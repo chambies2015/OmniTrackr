@@ -24,6 +24,7 @@ from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
+from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from ..visitor_identity import set_visitor_cookie, visitor_identity
 
@@ -827,7 +828,8 @@ def reviews_index(
     page = _inject_reviews_item_list_json_ld(page, reviews, category)
     page = _apply_category_review_context(page, category)
     standalone = sum(1 for review in reviews if _review_is_standalone(review))
-    noindex = bool(q) or standalone < MIN_INDEXED_LISTING_REVIEWS
+    needed = review_quality.MIN_INDEXED_CATEGORY_REVIEWS if category else MIN_INDEXED_LISTING_REVIEWS
+    noindex = bool(q) or standalone < needed
     if noindex:
         page = _noindex_empty_review_category(page)
     response = strict_html_response(page)

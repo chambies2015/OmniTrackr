@@ -108,7 +108,8 @@ def _quotes(db: Session, kind: str, ranked: list[dict]) -> None:
             if len(text) > QUOTE_CHARS:
                 text = text[:QUOTE_CHARS].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
             entry["quote"] = {"text": text, "username": review["username"], "url": review["url"],
-                              "profile_url": review.get("profile_url"), "rating": review["rating"]}
+                              "profile_url": review.get("profile_url"), "rating": review["rating"],
+                              "standalone": bool(review.get("search_ready"))}
 
 
 def build(db: Session, kind: str) -> dict:

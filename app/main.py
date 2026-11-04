@@ -820,6 +820,10 @@ for route in profile_widgets_router.router.routes:
     elif getattr(route, "path", None) == "/u/id/{user_id:database_id}/widget/{kind}.png":
         bind_rate_limited_endpoint(route, rate_limited_widget_by_id)
 app.include_router(profile_widgets_router.router)
+# Each share can ask Spotify, YouTube or OMDb for a title, so it gets the same limit as the metadata search.
+for route in pwa.router.routes:
+    if getattr(route, "path", None) == "/share" and "GET" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:
@@ -996,6 +1000,25 @@ for route in seasonal_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_seasonal_add)
 app.include_router(seasonal_router.router)
 
+from .routers import gift_guide as gift_guide_router
+# The claim routes need no account, so they are limited per address. The member routes match the seasonal hub's.
+GIFT_GUIDE_LIMITS = {
+    ("/api/gift-list/items", "POST"): "60/minute",
+    ("/api/gift-list/link", "POST"): "10/hour",
+    ("/api/gift-list", "GET"): "60/minute",
+    ("/api/gift-list", "PATCH"): "30/minute",
+    ("/api/gift-list/items/{item_id}", "PATCH"): "60/minute",
+    ("/api/gift-list/items/{item_id}", "DELETE"): "60/minute",
+    ("/api/gifts/{token}/items/{item_id}/claim", "POST"): "20/minute",
+    ("/api/gifts/{token}/items/{item_id}/unclaim", "POST"): "20/minute",
+}
+for route in gift_guide_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = GIFT_GUIDE_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(gift_guide_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
@@ -1143,6 +1166,17 @@ for route in binge_calculator_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_binge_length)
 app.include_router(binge_calculator_router.router)
 
+from .routers import review_inbox as review_inbox_router
+rate_limited_review_inbox = {
+    "/api/review-inbox/share": limiter.limit("30/minute")(review_inbox_router.share_review),
+    "/api/review-inbox/keep": limiter.limit("30/minute")(review_inbox_router.keep_review),
+    "/api/review-inbox/undo": limiter.limit("30/minute")(review_inbox_router.undo_answer),
+}
+for route in review_inbox_router.router.routes:
+    if getattr(route, "path", None) in rate_limited_review_inbox:
+        bind_rate_limited_endpoint(route, rate_limited_review_inbox[route.path])
+app.include_router(review_inbox_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
@@ -1204,7 +1238,11 @@ async def advertising_page(request: Request):
 
 @app.get("/content-quality", tags=["public"])
 async def content_quality_page(request: Request):
-    response = strict_template_response("content_quality.html", request)
+    from . import editorial_index
+    response = strict_template_response("content_quality.html", request, {
+        "<!--EDITOR_SENTENCE-->": editorial_index.editor_label(),
+        "<!--GUIDE_LEDGER-->": editorial_index.ledger_html(),
+    })
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

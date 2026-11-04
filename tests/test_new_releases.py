@@ -33,8 +33,15 @@ def test_every_guide_is_complete_and_substantial():
         assert len(entry["lead"]) >= 2 and entry["plan"] and entry["plan_heading"] and len(entry["sources"]) >= 8
         assert words(entry) >= 2500, slug
         formats = [section["format"] for section in entry["sections"]]
-        assert len(formats) == len(set(formats)) >= 4
         assert all(fmt in new_releases.FORMAT_ORDER for fmt in formats)
+        ids = [new_releases.section_id(section) for section in entry["sections"]]
+        assert len(ids) == len(set(ids)), slug
+        if entry.get("focus"):
+            # A one-format guide (an anime season) splits its picks into several groups of that format.
+            assert set(formats) == {entry["focus"]} and len(formats) >= 3, slug
+            assert all(section.get("id") and section.get("label") for section in entry["sections"]), slug
+        else:
+            assert len(formats) == len(set(formats)) >= 4
         for label, url in entry["sources"]:
             assert label and url.startswith("https://")
         for label, href in entry["related"]:
@@ -60,8 +67,11 @@ def test_guides_publish_on_their_date():
     assert new_releases.published(date(2026, 10, 31)) == {}
     live = new_releases.published(date(2026, 11, 1))
     assert set(live) == {"november-2026", "winter-2026-27"}
+    assert "winter-2027-anime" in new_releases.published(date(2026, 11, 4))
     assert new_releases.current(date(2026, 11, 15)) == "november-2026"
+    # The anime season guide is newer and covers January too, but Release Radar keeps pointing at the all-format guide.
     assert new_releases.current(date(2027, 1, 20)) == "winter-2026-27"
+    assert new_releases.current(date(2027, 3, 20)) != "winter-2027-anime"
     # Once every stretch has passed, the newest guide still counts as current.
     assert new_releases.current(date(2027, 6, 1)) in live
 
@@ -95,7 +105,7 @@ def test_guide_page_reads_completely_without_an_account(client):
         assert f'id="{new_releases.anchor_id(item)}"' in html
     assert html.count("Save to my list") == len(new_releases.picks(entry))
     for section in entry["sections"]:
-        assert f'id="section-{section["format"]}"' in html
+        assert f'id="{new_releases.section_id(section)}"' in html
     assert "Also on the calendar" in html and "A plan for the month" in html and "How we chose" in html
     assert "Sources we checked" in html and "with AI assistance" in html
     assert 'href="/in-order/hunger-games"' in html and 'href="/new-releases/winter-2026-27"' in html
@@ -150,3 +160,24 @@ def test_release_radar_points_at_this_months_guide():
     note = _guide_note()
     slug = new_releases.current()
     assert f'href="/new-releases/{slug}"' in note
+
+
+def test_anime_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-anime"]
+    html = client.get("/new-releases/winter-2027-anime").text
+    assert f"<h1>{entry['name']}</h1>" in html and "ANIME SEASON GUIDE" in html
+    for section in entry["sections"]:
+        assert f'id="{new_releases.section_id(section)}"' in html
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{len(new_releases.picks(entry))} anime picks in {len(entry['sections'])} groups." in html
+    # Its own note on how the picks were chosen replaces the standard one.
+    assert entry["method"][0][:60] in html and "left out anything without a firm date" not in html
+    # The broad winter guide links here, and the anime picks from it are not repeated.
+    assert 'href="/new-releases/winter-2027-anime"' in client.get("/new-releases/winter-2026-27").text
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert 'href="/new-releases/winter-2027-anime"' in client.get("/anime-tracker").text
+    # On the hub, this month's all-format guide comes first and the anime guide counts shows, not releases.
+    hub = client.get("/new-releases").text
+    assert hub.index("This month") < hub.index("Winter 2027 anime season")
+    assert f"{len(new_releases.picks(entry))} anime, including Historie" in hub

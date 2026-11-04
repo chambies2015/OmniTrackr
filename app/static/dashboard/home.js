@@ -89,9 +89,42 @@ async function openLibraryItemFromLocation() {
   }
 }
 
+const SHARE_KINDS = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks', 'screen'];
+
+// A link or text shared from another app arrives as /?share=1&q=…&kind=…&year=…&via=…
+// (built by /share on the server). Read it once, take it out of the address bar so a
+// reload doesn't reopen it, and open Add anything with the search already running.
+function consumeSharedTitle() {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get('share') !== '1') return null;
+  const one = name => {
+    const values = url.searchParams.getAll(name);
+    return values.length === 1 ? values[0] : '';
+  };
+  const shared = {
+    query: one('q').replace(/\s+/g, ' ').trim().slice(0, 200),
+    kind: SHARE_KINDS.includes(one('kind')) ? one('kind') : '',
+    year: /^(?:19|20)\d{2}$/.test(one('year')) ? one('year') : '',
+    via: /^[a-z]{2,20}$/.test(one('via')) ? one('via') : '',
+  };
+  ['share', 'q', 'kind', 'year', 'via'].forEach(name => url.searchParams.delete(name));
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  return shared;
+}
+
+function openSharedTitleFromLocation() {
+  const shared = consumeSharedTitle();
+  if (!shared) return false;
+  Promise.resolve(openSharedTitle(shared)).catch(() => {
+    showNotice('Could not open Add anything. Tap ＋ to search for the title you shared.');
+  });
+  return true;
+}
+
 function openDashboardTargetFromLocation() {
   if (!hasStoredAuth()) return false;
   const params = new URL(window.location.href).searchParams;
+  if (params.get('share') === '1') return openSharedTitleFromLocation();
   if (params.has('library_category') || params.has('library_item')) {
     // Ambiguous mixed handoffs must never race each other or choose a different title.
     if (params.has('collection')) {

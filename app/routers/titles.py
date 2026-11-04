@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
+from .. import affiliate, models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -27,7 +27,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261031-sweep-1"
+CSS_VERSION = "20261103-where-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
@@ -147,7 +147,8 @@ async def _load(request: Request, db: Session, kind: str, slug: str):
     metadata = await title_metadata.get_or_fetch(
         db, client, kind, group.normalized, group.title, group.year, _metadata_creator(kind, summary))
     summary["where"] = await where_to_watch.get_or_fetch(
-        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4)
+        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4,
+        creator=_metadata_creator(kind, summary))
     return group, summary, metadata
 
 
@@ -287,40 +288,64 @@ def _fact_value_html(kind: str, label: str, value, links: dict) -> str:
     return ", ".join(f'<a href="{_e(links[name])}">{_e(name)}</a>' if name in links else _e(name) for name in names)
 
 
-WHERE_HEADINGS = {"game": "Where to play {title}"}
+def _where_chip(provider: dict, rel: str = "noopener nofollow") -> str:
+    logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
+            if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
+    inner = f'{logo}<span>{_e(provider["name"])}</span>'
+    if provider.get("url"):
+        return f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="{rel}">{inner}</a></li>'
+    return f'<li><span class="title-where__provider">{inner}</span></li>'
 
 
 def _where_html(group, summary: dict) -> str:
-    """Services that stream, rent, sell or first aired the title, with the credits the data needs."""
+    """Services that stream, sell, lend or first aired the title, with the credits the data needs.
+
+    Amazon links (when the Associates tag is set) and search links on other services are
+    added here at render time; they are never cached as if we had checked them.
+    """
     where = summary.get("where") or {}
-    if not where.get("groups"):
+    creator = summary.get("creator") or ""
+    buy = affiliate.links_for(group.kind, group.title, creator)
+    lookups = where_to_watch.searches(group.kind, group.title, creator)
+    if not where.get("groups") and not buy and not lookups:
         return ""
     rows = []
-    for entry in where["groups"]:
-        chips = []
-        for provider in entry["providers"]:
-            logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
-                    if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
-            inner = f'{logo}<span>{_e(provider["name"])}</span>'
-            chips.append(f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="noopener nofollow">{inner}</a></li>'
-                         if provider.get("url") else f'<li><span class="title-where__provider">{inner}</span></li>')
-        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{"".join(chips)}</ul></div>')
-    heading = WHERE_HEADINGS.get(group.kind, "Where to watch {title}").format(title=group.title)
+    for entry in where.get("groups") or []:
+        chips = "".join(_where_chip(provider) for provider in entry["providers"])
+        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{chips}</ul></div>')
+    if buy:
+        chips = "".join(_where_chip({"name": link["merchant"], "url": link["url"]}, "sponsored noopener") for link in buy)
+        rows.append(f'<div class="title-where__group title-where__group--buy"><h3>Buy a copy</h3><ul>{chips}</ul></div>')
+    heading = where_to_watch.heading(group.kind, group.title)
+    searches = ""
+    if lookups:
+        links = "".join(f'<li><a href="{_e(link["url"])}" target="_blank" rel="noopener nofollow">{_e(link["name"])} ↗</a></li>'
+                        for link in lookups)
+        searches = (f'<div class="title-where__search"><h3>Search other services</h3><ul>{links}</ul>'
+                    f'<p class="title-where__note">These open a search on each site, so check the result is the right one.</p></div>')
     notes = []
     if where.get("region"):
         checked = _pretty_date(where.get("fetched")) or where.get("fetched") or ""
         notes.append(f'<p class="title-where__note">Showing {_e(where["region"])} availability, checked {_e(checked)}. Services change their catalogues often.</p>')
+    checked = ""
+    if not where.get("region") and where.get("groups") and where.get("fetched") and group.kind not in where_to_watch.VIDEO_KINDS:
+        checked = f'Checked {_e(_pretty_date(where["fetched"]) or where["fetched"])}. '
     credits = where.get("credits") or []
     if credits:
-        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' for c in credits)
+        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' if c.get("url") else _e(c["name"])
+                          for c in credits)
         tmdb = " This product uses the TMDB API but is not endorsed or certified by TMDB." if where.get("justwatch") else ""
-        notes.append(f'<p class="title-where__note">Data from {named}.{tmdb}</p>')
+        notes.append(f'<p class="title-where__note">{checked}Data from {named}.{tmdb}</p>')
+    elif checked:
+        notes.append(f'<p class="title-where__note">{checked.strip()}</p>')
+    if buy:
+        notes.append(affiliate.disclosure_html("title-where__note"))
     more = ""
     if group.kind in where_to_watch.VIDEO_KINDS:
         more = (f'<a class="title-where__more" href="{_e(where.get("link") or where_to_watch.justwatch_search(group.title))}" '
                 f'target="_blank" rel="noopener nofollow">Compare every service{" on JustWatch" if not where.get("link") else ""} ↗</a>')
     return (f'<section class="title-section title-where" aria-labelledby="where-title"><h2 id="where-title">{_e(heading)}</h2>'
-            f'<div class="title-where__groups">{"".join(rows)}</div>{more}'
+            f'<div class="title-where__groups">{"".join(rows)}</div>{more}{searches}'
             f'{"".join(notes)}</section>')
 
 
@@ -489,7 +514,7 @@ def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
     facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
     services = where_to_watch.names(summary.get("where"))
     if services:
-        facts.append(("Where to play" if group.kind == "game" else "Where to watch",
+        facts.append((where_to_watch.heading(group.kind),
                       f'<a href="#where-title">{_e(", ".join(services))}</a>'))
     if _genres(metadata):
         facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
@@ -736,6 +761,20 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
             lines.append(f"get it on {_join(names)}")
         elif label == "Originally aired on":
             lines.append(f"find it on {_join(names)}, where it first aired")
+        elif label == "Listen on":
+            lines.append(f"listen on {_join(names)}")
+        elif label == "Listen free on":
+            lines.append(f"listen free on {_join(names)}")
+        elif label == "Any podcast app":
+            lines.append("add its RSS feed to any podcast app")
+        elif label == "Buy or listen on":
+            lines.append(f"get it on {_join(names)}")
+        elif label == "Read free":
+            lines.append(f"read it free on {_join(names)}")
+        elif label == "Borrow free":
+            lines.append(f"borrow it free from {_join(names)}")
+        elif label == "Read officially on":
+            lines.append(f"read it officially on {_join(names)}")
     if not lines:
         return "", "", ""
     region = f" in the {where['region']}" if where.get("region") == "US" else (f" in {where['region']}" if where.get("region") else "")
@@ -743,7 +782,7 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
     text = text[:1].upper() + text[1:]
     if where.get("fetched"):
         text += f" Checked {_pretty_date(where['fetched'])}."
-    verb = "play" if group.kind == "game" else "watch"
+    verb = where_to_watch.verb(group.kind) + (" to" if group.kind in where_to_watch.LISTEN_KINDS else "")
     return f"Where can I {verb} {title}?", text, _e(text) + ' <a href="#where-title">See every option</a>.'
 
 
@@ -958,6 +997,8 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     streaming = where_to_watch.stream_names(summary.get("where"), limit=2)
     if streaming and group.kind in where_to_watch.VIDEO_KINDS:
         description_bits.append("where to watch it (" + " and ".join(streaming) + ")")
+    elif streaming and group.kind in where_to_watch.LISTEN_KINDS + where_to_watch.READ_KINDS:
+        description_bits.append(f"where to {where_to_watch.verb(group.kind)} it (" + " and ".join(streaming) + ")")
     if metadata.get("trailer"):
         description_bits.append("trailer")
     meta_description = _excerpt(", ".join(description_bits) + ".", 158)
@@ -993,7 +1034,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
         (summary.get("discussions_html", ""), "discussions-title", "Discussions"),
         (_trailer_html(group, metadata), "trailer-title", "Trailer"),
-        (_where_html(group, summary), "where-title", "Where to play" if group.kind == "game" else "Where to watch"),
+        (_where_html(group, summary), "where-title", where_to_watch.heading(group.kind)),
         (_about_html(group, summary, metadata), "about-title", "About"),
         (_faq_html(group, faq), "faq-title", "Quick answers"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
@@ -1362,7 +1403,7 @@ async def where_to_watch_lookup(request: Request, response: Response,
                                 title: str = Query(..., min_length=1, max_length=300),
                                 year: Optional[int] = Query(None, ge=1800, le=2200),
                                 user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Where a library title streams or sells, for the member's own rows (works for private libraries too)."""
+    """Where a library title streams, sells or lends, for the member's own rows (works for private libraries too)."""
     response.headers["Cache-Control"] = "private, no-store"
     if kind not in where_to_watch.KINDS:
         raise HTTPException(404, "Not available for this kind of title")
@@ -1382,6 +1423,10 @@ async def where_to_watch_lookup(request: Request, response: Response,
         "credits": where.get("credits") or [],
         "tmdb_notice": bool(where.get("justwatch")),
         "more": (where.get("link") or where_to_watch.justwatch_search(display)) if kind in where_to_watch.VIDEO_KINDS else None,
+        "heading": where_to_watch.heading(kind),
+        "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
+        "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
+        "searches": where_to_watch.searches(kind, display),
     }
 
 
@@ -1514,8 +1559,11 @@ def _chart_entry_html(entry: dict) -> str:
     if entry.get("quote"):
         q = entry["quote"]
         who = (f'<a href="{_e(q["profile_url"])}">{_e(q["username"])}</a>' if q.get("profile_url") else _e(q["username"]))
+        # Short reviews have no page of their own (it would be a 404), so they link to the title's reviews.
+        more = (f'<a href="{_e(q["url"])}">full review</a>' if q.get("standalone")
+                else f'<a href="{_e(entry["url"])}#community-title">more reviews</a>')
         quote = (f'<blockquote class="title-chart__quote"><p>“{_e(q["text"])}”</p>'
-                 f'<footer>{who} · <a href="{_e(q["url"])}">full review</a></footer></blockquote>')
+                 f'<footer>{who} · {more}</footer></blockquote>')
     return (f'<li class="title-chart__entry" id="rank-{entry["rank"]}">'
             f'<span class="title-chart__rank" aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>'
             f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'

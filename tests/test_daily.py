@@ -111,7 +111,7 @@ def test_archive_and_past_pages(client, on_day):
     entry = daily.puzzle(1)
     assert past.status_code == 200
     assert "<details data-daily-spoiler>" in past.text and f"The answer: {entry['title']}" in past.text
-    assert entry["note"][:60] in past.text and '<meta name="robots" content="index, follow' in past.text
+    assert entry["note"][:60] in past.text and '<meta name="robots" content="noindex, follow' in past.text
     today = client.get("/daily/3", follow_redirects=False)
     assert today.status_code == 307 and today.headers["location"] == "/daily"
     assert client.get("/daily/4").status_code == 404
@@ -177,6 +177,14 @@ def test_sitemap_footer_and_llms_list_the_game(client, on_day):
     on_day(3)
     sitemap = client.get("/sitemap.xml").text
     assert "https://omnitrackr.xyz/daily</loc>" in sitemap and "/daily/archive</loc>" in sitemap
+    assert "/daily/2</loc>" not in sitemap and "/daily/3</loc>" not in sitemap
+
+
+def test_past_puzzles_can_be_indexed_again(client, on_day, monkeypatch):
+    monkeypatch.setattr(daily, "INDEX_PAST_PUZZLES", True)
+    on_day(3)
+    assert '<meta name="robots" content="index, follow' in client.get("/daily/1").text
+    sitemap = client.get("/sitemap.xml").text
     assert "/daily/2</loc>" in sitemap and "/daily/3</loc>" not in sitemap
     assert 'href="/daily"' in client.get("/about").text
     assert "/daily" in client.get("/llms.txt").text

@@ -15,6 +15,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
+from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
@@ -67,6 +68,7 @@ CORE_SITEMAP_PATHS = (
     ("/in-order", "monthly", "0.75"),
     ("/halloween", "weekly", "0.75"),
     ("/holidays", "weekly", "0.75"),
+    ("/holidays/gifts", "weekly", "0.75"),
     ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
@@ -124,7 +126,7 @@ def _database_parts(db: Session) -> list[str]:
             ).limit(200).all()
             ready_count = len(visible_search_ready(category, category_candidates))
             search_ready_total += ready_count
-            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
+            if ready_count >= review_quality.MIN_INDEXED_CATEGORY_REVIEWS:
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -297,7 +299,7 @@ def _database_parts(db: Session) -> list[str]:
     for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
-            f"<lastmod>{edition['published_date']}</lastmod>"
+            f"<lastmod>{edition.get('reviewed', edition['published_date'])}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
     # Monthly challenge guides that have started; future months stay unpublished.
@@ -311,12 +313,13 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
-    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
+    # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
     daily_numbers = daily.archive_numbers()
     if daily_numbers:
         sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
-    for number in daily_numbers:
+    for number in (daily_numbers if daily.INDEX_PAST_PUZZLES else []):
         sitemap_parts.append(
             f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
             "<changefreq>yearly</changefreq><priority>0.5</priority></url>"
@@ -548,6 +551,7 @@ Allow: /ads.txt
 Allow: /sellers.json
 Disallow: /auth/
 Disallow: /api/
+Disallow: /share
 Disallow: /account/
 Disallow: /friends
 Disallow: /movies/
@@ -691,7 +695,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
 "If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
-Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
+Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel. The holiday gift guide at {base_url}/holidays/gifts has four gift ideas for each kind of fan (movies, TV, anime, games, music, books, manga, podcasts and audiobooks), each with what to check before buying, and members can turn their library into a gift list to share with family.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
 Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.

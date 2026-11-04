@@ -226,6 +226,12 @@ MONTHLY_EDITIONS = {
         "essay_title": "Start with one small thing",
         "essay": "September can make every unfinished plan feel urgent. This edition suggests something smaller: choose one thing, give it your full attention, and keep it at a human scale. Not every work here is comforting. Each one does find meaning in an ordinary practice, whether that is cleaning, singing with friends, learning a craft, arranging a room, listening closely, or putting a true memory into words.",
         "guide": "Pick whichever format feels easiest tonight. Perfect Days is a single film. Somebody Somewhere is warm and comes an episode at a time. Barakamon and Unpacking give you something to do without hurrying you. For Emma, Forever Ago and The Comfort Book are for slow, private evenings.",
+        "notes": {"heading": 'How the six fit together', "paragraphs": [
+            "The picks pair up. Perfect Days and Unpacking are both about the objects a person keeps and the order they keep them in: Hirayama's cassettes and paperbacks, the plates and posters you lift out of each box. Somebody Somewhere and Barakamon are about someone who has lost their footing and finds it again through neighbours who won't leave them alone. For Emma, Forever Ago and The Comfort Book are the two you take in alone, late, in small doses.",
+            "None of them is a big commitment. Perfect Days is a two-hour film. Unpacking takes most players an evening or two. Barakamon is twelve short episodes, and Somebody Somewhere's half-hour episodes run to three seasons, so it is the one that can last the whole month. The album is under forty minutes. If you only try one, make it Perfect Days: Hirayama cleans public toilets in Tokyo for a living, and the film still makes his days look like something worth wanting.",
+            'A small suggestion for the month, in the spirit of the edition: pick one of the six and give it the same time on the same day each week, the way Hirayama keeps his routine. It works better than trying all six at once.',
+        ]},
+        "reviewed": "2026-11-04",
         "prompt": "What is one small practice you could return to this month without turning it into a performance?",
         "items": [
             {"key": "perfect-days", "category": "movies", "title": "Perfect Days", "meta": {"director": "Wim Wenders", "year": 2023},
@@ -262,6 +268,12 @@ MONTHLY_EDITIONS = {
         "essay_title": "Not every shadow needs a flashlight",
         "essay": "October is the month of jump scares and spectacle. The unease in these six works builds slowly and lasts longer. Each leaves a door open between the ordinary and the inexplicable: a house remembers, an island transmits a voice, a community mistakes certainty for safety, and grief changes the scale of time. None of them asks you to be brave. They ask you to sit with an image, a sound, a choice or a sentence for a while before deciding what it means.",
         "guide": "Choose by how much uncertainty you can take tonight. A Ghost Story is the stillest, and takes one sitting. Midnight Mass is the longest and most intense. Mushi-Shi comes one self-contained episode at a time. In OXENFREE you work through a mystery by talking. Ghosteen wants one uninterrupted listen, and The Haunting of Hill House is the sharpest study of a mind and a place growing hard to tell apart.",
+        "notes": {"heading": 'How the six fit together', "paragraphs": [
+            "Two of these picks are linked by a person. Mike Flanagan, who created Midnight Mass, also made the 2018 Netflix series loosely based on The Haunting of Hill House. Read Shirley Jackson's novel first and you will see what he took from it: the house is never the only thing wrong, and the people who come to it bring their own trouble. The other pairing is A Ghost Story and Ghosteen, which are both about grief that refuses to keep to a schedule. Nick Cave wrote much of Ghosteen after the death of his son in 2015.",
+            "OXENFREE and Mushi-Shi are the two to take slowly. OXENFREE takes a few hours, and its ending changes with the conversations you choose, so many people play it twice. Mushi-Shi's first season is 26 stand-alone episodes; one a night works better than a binge.",
+            'If you want to build up, start with Mushi-Shi or A Ghost Story, which unsettle without frightening, and leave Midnight Mass for last. Its seven episodes are the longest commitment here and by far the most intense, and its long monologues are easier to sit through once you are in the mood the rest of the edition creates.',
+        ]},
+        "reviewed": "2026-11-04",
         "prompt": "When a story leaves something unresolved, do you lean in, start inventing answers, or get impatient? Do you react the same way to uncertainty in the rest of your life?",
         "items": [
             {"key": "a-ghost-story", "category": "movies", "title": "A Ghost Story", "meta": {"director": "David Lowery", "year": 2017},
@@ -298,6 +310,12 @@ MONTHLY_EDITIONS = {
         "essay_title": "Arriving late is still arriving",
         "essay": "November is when the year's new releases get loudest and the best-of lists start appearing, this site's included. This edition goes the other way. All six picks were made before 2000, and each one takes a route that looks inefficient at first. Ozu's camera hardly moves. Columbo tells you the killer in the first ten minutes. Stevens the butler drives across England to see a woman he never managed to speak plainly to, twenty years too late. None of these detours is wasted. The pleasure is in how the story gets there, and in what you notice when nothing is rushing you along. It pairs with this month's challenge, which asks you to finish something from before 2000 and spend some time on paper.",
         "guide": "Choose by the shape of your evening. Tokyo Story and Kind of Blue each take one sitting and reward your full attention. A Columbo episode is a feature-length mystery you can drop in and out of, and Cowboy Bebop comes in 26 sessions that mostly stand alone. Grim Fandango is a long adventure to play over several weekends, and The Remains of the Day is a short novel that is easy to start and hard to put down.",
+        "notes": {"heading": 'How the six fit together', "paragraphs": [
+            'Put together, the six make a month of more than thirty hours, most of it in Grim Fandango and Cowboy Bebop. Tokyo Story is a little over two hours, Kind of Blue about 45 minutes, and The Remains of the Day a short novel. Columbo is the flexible one: almost seventy episodes over 35 years, each a complete mystery, so you can stop after one or keep going all winter.',
+            "Two pairs work well. Tokyo Story and The Remains of the Day are both about people who discover too late what they owed their family or themselves, and both leave the saddest part unspoken. Cowboy Bebop and Kind of Blue are linked by jazz: the show's sessions are named after songs and genres, and Yoko Kanno's score borrows openly from bebop and from the modal jazz that Kind of Blue made famous.",
+            "For this month's challenge, which asks you to finish one thing from before 2000, The Remains of the Day or Tokyo Story is the safest finish. Grim Fandango is the most rewarding but the easiest to stall on, so keep a hint guide open for the puzzles and don't count it as cheating.",
+        ]},
+        "reviewed": "2026-11-04",
         "prompt": "Which of this month's picks felt most like its own time, and which felt as if it could have been made last year?",
         "items": [
             {"key": "tokyo-story", "category": "movies", "title": "Tokyo Story", "meta": {"director": "Yasujir\u014d Ozu", "year": 1953},

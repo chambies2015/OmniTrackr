@@ -1,5 +1,57 @@
 # Public content review — September 17, 2026
 
+## Follow-up — November 4, 2026: another "low value content" rejection
+
+Crawled the live sitemap (138 URLs) and every page those link to (362 more). Only six
+linked pages outside the sitemap were indexable (privacy, terms, contact, editorial
+standards, the current roundup and a `?login=1` homepage variant with a canonical), so
+the gates on title, people, studio and review pages are working. The question this time
+was what kind of pages make up the indexed set. Roughly:
+
+- 70 written guides: Discover trails and monthly editions, If you liked, In order,
+  best-of, release guides, the seasonal hubs, browse shelves, challenges, editors'
+  collections, Pick for me, the Daily hub and archive.
+- 35 pages about the app: the homepage, about and FAQ, nine tracker pages, thirteen
+  /switch import guides, the tools.
+- 35 pages built mostly from data or one template: eight weekly roundups plus the
+  archive and current week, twenty past Daily puzzles, the People and Studios
+  directories, a movies-only review listing.
+
+The weekly roundups were the clearest problem. Each is a list of 40 to 80 releases from
+the Release Radar feeds, every one with a "Find it on Amazon" search link, under a
+write-up assembled from counts ("The week of October 5 to 11 brought 10 new films, 30 TV
+premieres..."). That is close to what Google's thin-content policy calls thin affiliate
+and automatically generated pages. Release Radar category pages were already noindex for
+the same reason in October.
+
+Changes:
+
+- `weekly_roundup.INDEX_ROUNDUPS = False`: every roundup, the archive and the current
+  week are noindex and out of the sitemap. The thresholds still apply if it's turned on.
+- `daily.INDEX_PAST_PUZZLES = False`: past puzzle pages (about 300 words each, one more a
+  day) are noindex and out of the sitemap. `/daily` and `/daily/archive` stay indexed.
+- People and Studios directories are indexed only when at least six of the pages they
+  list are indexable (`people_pages.DIRECTORY_INDEX_MIN_PAGES`). On November 4 none of
+  the 62 linked people pages or 43 studio pages was, so the directory was a list of
+  links to noindex pages.
+- One-format review listings need eight standalone reviews
+  (`review_quality.MIN_INDEXED_CATEGORY_REVIEWS`). The movies listing was about 10% its
+  own text; the rest repeated `/reviews`.
+- Release Radar cards for TV and anime premieres no longer carry Amazon links
+  (`release_radar.SHOP_LINK_CATEGORIES`). The indexed `/release-radar` page had 29.
+- `ad-loader.js` now allows `/best-of/<year>/<format>` and `/new-releases/<slug>`. Both
+  routers already added the loader for signed-out visitors on indexed pages, but the
+  script's own path list skipped them, so the strongest guides could never show an ad.
+
+After this the indexed set is about 70 guides and 35 app pages. Nothing was deleted or
+redirected, and no member data changed.
+
+What code can't fix: the rejection text now asks for "a consistent presence on the web"
+and "genuine user interest". With about 550 Google visits a month and a domain that
+started publishing guides in September, time and real visitors are a large part of the
+answer. See `adsense/adsense-account-checklist.md` in the project files for the
+Search Console steps and the waiting period.
+
 ## Follow-up — October 31, 2026: landing pages Google sends people to
 
 Measured the live pages first (Playwright, desktop 1366 px and a throttled Pixel 7)

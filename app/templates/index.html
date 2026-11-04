@@ -47,7 +47,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
+  <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <script src="/static/visit.js?v=20261030-people-1" defer></script>
   <link rel="preload" href="./styles.css?v=20261031-push-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -63,14 +63,16 @@
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
   <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
-  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
+  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261103-where-2">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261030-claim-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261104-styles-1">
+  <link rel="stylesheet" href="/static/app-themes.css?v=20261104-themes-1">
+  <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261030-steam-3">
-  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
+  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261104-gifts-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
@@ -79,6 +81,9 @@
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
+  <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
+  <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
+  <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -333,6 +338,7 @@
 </head>
 
 <body class="dark-mode app-shell" data-active-tab="movies">
+  <script src="/static/app-themes.js?v=20261104-themes-1"></script>
   <a class="skip-link" href="#mainContainer" id="skipToLibrary">Skip to your library</a>
   <div class="account-toolbar" role="region" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
@@ -341,8 +347,8 @@
     <span>Friends</span>
   </button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
-  <button id="notificationBell" class="notification-bell" aria-label="View notifications">
-    🔔
+  <button id="notificationBell" class="notification-bell" type="button" aria-label="View notifications">
+    <span aria-hidden="true">🔔</span>
     <span id="notificationDot" class="notification-dot" style="display: none;"></span>
   </button>
   <div id="notificationDropdown" class="notification-dropdown" style="display: none;">
@@ -362,10 +368,10 @@
       <form id="pushSettings" class="push-settings" aria-label="Notification settings" hidden></form>
     </div>
   </div>
-  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
-    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile"
+  <button id="userDisplay" class="user-display-btn" type="button">
+    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt=""
       data-fallback-src="/static/default-avatar.svg">
-    <span id="userDisplayText"></span>
+    <span class="sr-only">Account settings, </span><span id="userDisplayText"></span>
   </button>
   <a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>Site stats</a>
   <button type="button" id="installAppBtn" class="site-stats-link install-app-btn" hidden>Install app</button>
@@ -436,6 +442,7 @@
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="for-you">For you</button>
         <button class="tab" data-switch-tab="friends-feed">Friends feed<span id="friendsFeedDot" class="ffeed-dot" hidden><span class="sr-only"> (new updates)</span></span></button>
         <button class="tab" data-switch-tab="activity">Journal</button>
         <button class="tab" data-switch-tab="recommendations">Postcards</button>
@@ -647,6 +654,38 @@
             </div>
           </div>
           <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+        </section>
+
+        <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
+        <section id="reviewInbox" class="for-you-card review-inbox" aria-labelledby="reviewInboxTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">Only you can see these</p>
+              <h2 id="reviewInboxTitle">Share your reviews</h2>
+              <p id="reviewInboxSummary" class="for-you-card__summary"></p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" id="reviewInboxHide" class="for-you-card__dismiss">Hide for now</button>
+            </div>
+          </div>
+          <ol id="reviewInboxList" class="review-inbox__list" aria-live="polite"></ol>
+          <button type="button" id="reviewInboxMore" class="review-inbox__more" aria-controls="reviewInboxList" hidden></button>
+          <p class="review-inbox__note">A shared review shows on its title's page and under <a href="/reviews">Reviews</a> with your username and rating. You can make it private again from the title in your library. Reviews you import from other sites always start private.</p>
+        </section>
+
+        <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">From members with your taste</p>
+              <h2 id="picksTeaserTitle">Picked for you</h2>
+              <p class="for-you-card__summary">Titles you haven't saved yet, chosen from what you rate highly.</p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" class="action-btn" data-switch-tab="for-you">See all picks</button>
+              <button type="button" id="picksTeaserHide" class="for-you-card__dismiss">Hide from home</button>
+            </div>
+          </div>
+          <div id="picksTeaserList" class="for-you-grid for-you-grid--wide"></div>
         </section>
 
         <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
@@ -1599,6 +1638,32 @@
     </div>
 
     <!-- Friends Feed Tab Content -->
+    <!-- For you: picks from other members' libraries (picked-for-you.js) -->
+    <div id="for-you-tab" class="tab-content">
+      <section class="picks-hero" aria-labelledby="picksHeading">
+        <div>
+          <p class="picks-hero__eyebrow">Picked from members' libraries</p>
+          <h2 id="picksHeading">For you</h2>
+          <p id="picksSummary" class="picks-hero__summary"></p>
+        </div>
+        <div class="picks-hero__links">
+          <a href="/pick">Pick for me</a>
+          <a href="/trending">Trending</a>
+          <button type="button" id="picksRefresh" class="picks-hero__refresh">Refresh picks</button>
+        </div>
+      </section>
+      <div id="picksFilters" class="picks-filters" role="group" aria-label="Show picks for" hidden></div>
+      <div id="picksRows" class="picks-rows" hidden></div>
+      <section class="picks-all" aria-labelledby="picksAllTitle">
+        <h3 id="picksAllTitle" class="picks-all__title">Picks for you</h3>
+        <div id="picksGrid" class="picks-grid" aria-live="polite"></div>
+      </section>
+      <p id="picksStatus" class="picks-status" role="status" aria-live="polite"></p>
+      <div id="picksGuides" class="picks-guides" hidden></div>
+      <p class="picks-note">Picks are worked out from libraries only: what members track, finish and rate. Categories other members keep private are never used, and nobody else sees what you were shown or hid.</p>
+      <div id="picksUndo" class="picks-undo" role="status" hidden></div>
+    </div>
+
     <div id="friends-feed-tab" class="tab-content">
       <section class="ffeed" aria-labelledby="friendsFeedTitle">
         <header class="ffeed__head">
@@ -2301,24 +2366,26 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261101-so-far-1"></script>
+  <script src="./auth.js?v=20261104-review-inbox-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
-  <script src="/static/for-you.js?v=20261101-speed-1"></script>
-  <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/review-inbox.js?v=20261104-review-inbox-1"></script>
+  <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
-  <script src="/static/supporter.js?v=20261030-claim-1"></script>
+  <script src="/static/supporter.js?v=20261104-styles-1"></script>
   <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
-  <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
+  <script src="/static/seasonal-card.js?v=20261104-gifts-1"></script>
   <script src="/static/memories.js?v=20261030-audiobooks-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
@@ -3085,13 +3152,18 @@
           <h4>Your supporter perks</h4>
           <p class="account-honest">Every tracking feature is free and stays free. Support pays for hosting, and the thank-yous are cosmetic.</p>
           <ul class="supporter-tiers" id="supporterTiers" aria-label="Ways to support"></ul>
-          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
-            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, color
+            themes for your own app, an accent color, banner and avatar frame for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
             supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
           <div class="supporter-membership" id="supporterMembership" hidden>
             <p id="supporterMembershipText"></p>
             <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
               rel="noopener noreferrer">See memberships ↗</a>
+          </div>
+          <div class="supporter-try" id="supporterTry" hidden>
+            <p class="supporter-try__title">Try a supporter theme</p>
+            <p class="info-text">Supporters can recolor their own OmniTrackr. Tap one to see it on this page. Nothing is saved, and a reload puts everything back.</p>
+            <div class="supporter-try__list" id="supporterTryList"></div>
           </div>
           <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
@@ -3139,15 +3211,21 @@
             <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
               <legend>Profile banner</legend>
             </fieldset>
+            <fieldset class="profile-settings__parts supporter-frames" id="supporterFrames">
+              <legend>Avatar frame</legend>
+            </fieldset>
             <div class="privacy-toggle-item" id="supporterMotionItem">
               <label for="supporterMotion" class="toggle-label">
-                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
+                <span>Let my banner and frame move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
                 <div class="toggle-container">
                   <input type="checkbox" id="supporterMotion" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
+            <fieldset class="profile-settings__parts supporter-themes" id="supporterThemes">
+              <legend>App theme <small class="supporter-themes__hint">Colors for your own OmniTrackr, in light and night mode. Only you see it.</small></legend>
+            </fieldset>
             <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>
           <div id="supporterError" class="error-message" role="alert"></div>
@@ -3543,6 +3621,7 @@
         <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
       </div>
       <div class="quick-capture-body">
+        <p id="quickCaptureShared" class="quick-capture-shared" tabindex="-1" hidden></p>
         <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
           <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
           <div class="quick-capture-search-field">

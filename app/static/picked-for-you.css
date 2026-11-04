@@ -1,0 +1,234 @@
+/* "For you" tab and its home card (picked-for-you.js). Uses the workspace tokens in app-theme.css. */
+
+.picks-hero {
+  align-items: flex-end;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--teal) 22%, transparent), transparent 42%),
+    linear-gradient(125deg, color-mix(in srgb, var(--accent-solid) 20%, var(--card-bg)), var(--card-bg) 70%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  justify-content: space-between;
+  margin: 0 0 var(--space-5);
+  padding: var(--space-6);
+}
+.picks-hero__eyebrow, .picks-row__eyebrow {
+  color: var(--teal);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0 0 var(--space-1);
+  text-transform: uppercase;
+}
+body.app-shell.dark-mode :is(.picks-hero__eyebrow, .picks-row__eyebrow) { color: #5eead4; }
+.picks-hero h2 { font-size: var(--text-3xl); margin: 0 0 var(--space-2); }
+/* Opening the tab moves focus to its heading for screen readers; it isn't something to click. */
+.picks-hero h2[tabindex="-1"]:focus { outline: none; }
+.picks-hero__summary { color: var(--fg-secondary); line-height: 1.55; margin: 0; max-width: 62ch; }
+.picks-hero__links { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.picks-hero__links a, .picks-hero__refresh {
+  align-items: center;
+  background: var(--card-bg);
+  display: inline-flex;
+  line-height: 1.2;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: var(--control-sm);
+  padding: 7px var(--space-4);
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.picks-hero__links a:hover, .picks-hero__refresh:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+
+.picks-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-5); }
+.picks-filters[hidden] { display: none; }
+.picks-filter {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: var(--control-sm);
+  padding: 6px var(--space-4);
+}
+.picks-filter:hover { background: var(--surface-hover); color: var(--fg); }
+.picks-filter[aria-pressed="true"] { background: var(--accent-solid); border-color: var(--accent-solid); color: var(--on-accent); }
+:is(.picks-filter, .picks-hero__links a, .picks-hero__refresh, .picks-card__save, .picks-card__dismiss, .picks-undo__button):focus-visible {
+  box-shadow: var(--ring);
+  outline: none;
+}
+
+.picks-rows[hidden], .picks-all[hidden], .picks-guides[hidden] { display: none; }
+.picks-row { margin: 0 0 var(--space-8); }
+.picks-row__head { margin: 0 0 var(--space-3); }
+.picks-row__title, .picks-all__title, .picks-guides__title { font-size: var(--text-xl); margin: 0; }
+.picks-all__title { margin: 0 0 var(--space-3); }
+/* Rows scroll sideways on every screen, like a shelf. */
+.picks-row__track {
+  display: grid;
+  gap: var(--space-3);
+  grid-auto-columns: minmax(172px, 196px);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 2px var(--space-3);
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.picks-row__track > .picks-card { scroll-snap-align: start; }
+.picks-grid { display: grid; gap: var(--space-4) var(--space-3); grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); }
+
+.picks-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.picks-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) { .picks-card, .picks-card:hover { transform: none; transition: none; } }
+.picks-card__poster-link { display: block; position: relative; }
+.picks-card__poster {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  background: linear-gradient(160deg, #3b2a7a, #141630);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.picks-card__poster img { height: 100%; object-fit: cover; width: 100%; }
+.picks-card__initial { color: #c4b5fd; font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; }
+.picks-card__score {
+  background: #0b0a18d9;
+  border-radius: var(--radius-pill);
+  bottom: var(--space-2);
+  color: #fde68a;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  left: var(--space-2);
+  padding: 3px var(--space-2);
+  position: absolute;
+}
+.picks-card__body { display: flex; flex: 1; flex-direction: column; gap: 3px; padding: var(--space-3); }
+.picks-card__title { font-size: var(--text-md); line-height: 1.3; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picks-card__title a { color: var(--fg); text-decoration: none; }
+.picks-card__title a:hover { text-decoration: underline; }
+.picks-card__meta { color: var(--fg-secondary); font-size: var(--text-xs); line-height: 1.4; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picks-card__detail { -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--fg-secondary); display: -webkit-box; font-size: var(--text-xs); line-height: 1.4; margin: 0; overflow: hidden; }
+.picks-card__reason {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--primary);
+  display: -webkit-box;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+}
+.picks-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin-top: auto; padding-top: var(--space-3); }
+.picks-card__save {
+  background: var(--accent-solid);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--on-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-4);
+}
+.picks-card__save:hover { background: var(--primary-hover); }
+body.app-shell.dark-mode .picks-card__save:hover { background: #6d28d9; }
+.picks-card__save:disabled { cursor: default; }
+.picks-card__save.is-added { background: var(--success-soft); color: var(--success); }
+.picks-card__dismiss {
+  background: none;
+  border: 0;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-xs);
+  min-height: var(--control-sm);
+  padding: 0 var(--space-1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.picks-card__dismiss:hover { color: var(--fg); }
+
+.picks-status { color: var(--fg-secondary); margin: var(--space-4) 0; min-height: 1.2em; }
+.picks-status:empty { margin: 0; }
+.picks-guides { margin: var(--space-6) 0 0; }
+.picks-guides__list { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-top: var(--space-3); }
+.picks-guide {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+}
+.picks-guide:hover { border-color: var(--border-strong); }
+.picks-guide span { color: var(--fg-secondary); font-size: var(--text-sm); }
+.picks-note { color: var(--fg-secondary); font-size: var(--text-sm); line-height: 1.5; margin: var(--space-6) 0 var(--space-4); max-width: 70ch; }
+
+.picks-undo {
+  align-items: center;
+  background: var(--fg);
+  border-radius: var(--radius-pill);
+  bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-lg);
+  color: var(--bg);
+  display: flex;
+  gap: var(--space-3);
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 60;
+}
+.picks-undo[hidden] { display: none; }
+.picks-undo__button {
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-4);
+}
+body.has-app-dock .picks-undo { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+/* Home card: let the reason wrap to two lines instead of cutting it off. */
+.picks-teaser .for-you-item__note { -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box; white-space: normal; }
+
+@media (max-width: 600px) {
+  .picks-hero { padding: var(--space-5); }
+  .picks-hero__links { gap: var(--space-1) var(--space-2); }
+  .picks-hero__links a, .picks-hero__refresh { padding: 5px var(--space-3); }
+  .picks-hero h2 { font-size: var(--text-2xl); }
+  .picks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .picks-row__track { grid-auto-columns: 46%; }
+  .picks-card__save { padding: 0 var(--space-3); }
+}

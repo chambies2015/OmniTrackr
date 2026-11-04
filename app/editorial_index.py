@@ -12,6 +12,16 @@ from datetime import date
 from html import escape
 from itertools import zip_longest
 
+# The person who reviews every guide before it goes up. None keeps the bylines and the
+# editorial standards page anonymous ("the site owner").
+EDITOR_NAME = None
+
+
+def editor_label() -> str:
+    """How the editorial standards page names the reviewer, at the start of a sentence."""
+    return f"{escape(EDITOR_NAME)}, who runs OmniTrackr," if EDITOR_NAME else "The site owner"
+
+
 SECTION_LABELS = {
     "discover": "Discover guide",
     "monthly": "Monthly edition",
@@ -34,7 +44,7 @@ def _discover() -> list[dict]:
 def _monthly() -> list[dict]:
     from .discover_catalog import published_editions
     return [{"section": "monthly", "href": f"/discover/monthly/{slug}", "name": edition["name"],
-             "summary": edition["intro"], "updated": edition["published_date"]}
+             "summary": edition["intro"], "updated": edition.get("reviewed", edition["published_date"])}
             for slug, edition in published_editions().items()]
 
 
@@ -59,7 +69,13 @@ def _seasonal() -> list[dict]:
     from .seasonal_guides import SEASONS
     return [{"section": "seasonal", "href": entry["path"], "name": f"{entry['name']} picks",
              "summary": entry["summary"], "updated": entry["reviewed"]}
-            for entry in SEASONS.values()]
+            for entry in SEASONS.values()] + [_gift_guide()]
+
+
+def _gift_guide() -> dict:
+    from .gift_guides import GUIDE
+    return {"section": "seasonal", "href": GUIDE["path"], "name": "Holiday gift guide",
+            "summary": GUIDE["summary"], "updated": GUIDE["reviewed"]}
 
 
 def _best_of() -> list[dict]:
@@ -159,3 +175,31 @@ def directory_html() -> str:
         groups.append(f'<div class="directory-group"><h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a></h3>'
                       f'<ul>{items}</ul></div>')
     return "".join(groups)
+
+
+def ledger_html() -> str:
+    """Every guide with the date it was last checked, grouped by section, for the editorial standards page."""
+    pieces = entries()
+    groups = []
+    for section, heading, hub in SECTION_ORDER:
+        rows = sorted(sorted((piece for piece in pieces if piece["section"] == section), key=lambda piece: piece["name"]),
+                      key=lambda piece: piece["updated"], reverse=True)
+        if not rows:
+            continue
+        items = "".join(
+            f'<li><a href="{escape(piece["href"], quote=True)}">{escape(piece["name"])}</a>'
+            + (f' <span class="ledger-date">checked <time datetime="{escape(piece["updated"])}">'
+               f'{escape(_date_label(piece["updated"]))}</time></span>' if _date_label(piece["updated"]) else "")
+            + '</li>'
+            for piece in rows
+        )
+        count = f'{len(rows)} guide{"s" if len(rows) != 1 else ""}'
+        groups.append(f'<h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a> <span class="ledger-count">{count}</span></h3>'
+                      f'<ul class="guide-ledger">{items}</ul>')
+    if not groups:
+        return ""
+    newest = max(piece["updated"] for piece in pieces)
+    return (f'<p>There are {len(pieces)} guides on the site right now. The most recent check was on '
+            f'<time datetime="{escape(newest)}">{escape(_date_label(newest))}</time>. Each date below is the last time '
+            'that guide was reread and its facts checked, and it matches the "Updated" line on the guide itself.</p>'
+            + "".join(groups))

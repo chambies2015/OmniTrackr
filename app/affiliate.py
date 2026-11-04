@@ -4,7 +4,7 @@ Everything here is off until the site owner sets an environment variable, so a
 deploy without configuration renders exactly what it did before.
 
 * AMAZON_ASSOCIATES_TAG  - e.g. "omnitrackr-20". Enables Amazon search links
-  for movies, TV, anime, games, music and books.
+  for movies, TV, anime, games, music, books, manga and audiobooks (Audible).
 * AFFILIATE_DISCLOSURE   - optional override for the disclosure sentence.
 
 Links are search links (title + format), so they work for any title without a
@@ -27,15 +27,17 @@ AMAZON_INDEX = {
     "music": ("popular", "album"),
     "books": ("stripbooks", ""),
     "manga": ("stripbooks", "manga"),
+    "audiobooks": ("audible", ""),
 }
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies",
     "tv": "tv", "tv_show": "tv", "tv-shows": "tv",
     "anime": "anime",
-    "video_game": "games", "video-games": "games", "games": "games",
-    "music": "music",
+    "video_game": "games", "video-games": "games", "games": "games", "game": "games",
+    "music": "music", "album": "music",
     "book": "books", "books": "books",
     "manga": "manga",
+    "audiobook": "audiobooks", "audiobooks": "audiobooks",
 }
 LINK_LABELS = {
     "movies": "Find it on Amazon",
@@ -45,6 +47,7 @@ LINK_LABELS = {
     "music": "Find it on Amazon",
     "books": "Find it on Amazon",
     "manga": "Find the volumes on Amazon",
+    "audiobooks": "Find the audiobook on Audible",
 }
 DEFAULT_DISCLOSURE = "As an Amazon Associate OmniTrackr earns from qualifying purchases. It never changes what we list."
 
@@ -91,3 +94,22 @@ def disclosure_html(css_class: str = "affiliate-disclosure") -> str:
     if not affiliate_enabled():
         return ""
     return f'<p class="{escape(css_class, quote=True)}">{escape(disclosure_text())}</p>'
+
+
+# Amazon search indexes the gift guide and gift lists may use. Anything else falls back to "aps" (all departments).
+SEARCH_STORES = {"aps", "movies-tv", "videogames", "popular", "stripbooks", "audible", "electronics", "toys-and-games"}
+
+
+def search_links(keywords: str, store: str = "aps", label: str = "Find it on Amazon") -> list[dict]:
+    """[{label, url, merchant}] for a free-text Amazon search, or [] when affiliate links are off.
+
+    Used for gifts that are things rather than titles (a turntable, a book light) and for
+    whatever a member types on their gift list.
+    """
+    tag = amazon_tag()
+    keywords = re.sub(r"\s+", " ", keywords or "").strip()[:150]
+    if not tag or not keywords:
+        return []
+    store = store if store in SEARCH_STORES else "aps"
+    url = "https://www.amazon.com/s?" + urlencode({"k": keywords, "i": store, "tag": tag})
+    return [{"label": label, "url": url, "merchant": "Amazon"}]

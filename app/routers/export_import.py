@@ -626,6 +626,19 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     )
 
 
+def _import_backup_bytes(content: bytes, current_user: models.User, db: Session):
+    data = json.loads(content.decode('utf-8'))
+
+    # Validate the imported data structure
+    # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
+    if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
+        raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', 'manga', 'podcasts', and 'audiobooks' are optional for backward compatibility.")
+
+    # Reuse the body endpoint's schema and import behavior for native backups.
+    import_payload = schemas.ImportData.model_validate(data)
+    return _run_import(import_payload, current_user, db)
+
+
 @router.post("/import/file/", response_model=schemas.ImportResult)
 async def import_from_file(
     file: UploadFile = File(...),
@@ -641,21 +654,14 @@ async def import_from_file(
         content = await file.read(MAX_JSON_IMPORT_BYTES + 1)
         if len(content) > MAX_JSON_IMPORT_BYTES:
             raise HTTPException(status_code=413, detail="JSON import exceeds the 25MB limit")
-        data = json.loads(content.decode('utf-8'))
-
-        # Validate the imported data structure
-        # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
-        if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
-            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', 'manga', 'podcasts', and 'audiobooks' are optional for backward compatibility.")
-
-        # Reuse the body endpoint's schema and import behavior for native backups.
-        import_payload = schemas.ImportData.model_validate(data)
-        return await run_in_threadpool(_run_import, import_payload, current_user, db)
+        # Decoding and checking up to 25 MB of JSON takes a while, so it runs on a worker
+        # thread with the import itself and other requests aren't held up.
+        return await run_in_threadpool(_import_backup_bytes, content, current_user, db)
 
     except HTTPException:
         # Preserve intentional client errors instead of masking them as a 500.
         raise
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except (json.JSONDecodeError, UnicodeDecodeError, RecursionError):
         raise HTTPException(status_code=400, detail="Invalid JSON file")
     except (ValidationError, TypeError, AttributeError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid import data: {str(e)}")

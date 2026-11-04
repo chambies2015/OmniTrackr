@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Optional
+from urllib.parse import quote
 
-from fastapi import APIRouter
-from fastapi.responses import FileResponse, Response
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import FileResponse, RedirectResponse, Response
 
+from .. import share_intake
 from ..csp import strict_html_response
+from ..dependencies import get_optional_current_user
 from ..site_chrome import message_page
 
 router = APIRouter(tags=["pwa"])
@@ -38,6 +42,13 @@ MANIFEST = {
         {"src": f"/static/screenshots/app-release-radar-narrow.webp?v={SCREENSHOT_VERSION}", "sizes": "358x799",
          "type": "image/webp", "form_factor": "narrow", "label": "Release Radar for the titles you track"},
     ],
+    # Android lists the installed app in the share sheet. A link or text shared from IMDb,
+    # Spotify, Goodreads, YouTube and so on lands on /share, which finds the title.
+    "share_target": {
+        "action": "/share",
+        "method": "GET",
+        "params": {"title": "title", "text": "text", "url": "url"},
+    },
     # Opening the app again focuses the window that is already open instead of stacking new ones.
     "launch_handler": {"client_mode": ["navigate-existing", "auto"]},
     "shortcuts": [
@@ -57,6 +68,28 @@ MANIFEST = {
 def manifest():
     return Response(content=json.dumps(MANIFEST, separators=(",", ":")), media_type="application/manifest+json",
                     headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/share", include_in_schema=False)
+async def share_target(
+    request: Request,
+    title: Optional[str] = None,
+    text: Optional[str] = None,
+    url: Optional[str] = None,
+    user=Depends(get_optional_current_user),
+):
+    """Where the phone's share sheet sends a link or text: works out the title, then opens Add anything."""
+    shared = share_intake.read_share(title, text, url)
+    client = getattr(request.app.state, "external_api_client", None)
+    shared = await share_intake.lookup_extras(shared, client, signed_in=user is not None)
+    path = shared.dashboard_path()
+    if user is None:
+        # Signed out: the log-in form opens and brings the share back afterwards.
+        path = "/?next=" + quote(path, safe="") + "#login"
+    response = RedirectResponse(path, status_code=303)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex"
+    return response
 
 
 @router.get("/sw.js", include_in_schema=False)

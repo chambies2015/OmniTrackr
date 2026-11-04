@@ -121,17 +121,17 @@
     if (status.member) {
       if (status.tier === 'directors_cut') return null;
       if (status.tier === 'season_pass') {
-        return 'Your Season Pass includes the member banners and lets your banner move. Director\'s Cut adds gold and your name in the credits at the top of the supporter wall.';
+        return 'Your Season Pass includes the member themes, frames and banners, and lets your banner and frame move. Director\'s Cut adds gold and your name in the credits at the top of the supporter wall.';
       }
-      return `Your ${status.tier_name || 'membership'} includes the neon, marquee and comic banners. Season Pass lets your banner move, and Director's Cut adds gold and a spot in the wall's credits.`;
+      return `Your ${status.tier_name || 'membership'} includes the Midnight and Matinee themes, the neon and orbit frames and three member banners. Season Pass lets your banner and frame move, and Director's Cut adds gold and a spot in the wall's credits.`;
     }
     if (status.active) {
       const until = status.active_until ? new Date(status.active_until) : null;
       const days = until && !Number.isNaN(until.getTime()) ? Math.ceil((until.getTime() - Date.now()) / DAY_MS) : null;
       const ending = days !== null && days <= 7 ? `Your perks end in ${days <= 1 ? 'a day' : `${days} days`}. ` : '';
-      return `${ending}A monthly membership keeps your perks on without topping up, and adds three member banners. Tiers start at $3 a month.`;
+      return `${ending}A monthly membership keeps your perks on without topping up, and adds two member app themes, two frames and three banners. Tiers start at $3 a month.`;
     }
-    return 'Monthly members also get neon, marquee and comic banners for their profile, and higher tiers add moving banners and gold. Tiers start at $3 a month.';
+    return 'Monthly members also get the Midnight and Matinee app themes, extra frames and banners, and higher tiers make them move and add gold. Tiers start at $3 a month.';
   }
 
   function renderMembership(status) {
@@ -149,7 +149,7 @@
   // What each way of supporting adds, so the choice is clear before anyone goes to Ko-fi.
   // Prices come from the server (supporters.TIERS); the wording matches /supporters.
   const TIER_PERKS = {
-    popcorn: 'Member tag on your profile, plus the neon, marquee and comic banners',
+    popcorn: 'Member tag on your profile, the Midnight and Matinee app themes, neon and orbit frames, and three member banners',
     season_pass: 'Everything in Popcorn, and your banner can move',
     directors_cut: 'Everything in Season Pass, plus gold and your name in the credits at the top of the supporter wall',
   };
@@ -167,7 +167,7 @@
     tipPrice.textContent = 'Any amount';
     const tipPerks = document.createElement('span');
     tipPerks.className = 'supporter-tier__perks';
-    tipPerks.textContent = 'Supporter badge, accent color, banners and six showcase spots for 30 days';
+    tipPerks.textContent = 'Supporter badge, app themes, profile colors, banners and frames, and six showcase spots for 30 days';
     tip.append(tipName, tipPrice, tipPerks);
     list.appendChild(tip);
     (Array.isArray(status.tiers) ? status.tiers : []).forEach(tier => {
@@ -203,13 +203,165 @@
     if (hint) hint.hidden = !!status.can_animate;
   }
 
-  // Banner swatches take the accent color that's picked right now, like the profile will.
+  // Banner and frame swatches take the accent color that's picked right now, like the profile will.
   function tintBanners(accent) {
-    const box = $('supporterBanners');
+    ['supporterBanners', 'supporterFrames'].forEach(id => {
+      const box = $(id);
+      if (!box) return;
+      Array.from(box.classList).filter(name => name.startsWith('supporter-banners--accent-'))
+        .forEach(name => box.classList.remove(name));
+      if (accent && ACCENT_NAME.test(accent)) box.classList.add(`supporter-banners--accent-${accent}`);
+    });
+  }
+
+  const THEME_NAMES = {
+    lagoon: 'Lagoon', sunset: 'Sunset', sakura: 'Sakura', ocean: 'Ocean', forest: 'Forest', crimson: 'Crimson',
+    gilded: 'Gilded', midnight: 'Midnight', matinee: 'Matinee',
+  };
+  const FRAME_NAMES = { halo: 'Halo', film: 'Film reel', sparkle: 'Sparkle', pixel: 'Pixel', neon: 'Neon', orbit: 'Orbit' };
+
+  function names(list) {
+    return Array.isArray(list) ? list.filter(name => typeof name === 'string' && ACCENT_NAME.test(name)) : [];
+  }
+
+  function themeApi() {
+    return window.OmniAppTheme && typeof window.OmniAppTheme.preview === 'function' ? window.OmniAppTheme : null;
+  }
+
+  function themeSwatch(theme) {
+    const swatch = document.createElement('span');
+    swatch.className = `supporter-theme__swatch supporter-theme__swatch--${theme || 'default'}`;
+    swatch.setAttribute('aria-hidden', 'true');
+    swatch.append(document.createElement('span'), document.createElement('span'));
+    return swatch;
+  }
+
+  function hintLine(box, text) {
+    const hint = document.createElement('p');
+    hint.className = 'info-text supporter-accent__hint';
+    hint.textContent = text;
+    box.appendChild(hint);
+  }
+
+  // App theme: what the member's own app looks like. Picking one shows it right away; saving keeps it.
+  function renderThemes(status) {
+    const box = $('supporterThemes');
     if (!box) return;
-    Array.from(box.classList).filter(name => name.startsWith('supporter-banners--accent-'))
-      .forEach(name => box.classList.remove(name));
-    if (accent && ACCENT_NAME.test(accent)) box.classList.add(`supporter-banners--accent-${accent}`);
+    box.querySelectorAll('label, .supporter-accent__hint').forEach(node => node.remove());
+    const gold = names(status.gold_themes);
+    const member = names(status.member_themes);
+    const unlocked = new Set(names(status.unlocked_themes));
+    const options = [null].concat(names(status.themes), gold, member);
+    let lockedGold = false;
+    let lockedMember = false;
+    options.forEach(theme => {
+      const label = document.createElement('label');
+      label.className = 'supporter-theme';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'supporterTheme';
+      input.value = theme || '';
+      input.checked = (status.app_theme || null) === theme;
+      input.disabled = !status.active || (theme !== null && !unlocked.has(theme));
+      if (status.active && input.disabled) {
+        label.classList.add('supporter-theme--locked');
+        if (gold.includes(theme)) lockedGold = true;
+        if (member.includes(theme)) lockedMember = true;
+      }
+      if (member.includes(theme)) label.classList.add('supporter-theme--member');
+      input.addEventListener('change', () => { const api = themeApi(); if (api) api.preview(theme); });
+      const text = document.createElement('span');
+      text.textContent = theme ? (THEME_NAMES[theme] || theme) : 'Default';
+      label.append(input, themeSwatch(theme), text);
+      box.appendChild(label);
+    });
+    if (!status.active) hintLine(box, 'Your theme comes back on when your support does.');
+    else if (lockedMember) hintLine(box, 'Midnight and Matinee come with a monthly membership.');
+    if (status.active && lockedGold) hintLine(box, `Gilded unlocks with gold: for founding supporters and after ${Number(status.gold_months) || 6} months of support.`);
+  }
+
+  function frameSample(frame) {
+    const wrap = document.createElement('span');
+    wrap.className = frame ? `avatar-frame avatar-frame--${frame}` : 'avatar-frame';
+    wrap.setAttribute('aria-hidden', 'true');
+    const face = document.createElement('span');
+    face.className = 'avatar-frame__face';
+    const user = typeof getUser === 'function' ? getUser() : null;
+    face.textContent = user && typeof user.username === 'string' && user.username ? user.username.charAt(0).toUpperCase() : 'A';
+    wrap.appendChild(face);
+    if (frame) {
+      const art = document.createElement('span');
+      art.className = 'avatar-frame__art';
+      wrap.appendChild(art);
+    }
+    return wrap;
+  }
+
+  function renderFrames(status) {
+    const box = $('supporterFrames');
+    if (!box) return;
+    box.querySelectorAll('label, .supporter-accent__hint').forEach(node => node.remove());
+    const member = names(status.member_frames);
+    const unlocked = new Set(names(status.unlocked_frames));
+    const options = [null].concat(names(status.frames), member);
+    let lockedMember = false;
+    options.forEach(frame => {
+      const label = document.createElement('label');
+      label.className = 'supporter-frame';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'supporterFrame';
+      input.value = frame || '';
+      input.checked = (status.frame || null) === frame;
+      input.disabled = !status.active || (frame !== null && !unlocked.has(frame));
+      if (status.active && input.disabled && member.includes(frame)) {
+        lockedMember = true;
+        label.classList.add('supporter-frame--locked');
+      }
+      if (member.includes(frame)) label.classList.add('supporter-frame--member');
+      const swatch = document.createElement('span');
+      swatch.className = 'supporter-frame__swatch';
+      swatch.appendChild(frameSample(frame));
+      const text = document.createElement('span');
+      text.textContent = frame ? (FRAME_NAMES[frame] || frame) : 'None';
+      label.append(input, swatch, text);
+      box.appendChild(label);
+    });
+    if (!status.active) hintLine(box, 'Frames come back on when your support does.');
+    else if (lockedMember) hintLine(box, 'Neon and orbit come with a monthly membership.');
+  }
+
+  // Not supporting right now: let them try the app themes on this page, nothing saved.
+  function renderTry(status) {
+    const box = $('supporterTry');
+    const list = $('supporterTryList');
+    if (!box || !list) return;
+    box.hidden = !!status.active;
+    if (box.hidden) return;
+    list.replaceChildren();
+    const options = [null].concat(names(status.themes), names(status.gold_themes), names(status.member_themes));
+    options.forEach(theme => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'supporter-try__theme';
+      button.setAttribute('aria-pressed', theme === null ? 'true' : 'false');
+      const text = document.createElement('span');
+      text.textContent = theme ? (THEME_NAMES[theme] || theme) : 'Default';
+      button.append(themeSwatch(theme), text);
+      button.addEventListener('click', () => {
+        const api = themeApi();
+        if (!api) return;
+        if (theme) api.preview(theme); else api.restore();
+        list.querySelectorAll('button').forEach(other => other.setAttribute('aria-pressed', other === button ? 'true' : 'false'));
+      });
+      list.appendChild(button);
+    });
+  }
+
+  // Keep this device's copy of the theme in step with what the server allows right now.
+  function syncTheme(status) {
+    const api = themeApi();
+    if (api && typeof api.remember === 'function') api.remember(status && typeof status.shown_theme === 'string' ? status.shown_theme : null);
   }
 
   function renderBanners(status) {
@@ -277,7 +429,11 @@
     if ($('supporterOnWall')) $('supporterOnWall').checked = status.on_wall === true;
     renderAccents(status);
     renderBanners(status);
+    renderFrames(status);
+    renderThemes(status);
     renderMotion(status);
+    renderTry(status);
+    syncTheme(status);
     renderMembership(status);
     renderTiers(status);
     renderPreview(status, status.accent);
@@ -308,6 +464,10 @@
     const banner = document.querySelector('input[name="supporterBanner"]:checked');
     if (loaded.active && banner) body.banner = banner.value || null;
     if (loaded.can_animate && $('supporterMotion')) body.banner_motion = $('supporterMotion').checked;
+    const frame = document.querySelector('input[name="supporterFrame"]:checked');
+    if (loaded.active && frame) body.frame = frame.value || null;
+    const theme = document.querySelector('input[name="supporterTheme"]:checked');
+    if (loaded.active && theme) body.app_theme = theme.value || null;
     saving = true;
     $('supporterSave').disabled = true;
     try {
@@ -431,7 +591,7 @@
     const title = document.createElement('strong');
     title.textContent = status.founding ? '★ You\'re a founding supporter!' : '♥ Your supporter perks are on!';
     const text = document.createElement('p');
-    text.textContent = 'Thank you for keeping OmniTrackr running. Pick a profile color and banner, and choose whether to join the supporter wall.';
+    text.textContent = 'Thank you for keeping OmniTrackr running. Pick a color theme for your app, a banner and frame for your profile, and choose whether to join the supporter wall.';
     const actions = document.createElement('div');
     actions.className = 'supporter-welcome__actions';
     const pick = document.createElement('button');
@@ -462,12 +622,14 @@
     }
     const fromKofi = /(^|\.)ko-fi\.com$/i.test((() => { try { return new URL(document.referrer).hostname; } catch (e) { return ''; } })());
     const last = Number(stored(CHECKED_KEY)) || 0;
-    if (!fromKofi && Date.now() - last < RECHECK_MS) return;
+    const themeKnown = !themeApi() || typeof themeApi().known !== 'function' || themeApi().known();
+    if (!fromKofi && themeKnown && Date.now() - last < RECHECK_MS) return;
     store(CHECKED_KEY, String(Date.now()));
     try {
       const response = await fetch(`${apiBase()}/api/supporter`, fetchOptions());
       if (!response.ok) return;
       const status = await response.json();
+      syncTheme(status);
       if (status.active && stored(WELCOMED_KEY) !== (status.since || 'yes')) showWelcome(status);
     } catch (error) { /* the thank-you is optional */ }
   }
@@ -484,7 +646,7 @@
   }
 
   window.SupporterSettings = { load, apply };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome, membershipText, claim };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome, membershipText, claim, renderThemes, renderFrames, renderTry };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
