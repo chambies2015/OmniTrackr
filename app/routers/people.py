@@ -319,7 +319,7 @@ _directory_lock = threading.Lock()
 
 
 def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
-    groups = people_pages.directory(db, entity)
+    groups = people_pages.directory_with_pages(db, entity)
     eyebrow, heading, intro = DIRECTORY_COPY[entity]
     sections, listed = [], []
     for role, entries in groups.items():
@@ -339,10 +339,12 @@ def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
     # Mostly links, so it waits until enough of the pages it lists have real member data.
     index_directory = sum(1 for entry in listed if entry["titles"] >= people_pages.INDEX_MIN_WORKS) >= 12
     canonical = SITE_URL + PEOPLE_PATHS[entity]
+    # A director who also wrote is listed under both roles; the list names each page once.
+    unique = list({entry["url"]: entry for entry in listed}.values())
     item_list = {"@context": "https://schema.org", "@type": "CollectionPage", "name": heading, "url": canonical,
                  "description": intro, "mainEntity": {"@type": "ItemList", "itemListElement": [
                      {"@type": "ListItem", "position": position, "name": entry["name"], "url": SITE_URL + entry["url"]}
-                     for position, entry in enumerate(listed[:100], start=1)]}}
+                     for position, entry in enumerate(unique[:100], start=1)]}}
     structured = f'<script type="application/ld+json">{_script_json(item_list)}</script>' if listed else ""
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -365,16 +367,19 @@ def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
     return apply_site_chrome(html), index_directory
 
 
-def _directory_response(db: Session, entity: str):
+def _cached_directory_page(db: Session, entity: str) -> tuple[str, bool]:
     if os.getenv("TESTING", "").lower() == "true":
-        html, index_directory = _directory_page(db, entity)
-    else:
-        with _directory_lock:
-            cached = _directory_cache.get(entity)
-            if cached is None or time.monotonic() - cached[0] >= DIRECTORY_CACHE_SECONDS:
-                cached = (time.monotonic(), _directory_page(db, entity))
-                _directory_cache[entity] = cached
-            html, index_directory = cached[1]
+        return _directory_page(db, entity)
+    with _directory_lock:
+        cached = _directory_cache.get(entity)
+        if cached is None or time.monotonic() - cached[0] >= DIRECTORY_CACHE_SECONDS:
+            cached = (time.monotonic(), _directory_page(db, entity))
+            _directory_cache[entity] = cached
+        return cached[1]
+
+
+def _directory_response(db: Session, entity: str):
+    html, index_directory = _cached_directory_page(db, entity)
     response = strict_html_response(html)
     response.headers["Cache-Control"] = "public, max-age=900"
     if not index_directory:
@@ -393,4 +398,4 @@ def studios_index(db: Session = Depends(get_db)):
 
 
 def directory_is_indexable(db: Session, entity: str) -> bool:
-    return _directory_page(db, entity)[1]
+    return _cached_directory_page(db, entity)[1]

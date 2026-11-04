@@ -1559,8 +1559,11 @@ def _chart_entry_html(entry: dict) -> str:
     if entry.get("quote"):
         q = entry["quote"]
         who = (f'<a href="{_e(q["profile_url"])}">{_e(q["username"])}</a>' if q.get("profile_url") else _e(q["username"]))
+        # Short reviews have no page of their own (it would be a 404), so they link to the title's reviews.
+        more = (f'<a href="{_e(q["url"])}">full review</a>' if q.get("standalone")
+                else f'<a href="{_e(entry["url"])}#community-title">more reviews</a>')
         quote = (f'<blockquote class="title-chart__quote"><p>“{_e(q["text"])}”</p>'
-                 f'<footer>{who} · <a href="{_e(q["url"])}">full review</a></footer></blockquote>')
+                 f'<footer>{who} · {more}</footer></blockquote>')
     return (f'<li class="title-chart__entry" id="rank-{entry["rank"]}">'
             f'<span class="title-chart__rank" aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>'
             f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'
