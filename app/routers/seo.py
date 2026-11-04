@@ -299,7 +299,7 @@ def _database_parts(db: Session) -> list[str]:
     for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
-            f"<lastmod>{edition['published_date']}</lastmod>"
+            f"<lastmod>{edition.get('reviewed', edition['published_date'])}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
     # Monthly challenge guides that have started; future months stay unpublished.

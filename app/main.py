@@ -1223,7 +1223,11 @@ async def advertising_page(request: Request):
 
 @app.get("/content-quality", tags=["public"])
 async def content_quality_page(request: Request):
-    response = strict_template_response("content_quality.html", request)
+    from . import editorial_index
+    response = strict_template_response("content_quality.html", request, {
+        "<!--EDITOR_SENTENCE-->": editorial_index.editor_label(),
+        "<!--GUIDE_LEDGER-->": editorial_index.ledger_html(),
+    })
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

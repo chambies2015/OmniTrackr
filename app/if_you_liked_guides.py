@@ -9,6 +9,9 @@ the titles OmniTrackr members track most and the ones people most often search
 Pick fields: kind (title_pages.KINDS key), title, year, creator (director, author or
 artist; None for TV, anime and games), match (index into threads), why (stands on its
 own, also shown by Pick for me), note (the comparison), caveat.
+
+Guide fields besides picks: lead, threads (name, text), start, and faq: (question,
+answer) pairs about the anchor and the picks, shown as "Questions" on the page.
 """
 
 GUIDES = {
@@ -55,6 +58,22 @@ GUIDES = {
              "why": "Ambient music written for a documentary about the Apollo moon missions, meant to capture the strangeness and calm of being in space.",
              "note": "Hans Zimmer's organ score is half of Interstellar's power. Apollo, made by Brian Eno with Daniel Lanois and Roger Eno, chases a similar weightless feeling, only more gently. \"An Ending (Ascent)\" has become one of the most borrowed pieces of music in film and television for exactly that reason.",
              "caveat": "This is ambient music: no beats, few melodies, and best heard with headphones and nothing else going on."},
+        ],
+        "faq": [
+            ('Which pick is closest to Interstellar?',
+             'Contact. It is the other film here about a scientist who makes a journey nobody else can verify, and '
+             "Jodie Foster's Ellie Arroway is as stubborn as Cooper. Matthew McConaughey is in both. Arrival is the "
+             'better match for the grief between a parent and a child, but it never leaves Earth.'),
+            ('How much of the science in Interstellar is real?',
+             'More than in most space films. The physicist Kip Thorne, who later shared the 2017 Nobel Prize in '
+             'Physics for detecting gravitational waves, advised on the film, and the black hole Gargantua was '
+             "rendered from his equations. The time lost on Miller's planet is possible in principle near a black hole "
+             'spinning almost as fast as physics allows. The tesseract near the end is where the film leaves known '
+             "physics behind, and Thorne's book The Science of Interstellar says which parts are speculation."),
+            ("What should I try if I don't usually like science fiction?",
+             'Project Hail Mary. It is funny, the science is explained as the narrator works it out, and what keeps '
+             'you reading is a friendship more than the physics. The 2026 film with Ryan Gosling is on our list of the '
+             'best movies of 2026.'),
         ],
         "start": [
             "If you want the same feeling tonight, watch Arrival. If you want to be the one figuring the universe out, play Outer Wilds, and keep it spoiler-free. If you want a book that will keep you up past midnight, start Project Hail Mary.",
@@ -104,6 +123,21 @@ GUIDES = {
              "note": "Hyperion matches Dune's density, its blend of religion, politics and far-future technology, and its sense that faith can be a weapon. Structured like The Canterbury Tales, each pilgrim's story is in a different genre, so it is also one of the most varied books in science fiction. It won the Hugo Award.",
              "caveat": "It ends without resolving its main story; you need the sequel, The Fall of Hyperion."},
         ],
+        "faq": [
+            ('Do I need to read the book before watching Dune?',
+             "No. Villeneuve's two films cover the first novel and explain enough to follow it. The book adds what a "
+             "film can't easily show: Paul's inner voice, the politics between the Great Houses and the Spacing Guild, "
+             'and an appendix on the ecology of Arrakis. Our Dune in order guide covers the rest of the books and the '
+             'films.'),
+            ('Why is Lawrence of Arabia on a Dune list?',
+             "Frank Herbert drew on T. E. Lawrence's story of an outsider who leads a desert revolt, and Paul's arc is "
+             'a darker version of it. Both films treat the desert as a character, with wide shots and long silences. '
+             'Lawrence of Arabia runs close to four hours with an intermission, so plan an evening around it.'),
+            ('Is Paul Atreides meant to be the hero?',
+             'Not quite. Herbert said he meant Dune as a warning about charismatic leaders, and he wrote Dune Messiah '
+             'partly because readers took Paul as a straightforward hero. Part Two makes that reading harder to miss '
+             "than the first film does. It is why this guide's third thread is about a chosen one you should question."),
+        ],
         "start": [
             "For the same visual awe, watch Blade Runner 2049. For the politics, start Andor and give it four episodes. For a book that matches Dune's weight, read Hyperion and have The Fall of Hyperion ready.",
         ],
@@ -151,6 +185,22 @@ GUIDES = {
              "why": "A killer strikes Gotham's mob families on every holiday for a year, while Batman, Jim Gordon and Harvey Dent try to stop him.",
              "note": "Jeph Loeb and Tim Sale's comic is one of the stories Nolan's films drew on, especially for Harvey Dent's fall and the mob-war plot. It reads like a detective noir, and Sale's art makes Gotham feel like a real city in the grip of winter.",
              "caveat": "It assumes you know Batman's main villains, and it is a whodunit with a disputed solution."},
+        ],
+        "faq": [
+            ('Do I need to watch Batman Begins first?',
+             'It helps, but you can start with The Dark Knight. It reintroduces Bruce Wayne, Alfred, Gordon and Lucius '
+             'Fox as it goes, and the Joker has no backstory to miss. Batman Begins sets up Rachel Dawes, played by a '
+             "different actor in the sequel, and Gotham's corrupt police, which gives a few scenes more weight. The "
+             'Dark Knight Rises (2012) ends the trilogy.'),
+            ('Why is Heat on the list?',
+             'Christopher Nolan has talked about Heat as an influence on The Dark Knight, and you can see it in the '
+             'opening bank robbery, the size of the city and a cop and a criminal who understand each other. William '
+             "Fichtner, who plays the bank manager in The Dark Knight's opening scene, is also in Heat."),
+            ('Which Batman comics are closest to the film?',
+             "The Long Halloween, which is on this list, shaped Harvey Dent's story and the mob war. The Killing Joke, "
+             'in which the Joker sets out to prove that one bad day can break anyone, is the other comic usually '
+             "linked to the film's Joker. The Killing Joke is short enough for one sitting; The Long Halloween is a "
+             'weekend.'),
         ],
         "start": [
             "For the crime-epic feeling, watch Heat. For a villain who will stay with you, start Monster. For more Batman, play Arkham Asylum or read The Long Halloween over a weekend.",
@@ -204,6 +254,21 @@ GUIDES = {
              "note": "\"Running Up That Hill\" opens this album, and its use in Max's story in the fourth season sent it back up the charts in 2022, almost four decades after release. The rest of the record is just as strange and emotional, especially the second side, The Ninth Wave.",
              "caveat": "The second side is one long concept piece with no obvious singles. Listen to it in one sitting."},
         ],
+        "faq": [
+            ('Is Stranger Things based on a book or a true story?',
+             'No. The Duffer Brothers wrote it as an original series, borrowing openly from Stephen King, Steven '
+             "Spielberg and John Carpenter. The experiments at Hawkins Lab echo the CIA's real MKUltra program and the "
+             "Montauk Project conspiracy theory. Montauk was the show's working title."),
+            ('Which picks suit younger viewers?',
+             'The Goonies, rated PG, is the easiest family pick. Super 8 is rated PG-13 and has a few scenes that '
+             "frighten young children. Keep It away from younger readers: Stephen King's novel is long and violent and "
+             'has adult scenes the show would never include.'),
+            ('Is Dark like Stranger Things?',
+             'It shares the small town, the missing child and the cave, but it is colder and much more complicated. '
+             'Dark is a German series about time travel across several generations of four families, and many viewers '
+             'keep notes or a family tree. It finished in three seasons, from 2017 to 2020, so it has a complete '
+             'ending.'),
+        ],
         "start": [
             "For the closest feeling, watch Super 8 tonight. For a mystery that keeps going, start Dark. To play your own version, try Oxenfree with the lights off.",
         ],
@@ -251,6 +316,20 @@ GUIDES = {
              "why": "A young con man sent to Italy to bring home a rich man's son decides he would rather become him.",
              "note": "Patricia Highsmith makes you root for a murderer the same way Breaking Bad does, by putting you inside his head as he solves one problem after another. It is short, tense and very readable, and it started a series of five Ripley novels.",
              "caveat": "Ripley is never punished in the way readers expect, which is the point but can be unsettling."},
+        ],
+        "faq": [
+            ('Should I watch Better Call Saul before or after Breaking Bad?',
+             'After. Better Call Saul is mostly a prequel, but it was written for people who know where Jimmy McGill '
+             'ends up, and its best scenes depend on that. Its black-and-white scenes take place after Breaking Bad '
+             'ends.'),
+            ('Do I need to watch El Camino?',
+             'No, but most fans are glad they did. El Camino (2019) is a film about Jesse Pinkman in the hours after '
+             'the Breaking Bad finale. It is an epilogue, and it works best straight after the last episode, while the '
+             'ending is fresh.'),
+            ('How is the Fargo series connected to the film?',
+             "It shares the Coen brothers' 1996 film's tone and its snowy corner of the Midwest. Each season of the "
+             'series is a separate story with new characters, so you can start with any of them. Season one, set in '
+             '2006, is closest to Breaking Bad: an ordinary man becomes something worse after one violent act.'),
         ],
         "start": [
             "If you want more of the same world, Better Call Saul is the obvious next step. For a complete story in one night, watch No Country for Old Men. For a book you can read in a weekend, pick up The Talented Mr. Ripley.",
@@ -300,6 +379,21 @@ GUIDES = {
              "note": "Lain asks Severance's question about identity, whether you are the person in front of you or the one other people remember, and asks it through technology. Its humming power lines and eerie silence create the same unease as Lumon's empty corridors.",
              "caveat": "Deliberately confusing, and it does not explain itself. Don't expect to solve it on a first watch."},
         ],
+        "faq": [
+            ('Is Severance based on a book?',
+             'No. Dan Erickson created it as an original series, and Ben Stiller directed most of the first season. '
+             "The severance procedure is fiction. The closest book is Kazuo Ishiguro's Never Let Me Go, on this list, "
+             "which is also about people whose lives are arranged by an institution they can't see the edges of."),
+            ('Which pick is closest to Severance?',
+             'The Stanley Parable. It is a game about an office worker who finds that all his colleagues have '
+             'vanished, and it keeps asking who is really in control of you at work. A first playthrough takes a few '
+             'hours, and you can stop whenever you like. For something longer, Control is set in a government building '
+             'that is bigger inside than out.'),
+            ('Is The Prisoner worth watching today?',
+             'Yes, if you can settle into 1960s pacing. It is a 17-episode British series about a former agent held in '
+             'a seaside village where everyone has a number instead of a name. Like Severance, it is about one person '
+             "refusing an institution's version of who he is, and its last episode is still argued over."),
+        ],
         "start": [
             "For the most similar feeling, play The Stanley Parable this evening. For a film, Eternal Sunshine of the Spotless Mind. For a long mystery to theorize about, try The Prisoner.",
         ],
@@ -348,6 +442,20 @@ GUIDES = {
              "note": "Station Eleven is the hopeful counterpart to The Last of Us. It shares the show's best idea, that people need more than survival, and builds a whole series around it. Its motto, \"survival is insufficient\", could describe the Bill and Frank episode.",
              "caveat": "It jumps between timelines and takes a couple of episodes to show where it is going."},
         ],
+        "faq": [
+            ('Should I play the game or watch the show first?',
+             'Either works, but each spoils the other. The first season follows the 2013 game closely, including its '
+             'ending, and recreates some scenes almost exactly. If you play games at all, play first: the ending hits '
+             'harder when you are the one holding the controller.'),
+            ('Which film is closest to The Last of Us?',
+             'Children of Men. Both follow a worn-out man escorting someone precious across a country that has fallen '
+             'apart, and both care more about the people met on the way than the cause of the collapse. Children of '
+             'Men is set in 2027, in a world where no child has been born for eighteen years.'),
+            ('Which pick is the least bleak?',
+             'Station Eleven. It also begins with a pandemic, but most of it is set twenty years later, with a '
+             'travelling theatre company performing Shakespeare, and it is more interested in what people make than '
+             'what they lose. It is a ten-episode limited series with a complete ending.'),
+        ],
         "start": [
             "If you have never played it, the game is the essential next step. For one evening, watch Children of Men. For something gentler, Station Eleven.",
         ],
@@ -395,6 +503,20 @@ GUIDES = {
              "why": "In a world where ash falls from the sky and a god-emperor rules, a street thief joins a crew planning the ultimate heist: overthrowing him.",
              "note": "Mistborn has Arcane's oppressed underclass and an elite living in luxury, plus a magic system with clear rules, like Hextech. Its heroine Vin, a street kid learning to trust a found family, would fit right in Zaun.",
              "caveat": "It is long and takes a while to get going, but the payoff is worth it."},
+        ],
+        "faq": [
+            ('Do I need to know League of Legends to watch Arcane?',
+             'No. Arcane was written for people who have never played the game. Vi, Jinx, Caitlyn, Jayce and Viktor '
+             'are characters from League of Legends, and players will catch references, but the story stands alone and '
+             'ends after two seasons.'),
+            ("Who made Arcane's animation?",
+             'Fortiche, a studio in Paris, working with Riot Games. It paints textures over 3D models so frames look '
+             'hand-painted, the same broad idea behind Into the Spider-Verse, the first pick here. Arcane won the Emmy '
+             'for Outstanding Animated Program in 2022.'),
+            ('Is Castlevania for the same audience as Arcane?',
+             'Mostly. It is also adult animation based on a game, about family and power in a country Dracula has '
+             'declared war on, but it is much gorier. Its first season is only four episodes, so it plays like a '
+             'prologue before the story opens up.'),
         ],
         "start": [
             "For another animation landmark, watch Into the Spider-Verse. For a complete story to binge, Cyberpunk: Edgerunners. For something long, Fullmetal Alchemist: Brotherhood.",
@@ -448,6 +570,19 @@ GUIDES = {
              "note": "Devil May Cry 5 is the closest a game comes to JJK's fights. It rewards creativity and style with a rank that climbs as you vary your attacks. Its swaggering heroes, especially Dante, would feel at home next to Gojo.",
              "caveat": "Its story is thin and assumes some knowledge of the series, and the combat takes practice to master."},
         ],
+        "faq": [
+            ('Should I watch Jujutsu Kaisen 0 before season two?',
+             'Yes. The film is a prequel about Yuta Okkotsu, set a year before season one, and season two and the arcs '
+             'after it expect you to know him. It came out in Japan in December 2021, between the first two seasons.'),
+            ("Is Hunter x Hunter really where JJK's power system comes from?",
+             'In part. Gege Akutami has named Yoshihiro Togashi, who created Hunter x Hunter, as a major influence, '
+             'and it shows in cursed techniques that come with rules, costs and binding vows, much like Nen. Yu Yu '
+             "Hakusho, also on this list, is Togashi's earlier series."),
+            ('Which pick is the darkest?',
+             'Chainsaw Man, then Dorohedoro. Chainsaw Man kills main characters with little warning. Dorohedoro is '
+             'violent and grotesque, and also very funny. Demon Slayer is the gentlest of the action picks, with a '
+             'kind lead and a clear line between good and evil.'),
+        ],
         "start": [
             "Watch Jujutsu Kaisen 0 first. If you want the next big thing, try Chainsaw Man. If you want the series that inspired JJK's power system, Hunter x Hunter.",
         ],
@@ -495,6 +630,20 @@ GUIDES = {
              "why": "A war orphan wins a place at an elite military academy just as her nation is invaded, and discovers a terrible power.",
              "note": "The Poppy War follows a young soldier into the horrors of war in a fantasy world modeled on 20th-century China, and shows her becoming capable of atrocity herself. Its moral collapse will feel familiar to anyone who followed Eren to the end.",
              "caveat": "It depicts war crimes in graphic detail, especially in its second half."},
+        ],
+        "faq": [
+            ('Is Vinland Saga like Attack on Titan?',
+             'Its first season is: a boy driven by revenge inside a brutal war. The second season becomes a slow story '
+             'about a former soldier working as a slave on a farm and trying to live without violence. Some viewers '
+             'love that turn and others stop there. Both seasons are about the cycle of hatred that Attack on Titan '
+             'ends on.'),
+            ('How long is Attack on Titan?',
+             'Four seasons broadcast from 2013 to 2023, about 89 episodes if you count the two-part finale. The final '
+             'season was split into parts, and the last special aired in November 2023.'),
+            ('Which pick has the biggest twists?',
+             "Code Geass and The Promised Neverland. The Promised Neverland's first episode ends on the reveal the "
+             'rest of the season is built on. Its first season is far stronger than its second, which departs from the '
+             'manga, so many fans stop after season one or read the manga instead.'),
         ],
         "start": [
             "If the war and its moral questions stayed with you, start Vinland Saga. For twists, Code Geass. For a game, Shadow of the Colossus.",
@@ -544,6 +693,20 @@ GUIDES = {
              "note": "Treasure Island invented much of what we imagine pirates to be, from treasure maps to parrots. It is short, exciting and still readable, and Long John Silver is an ancestor of every likable rogue in One Piece.",
              "caveat": "Its 19th-century language takes a few pages to get used to."},
         ],
+        "faq": [
+            ('How long does it take to catch up on One Piece?',
+             'A long time. The anime has passed 1,100 episodes since 1999, which at about twenty minutes an episode '
+             'without the opening and ending is well over 350 hours. Many fans read the manga instead, or skip the '
+             'filler arcs that were made to let the manga stay ahead.'),
+            ('Is the live-action One Piece worth watching?',
+             "Yes, especially for sharing the story with someone who won't start a long anime. The first season (2023) "
+             'covers the East Blue saga, roughly the first hundred chapters of the manga, and Eiichiro Oda was an '
+             'executive producer.'),
+            ('Why is a Zelda game on a One Piece list?',
+             'The Wind Waker is about sailing a great ocean between islands, each with its own people and secrets, '
+             "which is One Piece's structure in miniature. Its cel-shaded look has aged well. It came out on GameCube "
+             'in 2002, and an HD version followed on Wii U in 2013.'),
+        ],
         "start": [
             "If you want a complete story with the same heart, watch Avatar: The Last Airbender. For a game, The Wind Waker. To share One Piece with a friend, start the live-action series together.",
         ],
@@ -591,6 +754,18 @@ GUIDES = {
              "why": "An aging English butler takes a road trip and slowly lets the reader see the feelings and regrets he spent his life not admitting.",
              "note": "It may seem an odd pick, but no novel shares Frieren's emotional core more closely: someone looking back on years spent beside a person they never fully understood, and realizing what they missed. Ishiguro won the Booker Prize for it.",
              "caveat": "It is restrained and very English, and most of what matters goes unsaid."},
+        ],
+        "faq": [
+            ('Why does Frieren begin after the adventure is over?',
+             "That is the premise. The hero's party has already defeated the Demon King when the first episode begins. "
+             'The show is about the elf mage of the party, who will live for more than a thousand years, realising too '
+             'late how little she knew her companions, and her later journey retraces their route.'),
+            ('Which pick is closest to Frieren?',
+             'Mushishi for the pace and the quiet magic, Violet Evergarden for the grief and for learning what people '
+             'meant to you. Violet Evergarden is the more emotional of the two, and its 2020 film finishes the story.'),
+            ('Is Frieren based on a manga?',
+             'Yes. Kanehito Yamada writes it and Tsukasa Abe draws it, and it began in Weekly Shōnen Sunday in 2020. '
+             'The anime is made by Madhouse, the studio behind Death Note and the 2011 Hunter x Hunter.'),
         ],
         "start": [
             "For the same feeling in a single evening, watch The Tale of the Princess Kaguya. For something to play, Spiritfarer. For a novel, The Remains of the Day.",

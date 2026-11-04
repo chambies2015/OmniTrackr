@@ -148,13 +148,28 @@ def discover_index():
     return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + season_card + challenge_card + liked_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
 
 
+def _notes_section(notes) -> str:
+    if not notes:
+        return ""
+    return (f'<section class="editorial edition-notes" aria-labelledby="edition-notes-heading">'
+            f'<h2 id="edition-notes-heading">{escape(notes["heading"])}</h2>'
+            + "".join(f'<p>{escape(text)}</p>' for text in notes["paragraphs"]) + '</section>')
+
+
+def _long_date(value: str) -> str:
+    parsed = date.fromisoformat(value)
+    return f"{parsed:%B} {parsed.day}, {parsed.year}"
+
+
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
     items = "".join(f'<article class="pick"><p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></article>' for n, i in enumerate(trail["items"], 1))
     essay_section = ""
     if essay:
         essay_section = f'<section class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
     signin = '/?next=' + quote('/discover/' + api_path + '#save-picks', safe='') + '#landing-auth'
-    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div><section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
+    checked = (f' · Updated <time datetime="{escape(trail["reviewed"], quote=True)}">{escape(_long_date(trail["reviewed"]))}</time>'
+               if trail.get("reviewed") else "")
+    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div>{_notes_section(trail.get("notes"))}<section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}{checked}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
 
 
 def paragraphs(values):
@@ -249,7 +264,7 @@ def monthly_detail(slug: str):
             "@context": "https://schema.org", "@type": "Article",
             "headline": edition["name"], "description": edition["intro"],
             "datePublished": edition["published_date"],
-            "dateModified": edition["published_date"],
+            "dateModified": edition.get("reviewed", edition["published_date"]),
             "mainEntityOfPage": canonical, "url": canonical,
             "author": {"@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/about"},
             "publisher": {"@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/"},

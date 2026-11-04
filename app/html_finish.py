@@ -5,12 +5,13 @@ do for unchanged, so pages never depend on these steps to work.
 """
 from __future__ import annotations
 
+from .guide_links import add_crosslinks
 from .image_sizes import shrink_html
 from .page_breadcrumbs import add_breadcrumbs
 from .page_hints import add_preconnects
 from .site_chrome import fill_join_prompt
 
-STEPS = (shrink_html, add_preconnects, add_breadcrumbs, fill_join_prompt)
+STEPS = (shrink_html, add_preconnects, add_breadcrumbs, fill_join_prompt, add_crosslinks)
 
 
 def finish(html: str) -> str:
