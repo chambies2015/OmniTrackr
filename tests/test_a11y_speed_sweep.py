@@ -28,7 +28,7 @@ def test_dashboard_keeps_home_cards_library_and_footer_still_until_settled():
     assert "...cardRequests]).then(batch.resolve)" in home_js
     # auth.js changed, so pages must ask browsers for the new copy.
     # Later changes bump the tag again, so check both pages ask for the same copy from Nov 1 2026 or newer.
-    versions = [re.search(r"auth\.js\?v=(\d{8})[\w-]*", text) for text in (index, _read(TEMPLATES / "public_landing.html"))]
+    versions = [re.search(r"(?<![A-Za-z])auth\.js\?v=(\d{8})[\w-]*", text) for text in (index, _read(TEMPLATES / "public_landing.html"))]
     assert all(versions) and versions[0].group(0) == versions[1].group(0) and versions[0].group(1) >= "20261101"
 
 
