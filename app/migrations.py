@@ -829,6 +829,7 @@ def run_migrations():
     add_lookup_indexes()
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
+    fold_private_link_pages()
 
 
 def add_notification_link_column():
@@ -1122,3 +1123,44 @@ def fold_unreadable_traffic_sources():
             print(f"Folded {folded} unreadable traffic source label(s) into {BAD_TAG!r}")
     except Exception as e:
         print(f"Migration warning (traffic sources): {e}")
+
+
+def fold_private_link_pages():
+    """Take share-link tokens out of the Site stats page counts (Nov 4 2026 security check).
+
+    Gift lists, shared-list invites, polls and recaps are opened by a link whose token is the
+    key. Until site_traffic.mask_private_link, each opened link was counted under its own full
+    address, so the tokens were stored in site_traffic_daily and listed on the Site stats page.
+    This moves each such row's count onto the "/gifts/(private link)" style row for the same day
+    and kind. Visit totals stay the same; only the token is dropped.
+    """
+    try:
+        from .site_traffic import mask_private_link
+        inspector = inspect(engine)
+        if not inspector.has_table("site_traffic_daily"):
+            return
+        folded = 0
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, day, kind, key, count FROM site_traffic_daily WHERE kind IN ('page', 'human_page')"
+            )).fetchall()
+            for row in rows:
+                masked = mask_private_link(row.key or "")
+                if masked == (row.key or ""):
+                    continue
+                existing = conn.execute(text(
+                    "SELECT id FROM site_traffic_daily WHERE day = :day AND kind = :kind AND key = :key AND id != :id"
+                ), {"day": row.day, "kind": row.kind, "key": masked, "id": row.id}).first()
+                if existing is None:
+                    conn.execute(text("UPDATE site_traffic_daily SET key = :key WHERE id = :id"),
+                                 {"key": masked, "id": row.id})
+                else:
+                    conn.execute(text("UPDATE site_traffic_daily SET count = count + :count WHERE id = :target"),
+                                 {"count": int(row.count or 0), "target": existing.id})
+                    conn.execute(text("DELETE FROM site_traffic_daily WHERE id = :id"), {"id": row.id})
+                folded += 1
+            conn.commit()
+        if folded:
+            print(f"Folded {folded} share-link page row(s) in Site stats")
+    except Exception as e:
+        print(f"Migration warning (share-link pages): {e}")

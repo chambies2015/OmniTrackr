@@ -58,6 +58,7 @@ def delete_owned_media(db: Session, user_id: int, category: str, item_id: int):
         states = db.query(models.PublicReviewState.id).filter_by(category=review_category, item_id=item_id)
         db.query(models.PublicReviewReport).filter(models.PublicReviewReport.state_id.in_(states)).delete(synchronize_session=False)
         db.query(models.PublicReviewState).filter_by(category=review_category, item_id=item_id).delete(synchronize_session=False)
+        db.query(models.ReviewShareChoice).filter_by(user_id=user_id, category=review_category, item_id=item_id).delete(synchronize_session=False)
         db.delete(item)
         db.commit()
         return item

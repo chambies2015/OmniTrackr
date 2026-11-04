@@ -418,7 +418,7 @@ def _owner_payload(db: Session, user) -> dict:
 
 
 @router.get("/api/gift-list")
-def get_gift_list(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_gift_list(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     """The member's gift list (never the claims) and gift ideas from their own library."""
     _private(response)
     return _owner_payload(db, user)
@@ -462,7 +462,7 @@ class GiftNote(BaseModel):
 
 
 @router.patch("/api/gift-list/items/{item_id}")
-def note_gift(item_id: PositiveDatabaseId, payload: GiftNote, response: Response,
+def note_gift(item_id: PositiveDatabaseId, payload: GiftNote, request: Request, response: Response,
               user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     try:
@@ -474,7 +474,7 @@ def note_gift(item_id: PositiveDatabaseId, payload: GiftNote, response: Response
 
 
 @router.delete("/api/gift-list/items/{item_id}")
-def remove_gift(item_id: PositiveDatabaseId, response: Response,
+def remove_gift(item_id: PositiveDatabaseId, request: Request, response: Response,
                 user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     try:
@@ -492,7 +492,7 @@ class GiftSettings(BaseModel):
 
 
 @router.patch("/api/gift-list")
-def update_gift_list(payload: GiftSettings, response: Response,
+def update_gift_list(payload: GiftSettings, request: Request, response: Response,
                      user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Change the note at the top of the shared page, or switch the link off and on."""
     _private(response)
@@ -543,9 +543,11 @@ def claim_gift(token: str, item_id: PositiveDatabaseId, request: Request, respon
 
 @router.post("/api/gifts/{token}/items/{item_id}/unclaim")
 def unclaim_gift(token: str, item_id: PositiveDatabaseId, payload: GiftUnclaim, request: Request, response: Response,
-                 db: Session = Depends(get_db)):
+                 user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     _private(response)
     gift_list = _shared_or_404(db, token)
+    if user is not None and user.id == gift_list.owner_id:
+        raise HTTPException(403, "This is your own list, so the surprise is safe: you can't change marks on it.")
     try:
         gift_lists.unclaim(db, gift_list, item_id, payload.key)
     except gift_lists.GiftListError as error:

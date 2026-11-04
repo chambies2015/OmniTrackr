@@ -1903,3 +1903,24 @@ class GiftListItem(Base):
     gift_list = relationship("GiftList", back_populates="items")
 
     __table_args__ = (UniqueConstraint("list_id", "kind", "normalized", name="uq_gift_list_item"),)
+
+
+class ReviewShareChoice(Base):
+    """A member's answer to the "Share your reviews" card for one private review (Nov 2026).
+
+    New table only. The library row changes only when the member presses Share, which sets
+    review_public exactly as the library editor's Public switch does. "kept" means the member
+    chose to keep that review private, so the card stops asking until the review is rewritten
+    (content_hash is the review text the member was shown).
+    """
+    __tablename__ = "review_share_choices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    choice = Column(String(8), nullable=False)  # shared, kept
+    content_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "category", "item_id", name="uq_review_share_choice_item"),)
