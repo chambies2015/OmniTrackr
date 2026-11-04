@@ -1005,6 +1005,10 @@ from .routers import gift_guide as gift_guide_router
 GIFT_GUIDE_LIMITS = {
     ("/api/gift-list/items", "POST"): "60/minute",
     ("/api/gift-list/link", "POST"): "10/hour",
+    ("/api/gift-list", "GET"): "60/minute",
+    ("/api/gift-list", "PATCH"): "30/minute",
+    ("/api/gift-list/items/{item_id}", "PATCH"): "60/minute",
+    ("/api/gift-list/items/{item_id}", "DELETE"): "60/minute",
     ("/api/gifts/{token}/items/{item_id}/claim", "POST"): "20/minute",
     ("/api/gifts/{token}/items/{item_id}/unclaim", "POST"): "20/minute",
 }
