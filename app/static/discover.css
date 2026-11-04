@@ -121,6 +121,7 @@ button:disabled { cursor: wait; opacity: .6; }
 }
 .editorial h2 { color: var(--site-text); font-size: 1.28rem; }
 .editorial p { margin: 0; }
+.edition-notes p + p { margin-top: 12px; }
 .edition-essay { border-left: 3px solid #5eead4; }
 .picks { display: grid; gap: 18px; }
 .pick { background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); border: 1px solid var(--site-border); border-radius: var(--site-radius); padding: 27px 30px; }
