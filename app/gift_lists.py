@@ -278,11 +278,14 @@ def claim(db: Session, gift_list: models.GiftList, item_id: int) -> str:
 
 
 def unclaim(db: Session, gift_list: models.GiftList, item_id: int, key: str) -> None:
+    """Undo a claim with its key.
+
+    A wrong key gets the same answer whether or not the gift is marked, so this can't be
+    used to check which gifts are taken without marking them.
+    """
     item = _shared_item(gift_list, item_id)
-    if item.claimed_at is None:
-        return
-    if not isinstance(key, str) or not CLAIM_KEY_RE.fullmatch(key) or not item.claim_hash \
-            or not hmac.compare_digest(item.claim_hash, _hash(key)):
+    if item.claimed_at is None or not isinstance(key, str) or not CLAIM_KEY_RE.fullmatch(key) \
+            or not item.claim_hash or not hmac.compare_digest(item.claim_hash, _hash(key)):
         raise GiftListError("Only the person who marked this gift can undo it, from the same browser.", 403)
     item.claimed_at = None
     item.claim_hash = None
