@@ -40,9 +40,13 @@ def published(today: Optional[date] = None) -> dict:
 
 
 def current(today: Optional[date] = None) -> Optional[str]:
-    """The newest live guide whose stretch of the calendar includes today, else the newest live guide."""
+    """The newest live all-format guide whose stretch of the calendar includes today, else the newest live one.
+
+    Guides with a ``focus`` (one format, such as an anime season) are never "current": Release Radar and the
+    hub point at the guide that covers everything.
+    """
     day = _today(today).isoformat()
-    live = published(today)
+    live = {slug: entry for slug, entry in published(today).items() if not entry.get("focus")}
     for slug, entry in live.items():
         if entry["starts"] <= day <= entry["ends"]:
             return slug
@@ -52,6 +56,16 @@ def current(today: Optional[date] = None) -> Optional[str]:
 def picks(entry: dict) -> list[dict]:
     """Every pick across the guide's sections, in page order."""
     return [item for section in entry["sections"] for item in section["picks"]]
+
+
+def section_id(section: dict) -> str:
+    """The section's anchor: its own ``id`` if it has one (a one-format guide has several anime sections)."""
+    return "section-" + (section.get("id") or section["format"])
+
+
+def section_label(section: dict) -> str:
+    """What the jump links and the eyebrow call the section."""
+    return section.get("label") or FORMAT_LABELS[section["format"]]
 
 
 def anchor_id(item: dict) -> str:

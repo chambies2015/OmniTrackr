@@ -22,7 +22,14 @@ const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 // Keep a visitor's chosen Discover, review, title, or collection page through
 // same-tab registration and email verification. Returning only opens a preview;
 // saving always requires the visitor's explicit confirmation on that page.
+// A link or text shared from another app (see /share) waits for sign-in too.
+const SHARE_RETURN = /^\/\?share=1(?:&q=[A-Za-z0-9%._~-]{1,400})?(?:&kind=(?:movies|tv-shows|anime|video-games|music|books|manga|podcasts|audiobooks|screen))?(?:&year=(?:19|20)\d{2})?(?:&via=[a-z]{2,20})?$/;
+
 function validateDiscoverAuthReturn(value) {
+    if (typeof value === 'string' && value.length <= 520) {
+        const shared = value.match(SHARE_RETURN);
+        if (shared && shared[0] === value) return value;
+    }
     if (typeof value !== 'string' || value.length > 180) return null;
     const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
     // Compare the entire match as JavaScript's $ can precede a final newline.
@@ -41,8 +48,8 @@ function validateDiscoverAuthReturn(value) {
     // Group polls: the poll page and the page that makes them.
     const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
     if (poll && poll[0] === value) return value;
-    // Daily, Pick for me, the start page, tier lists, "If you liked" and "In order" guides and the dashboard cards they link to.
-    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    // Daily, Pick for me, the start page, tier lists, the gift guide, "If you liked" and "In order" guides and the dashboard cards they link to.
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/gifts|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;

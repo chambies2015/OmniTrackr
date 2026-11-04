@@ -99,6 +99,7 @@ function setup() {
   for (const category of ['all', ...categories]) {
     const button = new Element('button'); button.dataset.quickCategory = category; searchForm.append(button);
   }
+  const sharedNote = add('quickCaptureShared', 'p'); sharedNote.hidden = true; modal.append(sharedNote);
   modal.append(add('quickCaptureStatus'), add('quickCaptureResults'));
   const manual = add('quickCaptureManual', 'button'); modal.append(manual);
   const tabs = new Map(categories.map(category => [category, new Element('button')]));
@@ -127,7 +128,7 @@ function setup() {
     toggle.setAttribute('aria-expanded', 'false');
     document.body.append(toggle);
   }
-  const requests = [], timers = new Map(), opened = [], confirmations = [];
+  const requests = [], timers = new Map(), opened = [], confirmations = [], notices = [];
   let timerId = 0, now = 0, confirmResult = true;
   const setTimeout = (callback, delay = 0) => { const id = ++timerId; timers.set(id, { callback, at: now + delay }); return id; };
   const clearTimeout = id => timers.delete(id);
@@ -140,6 +141,7 @@ function setup() {
       getComputedStyle: element => ({ display: element.style.display || 'block' }),
     },
     closeLibrarySearch() {}, getTabButton: category => tabs.get(category),
+    notices, showNotice(message, tone) { notices.push([message, tone]); },
     switchTab: category => opened.push(category),
     fetch(url, options) {
       // Deliberately ignore abort: stale response guards must also handle a response
@@ -475,4 +477,97 @@ test('short, blank, and oversized queries do not start provider lookups', async 
   await s.search('a');
   await s.search('a'.repeat(201));
   assert.equal(s.requests.length, 0);
+});
+
+// --------------------------------------------------------- shared from another app
+
+function shareForm(s, formId, saves) {
+  const form = s.get(formId);
+  const listeners = new Set();
+  form.addEventListener = (type, listener) => { if (type === 'reset') listeners.add(listener); };
+  form.removeEventListener = (type, listener) => listeners.delete(listener);
+  const reset = form.reset;
+  form.reset = () => { reset(); listeners.forEach(listener => listener()); };
+  form.submitted = 0;
+  form.onsubmit = async function () { form.submitted += 1; if (saves) form.reset(); };
+  return form;
+}
+
+test('a shared IMDb link searches films and series for that year and explains where it came from', async () => {
+  const s = setup();
+  s.get('quickCaptureModal').style.display = 'none';
+  const search = s.context.openSharedTitle({ query: 'Dune: Part Two', kind: 'screen', year: '2024', via: 'imdb' });
+  assert.equal(s.get('quickCaptureModal').style.display, 'flex');
+  assert.equal(s.get('quickCaptureQuery').value, 'Dune: Part Two');
+  assert.deepEqual(s.requests.map(request => request.category).sort(), ['movies', 'tv-shows']);
+  assert.ok(s.requests.every(request => request.url.endsWith('&year=2024')));
+  const note = s.get('quickCaptureShared');
+  assert.equal(note.hidden, false);
+  assert.match(note.textContent, /Shared from IMDb/);
+  s.advance(0);
+  assert.equal(s.document.activeElement, note, 'the phone keyboard stays down so the matches are visible');
+  s.respond('movies', 'Dune: Part Two');
+  s.respond('tv-shows', null);
+  await search;
+  const card = s.get('quickCaptureResults').querySelector('.quick-capture-result--shared');
+  assert.ok(card);
+  const [add, edit] = card.querySelectorAll('button');
+  assert.equal(add.dataset.action, 'add-quick-capture-result');
+  assert.equal(edit.dataset.action, 'choose-quick-capture-result');
+  assert.match(add.getAttribute('aria-label'), /Add Dune: Part Two to Movies/);
+});
+
+test('one tap on Add saves through the shelf form and confirms it', async () => {
+  const s = setup();
+  const form = shareForm(s, 'addMovieForm', true);
+  const search = s.context.openSharedTitle({ query: 'Dune', kind: 'movies', via: 'letterboxd' });
+  s.respond('movies', 'Dune');
+  await search;
+  const add = s.get('quickCaptureResults').querySelector('[data-action="add-quick-capture-result"]');
+  assert.equal(await s.context.addQuickCaptureResult(Number(add.dataset.quickResultIndex)), true);
+  assert.equal(form.submitted, 1);
+  assert.deepEqual([...s.context.notices], [['Added “Dune” to Movies.', 'success']]);
+  assert.equal(s.get('quickCaptureModal').style.display, 'none');
+  assert.equal(s.get('quickCaptureShared').hidden, true, 'closing forgets the share');
+  assert.equal(s.get('movieFormContent').scrolled, undefined, 'a saved title does not jump to the form');
+});
+
+test('when the form refuses the save, the filled form opens instead of a false confirmation', async () => {
+  const s = setup();
+  const form = shareForm(s, 'addBookForm', false);
+  const search = s.context.openSharedTitle({ query: 'Dune Frank Herbert', kind: 'books', via: 'goodreads' });
+  s.respond('books', 'Dune');
+  await search;
+  assert.equal(await s.context.addQuickCaptureResult(0), false);
+  assert.equal(form.submitted, 1);
+  assert.equal(s.context.notices.length, 0);
+  assert.equal(s.get('bookTitle').value, 'Dune');
+  assert.equal(s.get('bookFormContent').scrolled, true);
+  s.advance(300);
+  assert.equal(s.document.activeElement, s.get('bookTitle'));
+});
+
+test('a share with no readable title asks for one and searches nothing', () => {
+  const s = setup();
+  s.context.openSharedTitle({ query: '', kind: 'music', via: 'spotify' });
+  assert.equal(s.requests.length, 0);
+  assert.match(s.get('quickCaptureShared').textContent, /Shared from Spotify/);
+  assert.match(s.get('quickCaptureStatus').textContent, /Type the title/);
+  s.advance(0);
+  assert.equal(s.document.activeElement, s.get('quickCaptureQuery'));
+});
+
+test('a corrected search keeps one-tap Add but drops the shared year', async () => {
+  const s = setup();
+  const first = s.context.openSharedTitle({ query: 'Dune', kind: 'screen', year: '1984', via: 'imdb' });
+  s.respond('movies', null); s.respond('tv-shows', null);
+  await first;
+  s.context.selectQuickCaptureCategory('movies');
+  const again = s.search('Dune Part Two');
+  const latest = s.requests.at(-1);
+  assert.equal(latest.category, 'movies');
+  assert.equal(latest.url.includes('year='), false);
+  latest.resolve(ok(payload('movies', 'Dune: Part Two')));
+  await again;
+  assert.ok(s.get('quickCaptureResults').querySelector('[data-action="add-quick-capture-result"]'));
 });

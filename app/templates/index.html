@@ -47,7 +47,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
+  <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <script src="/static/visit.js?v=20261030-people-1" defer></script>
   <link rel="preload" href="./styles.css?v=20261031-push-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -70,7 +70,7 @@
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261030-steam-3">
-  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
+  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261104-gifts-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
@@ -80,6 +80,7 @@
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
+  <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -2344,7 +2345,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261101-so-far-1"></script>
+  <script src="./auth.js?v=20261104-share-gifts-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
@@ -2362,7 +2363,7 @@
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
-  <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
+  <script src="/static/seasonal-card.js?v=20261104-gifts-1"></script>
   <script src="/static/memories.js?v=20261030-audiobooks-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
@@ -3587,6 +3588,7 @@
         <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
       </div>
       <div class="quick-capture-body">
+        <p id="quickCaptureShared" class="quick-capture-shared" tabindex="-1" hidden></p>
         <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
           <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
           <div class="quick-capture-search-field">

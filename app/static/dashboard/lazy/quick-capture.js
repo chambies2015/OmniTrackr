@@ -5,7 +5,7 @@ function isCurrentQuickCaptureSearch(search) {
     && quickCaptureCategory === search.category;
 }
 
-function openQuickCapture() {
+function openQuickCapture(options) {
   const modal = document.getElementById('quickCaptureModal');
   const query = document.getElementById('quickCaptureQuery');
   if (!modal || !query) return;
@@ -13,9 +13,12 @@ function openQuickCapture() {
   closeLibrarySearch();
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  // A shared title already fills the search; focusing it would only cover the
+  // matches with the phone keyboard.
+  const focusTarget = options?.focus === false ? document.getElementById('quickCaptureShared') : query;
   window.setTimeout(() => {
-    query.focus();
-    query.select();
+    focusTarget?.focus();
+    if (focusTarget === query) query.select();
   }, 0);
 }
 
@@ -23,6 +26,7 @@ function closeQuickCapture() {
   const modal = document.getElementById('quickCaptureModal');
   if (!modal) return;
   resetQuickCaptureSearch();
+  showQuickCaptureShare(null);
   modal.style.display = 'none';
   document.body.style.overflow = '';
   if (quickCaptureReturnFocus instanceof HTMLElement) quickCaptureReturnFocus.focus();
@@ -141,7 +145,13 @@ async function fetchQuickCaptureCategory(category, query, signal) {
     if (signal.aborted) { cancel(); return unavailable('cancelled'); }
     const request = (async () => {
       try {
-        const response = await fetch(`${API_BASE}${source.endpoint(query)}`, {
+        let endpoint = source.endpoint(query);
+        // A share that named a year ("Dune (2021)") picks the right film or series of that name.
+        const share = quickCaptureShare;
+        if (share?.year && share.query === query && (category === 'movies' || category === 'tv-shows')) {
+          endpoint += `&year=${encodeURIComponent(share.year)}`;
+        }
+        const response = await fetch(`${API_BASE}${endpoint}`, {
           signal: controller.signal, credentials: 'same-origin', headers: { Accept: 'application/json' },
         });
         if (!response.ok) return unavailable(response.status === 429 ? 'busy' : response.status === 401 ? 'signin' : 'unavailable');
@@ -181,7 +191,8 @@ function updateQuickCaptureStatus(search) {
   const unavailable = groups.filter(group => group.state === 'unavailable').length;
   const count = quickCaptureResults.length;
   if (count) {
-    status.textContent = `${count} match${count === 1 ? '' : 'es'} for “${search.query}”. Choose one to review before saving.`;
+    status.textContent = `${count} match${count === 1 ? '' : 'es'} for “${search.query}”. `
+      + (search.shared ? 'Tap Add to save one, or Edit first to change the details.' : 'Choose one to review before saving.');
   } else if (pending) {
     status.textContent = `Searching for “${search.query}”… You can enter a title manually at any time.`;
   } else {
@@ -235,6 +246,10 @@ function renderQuickCaptureResults(search, group, result) {
     // Append stable indices; another source must not replace a focused result.
     result.results.forEach(item => {
       const index = quickCaptureResults.push(item) - 1;
+      if (search.shared) {
+        group.grid.appendChild(sharedQuickCaptureResult(item, index));
+        return;
+      }
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'quick-capture-result';
@@ -291,8 +306,11 @@ async function searchQuickCapture(event) {
   resetQuickCaptureSearch();
   const controller = new AbortController();
   quickCaptureController = controller;
-  const categories = quickCaptureCategory === 'all' ? QUICK_CAPTURE_CATEGORY_ORDER : [quickCaptureCategory];
-  const search = { query, category: quickCaptureCategory, controller, groups: new Map() };
+  const share = quickCaptureShare && quickCaptureShare.query === query ? quickCaptureShare : null;
+  // IMDb, Netflix and similar links could be a film or a series: search both shelves.
+  const categories = quickCaptureCategory !== 'all' ? [quickCaptureCategory]
+    : share?.kind === 'screen' ? ['movies', 'tv-shows'] : QUICK_CAPTURE_CATEGORY_ORDER;
+  const search = { query, category: quickCaptureCategory, controller, groups: new Map(), shared: !!quickCaptureShare };
   quickCaptureSearch = search;
   createQuickCaptureGroups(search, categories, results);
   // Each source renders independently; completion never gates the first result.
@@ -318,17 +336,7 @@ function prepareQuickCaptureDestination(category, title) {
   };
   const destination = destinations[category];
   if (!destination) return null;
-  const form = document.getElementById({
-    movies: 'addMovieForm',
-    'tv-shows': 'addTVShowForm',
-    anime: 'addAnimeForm',
-    'video-games': 'addVideoGameForm',
-    music: 'addMusicForm',
-    books: 'addBookForm',
-    manga: 'addMangaForm',
-    podcasts: 'addPodcastForm',
-    audiobooks: 'addAudiobookForm',
-  }[category]);
+  const form = document.getElementById(QUICK_CAPTURE_ADD_FORMS[category]);
   const hasDraft = form && Array.from(form.elements).some(field => {
     if (field.type === 'submit' || field.type === 'button') return false;
     if (field.type === 'checkbox' || field.type === 'radio') return field.checked;
@@ -351,12 +359,12 @@ function prepareQuickCaptureDestination(category, title) {
   return { ...destination, titleInput };
 }
 
-function applyQuickCaptureResult(index) {
-  if (!quickCaptureSearch || !isCurrentQuickCaptureSearch(quickCaptureSearch)) return;
+function applyQuickCaptureResult(index, { quiet = false } = {}) {
+  if (!quickCaptureSearch || !isCurrentQuickCaptureSearch(quickCaptureSearch)) return null;
   const item = quickCaptureResults[index];
-  if (!item) return;
+  if (!item) return null;
   const destination = prepareQuickCaptureDestination(item.category, item.title);
-  if (!destination) return;
+  if (!destination) return null;
   const data = item.raw || {};
 
   if (item.category === 'movies') {
@@ -410,6 +418,16 @@ function applyQuickCaptureResult(index) {
   }
 
   closeQuickCapture();
+  if (quiet) {
+    // Opening the form focuses its title box; read-only keeps the phone keyboard down while it saves.
+    destination.titleInput.readOnly = true;
+  } else {
+    showQuickCaptureForm(destination);
+  }
+  return { ...destination, item };
+}
+
+function showQuickCaptureForm(destination) {
   const formContent = document.getElementById(`${destination.form}Content`);
   formContent?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   window.setTimeout(() => destination.titleInput.focus(), 250);
@@ -431,3 +449,117 @@ function openQuickCaptureManual() {
   window.setTimeout(() => destination.titleInput.focus(), 250);
 }
 
+
+// ------------------------------------------------------------- shared titles
+// Another app's share sheet sent a link or some text (see app/share_intake.py and
+// /share). Add anything opens with that search running, and each match can be
+// added in one tap or opened in the form first.
+
+function showQuickCaptureShare(shared) {
+  quickCaptureShare = shared;
+  // On phones the shared layout drops the intro and manual-entry rows so the matches sit higher.
+  document.querySelector('.quick-capture-modal')?.classList.toggle('quick-capture-modal--shared', !!shared);
+  const note = document.getElementById('quickCaptureShared');
+  if (!note) return;
+  if (!shared) {
+    note.hidden = true;
+    note.replaceChildren();
+    return;
+  }
+  const source = QUICK_CAPTURE_SHARE_SOURCES[shared.via];
+  const heading = document.createElement('strong');
+  heading.textContent = source ? `Shared from ${source}` : 'Shared with OmniTrackr';
+  const detail = document.createElement('span');
+  detail.textContent = shared.query
+    ? 'Tap Add on the right match and it goes straight into your library.'
+    : 'We couldn\u2019t read a title from that share. Type it above and pick a match.';
+  note.replaceChildren(heading, detail);
+  note.hidden = false;
+}
+
+function openSharedTitle(shared) {
+  const query = document.getElementById('quickCaptureQuery');
+  if (!query || !shared) return;
+  const search = String(shared.query || '').trim();
+  openQuickCapture({ focus: search.length < 2 });
+  query.value = search;
+  const kind = QUICK_CAPTURE_CATEGORIES[shared.kind] ? shared.kind : 'all';
+  selectQuickCaptureCategory(kind);
+  showQuickCaptureShare({ ...shared, query: search });
+  const status = document.getElementById('quickCaptureStatus');
+  if (search.length < 2) {
+    if (status) status.textContent = 'Type the title you shared, then search.';
+    return;
+  }
+  return searchQuickCapture({ preventDefault() {} });
+}
+
+function sharedQuickCaptureResult(item, index) {
+  const card = document.createElement('div');
+  card.className = 'quick-capture-result quick-capture-result--shared';
+  card.appendChild(quickCaptureImage(item.image, item.title));
+  const copy = document.createElement('span');
+  copy.className = 'quick-capture-result__copy';
+  const title = document.createElement('strong');
+  title.textContent = item.title || 'Untitled';
+  const meta = document.createElement('small');
+  meta.textContent = item.meta || QUICK_CAPTURE_CATEGORIES[item.category].label;
+  copy.append(title, meta);
+  const actions = document.createElement('span');
+  actions.className = 'quick-capture-result__buttons';
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'quick-capture-result__add';
+  add.dataset.action = 'add-quick-capture-result';
+  add.dataset.quickResultIndex = String(index);
+  add.textContent = 'Add';
+  add.setAttribute('aria-label', `Add ${item.title || 'this title'} to ${QUICK_CAPTURE_CATEGORIES[item.category].label}`);
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'quick-capture-result__edit';
+  edit.dataset.action = 'choose-quick-capture-result';
+  edit.dataset.quickResultIndex = String(index);
+  edit.textContent = 'Edit first';
+  edit.setAttribute('aria-label', `Open ${item.title || 'this title'} in the form before saving`);
+  actions.append(add, edit);
+  card.append(copy, actions);
+  return card;
+}
+
+// One tap: fill the shelf's add form from the match and send it with that form's own
+// checks. The form clears itself after a good save; if it doesn't, it stays open with
+// the reason showing, so nothing is lost.
+async function addQuickCaptureResult(index) {
+  const destination = applyQuickCaptureResult(index, { quiet: true });
+  if (!destination) return false;
+  const form = document.getElementById(QUICK_CAPTURE_ADD_FORMS[destination.item.category]);
+  const label = QUICK_CAPTURE_CATEGORIES[destination.item.category].label;
+  const done = () => window.setTimeout(() => { destination.titleInput.readOnly = false; }, 0);
+  if (!form || typeof form.onsubmit !== 'function') {
+    done();
+    showQuickCaptureForm(destination);
+    return false;
+  }
+  let saved = false;
+  const onReset = () => { saved = true; };
+  form.addEventListener('reset', onReset, { once: true });
+  try {
+    await form.onsubmit.call(form, { type: 'submit', target: form, preventDefault() {} });
+  } catch (_) {
+    // The form shows its own error.
+  } finally {
+    form.removeEventListener('reset', onReset);
+  }
+  done();
+  if (saved) {
+    // Fold the emptied form away and show the shelf the title went to.
+    const content = document.getElementById(`${destination.form}Content`);
+    if (content?.classList.contains('expanded')) toggleCollapsible(destination.form);
+    if (document.activeElement === destination.titleInput) destination.titleInput.blur?.();
+    document.getElementById(`${destination.form}Toggle`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showNotice(`Added \u201c${destination.item.title}\u201d to ${label}.`, 'success');
+    return true;
+  }
+  showQuickCaptureForm(destination);
+  return false;
+}
