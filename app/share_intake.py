@@ -26,6 +26,10 @@ import httpx
 # film or a series (IMDb, Netflix and the like) so both get searched.
 KINDS = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks", "screen")
 MAX_FIELD = 2000
+# Titles sit at the start of shared text; the rest is descriptions. Keeping the regex work to
+# this many characters bounds every pattern below, whatever the other app sends.
+MAX_TITLE_TEXT = 300
+MAX_SLUG = 200
 MAX_QUERY = 120
 MAX_ENCODED_QUERY = 400
 LOOKUP_TIMEOUT = httpx.Timeout(3.0, connect=2.0)
@@ -224,7 +228,7 @@ def _read_link(link: str) -> tuple[Optional[_Site], Optional[str], str, Optional
     host = parts.hostname.lower()
     clean = f"https://{host}{parts.path}"
     site = _site_for(host)
-    segments = [segment for segment in parts.path.split("/") if segment]
+    segments = [segment[:MAX_SLUG] for segment in parts.path.split("/") if segment]
     lowered = [segment.lower() for segment in segments]
     kind = site.kind if site else None
     slug = ""
@@ -322,7 +326,7 @@ def clean_title(raw: str, *, split_by: bool = False) -> tuple[str, Optional[str]
     """
     text = _EMOJI.sub(" ", _URL.sub(" ", raw or ""))
     text = re.sub(r"[\r\n\t]+", " | ", text)
-    text = re.sub(r"\s+", " ", text).strip(" \"'“”‘’|:-–—")
+    text = re.sub(r"\s+", " ", text).strip(" \"'“”‘’|:-–—")[:MAX_TITLE_TEXT]
     if not text:
         return "", None, None, None
     year = kind = who = None

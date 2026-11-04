@@ -156,3 +156,21 @@ def test_dashboard_has_the_share_note_and_styles():
     assert '<p id="quickCaptureShared" class="quick-capture-shared" tabindex="-1" hidden></p>' in html
     assert '/static/share-intake.css?v=' in html
     assert Path("app/static/share-intake.css").exists()
+
+
+@pytest.mark.parametrize("payload", [
+    "a" + " " * 1990 + "b",
+    "watch " + "a | netflix " * 160,
+    "-audiobook" * 199,
+    "⭐0" + "★0" * 990,
+    "a - ep by " + "  " * 990 + "x",
+    "a by " * 399,
+    "(" + "tv series " * 199,
+    "x (" + "a" * 1990,
+])
+def test_share_parsing_stays_fast_on_hostile_text(payload):
+    import time
+    started = time.perf_counter()
+    share_intake.read_share(title=payload, text=payload, url="https://www.audible.com/pd/" + payload.replace(" ", "-"))
+    share_intake.clean_title(payload, split_by=True)
+    assert time.perf_counter() - started < 0.25
