@@ -1,4 +1,6 @@
 """People and studio pages: credits, member numbers, indexing rules and links from title pages."""
+from datetime import datetime
+
 from app import auth, models, people_pages, title_metadata
 from app.editorial_collections import EDITOR_EMAIL, EDITOR_USERNAME
 
@@ -137,7 +139,10 @@ def test_title_page_links_credits_with_pages(client, db_session):
 
 
 def test_directories_list_names_with_several_titles(client, db_session):
-    nolan_library(db_session)
+    users = nolan_library(db_session)
+    for title, year in (("Hades", 2020), ("Bastion", 2011)):
+        db_session.add(models.VideoGame(user_id=users[0].id, title=title, release_date=datetime(year, 6, 1)))
+    db_session.commit()
     facts(db_session, "game:hades:2020", ("Developer", "Supergiant Games"))
     facts(db_session, "game:bastion:2011", ("Developer", "Supergiant Games"))
     people = client.get("/people")
@@ -145,6 +150,25 @@ def test_directories_list_names_with_several_titles(client, db_session):
     assert people.headers["X-Robots-Tag"] == "noindex, follow"
     studios = client.get("/studios").text
     assert 'href="/studios/supergiant-games"' in studios and "Game developers" in studios
+    assert client.get("/studios/supergiant-games").status_code == 200
+
+
+def test_directories_skip_names_whose_page_would_be_missing(client, db_session):
+    """Credits on titles no member tracks count toward the directory but leave the page with nothing to show."""
+    nolan_library(db_session)
+    facts(db_session, "game:hades:2020", ("Developer", "Supergiant Games"))
+    facts(db_session, "game:bastion:2011", ("Developer", "Supergiant Games"))
+    assert client.get("/studios/supergiant-games").status_code == 404
+    assert 'href="/studios/supergiant-games"' not in client.get("/studios").text
+
+
+def test_people_directory_names_each_page_once_in_structured_data(client, db_session):
+    nolan_library(db_session)
+    facts(db_session, "movie:interstellar:2014", ("Director", "Christopher Nolan"), ("Screenplay", "Christopher Nolan"))
+    facts(db_session, "movie:the prestige:2006", ("Director", "Christopher Nolan"), ("Screenplay", "Christopher Nolan"))
+    html = client.get("/people").text
+    data = html.split('"itemListElement": ', 1)[1].split("</script>", 1)[0]
+    assert data.count('"url": "https://omnitrackr.xyz/people/christopher-nolan"') == 1
 
 
 def test_sitemap_lists_indexable_people(db_session):

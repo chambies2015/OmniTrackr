@@ -201,7 +201,7 @@ _CHEVRON = ('<svg class="site-dd__chev" viewBox="0 0 12 12" width="10" height="1
 
 
 def _brand() -> str:
-    return '<a class="site-brand" href="/"><img src="/vortex-still.webp" alt="" width="28" height="28">OmniTrackr</a>'
+    return '<a class="site-brand" href="/"><img src="/vortex-mark.webp" alt="" width="28" height="28">OmniTrackr</a>'
 
 
 def _menu_items(items, active: str, *, with_blurb: bool) -> str:

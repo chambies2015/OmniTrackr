@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from .image_sizes import shrink_html
 from .page_breadcrumbs import add_breadcrumbs
+from .page_hints import add_preconnects
 from .site_chrome import fill_join_prompt
 
-STEPS = (shrink_html, add_breadcrumbs, fill_join_prompt)
+STEPS = (shrink_html, add_preconnects, add_breadcrumbs, fill_join_prompt)
 
 
 def finish(html: str) -> str:

@@ -447,6 +447,33 @@ def directory(db: Session, entity: str, per_role: int = 18) -> dict[str, list[di
     return result
 
 
+def directory_with_pages(db: Session, entity: str, per_role: int = 18) -> dict[str, list[dict]]:
+    """directory() without the names whose own page would be a 404.
+
+    The directory counts titles by name alone, while a page needs at least one of
+    those titles to have a title page of its own, so a mangaka or host can be
+    counted twice here and still have nothing to show. Linking them sent visitors
+    and Googlebot to "not found" pages.
+    """
+    memo: dict = {}  # Pages share most of their titles; look each one up once.
+    has_page: dict[str, bool] = {}
+    result = {}
+    for role, entries in directory(db, entity, per_role).items():
+        kept = []
+        for entry in entries:
+            if entry["slug"] not in has_page:
+                try:
+                    has_page[entry["slug"]] = build(db, entity, entry["slug"], memo) is not None
+                except Exception:
+                    db.rollback()
+                    has_page[entry["slug"]] = False
+            if has_page[entry["slug"]]:
+                kept.append(entry)
+        if kept:
+            result[role] = kept
+    return result
+
+
 def sitemap_paths(db: Session, limit: int = 200) -> list[str]:
     paths = []
     memo: dict = {}  # Pages share most of their titles; look each one up once.
