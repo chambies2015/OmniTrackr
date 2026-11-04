@@ -1,0 +1,57 @@
+/* Add anything, opened by a link or text shared from another app (dashboard/lazy/quick-capture.js). */
+
+.quick-capture-shared {
+  background: var(--teal-soft, rgba(94, 234, 212, .08));
+  border: 1px solid var(--teal, #5eead4);
+  border-radius: var(--radius-md, 12px);
+  color: var(--fg, #eef2ff);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+}
+.quick-capture-shared[hidden] { display: none; }
+/* Focus lands here so screen readers start at the share; it is not something to press. */
+.quick-capture-shared:focus,
+.quick-capture-shared:focus-visible { box-shadow: none; outline: none; }
+.quick-capture-shared strong { color: var(--teal, #5eead4); font-size: .82rem; }
+.quick-capture-shared span { color: var(--fg-secondary, #aeb4ca); font-size: .78rem; line-height: 1.45; }
+
+/* A shared match is a card with two buttons rather than one big button. */
+.quick-capture-result.quick-capture-result--shared { cursor: default; }
+.quick-capture-result.quick-capture-result--shared:hover { transform: none; }
+.quick-capture-result__buttons { align-items: stretch; display: flex; flex-direction: column; gap: 6px; }
+.quick-capture-result__buttons button {
+  border-radius: var(--radius-pill, 999px);
+  cursor: pointer;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+  min-height: 34px;
+  min-width: 78px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.quick-capture-result__add {
+  background: var(--accent-solid, #7c3aed);
+  border: 1px solid var(--accent-solid, #7c3aed);
+  color: var(--on-accent, #fff);
+}
+.quick-capture-result__add:hover { filter: brightness(1.08); }
+.quick-capture-result__edit {
+  background: transparent;
+  border: 1px solid var(--border, rgba(255, 255, 255, .14));
+  color: var(--primary, #c4b5fd);
+}
+.quick-capture-result__edit:hover { background: var(--surface-hover, rgba(124, 58, 237, .13)); }
+.quick-capture-result__buttons button:focus-visible { box-shadow: var(--ring, 0 0 0 3px rgba(124, 58, 237, .45)); outline: 0; }
+.quick-capture-result__buttons button:disabled { cursor: wait; opacity: .6; }
+
+@media (max-width: 640px) {
+  .quick-capture-modal--shared .quick-capture-header p:not(.quick-capture-eyebrow),
+  .quick-capture-modal--shared .quick-capture-manual { display: none; }
+  /* Thumb-sized: the Add button is what most people tap after sharing. */
+  .quick-capture-result.quick-capture-result--shared { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .quick-capture-result__buttons button { min-height: 44px; }
+}

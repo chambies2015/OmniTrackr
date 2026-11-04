@@ -820,6 +820,10 @@ for route in profile_widgets_router.router.routes:
     elif getattr(route, "path", None) == "/u/id/{user_id:database_id}/widget/{kind}.png":
         bind_rate_limited_endpoint(route, rate_limited_widget_by_id)
 app.include_router(profile_widgets_router.router)
+# Each share can ask Spotify, YouTube or OMDb for a title, so it gets the same limit as the metadata search.
+for route in pwa.router.routes:
+    if getattr(route, "path", None) == "/share" and "GET" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:

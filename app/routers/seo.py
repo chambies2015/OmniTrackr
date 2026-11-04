@@ -548,6 +548,7 @@ Allow: /ads.txt
 Allow: /sellers.json
 Disallow: /auth/
 Disallow: /api/
+Disallow: /share
 Disallow: /account/
 Disallow: /friends
 Disallow: /movies/

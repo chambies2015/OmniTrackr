@@ -114,6 +114,14 @@
   }
 
   function cardCopy() {
+    // Android lists the installed app in the share sheet; iPhone and iPad don't offer that to web apps.
+    if (touchDevice() && !iosSafari()) {
+      return {
+        title: 'Keep your library on your home screen',
+        summary: 'Add OmniTrackr as an app. It opens full screen from its own icon, and OmniTrackr shows up '
+          + 'when you tap Share in IMDb, Spotify, Goodreads or YouTube, so saving a title takes one tap.',
+      };
+    }
     if (iosSafari() || touchDevice()) {
       return {
         title: 'Keep your library on your home screen',

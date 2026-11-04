@@ -583,7 +583,32 @@ let quickCaptureResults = [];
 let quickCaptureController = null;
 let quickCaptureReturnFocus = null;
 let quickCaptureSearch = null;
+const QUICK_CAPTURE_ADD_FORMS = {
+  movies: 'addMovieForm',
+  'tv-shows': 'addTVShowForm',
+  anime: 'addAnimeForm',
+  'video-games': 'addVideoGameForm',
+  music: 'addMusicForm',
+  books: 'addBookForm',
+  manga: 'addMangaForm',
+  podcasts: 'addPodcastForm',
+  audiobooks: 'addAudiobookForm',
+};
+// Set while Add anything is showing something shared from another app (see openSharedTitle).
+let quickCaptureShare = null;
 const QUICK_CAPTURE_TIMEOUT_MS = 15000;
+// "Shared from …" names for the apps /share recognises.
+const QUICK_CAPTURE_SHARE_SOURCES = {
+  imdb: 'IMDb', tmdb: 'TMDB', letterboxd: 'Letterboxd', trakt: 'Trakt', rottentomatoes: 'Rotten Tomatoes',
+  justwatch: 'JustWatch', netflix: 'Netflix', primevideo: 'Prime Video', disneyplus: 'Disney+', hulu: 'Hulu',
+  max: 'Max', appletv: 'Apple TV', myanimelist: 'MyAnimeList', anilist: 'AniList', crunchyroll: 'Crunchyroll',
+  kitsu: 'Kitsu', mangadex: 'MangaDex', steam: 'Steam', rawg: 'RAWG', backloggd: 'Backloggd', igdb: 'IGDB',
+  gog: 'GOG', epic: 'Epic Games Store', playstation: 'PlayStation Store', nintendo: 'Nintendo', xbox: 'Xbox',
+  spotify: 'Spotify', applemusic: 'Apple Music', applepodcasts: 'Apple Podcasts', applebooks: 'Apple Books',
+  youtubemusic: 'YouTube Music', youtube: 'YouTube', bandcamp: 'Bandcamp', deezer: 'Deezer', tidal: 'TIDAL',
+  soundcloud: 'SoundCloud', pocketcasts: 'Pocket Casts', overcast: 'Overcast', goodreads: 'Goodreads',
+  openlibrary: 'Open Library', storygraph: 'The StoryGraph', audible: 'Audible', amazon: 'Amazon', libby: 'Libby',
+};
 
 function resetQuickCaptureSearch() {
   quickCaptureController?.abort();
@@ -794,6 +819,7 @@ function handleDelegatedClick(event) {
     'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
     'retry-quick-capture-source': () => retryQuickCaptureCategory(target.dataset.quickCategory),
     'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
+    'add-quick-capture-result': () => addQuickCaptureResult(Number(target.dataset.quickResultIndex)),
     'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
     'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
