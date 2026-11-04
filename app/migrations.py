@@ -822,6 +822,7 @@ def run_migrations():
     add_supporter_wall_column()
     add_supporter_banner_column()
     add_membership_columns()
+    add_supporter_style_columns()
     add_public_diary_column()
     add_taste_match_link_column()
     add_calendar_episodes_column()
@@ -904,6 +905,25 @@ def add_membership_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (memberships): {e}")
+
+
+def add_supporter_style_columns():
+    """Add the app theme and avatar frame picks (Nov 2026). Both nullable, so every supporter looks the same until they pick."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("supporters")}
+        with engine.connect() as conn:
+            if "app_theme" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN app_theme VARCHAR(24)"))
+                print("Added app_theme column to supporters table")
+            if "avatar_frame" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN avatar_frame VARCHAR(24)"))
+                print("Added avatar_frame column to supporters table")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (supporter styles): {e}")
 
 
 def add_public_diary_column():

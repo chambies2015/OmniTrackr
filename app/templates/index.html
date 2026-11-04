@@ -65,7 +65,9 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261103-where-2">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261030-claim-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261104-styles-1">
+  <link rel="stylesheet" href="/static/app-themes.css?v=20261104-themes-1">
+  <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
@@ -335,6 +337,7 @@
 </head>
 
 <body class="dark-mode app-shell" data-active-tab="movies">
+  <script src="/static/app-themes.js?v=20261104-themes-1"></script>
   <a class="skip-link" href="#mainContainer" id="skipToLibrary">Skip to your library</a>
   <div class="account-toolbar" role="region" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
@@ -2356,7 +2359,7 @@
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
-  <script src="/static/supporter.js?v=20261030-claim-1"></script>
+  <script src="/static/supporter.js?v=20261104-styles-1"></script>
   <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
@@ -3130,13 +3133,18 @@
           <h4>Your supporter perks</h4>
           <p class="account-honest">Every tracking feature is free and stays free. Support pays for hosting, and the thank-yous are cosmetic.</p>
           <ul class="supporter-tiers" id="supporterTiers" aria-label="Ways to support"></ul>
-          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
-            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, color
+            themes for your own app, an accent color, banner and avatar frame for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
             supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
           <div class="supporter-membership" id="supporterMembership" hidden>
             <p id="supporterMembershipText"></p>
             <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
               rel="noopener noreferrer">See memberships ↗</a>
+          </div>
+          <div class="supporter-try" id="supporterTry" hidden>
+            <p class="supporter-try__title">Try a supporter theme</p>
+            <p class="info-text">Supporters can recolor their own OmniTrackr. Tap one to see it on this page. Nothing is saved, and a reload puts everything back.</p>
+            <div class="supporter-try__list" id="supporterTryList"></div>
           </div>
           <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
@@ -3184,15 +3192,21 @@
             <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
               <legend>Profile banner</legend>
             </fieldset>
+            <fieldset class="profile-settings__parts supporter-frames" id="supporterFrames">
+              <legend>Avatar frame</legend>
+            </fieldset>
             <div class="privacy-toggle-item" id="supporterMotionItem">
               <label for="supporterMotion" class="toggle-label">
-                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
+                <span>Let my banner and frame move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
                 <div class="toggle-container">
                   <input type="checkbox" id="supporterMotion" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
+            <fieldset class="profile-settings__parts supporter-themes" id="supporterThemes">
+              <legend>App theme <small class="supporter-themes__hint">Colors for your own OmniTrackr, in light and night mode. Only you see it.</small></legend>
+            </fieldset>
             <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>
           <div id="supporterError" class="error-message" role="alert"></div>
