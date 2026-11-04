@@ -72,6 +72,16 @@ BANNERS = ("aurora", "filmstrip", "pixels", "pages", "vinyl", "stars")
 # Extra banners for monthly members of any tier.
 MEMBER_BANNERS = ("neon", "marquee", "comic")
 ALL_BANNERS = BANNERS + MEMBER_BANNERS
+# App themes (Nov 2026): colors for the member's own signed-in OmniTrackr, in light and night mode.
+# Only the supporter sees them. "gilded" follows the gold accent; the member themes need a membership.
+APP_THEMES = ("lagoon", "sunset", "sakura", "ocean", "forest", "crimson")
+GOLD_THEMES = ("gilded",)
+MEMBER_THEMES = ("midnight", "matinee")
+ALL_THEMES = APP_THEMES + GOLD_THEMES + MEMBER_THEMES
+# Avatar frames (Nov 2026) drawn around the profile picture on the public profile, in the accent color.
+FRAMES = ("halo", "film", "sparkle", "pixel")
+MEMBER_FRAMES = ("neon", "orbit")
+ALL_FRAMES = FRAMES + MEMBER_FRAMES
 # Ko-fi membership tiers, lowest first. Keep names and prices in step with ko-fi.com/omnitrackr/tiers;
 # a payment whose tier name isn't listed here is placed by its amount.
 TIERS = (
@@ -256,6 +266,36 @@ def shown_banner(supporter: Optional[models.Supporter]) -> Optional[str]:
     return banner if banner in unlocked_banners(supporter) else None
 
 
+def unlocked_themes(supporter: Optional[models.Supporter], months: int, now: Optional[datetime] = None) -> tuple:
+    if not is_active(supporter, now):
+        return ()
+    themes = APP_THEMES
+    if "gold" in unlocked_accents(supporter, months):
+        themes += GOLD_THEMES
+    if is_member(supporter, now):
+        themes += MEMBER_THEMES
+    return themes
+
+
+def shown_theme(db: Session, supporter: Optional[models.Supporter]) -> Optional[str]:
+    """The saved app theme, if the member can still use it. A lapse hides it but keeps the choice."""
+    theme = supporter.app_theme if supporter else None
+    if theme not in ALL_THEMES:
+        return None
+    return theme if theme in unlocked_themes(supporter, months_supported(db, supporter.user_id)) else None
+
+
+def unlocked_frames(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> tuple:
+    if not is_active(supporter, now):
+        return ()
+    return ALL_FRAMES if is_member(supporter, now) else FRAMES
+
+
+def shown_frame(supporter: Optional[models.Supporter]) -> Optional[str]:
+    frame = supporter.avatar_frame if supporter else None
+    return frame if frame in unlocked_frames(supporter) else None
+
+
 def is_ad_free(db: Session, user) -> bool:
     """Whether this member should see no ads. Supporters get it while their perks are active."""
     return user is not None and is_active(get_supporter(db, user.id))
@@ -291,10 +331,13 @@ def public_badge(db: Session, user_id: int) -> Optional[dict]:
         return None
     tier = member_tier(supporter)
     banner = shown_banner(supporter)
+    frame = shown_frame(supporter)
+    moving = bool(supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
             "banner": banner, "founding": is_founding(supporter), "months": months_supported(db, user_id),
             "tier": tier["name"] if tier else None,
-            "motion": bool(banner and supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)}
+            "motion": bool(banner and moving),
+            "frame": frame, "frame_motion": bool(frame and moving)}
 
 
 def public_badges(db: Session, user_ids) -> dict:
@@ -548,6 +591,16 @@ def status_payload(db: Session, user) -> dict:
         "member_until": supporter.member_until.isoformat() if tier and supporter.member_until else None,
         "banner_motion": bool(supporter and supporter.banner_motion),
         "can_animate": bool(tier and tier["rank"] >= MOTION_RANK),
+        "app_theme": (supporter.app_theme if supporter and supporter.app_theme in ALL_THEMES else None),
+        "shown_theme": shown_theme(db, supporter) if supporter else None,
+        "themes": list(APP_THEMES),
+        "gold_themes": list(GOLD_THEMES),
+        "member_themes": list(MEMBER_THEMES),
+        "unlocked_themes": list(unlocked_themes(supporter, months)) if supporter else [],
+        "frame": (supporter.avatar_frame if supporter and supporter.avatar_frame in ALL_FRAMES else None),
+        "frames": list(FRAMES),
+        "member_frames": list(MEMBER_FRAMES),
+        "unlocked_frames": list(unlocked_frames(supporter)) if supporter else [],
         "tiers": [dict(item) for item in TIERS],
         "tiers_url": tiers_url(),
         "ad_free": active,
@@ -587,6 +640,26 @@ def save_settings(db: Session, user, changes: dict) -> models.Supporter:
         if motion and member_rank(supporter) < MOTION_RANK:
             raise PermissionError("Moving banners come with the Season Pass and Director's Cut memberships.")
         supporter.banner_motion = motion
+    if "app_theme" in changes:
+        theme = changes["app_theme"] or None
+        if theme is not None and theme not in ALL_THEMES:
+            raise ValueError("Pick one of the listed app themes.")
+        if theme is not None and not is_active(supporter):
+            raise PermissionError("App themes are a perk for current supporters.")
+        if theme in MEMBER_THEMES and not is_member(supporter):
+            raise PermissionError("Midnight and Matinee come with a monthly Ko-fi membership.")
+        if theme in GOLD_THEMES and "gold" not in unlocked_accents(supporter, months_supported(db, user.id)):
+            raise PermissionError(f"Gilded unlocks with gold: for founding supporters and after {GOLD_MONTHS} months of support.")
+        supporter.app_theme = theme
+    if "frame" in changes:
+        frame = changes["frame"] or None
+        if frame is not None and frame not in ALL_FRAMES:
+            raise ValueError("Pick one of the listed avatar frames.")
+        if frame is not None and not is_active(supporter):
+            raise PermissionError("Avatar frames are a perk for current supporters.")
+        if frame in MEMBER_FRAMES and not is_member(supporter):
+            raise PermissionError("Neon and orbit frames come with a monthly Ko-fi membership.")
+        supporter.avatar_frame = frame
     db.commit()
     db.refresh(supporter)
     return supporter
@@ -619,12 +692,45 @@ def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
 
 
 def monthly_goal() -> Optional[float]:
-    """The monthly hosting goal in US dollars, from ``KOFI_MONTHLY_GOAL``. Unset hides the meter."""
+    """The monthly hosting goal in US dollars, from ``KOFI_MONTHLY_GOAL``, or else the total of
+    ``KOFI_MONTHLY_COSTS``. Neither set hides the meter."""
+    raw = (os.getenv("KOFI_MONTHLY_GOAL") or "").strip()
+    if not raw:
+        total = sum(item["amount"] for item in monthly_costs())
+        return round(total, 2) if total > 0 else None
     try:
-        goal = float((os.getenv("KOFI_MONTHLY_GOAL") or "").strip().lstrip("$"))
+        goal = float(raw.lstrip("$"))
     except ValueError:
         return None
     return goal if 0 < goal < 1_000_000 else None
+
+
+COST_LIMIT = 8
+_COST_SPLIT = re.compile(r"[;\n]")
+
+
+def monthly_costs() -> list[dict]:
+    """What running OmniTrackr costs a month, from ``KOFI_MONTHLY_COSTS``.
+
+    The format is "Label: amount" pairs split by semicolons or new lines, in US dollars, for example
+    "Web server: 7; Database: 19; Email: 15". Lines that don't read cleanly are skipped, and an unset
+    variable gives an empty list (the page then describes the costs without numbers).
+    """
+    items = []
+    for part in _COST_SPLIT.split(os.getenv("KOFI_MONTHLY_COSTS") or ""):
+        label, sep, amount = part.rpartition(":")
+        if not sep:
+            label, sep, amount = part.rpartition("=")
+        label = " ".join(label.split())[:40]
+        try:
+            value = float(amount.strip().lstrip("$").replace(",", ""))
+        except ValueError:
+            continue
+        if label and 0 <= value < 100_000:
+            items.append({"label": label, "amount": value})
+        if len(items) >= COST_LIMIT:
+            break
+    return items
 
 
 def _amount(value: Optional[str]) -> float:

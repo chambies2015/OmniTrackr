@@ -1074,6 +1074,10 @@ class Supporter(Base):
     member_until = Column(DateTime, nullable=True)
     # Season Pass and up can let their banner move. Off by default.
     banner_motion = Column(Boolean, nullable=False, default=False)
+    # Nov 2026: a color theme for the member's own app and a frame around their profile picture.
+    # Both NULL by default, so nothing changes until a supporter picks one.
+    app_theme = Column(String(24), nullable=True)
+    avatar_frame = Column(String(24), nullable=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
