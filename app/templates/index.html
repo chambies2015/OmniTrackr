@@ -80,6 +80,7 @@
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
+  <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
@@ -650,6 +651,23 @@
             </div>
           </div>
           <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+        </section>
+
+        <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
+        <section id="reviewInbox" class="for-you-card review-inbox" aria-labelledby="reviewInboxTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">Only you can see these</p>
+              <h2 id="reviewInboxTitle">Share your reviews</h2>
+              <p id="reviewInboxSummary" class="for-you-card__summary"></p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" id="reviewInboxHide" class="for-you-card__dismiss">Hide for now</button>
+            </div>
+          </div>
+          <ol id="reviewInboxList" class="review-inbox__list" aria-live="polite"></ol>
+          <button type="button" id="reviewInboxMore" class="review-inbox__more" aria-controls="reviewInboxList" hidden></button>
+          <p class="review-inbox__note">A shared review shows on its title's page and under <a href="/reviews">Reviews</a> with your username and rating. You can make it private again from the title in your library. Reviews you import from other sites always start private.</p>
         </section>
 
         <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
@@ -2345,7 +2363,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261104-share-gifts-1"></script>
+  <script src="./auth.js?v=20261104-review-inbox-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
@@ -2354,6 +2372,7 @@
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/review-inbox.js?v=20261104-review-inbox-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261030-claim-1"></script>

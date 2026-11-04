@@ -814,6 +814,7 @@ function showMainUI() {
     const homeCards = [window.refreshForYou?.(), window.refreshYearGoals?.()];
     window.refreshFriendRecs?.();
     window.refreshFriendFeed?.();
+    window.refreshReviewInbox?.();
     homeCards.push(window.refreshMonthlyChallenge?.(), window.refreshSeasonCard?.(), window.refreshBadges?.(),
         window.refreshOnThisDay?.());
     window.dashboardHomeCards = homeCards;

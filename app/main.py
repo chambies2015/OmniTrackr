@@ -1166,6 +1166,17 @@ for route in binge_calculator_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_binge_length)
 app.include_router(binge_calculator_router.router)
 
+from .routers import review_inbox as review_inbox_router
+rate_limited_review_inbox = {
+    "/api/review-inbox/share": limiter.limit("30/minute")(review_inbox_router.share_review),
+    "/api/review-inbox/keep": limiter.limit("30/minute")(review_inbox_router.keep_review),
+    "/api/review-inbox/undo": limiter.limit("30/minute")(review_inbox_router.undo_answer),
+}
+for route in review_inbox_router.router.routes:
+    if getattr(route, "path", None) in rate_limited_review_inbox:
+        bind_rate_limited_endpoint(route, rate_limited_review_inbox[route.path])
+app.include_router(review_inbox_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
