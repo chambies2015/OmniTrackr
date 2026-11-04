@@ -94,3 +94,22 @@ def disclosure_html(css_class: str = "affiliate-disclosure") -> str:
     if not affiliate_enabled():
         return ""
     return f'<p class="{escape(css_class, quote=True)}">{escape(disclosure_text())}</p>'
+
+
+# Amazon search indexes the gift guide and gift lists may use. Anything else falls back to "aps" (all departments).
+SEARCH_STORES = {"aps", "movies-tv", "videogames", "popular", "stripbooks", "audible", "electronics", "toys-and-games"}
+
+
+def search_links(keywords: str, store: str = "aps", label: str = "Find it on Amazon") -> list[dict]:
+    """[{label, url, merchant}] for a free-text Amazon search, or [] when affiliate links are off.
+
+    Used for gifts that are things rather than titles (a turntable, a book light) and for
+    whatever a member types on their gift list.
+    """
+    tag = amazon_tag()
+    keywords = re.sub(r"\s+", " ", keywords or "").strip()[:150]
+    if not tag or not keywords:
+        return []
+    store = store if store in SEARCH_STORES else "aps"
+    url = "https://www.amazon.com/s?" + urlencode({"k": keywords, "i": store, "tag": tag})
+    return [{"label": label, "url": url, "merchant": "Amazon"}]

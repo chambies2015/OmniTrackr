@@ -63,6 +63,8 @@ body.dark-mode .season-card[data-season-theme="holiday"] { --season-accent: #fbb
 .season-card__shelf:hover, .season-card__shelf:focus-visible { border-color: var(--season-accent); }
 .season-card__shelf strong { display: block; font-size: .95rem; }
 .season-card__shelf span { color: var(--fg-secondary, var(--fg)); display: block; font-size: .82rem; margin-top: 2px; }
+.season-card__shelf--extra { border-style: dashed; grid-column: 1 / -1; }
+.season-card__shelf--extra strong { color: var(--season-accent); }
 .season-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 16px; }
 .season-card__open {
   align-items: center;

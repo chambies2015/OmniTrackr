@@ -27,6 +27,11 @@ JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 MAX_ADD = 30
+# Pages that sit beside a hub, shown on its dashboard card and in its "More for the season" cards.
+EXTRA_LINKS = {
+    "holidays": [{"path": "/holidays/gifts", "name": "Gift guide",
+                  "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."}],
+}
 FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music"}
 
 
@@ -148,6 +153,7 @@ def _related(slug: str, entry: dict, today: date) -> str:
         if month in public:
             links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
                           challenges.CHALLENGES[month]["tagline"]))
+    links[:0] = [(extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get(slug, [])]
     links.extend((other["path"], f"{other['name']} picks", other["card"])
                  for other_slug, other in SEASONS.items() if other_slug != slug)
     links.extend([
@@ -272,6 +278,7 @@ def seasonal_current(request: Request, response: Response, user=Depends(get_curr
         "year": date.today().year, "card": entry["card"], "cta": entry["card_cta"], "days_left": seasonal.days_left(entry),
         "shelves": [{"key": shelf["key"], "name": shelf["name"], "tagline": shelf["tagline"]} for shelf in entry["shelves"]],
         "total": progress["total"], "tracked": progress["tracked"], "done": progress["done"],
+        "links": EXTRA_LINKS.get(slug, []),
     }
 
 

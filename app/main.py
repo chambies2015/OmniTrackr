@@ -996,6 +996,21 @@ for route in seasonal_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_seasonal_add)
 app.include_router(seasonal_router.router)
 
+from .routers import gift_guide as gift_guide_router
+# The claim routes need no account, so they are limited per address. The member routes match the seasonal hub's.
+GIFT_GUIDE_LIMITS = {
+    ("/api/gift-list/items", "POST"): "60/minute",
+    ("/api/gift-list/link", "POST"): "10/hour",
+    ("/api/gifts/{token}/items/{item_id}/claim", "POST"): "20/minute",
+    ("/api/gifts/{token}/items/{item_id}/unclaim", "POST"): "20/minute",
+}
+for route in gift_guide_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = GIFT_GUIDE_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(gift_guide_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)

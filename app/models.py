@@ -1849,3 +1849,53 @@ class ForYouDismissal(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "title_key", name="uq_for_you_dismissal"),
     )
+
+
+class GiftList(Base):
+    """A member's holiday gift list, shared with family through one link (Nov 2026).
+
+    New tables only. Items are copies of a title or a typed idea, never library rows,
+    so the list never reads or changes the library once an item is on it. ``token``
+    is the share link; replacing it retires the old link, and ``shared`` turns it off.
+    """
+    __tablename__ = "gift_lists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), unique=True, nullable=False, index=True)
+    message = Column(String(200), nullable=True)
+    shared = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    items = relationship("GiftListItem", cascade="all, delete-orphan", back_populates="gift_list",
+                         order_by="GiftListItem.id")
+
+
+class GiftListItem(Base):
+    """One wish on a gift list: a title (kind is a title kind) or a typed idea (kind "other").
+
+    ``claim_hash`` is the SHA-256 of a key held by whoever marked it as theirs to buy,
+    so they can undo it. The list's owner is never shown claims.
+    """
+    __tablename__ = "gift_list_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("gift_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    normalized = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    creator = Column(String(120), nullable=True)
+    image = Column(String(500), nullable=True)
+    # Amazon search words and department for gifts from the guide; None means "use the title".
+    search = Column(String(150), nullable=True)
+    store = Column(String(20), nullable=True)
+    note = Column(String(120), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    claimed_at = Column(DateTime, nullable=True)
+    claim_hash = Column(String(64), nullable=True)
+
+    gift_list = relationship("GiftList", back_populates="items")
+
+    __table_args__ = (UniqueConstraint("list_id", "kind", "normalized", name="uq_gift_list_item"),)
