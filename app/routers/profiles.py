@@ -26,6 +26,7 @@ router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261103-profile-2"
 TITLE_CSS_VERSION = "20261009-take-1"
+FRAMES_CSS_VERSION = "20261104-frames-1"
 
 
 def _e(value) -> str:
@@ -118,6 +119,16 @@ def _avatar_html(user: models.User) -> str:
         return f'<img class="profile-hero__avatar" src="/profile-pictures/{user.id}" alt="" width="120" height="120">'
     initial = (user.username or "?")[:1].upper()
     return f'<div class="profile-hero__avatar profile-hero__avatar--empty" aria-hidden="true">{_e(initial)}</div>'
+
+
+def _framed_avatar_html(view, user: models.User) -> str:
+    """The avatar, inside a supporter's frame when they picked one. Without a frame the markup is unchanged."""
+    frame = (view.supporter or {}).get("frame")
+    if frame not in supporters.ALL_FRAMES:
+        return _avatar_html(user)
+    motion = " avatar-frame--motion" if (view.supporter or {}).get("frame_motion") else ""
+    return (f'<div class="profile-hero__frame avatar-frame avatar-frame--{frame}{motion}">'
+            f'{_avatar_html(user)}<span class="avatar-frame__art" aria-hidden="true"></span></div>')
 
 
 def _supporter_html(view) -> str:
@@ -522,6 +533,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-banners.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/member-profile.css?v={CSS_VERSION}">
+  <link rel="stylesheet" href="/static/avatar-frames.css?v={FRAMES_CSS_VERSION}">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <script type="application/ld+json">{_json_ld(view, canonical, meta_description)}</script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
@@ -535,7 +547,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         <div class="profile-cover" aria-hidden="true">{_banner_html(view)}{wall}</div>
       </div>
       <div class="site-wrap profile-hero__inner">
-        {_avatar_html(user)}
+        {_framed_avatar_html(view, user)}
         <div class="profile-hero__copy">
           <h1>{_e(name)}</h1>
           <p class="profile-hero__meta">{_e(since)}</p>
