@@ -36,13 +36,15 @@ LOOKUP_TIMEOUT = httpx.Timeout(3.0, connect=2.0)
 
 _URL = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 _IMDB_ID = re.compile(r"/title/(tt\d{7,10})(?:/|$)")
+# The patterns below run on text whose whitespace is already collapsed to single
+# spaces, so they use literal spaces instead of \s+ and never backtrack over runs.
 _YEAR_IN_PARENS = re.compile(
-    r"\s*\((?P<label>(?:TV|Video|Podcast)?\s*(?:Series|Mini[- ]Series|Movie|Special|Short|Game)?\s*)"
-    r"(?P<year>(?:19|20)\d{2})(?:\s*[–—-]\s*(?:(?:19|20)\d{2})?\s*)?\)",
+    r"\((?P<label>(?:TV |Video |Podcast )?(?:Series |Mini[- ]Series |Movie |Special |Short |Game )?)"
+    r"(?P<year>(?:19|20)\d{2})(?: ?[–—-] ?(?:(?:19|20)\d{2})?)?\)",
     re.IGNORECASE,
 )
-_RATING = re.compile(r"\s*(?:⭐|★|☆)\s*\d.*$")
-_SEPARATOR = re.compile(r"\s+[|•·—–-]\s+")
+_RATING = re.compile(r"[⭐★☆] ?\d")
+_SEPARATOR = re.compile(r" [|•·—–-] ")
 
 # Site names that end page titles ("Dune - IMDb", "Hades on Steam").
 _SITE_NAMES = (
@@ -56,40 +58,36 @@ _SITE_NAMES = (
     "scribd", "everand", "google play", "google books", "wikipedia",
 )
 _SITE_SUFFIX = re.compile(
-    r"\s+(?:on|at|via|from|\|)\s+(?:" + "|".join(re.escape(name) for name in sorted(_SITE_NAMES, key=len, reverse=True))
-    + r")\s*$",
+    r" (?:on|at|via|from|\|) (?:" + "|".join(re.escape(name) for name in sorted(_SITE_NAMES, key=len, reverse=True))
+    + r") ?$",
     re.IGNORECASE,
 )
 _SITE_SEGMENT = re.compile(
     r"^(?:" + "|".join(re.escape(name) for name in sorted(_SITE_NAMES, key=len, reverse=True))
-    + r")(?:\s+(?:\w+\s+)?(?:page|app|store))?$",
+    + r")(?: (?:\w+ )?(?:page|app|store))?$",
     re.IGNORECASE,
 )
 # Segments that mean "the rest is about a video, not the title": trailers, clips and so on.
 _VIDEO_NOISE = re.compile(
-    r"\b(?:trailer|teaser|official\s+(?:music\s+)?video|official\s+audio|music\s+video|lyric\s+video|lyrics|"
-    r"visualizer|full\s+album|official\s+clip|gameplay|first\s+look|sneak\s+peek)\b",
+    r"\b(?:trailer|teaser|official (?:music )?video|official audio|music video|lyric video|lyrics|"
+    r"visualizer|full album|official clip|gameplay|first look|sneak peek)\b",
     re.IGNORECASE,
 )
 _VIDEO_NOISE_INLINE = re.compile(
-    r"\s*[\(\[](?:official\s+)?(?:\w+\s+)?(?:trailer|teaser|music video|video|audio|lyric video|lyrics|visualizer|"
-    r"hd|4k|remastered(?:\s+\d{4})?)(?:\s+\d+)?[\)\]]",
+    r" ?[\(\[](?:official )?(?:\w+ )?(?:trailer|teaser|music video|video|audio|lyric video|lyrics|visualizer|"
+    r"hd|4k|remastered(?: \d{4})?)(?: \d+)?[\)\]]",
     re.IGNORECASE,
 )
-_SPOTIFY_BY = re.compile(r"^(?P<title>.+?)\s+[-–—]\s+(?:album|single|ep|song|podcast|audiobook|compilation)\s+by\s+(?P<who>.+)$",
-                         re.IGNORECASE)
+_SPOTIFY_BY = re.compile(r" [-–—] (?:album|single|ep|song|podcast|audiobook|compilation) by ", re.IGNORECASE)
 _LEADING_CHATTER = re.compile(
-    r"^(?:(?:hey|look|ooh|omg)[,!]?\s+)?(?:check\s+(?:this|it)\s+out[:!,]?\s+|check\s+out\s+|listen\s+to\s+|"
-    r"(?:you\s+should\s+)?(?:watch|read|play|listen\s+to)\s+|i(?:'|’)?m\s+(?:watching|reading|playing|listening\s+to)\s+|"
-    r"now\s+(?:watching|reading|playing)[:\s]+|currently\s+(?:watching|reading|playing)[:\s]+|"
-    r"i\s+(?:just\s+)?(?:watched|read|played|finished|loved)\s+)",
+    r"^(?:(?:hey|look|ooh|omg)[,!]? )?(?:check (?:this|it) out[:!,]? |check out |listen to |"
+    r"(?:you should )?(?:watch|read|play|listen to) |i(?:'|’)?m (?:watching|reading|playing|listening to) |"
+    r"now (?:watching|reading|playing)[: ]+|currently (?:watching|reading|playing)[: ]+|"
+    r"i (?:just )?(?:watched|read|played|finished|loved) )",
     re.IGNORECASE,
 )
-_TRAILING_CHATTER = re.compile(r"\s+(?:by\s+[^|]+?\s+)?on\s+(?:" + "|".join(re.escape(name) for name in _SITE_NAMES) + r")[.!]?$",
-                               re.IGNORECASE)
 _TITLE_GARBAGE = re.compile(r"^(?:share|untitled|home|watch|listen|read|play|search|login|sign in|log in)$", re.IGNORECASE)
-_NETFLIX_WATCH = re.compile(r"^watch\s+(.+?)(?:\s+\|\s+netflix.*)?$", re.IGNORECASE)
-_EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿️‍]")
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200d]")
 
 
 @dataclass(frozen=True)
@@ -310,7 +308,8 @@ def _read_link(link: str) -> tuple[Optional[_Site], Optional[str], str, Optional
     elif key == "amazon":
         if "dp" in lowered and lowered.index("dp") > 0:
             slug = segments[lowered.index("dp") - 1]
-        slug = re.sub(r"[-_](?:Audible[-_])?Audiobook.*$", "", slug, flags=re.IGNORECASE)
+        audiobook = re.search(r"[-_](?:audible[-_])?audiobook", slug, re.IGNORECASE)
+        slug = slug[:audiobook.start()] if audiobook else slug
     elif key == "youtube" and host.startswith("music."):
         kind = "music"
     title = _from_slug(slug) if slug else ""
@@ -330,23 +329,25 @@ def clean_title(raw: str, *, split_by: bool = False) -> tuple[str, Optional[str]
     if not text:
         return "", None, None, None
     year = kind = who = None
-    netflix = _NETFLIX_WATCH.match(text)
-    if netflix and re.search(r"netflix", text, re.IGNORECASE):
-        text = netflix.group(1)
+    lowered = text.lower()
+    if lowered.startswith("watch ") and "netflix" in lowered:
+        # "Watch Stranger Things | Netflix Official Site"
+        cut = lowered.find(" | netflix")
+        text = text[6:cut if cut > 6 else None]
     # "Title by Artist | Goodreads": drop the site first, then look at the rest.
     for _ in range(3):
         before = text
-        text = _SITE_SUFFIX.sub("", text).strip()
+        text = " ".join(_SITE_SUFFIX.sub("", text).split())
         segments = _SEPARATOR.split(text)
         while len(segments) > 1 and _SITE_SEGMENT.match(segments[-1].strip()):
             segments.pop()
         text = " - ".join(segments) if len(segments) > 1 else segments[0]
         if text == before:
             break
-    spotify = _SPOTIFY_BY.match(text)
-    if spotify:
-        text, who = spotify.group("title"), spotify.group("who").strip()
-    text = _VIDEO_NOISE_INLINE.sub("", text)
+    spotify = _SPOTIFY_BY.search(text)
+    if spotify and spotify.start() > 0:
+        text, who = text[:spotify.start()], text[spotify.end():].strip()
+    text = " ".join(_VIDEO_NOISE_INLINE.sub("", text).split())
     # Cut at the first segment that is about a video rather than the title itself.
     segments = _SEPARATOR.split(text)
     for index, segment in enumerate(segments):
@@ -354,7 +355,9 @@ def clean_title(raw: str, *, split_by: bool = False) -> tuple[str, Optional[str]
             segments = segments[:index]
             break
     text = " - ".join(segments)
-    text = _RATING.sub("", text)
+    rating = _RATING.search(text)
+    if rating:
+        text = text[:rating.start()].rstrip()
     match = _YEAR_IN_PARENS.search(text)
     if match:
         year = match.group("year")
@@ -368,13 +371,22 @@ def clean_title(raw: str, *, split_by: bool = False) -> tuple[str, Optional[str]
         # Whatever follows "(2024)" is genres, ratings or site chrome.
         text = text[:match.start()]
     text = _LEADING_CHATTER.sub("", text)
-    text = _TRAILING_CHATTER.sub("", text)
+    text = text.strip()
+    # "… on Spotify" at the very end.
+    on = text.lower().rfind(" on ")
+    if on > 0 and _SITE_SEGMENT.match(text[on + 4:].rstrip(".!")):
+        text = text[:on]
     # A trailing "(Sousou no Frieren)" alternate title only confuses the search.
-    text = re.sub(r"\s*\([^()]{2,80}\)\s*$", "", text) if not re.fullmatch(r".*\(\s*\)\s*", text) else text
-    by = re.match(r"^(?P<title>.+?)\s+by\s+(?P<who>[^|]+)$", text, re.IGNORECASE)
-    if split_by and by and not who and len(by.group("who").split()) <= 5:
-        who = by.group("who").strip()
-        text = by.group("title")
+    opening = text.rfind("(")
+    if text.endswith(")") and opening > 0:
+        inner = text[opening + 1:-1]
+        if 2 <= len(inner.strip()) <= 80 and "(" not in inner and ")" not in inner:
+            text = text[:opening].rstrip()
+    by = text.lower().find(" by ")
+    if split_by and by > 0 and not who:
+        author = text[by + 4:].strip()
+        if author and "|" not in author and len(author.split()) <= 5:
+            who, text = author, text[:by]
     text = re.sub(r"\s+", " ", text).strip(" \"'“”‘’|:-–—,.")
     if _TITLE_GARBAGE.match(text) or _SITE_SEGMENT.match(text):
         text = ""
