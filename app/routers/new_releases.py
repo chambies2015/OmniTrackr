@@ -112,13 +112,28 @@ def _source_link(label: str, url: str) -> str:
             f' <span class="muted">({_e(host.removeprefix("www."))})</span></li>')
 
 
-def _section_id(section: dict) -> str:
-    return "section-" + section["format"]
+DEFAULT_METHOD = ("Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. Most of these "
+                  "releases were not out when we wrote about them, so read this as a guide to what is worth "
+                  "planning around. We picked from the dated releases on the calendars and studio announcements listed below, left out "
+                  "anything without a firm date, and chose the ones we would point a friend towards, with an honest note on who "
+                  "should wait for reviews. The opinions are ours.")
+
+
+def _method(entry: dict) -> str:
+    """How the picks were chosen: the guide's own paragraphs, or the standard note."""
+    return _paragraphs(entry.get("method") or [DEFAULT_METHOD])
+
+
+def _count_line(entry: dict, total: int) -> str:
+    sections = len(entry["sections"])
+    if entry.get("focus"):
+        return f"{total} {entry['focus']} picks in {sections} groups."
+    return f"{total} releases across {sections} formats."
 
 
 def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     reviewed = entry["reviewed"]
-    jump = [f'<a href="#{_section_id(section)}">{_e(new_releases.FORMAT_LABELS[section["format"]])}</a>'
+    jump = [f'<a href="#{new_releases.section_id(section)}">{_e(new_releases.section_label(section))}</a>'
             for section in entry["sections"]]
     if entry["also"]:
         jump.append('<a href="#also">Also on the calendar</a>')
@@ -127,20 +142,20 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today:
     parts = [
         '<article class="trail-guide yl-guide bo-guide nr-guide">',
         f'<header class="hero hero--guide"><a href="{new_releases.BASE_PATH}">← Every release guide</a>',
-        f'<p class="eyebrow">RELEASE GUIDE · {_e(entry["period"].upper())}</p>',
+        f'<p class="eyebrow">{_e(entry.get("eyebrow", "RELEASE GUIDE"))} · {_e(entry["period"].upper())}</p>',
         f'<h1>{_e(entry["name"])}</h1><p class="guide-deck">{_e(entry["summary"])}</p>',
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Checked ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time></p>',
         f'<nav class="guide-jump" aria-label="On this page">{"".join(jump)}</nav></header>',
         f'<div class="guide-intro">{_paragraphs(entry["lead"])}</div>',
-        f'<p class="nr-count">{total} releases across {len(entry["sections"])} formats. Each one says when and where it '
+        f'<p class="nr-count">{_count_line(entry, total)} Each one says when and where it '
         'comes out, why it is on our list, what to catch up on first, and one thing to know before you commit.'
         + ('' if signed_in else ' Save any of them to a list, no account needed, and we will keep it for you if you sign up.') + '</p>',
     ]
     for section in entry["sections"]:
-        label = new_releases.FORMAT_LABELS[section["format"]]
-        parts.append(f'<section id="{_section_id(section)}" class="nr-section" aria-labelledby="{_section_id(section)}-heading">'
-                     f'<p class="eyebrow">{_e(label.upper())}</p><h2 id="{_section_id(section)}-heading">{_e(section["heading"])}</h2>'
+        label = new_releases.section_label(section)
+        parts.append(f'<section id="{new_releases.section_id(section)}" class="nr-section" aria-labelledby="{new_releases.section_id(section)}-heading">'
+                     f'<p class="eyebrow">{_e(label.upper())}</p><h2 id="{new_releases.section_id(section)}-heading">{_e(section["heading"])}</h2>'
                      f'<div class="yl-section-intro">{_paragraphs(section["intro"])}</div><div class="picks yl-picks">')
         for item in section["picks"]:
             parts.append(_pick_html(item, details, signed_in, today))
@@ -170,11 +185,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today:
         '</div></section>',
         '<section id="method" class="guide-sources yl-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        '<p>Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. Most of these '
-        'releases were not out when we wrote about them, so read this as a guide to what is worth '
-        'planning around. We picked from the dated releases on the calendars and studio announcements listed below, left out '
-        'anything without a firm date, and chose the ones we would point a friend towards, with an honest note on who '
-        'should wait for reviews. The opinions are ours.</p>',
+        _method(entry),
         '<p>Nothing here is sponsored, and nobody paid to be included. Dates are for the US unless we say otherwise, and '
         'they can change; when one moves, we update the page and the date at the top. Links in the list go to OmniTrackr '
         'title pages, not shops.</p>',
@@ -209,14 +220,17 @@ def release_guides_index():
     live = new_releases.published(today)
     current = new_releases.current(today)
     cards = []
-    for slug, entry in live.items():
+    # This month's guide first, then the other all-format guides, then one-format guides such as an anime season.
+    ordered = sorted(live.items(), key=lambda pair: (pair[0] != current, bool(pair[1].get("focus"))))
+    for slug, entry in ordered:
         titles = " · ".join(item["title"] for item in new_releases.picks(entry)[:4])
-        label = "This month" if slug == current else entry["period"]
+        label = "This month" if slug == current else entry.get("hub_label", entry["period"])
+        noun = entry.get("focus") or "releases"
         cards.append(
             f'<li><a class="yl-card bo-card" href="{_e(new_releases.path(slug))}">'
-            f'<span class="yl-card__art"><span class="yl-card__initial" aria-hidden="true">{_e(entry["period"][:1])}</span></span>'
+            f'<span class="yl-card__art"><span class="yl-card__initial" aria-hidden="true">{_e(entry.get("hub_label", entry["period"])[:1])}</span></span>'
             f'<span class="yl-card__text"><span class="nr-card__label">{_e(label)}</span><strong>{_e(entry["name"])}</strong>'
-            f'<span>{len(new_releases.picks(entry))} releases, including {_e(titles)}</span></span></a></li>'
+            f'<span>{len(new_releases.picks(entry))} {_e(noun)}, including {_e(titles)}</span></span></a></li>'
         )
     content = (
         '<header class="hero"><p class="eyebrow">RELEASE GUIDES</p><h1>What is coming out, and what is worth it</h1>'
