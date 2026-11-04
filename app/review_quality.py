@@ -76,6 +76,10 @@ def is_public_review_safe(review_text: str | None) -> bool:
 # few standalone reviews rather than one lonely card.
 AD_MIN_REVIEW_WORDS = 150
 MIN_INDEXED_LISTING_REVIEWS = 3
+# A one-format listing (/reviews?category=movie) repeats cards already on /reviews. While the site
+# has a few dozen reviews it was mostly a copy of that page (about 10% of its text was its own,
+# Nov 4 2026), so it joins search only with more standalone reviews of its own format.
+MIN_INDEXED_CATEGORY_REVIEWS = 8
 
 
 def word_count(text: str | None) -> int:

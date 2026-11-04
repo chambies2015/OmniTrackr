@@ -245,8 +245,16 @@ class TestSEOEndpoints:
                 review=movie.review, review_public=True))
         db_session.commit()
         content = client.get("/sitemap.xml").text
-        assert "/reviews?category=movie" in content
+        # Three is enough for /reviews, but a movies-only listing would mostly repeat it.
         assert "/reviews</loc>" in content
+        assert "/reviews?category=movie" not in content
+        for n in range(4, 9):
+            crud.create_movie(db_session, user.id, MovieCreate(
+                title=f"Sitemap Category Movie {n}", director="Category Director", year=2026,
+                review=movie.review, review_public=True))
+        db_session.commit()
+        content = client.get("/sitemap.xml").text
+        assert "/reviews?category=movie" in content
         assert "/reviews?category=book" not in content
         assert f"/reviews/{spammy_movie.id}?category=movie" not in content
 

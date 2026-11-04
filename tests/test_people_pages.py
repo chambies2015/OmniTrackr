@@ -171,6 +171,18 @@ def test_people_directory_names_each_page_once_in_structured_data(client, db_ses
     assert data.count('"url": "https://omnitrackr.xyz/people/christopher-nolan"') == 1
 
 
+def test_directory_waits_for_enough_indexed_pages(client, db_session, monkeypatch):
+    nolan_library(db_session)
+    assert people_pages.sitemap_paths(db_session) == ["/people/christopher-nolan"]
+    # One indexed page is not enough for a page that is mostly links.
+    assert client.get("/people").headers["X-Robots-Tag"] == "noindex, follow"
+    assert "/people</loc>" not in client.get("/sitemap.xml").text
+    monkeypatch.setattr(people_pages, "DIRECTORY_INDEX_MIN_PAGES", 1)
+    people = client.get("/people")
+    assert "X-Robots-Tag" not in people.headers and '<meta name="robots" content="index, follow">' in people.text
+    assert "/people</loc>" in client.get("/sitemap.xml").text
+
+
 def test_sitemap_lists_indexable_people(db_session):
     nolan_library(db_session)
     assert people_pages.sitemap_paths(db_session) == ["/people/christopher-nolan"]

@@ -336,8 +336,9 @@ def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
     other = STUDIO if entity == PERSON else PERSON
     sections.append(f'<p class="people-note">Looking for {_e(ENTITY_LABEL[other].lower())}? '
                     f'<a href="{PEOPLE_PATHS[other]}">Browse {_e(DIRECTORY_COPY[other][1][0].lower() + DIRECTORY_COPY[other][1][1:])}</a>.</p>')
-    # Mostly links, so it waits until enough of the pages it lists have real member data.
-    index_directory = sum(1 for entry in listed if entry["titles"] >= people_pages.INDEX_MIN_WORKS) >= 12
+    # Mostly links, so it waits until enough of the pages it lists are indexed in their own right.
+    index_directory = (people_pages.indexable_entry_count(db, entity, listed)
+                       >= people_pages.DIRECTORY_INDEX_MIN_PAGES)
     canonical = SITE_URL + PEOPLE_PATHS[entity]
     # A director who also wrote is listed under both roles; the list names each page once.
     unique = list({entry["url"]: entry for entry in listed}.values())
