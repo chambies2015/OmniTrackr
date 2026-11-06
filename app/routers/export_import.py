@@ -115,6 +115,7 @@ def _export_collections(db: Session, user_id: int) -> list[dict]:
             "name": collection.name,
             "description": collection.description,
             "cover_url": collection.cover_url,
+            "ranked": bool(collection.ranked),
             "items": items,
         })
     return exported
@@ -219,7 +220,8 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
     for raw in payloads[:200]:
         try:
             clean = schemas.CollectionCreate(
-                name=raw.get("name"), description=raw.get("description"), cover_url=raw.get("cover_url")
+                name=raw.get("name"), description=raw.get("description"), cover_url=raw.get("cover_url"),
+                ranked=raw.get("ranked") is True,
             )
         except (ValidationError, AttributeError, TypeError):
             skipped += 1
@@ -236,6 +238,7 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
             name=clean.name,
             description=clean.description,
             cover_url=clean.cover_url,
+            ranked=clean.ranked,
             is_public=False,
             moderation_status="pending",
         )

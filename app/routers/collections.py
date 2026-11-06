@@ -6,12 +6,13 @@ from html import escape
 import json
 import os
 import re
+import secrets
 from pathlib import Path
 from typing import Annotated, Dict, List, Tuple, Type
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
@@ -19,12 +20,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..integer_bounds import PositiveDatabaseId
 from ..admin_access import is_moderator, moderator_usernames
-from .. import models, schemas
+from .. import funnel, models, schemas
 from ..collection_quality import evaluate_public_collection
+from ..review_quality import is_public_review_safe
 from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..csp import strict_html_response
 from ..progress import lock_progress_owner
-from ..dependencies import get_current_user, get_db
+from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..visitor_identity import (
     VISITOR_COOKIE,
     set_visitor_cookie as _set_visitor_cookie,
@@ -50,6 +52,10 @@ PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
 PUBLIC_COLLECTION_MAX_ITEMS = 50
 PUBLIC_COLLECTION_GALLERY_MIN = 3
+# A link-only list needs this many titles and nothing else (no introduction minimum).
+# It is never indexed, listed in the gallery, or linked from title pages or profiles.
+LINK_MIN_ITEMS = 3
+LINK_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]{16,32}")
 PUBLIC_COLLECTION_REPORT_THRESHOLD = max(2, int(os.getenv("PUBLIC_COLLECTION_REPORT_THRESHOLD", "3")))
 ARTWORK_FIELDS = {
     "movies": "poster_url",
@@ -460,11 +466,14 @@ def _serialize_collection(
         "is_public": collection.is_public,
         "moderation_status": moderation_status,
         "public_url": f"/collections/public/{collection.id}" if collection.is_public else None,
+        "ranked": bool(collection.ranked),
+        "link_url": f"/collections/link/{collection.link_token}" if collection.link_token else None,
         "view_count": collection.view_count or 0,
         "helpful_count": collection.helpful_count or 0,
         "report_count": current_report_count,
         "readiness": {
             "share_ready": quality.share_ready,
+            "link_ready": _link_ready(collection, db, media_lookup),
             "discover_ready": quality.discover_ready and not suspended and collection.moderation_status != "rejected",
             "character_count": quality.character_count,
             "word_count": quality.word_count,
@@ -528,6 +537,17 @@ def _collection_is_discoverable(
         and _collection_quality(collection, db, media_lookup).discover_ready
         and not _current_report_state_hides_collection(collection, db, media_lookup)
     )
+
+
+def _link_ready(collection: models.Collection, db: Session, media_lookup: dict | None = None) -> bool:
+    """Whether a share link may show this list: three titles and wording that passes the safety check."""
+    items = _available_items(collection, db, collection.user_id, media_lookup)
+    if len(items) < LINK_MIN_ITEMS:
+        return False
+    text_to_check = " ".join(
+        part for part in (collection.name, collection.description, *(item["curator_note"] for item in items)) if part
+    )
+    return is_public_review_safe(text_to_check)
 
 
 def _apply_automated_readiness(
@@ -689,6 +709,7 @@ def create_collection(
         name=payload.name,
         description=payload.description,
         cover_url=payload.cover_url,
+        ranked=payload.ranked,
     )
     db.add(collection)
     db.commit()
@@ -723,6 +744,8 @@ def update_collection(
     if "cover_url" in updates:
         content_changed = content_changed or updates["cover_url"] != collection.cover_url
         collection.cover_url = updates["cover_url"]
+    if "ranked" in updates and updates["ranked"] is not None:
+        collection.ranked = bool(updates["ranked"])
     if content_changed:
         _return_to_review(collection)
     if "is_public" in updates:
@@ -1211,44 +1234,97 @@ def explore_collections(
     return response
 
 
-@router.get("/public/{collection_id}")
-def public_collection(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
-    """Render the deliberately limited public view of an explicitly shared shelf."""
-    collection = _public_collection_or_404(db, collection_id)
+def _count_view(db: Session, collection: models.Collection, visitor_hash: str, trusted_visitor: bool) -> None:
+    if not trusted_visitor:
+        return
+    existing_view = db.query(models.CollectionView.id).filter(
+        models.CollectionView.collection_id == collection.id,
+        models.CollectionView.visitor_hash == visitor_hash,
+    ).first()
+    if existing_view:
+        return
+    db.add(models.CollectionView(collection_id=collection.id, visitor_hash=visitor_hash))
+    try:
+        db.flush()
+        db.query(models.Collection).filter(models.Collection.id == collection.id).update(
+            {models.Collection.view_count: models.Collection.view_count + 1},
+            synchronize_session=False,
+        )
+        db.commit()
+        db.refresh(collection)
+    except IntegrityError:
+        db.rollback()
+
+
+def _viewer_library_matches(db: Session, viewer, collection: models.Collection, media_lookup: dict) -> set[int]:
+    """Collection entry ids whose title the signed-in viewer already has (same edition check as saving)."""
+    if viewer is None or viewer.id == collection.user_id:
+        return set()
+    pairs = [
+        (entry, media_lookup[(collection.user_id, entry.category, entry.item_id)])
+        for entry in collection.items
+        if (collection.user_id, entry.category, entry.item_id) in media_lookup
+    ]
+    if not pairs:
+        return set()
+    existing = _collection_save_matches(db, viewer.id, pairs)
+    return {
+        entry.id for entry, media in pairs
+        if (entry.category, _media_identity_key(media, entry.category)) in existing
+    }
+
+
+def _entry_action_html(item: dict, viewer, owner_id: int, have: set[int], signin_url: str) -> str:
+    if viewer is not None and viewer.id == owner_id:
+        return ""
+    if viewer is not None and item["id"] in have:
+        return '<span class="collection-entry__have">✓ In your library</span>'
+    if viewer is not None:
+        return (f'<button type="button" class="collection-entry__add" data-entry-save="{item["id"]}" '
+                f'aria-label="Add {escape(item["title"], quote=True)} to my library">+ Add to my library</button>')
+    return (f'<a class="collection-entry__add" rel="nofollow" data-entry-signup href="{escape(signin_url, quote=True)}">'
+            '+ Add to my library</a>')
+
+
+def _render_collection_page(
+    collection: models.Collection,
+    request: Request,
+    db: Session,
+    viewer,
+    *,
+    path: str,
+    indexable: bool,
+    link_only: bool,
+):
+    """The shared list page, for both the public address and a share link."""
     template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8"))
     visitor_hash, visitor_token, trusted_visitor = _visitor_identity(request)
-    if trusted_visitor:
-        existing_view = db.query(models.CollectionView.id).filter(
-            models.CollectionView.collection_id == collection.id,
-            models.CollectionView.visitor_hash == visitor_hash,
-        ).first()
-        if not existing_view:
-            db.add(models.CollectionView(collection_id=collection.id, visitor_hash=visitor_hash))
-            try:
-                db.flush()
-                db.query(models.Collection).filter(models.Collection.id == collection.id).update(
-                    {models.Collection.view_count: models.Collection.view_count + 1},
-                    synchronize_session=False,
-                )
-                db.commit()
-                db.refresh(collection)
-            except IntegrityError:
-                db.rollback()
+    _count_view(db, collection, visitor_hash, trusted_visitor)
     media_lookup = _media_lookup_for_collections(db, [collection])
     items = _available_items(collection, db, collection.user_id, media_lookup)
+    have = _viewer_library_matches(db, viewer, collection, media_lookup)
+    signin_url = "/?next=" + quote(path, safe="") + "#landing-auth"
+    ranked = bool(collection.ranked)
+
+    def number(position: int) -> str:
+        if ranked:
+            return f'<span class="collection-entry__number collection-entry__number--rank" aria-label="Number {position}">#{position}</span>'
+        return f'<span class="collection-entry__number">{position:02d}</span>'
+
     item_cards = "".join(
-        '<li class="collection-entry">'
-        f'<span class="collection-entry__number">{position:02d}</span>'
-        + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '')
-        + f'<div><p>{escape(item["category_label"])}</p><h2>'
+        f'<li class="collection-entry{" collection-entry--top" if ranked and position <= 3 else ""}">'
+        + number(position)
+        + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '<span class="collection-entry__art-gap" aria-hidden="true"></span>')
+        + f'<div class="collection-entry__copy"><p>{escape(item["category_label"])}</p><h2>'
         + (f'<a href="{escape(item["title_path"], quote=True)}">{escape(item["title"])}</a>' if item.get("title_path") else escape(item["title"]))
         + '</h2>'
         + (f'<div class="collection-entry__note">{escape(item["curator_note"])}</div>' if item["curator_note"] else '')
-        + '</div></li>'
+        + '</div>'
+        + _entry_action_html(item, viewer, collection.user_id, have, signin_url)
+        + '</li>'
         for position, item in enumerate(items, 1)
     )
     description = (collection.description or "").strip()
-    approved = _approval_is_current(collection, db, media_lookup)
     related = _related_collections(db, collection, items)
     credits = _curator_credits(db, [collection] + [candidate for candidate, _ in related])
     credit = credits.get(collection.user_id)
@@ -1264,28 +1340,59 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
         + '</div><p class="related-collections__more"><a href="/collections/explore">Browse every collection →</a></p></section>'
     ) if related else ""
     cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
+    kind = "Ranked list" if ranked else ("Shared list" if link_only else "Shared collection")
+    meta_description = description[:160] if description else (
+        f"{len(items)} picks: " + ", ".join(item["title"] for item in items[:5])
+    )[:160]
+    if link_only:
+        actions = (
+            '<p class="collection-actions__link-note">Shared by link. It stays out of search and the public gallery.</p>'
+            '<button type="button" data-collection-action="show-report">Report</button>'
+        )
+        report_path = f"{path}/report"
+    else:
+        actions = (
+            '<button type="button" data-collection-action="helpful">Helpful</button>'
+            f'<a rel="nofollow" href="/collections/public/{collection.id}/save">Save a private copy</a>'
+            '<button type="button" data-collection-action="show-report">Report</button>'
+        )
+        report_path = f"/collections/public/{collection.id}/report"
+    metrics = (
+        f'<span>{collection.view_count or 0} readers</span>'
+        + ("" if link_only else f'<span id="collectionHelpfulCount">{collection.helpful_count or 0} found this helpful</span>')
+    )
     values = {
         "TITLE": escape(collection.name),
-        "DESCRIPTION": escape(description[:160], quote=True),
-        "PATH": f"/collections/public/{collection.id}",
+        "DESCRIPTION": escape(meta_description, quote=True),
+        "PATH": path,
+        "KIND": kind,
+        "PAGE_SUFFIX": "OmniTrackr list" if link_only else "OmniTrackr Collection",
         "INTRO": escape(description),
+        "INTRO_CLASS": "share-intro" if description else "share-intro share-intro--empty",
         "ITEMS": item_cards,
+        "LIST_CLASS": "collection-list collection-list--ranked" if ranked else "collection-list",
         "COUNT": str(len(items)),
-        "VIEWS": str(collection.view_count or 0),
-        "HELPFUL": str(collection.helpful_count or 0),
+        "METRICS": metrics,
+        "ACTIONS": actions,
+        "REPORT_PATH": escape(report_path, quote=True),
+        "HELPFUL_PATH": escape(f"/collections/public/{collection.id}/helpful", quote=True),
+        "ENTRY_PATH": escape(f"{path}/entries", quote=True),
+        "SIGNED_IN": "1" if viewer is not None else "0",
         "COLLECTION_ID": str(collection.id),
-        "CURATOR": _credit_html(credit) + _follow_credit_html(db, collection.user_id, credit),
+        "CURATOR": _credit_html(credit) + ("" if link_only else _follow_credit_html(db, collection.user_id, credit)),
         "AUTHOR": escape(credit[0] if credit else "OmniTrackr member", quote=True),
         "UPDATED_ISO": updated.date().isoformat() if updated else "",
         "UPDATED": f"{updated:%B} {updated.day}, {updated.year}" if updated else "",
         "RELATED": related_html,
-        "ROBOTS": "index, follow" if approved else "noindex, follow",
+        "ROBOTS": "index, follow" if indexable else "noindex, follow",
         "COVER": (
             f'<img class="share-cover" src="{escape(cover, quote=True)}" alt="" referrerpolicy="no-referrer">'
             if cover else ""
         ),
         "OG_IMAGE": (
-            f'<meta property="og:image" content="{escape(cover, quote=True)}">' if cover else ""
+            f'<meta property="og:image" content="https://omnitrackr.xyz{escape(path, quote=True)}/card.png">'
+            '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
+            '<meta name="twitter:card" content="summary_large_image">'
         ),
         "STRUCTURED_DATA": json.dumps({
             "@context": "https://schema.org",
@@ -1293,6 +1400,7 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
             "name": collection.name,
             "description": description,
             "numberOfItems": len(items),
+            "itemListOrder": "https://schema.org/ItemListOrderAscending" if ranked else "https://schema.org/ItemListUnordered",
             **({"author": author} if author else {}),
             **({"dateModified": updated.date().isoformat()} if updated else {}),
             "itemListElement": [
@@ -1304,10 +1412,98 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
     # One pass, so a name or description containing "{{KEY}}" is never filled in a second time.
     template = re.sub(r"\{\{([A-Z_]+)\}\}", lambda match: values.get(match.group(1), match.group(0)), template)
     response = strict_html_response(template)
-    response.headers["X-Robots-Tag"] = "index, follow" if approved else "noindex, follow"
+    response.headers["X-Robots-Tag"] = "index, follow" if indexable else "noindex, follow"
     response.headers["Cache-Control"] = "private, no-cache, must-revalidate"
     _set_visitor_cookie(response, visitor_token)
     return response
+
+
+@router.get("/public/{collection_id}")
+def public_collection(
+    collection_id: PositiveDatabaseId,
+    request: Request,
+    db: Session = Depends(get_db),
+    viewer=Depends(get_optional_current_user),
+):
+    """Render the deliberately limited public view of an explicitly shared shelf."""
+    collection = _public_collection_or_404(db, collection_id)
+    media_lookup = _media_lookup_for_collections(db, [collection])
+    return _render_collection_page(
+        collection, request, db, viewer,
+        path=f"/collections/public/{collection.id}",
+        indexable=_approval_is_current(collection, db, media_lookup),
+        link_only=False,
+    )
+
+
+def _linked_collection_or_404(db: Session, token: str, *, lock=False) -> models.Collection:
+    """The list behind a share link, if the link is on and the list can be shown."""
+    if not isinstance(token, str) or not LINK_TOKEN_RE.fullmatch(token):
+        raise HTTPException(status_code=404, detail="Shared list not found")
+    query = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+        models.User, models.Collection.user_id == models.User.id
+    ).filter(
+        models.Collection.link_token == token,
+        models.Collection.moderation_status != "rejected",
+        models.User.is_active == True,
+    )
+    if lock:
+        query = query.with_for_update(of=models.Collection)
+    collection = query.populate_existing().first()
+    if not collection or not hmac.compare_digest(collection.link_token or "", token):
+        raise HTTPException(status_code=404, detail="Shared list not found")
+    media_lookup = _media_lookup_for_collections(db, [collection])
+    if _current_report_state_hides_collection(collection, db, media_lookup) or not _link_ready(collection, db, media_lookup):
+        raise HTTPException(status_code=404, detail="Shared list not available")
+    return collection
+
+
+def _published_address(db: Session, collection: models.Collection) -> str | None:
+    """The public address when the list is also published, so a link and the page never compete."""
+    if not collection.is_public:
+        return None
+    try:
+        _public_collection_or_404(db, collection.id)
+    except HTTPException:
+        return None
+    return f"/collections/public/{collection.id}"
+
+
+def _unavailable_list_page():
+    page = message_page(
+        "List unavailable", "This list isn't shared anymore",
+        "The person who made it may have turned the link off, changed the list, or removed it.",
+        eyebrow="Shared lists", actions=(("Explore public collections", "/collections/explore"), ("Go to the homepage", "/")),
+    )
+    response = strict_html_response(page, status_code=404)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
+@router.get("/link/{token}", include_in_schema=False)
+def linked_collection(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    viewer=Depends(get_optional_current_user),
+):
+    """A list shared by link: same page as a public collection, never indexed or listed."""
+    try:
+        collection = _linked_collection_or_404(db, token)
+    except HTTPException:
+        return _unavailable_list_page()
+    published = _published_address(db, collection)
+    if published:
+        return RedirectResponse(published, status_code=302)
+    if viewer is None:
+        funnel.record("collection_link_opened", request)
+    return _render_collection_page(
+        collection, request, db, viewer,
+        path=f"/collections/link/{token}",
+        indexable=False,
+        link_only=True,
+    )
 
 
 @router.post("/public/{collection_id}/helpful")
@@ -1345,6 +1541,22 @@ def report_collection(
     db: Session = Depends(get_db),
 ):
     collection = _public_collection_or_404(db, collection_id)
+    return _record_report(collection, payload, request, db)
+
+
+@router.post("/link/{token}/report", status_code=status.HTTP_201_CREATED, include_in_schema=False)
+def report_linked_collection(
+    token: str,
+    payload: schemas.CollectionReportCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Reports on a shared link count toward the same automatic unlisting as public pages."""
+    collection = _linked_collection_or_404(db, token)
+    return _record_report(collection, payload, request, db)
+
+
+def _record_report(collection: models.Collection, payload, request: Request, db: Session):
     current_hash = _approval_content_hash(collection, db)
     visitor_hash, visitor_token, _ = _visitor_identity(request)
     duplicate = False
@@ -1387,6 +1599,9 @@ def report_collection(
                     message=(
                         f'Your public collection "{collection.name}" was automatically unlisted after '
                         "reports from multiple independent visitors. Edit it to publish a revised version."
+                    ) if collection.is_public else (
+                        f'The share link for your list "{collection.name}" was turned off automatically after '
+                        "reports from several different visitors. Edit the list and it can be shared again."
                     ),
                 ))
         db.commit()
@@ -1534,3 +1749,217 @@ def remove_collection_item(
     db.expire(collection, ["items"])
     _apply_automated_readiness(collection, db)
     db.commit()
+
+
+# ---------------------------------------------------------------- share links (Nov 2026)
+
+@router.post("/{collection_id}/link")
+def create_share_link(
+    collection_id: PositiveDatabaseId,
+    request: Request,
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Turn on (or return) the list's share link. Works before the list is ready for the gallery."""
+    response.headers["Cache-Control"] = "private, no-store"
+    collection = _get_collection(db, current_user.id, collection_id)
+    if collection.moderation_status == "rejected":
+        raise HTTPException(status_code=422, detail="This collection can't be shared.")
+    if not _link_ready(collection, db):
+        items = _available_items(collection, db, collection.user_id)
+        if len(items) < LINK_MIN_ITEMS:
+            raise HTTPException(status_code=422, detail=f"Add at least {LINK_MIN_ITEMS} titles before sharing a link.")
+        raise HTTPException(status_code=422, detail="Reword the title, introduction or notes before sharing this list.")
+    created = False
+    if not collection.link_token:
+        for _ in range(4):
+            collection.link_token = secrets.token_urlsafe(16)
+            try:
+                db.commit()
+                created = True
+                break
+            except IntegrityError:
+                db.rollback()
+                collection = _get_collection(db, current_user.id, collection_id)
+        else:
+            raise HTTPException(status_code=503, detail="Could not make a link. Please try again.")
+        funnel.record("collection_link_created", request)
+    db.refresh(collection)
+    return {"link_url": f"/collections/link/{collection.link_token}", "created": created}
+
+
+@router.delete("/{collection_id}/link", status_code=status.HTTP_204_NO_CONTENT)
+def delete_share_link(
+    collection_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Turn the share link off. Anyone who has the old address gets a "not shared anymore" page."""
+    collection = _get_collection(db, current_user.id, collection_id)
+    collection.link_token = None
+    db.commit()
+
+
+def _add_entry_to_library(db: Session, user: models.User, resolve, entry_id: int, request: Request) -> dict:
+    """Copy one title from someone's list into the viewer's library, unless they already have it."""
+    lock_progress_owner(db, user.id)
+    try:
+        collection = resolve(lock=True)
+        entry = next((item for item in collection.items if item.id == entry_id), None)
+        lookup = _media_lookup_for_collections(db, [collection])
+        media = lookup.get((collection.user_id, entry.category, entry.item_id)) if entry else None
+        if entry is None or media is None:
+            raise HTTPException(status_code=404, detail="That title isn't on this list anymore.")
+        if user.id == collection.user_id:
+            db.commit()
+            return {"added": False, "already": True, "title": media.title}
+        existing = _collection_save_matches(db, user.id, [(entry, media)])
+        if (entry.category, _media_identity_key(media, entry.category)) in existing:
+            db.commit()
+            return {"added": False, "already": True, "title": media.title}
+        _copy_media_for_user(db, media, entry.category, user.id, existing)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    funnel.record("collection_title_saved", request)
+    return {"added": True, "already": False, "title": media.title}
+
+
+@router.post("/public/{collection_id}/entries/{entry_id}/library")
+def add_public_entry_to_library(
+    collection_id: PositiveDatabaseId,
+    entry_id: PositiveDatabaseId,
+    request: Request,
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    return _add_entry_to_library(
+        db, current_user, lambda lock=False: _public_collection_or_404(db, collection_id, lock=lock), entry_id, request,
+    )
+
+
+@router.post("/link/{token}/entries/{entry_id}/library", include_in_schema=False)
+def add_linked_entry_to_library(
+    token: str,
+    entry_id: PositiveDatabaseId,
+    request: Request,
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    return _add_entry_to_library(
+        db, current_user, lambda lock=False: _linked_collection_or_404(db, token, lock=lock), entry_id, request,
+    )
+
+
+# ---------------------------------------------------------------- share card image
+
+_LIST_CARDS = None
+
+
+def _card_cache():
+    global _LIST_CARDS
+    if _LIST_CARDS is None:
+        from .profiles import _CardCache
+        _LIST_CARDS = _CardCache(size=96)
+    return _LIST_CARDS
+
+
+CARD_SHOWN_TITLES = 5
+
+
+def render_list_card(name: str, ranked: bool, entries: list[tuple[str, str]], total: int, curator: str) -> bytes:
+    """A 1200x630 card for link previews: the list's name and its first few titles."""
+    from io import BytesIO
+    from PIL import Image, ImageDraw
+    from .profiles import _fit, _font
+    width, height = 1200, 630
+    base = Image.new("RGB", (width, height), (11, 10, 24))
+    glow = Image.new("RGB", (width, height), (11, 10, 24))
+    glow_draw = ImageDraw.Draw(glow)
+    for step in range(18, 0, -1):
+        radius, mix = step * 34, (1 - step / 18) * 0.5
+        shade = (int(11 + 34 * mix), int(10 + 202 * mix), int(24 + 167 * mix))
+        glow_draw.ellipse((width - 120 - radius, height + 60 - radius, width - 120 + radius, height + 60 + radius), fill=shade)
+    image = Image.blend(base, glow, 0.7)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((40, 40, width - 40, height - 40), radius=28, outline=(60, 52, 110), width=2)
+    eyebrow = f"OmniTrackr · {'ranked list' if ranked else 'list'} · {total} pick{'' if total == 1 else 's'}"
+    draw.text((84, 76), eyebrow, font=_font(28, bold=True), fill=(94, 234, 212))
+    title_font = _font(60, bold=True)
+    words, lines, line = name.split(), [], ""
+    for word in words:
+        trial = f"{line} {word}".strip()
+        if draw.textlength(trial, font=title_font) <= width - 168 or not line:
+            line = trial
+        else:
+            lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
+    if len(lines) > 2:
+        lines = [lines[0], _fit(draw, " ".join(lines[1:]), title_font, width - 168)]
+    lines = [_fit(draw, text, title_font, width - 168) for text in lines]
+    y = 122
+    for text in lines:
+        draw.text((84, y), text, font=title_font, fill=(245, 243, 255))
+        y += 72
+    y += 16
+    row_font, label_font, number_font = _font(30, bold=True), _font(22), _font(26, bold=True)
+    shown = entries[:CARD_SHOWN_TITLES if len(lines) == 1 else CARD_SHOWN_TITLES - 1]
+    for position, (label, title) in enumerate(shown, 1):
+        marker = f"#{position}" if ranked else "•"
+        draw.text((84, y + 2), marker, font=number_font, fill=(196, 181, 253))
+        label_width = draw.textlength(label.upper(), font=label_font)
+        draw.text((150, y), _fit(draw, title, row_font, width - 300 - label_width), font=row_font, fill=(236, 233, 252))
+        draw.text((width - 84 - label_width, y + 6), label.upper(), font=label_font, fill=(148, 140, 190))
+        y += 50
+    if total > len(shown):
+        draw.text((150, y + 2), f"+ {total - len(shown)} more", font=label_font, fill=(148, 140, 190))
+    draw.text((84, height - 92), _fit(draw, f"By {curator}", _font(24), 700), font=_font(24), fill=(196, 181, 253))
+    brand = "omnitrackr.xyz"
+    draw.text((width - 84 - draw.textlength(brand, font=_font(24, bold=True)), height - 92), brand,
+              font=_font(24, bold=True), fill=(245, 243, 255))
+    buffer = BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+def _card_response(db: Session, collection: models.Collection, *, public: bool):
+    lookup = _media_lookup_for_collections(db, [collection])
+    items = _available_items(collection, db, collection.user_id, lookup)
+    credit = _curator_credits(db, [collection]).get(collection.user_id)
+    entries = [(item["category_label"], item["title"]) for item in items]
+    curator = credit[0] if credit else "an OmniTrackr member"
+    fingerprint = hashlib.sha256(
+        json.dumps([collection.id, collection.name, bool(collection.ranked), entries, curator]).encode("utf-8")
+    ).hexdigest()[:16]
+    cache = _card_cache()
+    key = (collection.id, fingerprint)
+    png = cache.get(key)
+    if png is None:
+        try:
+            png = render_list_card(collection.name, bool(collection.ranked), entries, len(entries), curator)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Card unavailable")
+        cache.put(key, png)
+    return Response(content=png, media_type="image/png", headers={
+        "Cache-Control": "public, max-age=3600" if public else "private, max-age=600",
+        "ETag": f'"{fingerprint}"', "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex",
+    })
+
+
+@router.get("/public/{collection_id}/card.png", include_in_schema=False)
+def public_collection_card(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
+    return _card_response(db, _public_collection_or_404(db, collection_id), public=True)
+
+
+@router.get("/link/{token}/card.png", include_in_schema=False)
+def linked_collection_card(token: str, request: Request, db: Session = Depends(get_db)):
+    return _card_response(db, _linked_collection_or_404(db, token), public=False)

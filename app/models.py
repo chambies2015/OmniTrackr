@@ -502,6 +502,10 @@ class Collection(Base):
     report_content_hash = Column(String, nullable=True)
     suspended_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Nov 2026: a list can be shared by an unguessable link before it is ready for the
+    # gallery (never indexed), and can be marked as ranked so pages show #1, #2, #3.
+    link_token = Column(String(32), nullable=True, unique=True, index=True)
+    ranked = Column(Boolean, nullable=False, default=False)
 
     owner = relationship("User", back_populates="collections")
     items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan", order_by="CollectionItem.position")
