@@ -152,8 +152,9 @@ def test_writeup_reads_from_the_numbers(db_session):
 
 
 def test_trending_pages_render_and_stay_out_of_search_while_thin(client, db_session):
+    # The page counts from the real clock, so the adds are dated from it too (NOW drifts out of the week).
     for user in crowd(db_session, "r", 3):
-        add(db_session, user, "Page Film", director="Some Director")
+        add(db_session, user, "Page Film", director="Some Director").added_at = datetime.utcnow() - timedelta(days=1)
     db_session.commit()
     response = client.get("/trending")
     assert response.status_code == 200
