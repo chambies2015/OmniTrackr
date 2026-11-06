@@ -356,6 +356,10 @@ def run_migrations():
                 "report_count": "INTEGER DEFAULT 0",
                 "report_content_hash": "VARCHAR",
                 "suspended_at": "TIMESTAMP",
+                # Nov 2026 share links and ranked lists. Existing collections start
+                # with no link and unranked, so nothing new is shared.
+                "link_token": "VARCHAR(32)",
+                "ranked": "BOOLEAN NOT NULL DEFAULT FALSE",
             }
             for column_name, column_type in collection_additions.items():
                 if column_name not in collection_columns:
@@ -373,6 +377,7 @@ def run_migrations():
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_suspended_at ON collections(suspended_at)"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_collections_link_token ON collections(link_token)"))
                 conn.commit()
 
         if inspector.has_table("collection_items"):
