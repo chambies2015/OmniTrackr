@@ -11,6 +11,7 @@ from app.discover_guides import GUIDES as DISCOVER_GUIDES
 from app.if_you_liked_guides import GUIDES as LIKED_GUIDES
 from app.in_order_guides import GUIDES as ORDER_GUIDES
 from app.seasonal_guides import SEASONS
+from app.holiday_guides import GUIDES as HOLIDAY_GUIDES
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +38,7 @@ def header(html):
 
 def test_editorial_index_lists_every_guide_newest_first():
     pieces = editorial_index.entries()
-    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + 1 + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs and the gift guide, best-of lists, release guides
+    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + 1 + len(HOLIDAY_GUIDES) + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs, the gift guide and the guides beside the holiday hub, best-of lists, release guides
     dates = [piece["updated"] for piece in pieces]
     assert dates == sorted(dates, reverse=True)
     latest = editorial_index.latest(6)
