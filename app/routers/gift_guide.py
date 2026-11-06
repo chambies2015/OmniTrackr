@@ -53,7 +53,7 @@ def _private(response: Response) -> Response:
 
 def _head(*, ads: bool) -> str:
     head = (f'<link rel="stylesheet" href="/static/if-you-liked.css?v={CSS_VERSION}">'
-            f'<link rel="stylesheet" href="/static/seasonal.css?v=20261022-holidays-1">'
+            f'<link rel="stylesheet" href="/static/seasonal.css?v=20261106-holiday-guides-1">'
             f'<link rel="stylesheet" href="/static/gift-guide.css?v={CSS_VERSION}">')
     if ads:
         head += '<script src="/static/ad-loader.js" defer></script>'
