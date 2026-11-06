@@ -450,6 +450,15 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
         page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)
         page = page.replace("<!--SAVEBAR_SIGNUP-->", savebar_signup_html(google), 1)
+        if "<!--HERO_STAGE-->" in page and "<!--/HERO_STAGE-->" in page:
+            try:
+                from . import guest_picks
+                stage = guest_picks.hero_stage()
+            except Exception:
+                stage = ""  # Keep the vortex.
+            start, end = page.index("<!--HERO_STAGE-->"), page.index("<!--/HERO_STAGE-->")
+            fallback = page[start + len("<!--HERO_STAGE-->"):end]
+            page = page[:start] + (stage or fallback) + page[end + len("<!--/HERO_STAGE-->"):]
         if "<!--HERO_QUICK_PICKS-->" in page:
             try:
                 from . import guest_picks
