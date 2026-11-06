@@ -221,7 +221,9 @@ def stats(db: Session, days: int, now: Optional[datetime] = None) -> dict:
         for item_id, user_id, text in rows:
             if (user_id, category, item_id) in decided:
                 continue
-            if evaluate_public_review(text, MIN_CHARS, DETAIL_MIN_CHARS).community_ready:
+            # Every member's private reviews: read the shared cache but don't fill it, or one
+            # Site stats visit could push the public reviews the feeds rely on out of it.
+            if evaluate_public_review(text, MIN_CHARS, DETAIL_MIN_CHARS, remember=False).community_ready:
                 waiting += 1
                 members.add(user_id)
     return {
