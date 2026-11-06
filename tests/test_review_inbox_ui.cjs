@@ -109,12 +109,15 @@ test('errors from the server are shown and the buttons come back', async () => {
 });
 
 test('hiding the card keeps it away for a while', async () => {
-  const { nodes, module } = setup();
+  let calls = 0;
+  const { nodes, module } = setup(async () => { calls += 1; return { ok: true, json: async () => DATA }; });
   await module.refresh();
   nodes.reviewInboxHide.listeners.click();
   assert.equal(nodes.reviewInbox.hidden, true);
   await module.refresh();
   assert.equal(nodes.reviewInbox.hidden, true);
+  // While it's hidden the dashboard doesn't ask the server to read every review again.
+  assert.equal(calls, 1);
 });
 
 test('no reviews to share, or a failed request, leaves the card hidden', async () => {

@@ -45,7 +45,7 @@ def _apply(db: Session, action):
 
 
 @router.get("/api/review-inbox")
-def list_reviews(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def list_reviews(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     return review_inbox.candidates(db, user)
 

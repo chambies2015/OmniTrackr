@@ -832,6 +832,9 @@ for route in supporters.router.routes:
     # Each claim can send an email to an address the member typed.
     elif getattr(route, "path", None) == "/api/supporter/claim" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("6/hour")(route.endpoint))
+    # Saving supporter settings (accent, banner, frame, app theme) is a click at a time.
+    elif getattr(route, "path", None) == "/api/supporter" and "PUT" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(supporters.router)
 
 rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
@@ -1168,6 +1171,8 @@ app.include_router(binge_calculator_router.router)
 
 from .routers import review_inbox as review_inbox_router
 rate_limited_review_inbox = {
+    # The list reads every private review a member has, so it gets a limit like the writes.
+    "/api/review-inbox": limiter.limit("30/minute")(review_inbox_router.list_reviews),
     "/api/review-inbox/share": limiter.limit("30/minute")(review_inbox_router.share_review),
     "/api/review-inbox/keep": limiter.limit("30/minute")(review_inbox_router.keep_review),
     "/api/review-inbox/undo": limiter.limit("30/minute")(review_inbox_router.undo_answer),

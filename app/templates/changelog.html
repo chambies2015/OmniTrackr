@@ -63,6 +63,17 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov6-2026-heading">
+        <h2 id="security-nov6-2026-heading">November 6, 2026: Security and speed check of review sharing, supporter themes and guide links</h2>
+        <p>We went over the "Share your reviews" card, the new supporter app themes and avatar frames, and the links between guides. We sent shares and undos for other members' reviews, old review versions and made-up ids, picked locked themes and frames without the right membership, and timed the card and Site stats against a library of 18,000 reviews. Nothing let one member change or read another member's reviews, locked perks stayed locked, and an accessibility scanner found nothing on the supporters page, the editorial standards page or the guides, in light or dark mode. These are the fixes.</p>
+        <ul>
+          <li>If you hid the "Share your reviews" card, the dashboard still asked the server to read all your private reviews on every visit. It now waits until the card is due back.</li>
+          <li>Loading that card, and saving supporter settings, now have request limits like the rest of the account.</li>
+          <li>Site stats checks every member's private reviews to count how many could be shared. Those checks went into the same memory the public review pages and the sitemap use, and on a busy site they could push the public reviews out. Site stats now reads that memory without adding to it.</li>
+          <li>Every public profile loaded the avatar frame styles. Only profiles that show a frame load them now.</li>
+        </ul>
+      </section>
+
       <section class="privacy-section" aria-labelledby="guide-depth-nov4-2026-heading">
         <h2 id="guide-depth-nov4-2026-heading">November 4, 2026: Guides that point to each other, and more to read in them</h2>
         <p>The guides used to link only to others of their own kind, so the Dune watch order never mentioned the "If you liked Dune" guide a click away. Now each one ends with a few guides from other sections that cover the same titles, the same director or author, or the same format, and says what they have in common.</p>
