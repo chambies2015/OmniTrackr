@@ -90,8 +90,13 @@ def evaluate_public_review(
     review_text: str | None,
     community_min_chars: int = 80,
     search_min_chars: int = 240,
+    remember: bool = True,
 ) -> ReviewQuality:
-    """Evaluate public usefulness without changing the user's saved review."""
+    """Evaluate public usefulness without changing the user's saved review.
+
+    ``remember=False`` still reads the cache but doesn't add to it. Site-wide scans of
+    private reviews use it, so they can't push the public reviews out of the cache.
+    """
     text = str(review_text or "").strip()
     # Public feeds, the homepage and the sitemap re-check every public review on each
     # build; the result depends only on the text and the two limits, so reuse it.
@@ -99,10 +104,12 @@ def evaluate_public_review(
            community_min_chars, search_min_chars)
     with _evaluated_lock:
         cached = _evaluated.get(key)
-        if cached is not None:
+        if cached is not None and remember:
             _evaluated.move_to_end(key)
     if cached is None:
         cached = _evaluate(text, community_min_chars, search_min_chars)
+        if not remember:
+            return replace(cached, checks=dict(cached.checks))
         with _evaluated_lock:
             _evaluated[key] = cached
             if len(_evaluated) > _EVALUATED_MAX:
