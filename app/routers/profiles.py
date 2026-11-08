@@ -486,6 +486,9 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
     owner_note = _owner_note_html(view, is_owner)
+    # Only a profile that shows a frame needs the frame styles (most profiles have none).
+    frames_css = (f'  <link rel="stylesheet" href="/static/avatar-frames.css?v={FRAMES_CSS_VERSION}">\n'
+                  if (view.supporter or {}).get("frame") in supporters.ALL_FRAMES else "")
     cta = ("" if signed_in else
            '<section class="profile-cta site-card"><div><p class="site-eyebrow">Free on OmniTrackr</p>'
            '<h2>Track everything you watch, play, read and hear</h2>'
@@ -533,8 +536,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-banners.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/member-profile.css?v={CSS_VERSION}">
-  <link rel="stylesheet" href="/static/avatar-frames.css?v={FRAMES_CSS_VERSION}">
-  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
+{frames_css}  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <script type="application/ld+json">{_json_ld(view, canonical, meta_description)}</script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/profile-page.js?v={CSS_VERSION}" defer></script>

@@ -152,9 +152,10 @@ def test_writeup_reads_from_the_numbers(db_session):
 
 
 def test_trending_pages_render_and_stay_out_of_search_while_thin(client, db_session):
+    # The page reads the real clock, so date the adds from it (NOW stops being "this week" after Nov 6).
     for user in crowd(db_session, "r", 3):
         item = add(db_session, user, "Page Film", director="Some Director")
-        item.added_at = datetime.utcnow() - timedelta(days=1)  # The page reads the real clock, not NOW.
+        item.added_at = datetime.utcnow() - timedelta(days=1)
     db_session.commit()
     response = client.get("/trending")
     assert response.status_code == 200

@@ -228,6 +228,7 @@ def supporter_status(response: Response, user: models.User = Depends(get_current
 @router.put("/api/supporter")
 def update_supporter(
     payload: SupporterSettingsUpdate,
+    request: Request,
     response: Response,
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
