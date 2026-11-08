@@ -1379,6 +1379,10 @@ def import_guest_list(
             from .. import browse
             browsed = browse.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
+            # A manga, podcast or audiobook saved from one of the guides beside the holiday hub.
+            from .. import seasonal
+            browsed = seasonal.find_extra(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
             missing += 1
             continue
         if group is not None:
