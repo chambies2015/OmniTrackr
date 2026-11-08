@@ -450,6 +450,15 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
         page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)
         page = page.replace("<!--SAVEBAR_SIGNUP-->", savebar_signup_html(google), 1)
+        if "<!--HERO_STAGE-->" in page and "<!--/HERO_STAGE-->" in page:
+            try:
+                from . import guest_picks
+                stage = guest_picks.hero_stage()
+            except Exception:
+                stage = ""  # Keep the vortex.
+            start, end = page.index("<!--HERO_STAGE-->"), page.index("<!--/HERO_STAGE-->")
+            fallback = page[start + len("<!--HERO_STAGE-->"):end]
+            page = page[:start] + (stage or fallback) + page[end + len("<!--/HERO_STAGE-->"):]
         if "<!--HERO_QUICK_PICKS-->" in page:
             try:
                 from . import guest_picks
@@ -842,6 +851,9 @@ for route in supporters.router.routes:
     # Each claim can send an email to an address the member typed.
     elif getattr(route, "path", None) == "/api/supporter/claim" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("6/hour")(route.endpoint))
+    # Saving supporter settings (accent, banner, frame, app theme) is a click at a time.
+    elif getattr(route, "path", None) == "/api/supporter" and "PUT" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(supporters.router)
 
 rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
@@ -1178,6 +1190,8 @@ app.include_router(binge_calculator_router.router)
 
 from .routers import review_inbox as review_inbox_router
 rate_limited_review_inbox = {
+    # The list reads every private review a member has, so it gets a limit like the writes.
+    "/api/review-inbox": limiter.limit("30/minute")(review_inbox_router.list_reviews),
     "/api/review-inbox/share": limiter.limit("30/minute")(review_inbox_router.share_review),
     "/api/review-inbox/keep": limiter.limit("30/minute")(review_inbox_router.keep_review),
     "/api/review-inbox/undo": limiter.limit("30/minute")(review_inbox_router.undo_answer),

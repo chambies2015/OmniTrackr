@@ -40,6 +40,8 @@ HUBS = {
     "/guides": "Guides",
     "/holidays": "Holiday picks",
     "/holidays/gifts": "Gift guide",
+    "/holidays/thanksgiving": "Thanksgiving weekend",
+    "/holidays/reading-and-listening": "Reading and listening",
     "/halloween": "Halloween picks",
 }
 PARENTS = {

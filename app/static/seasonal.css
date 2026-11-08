@@ -160,7 +160,30 @@
 .sn-faq__item summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 12px 0; }
 .sn-faq__item p { margin: 0 0 14px; }
 
+/* Guides beside a hub (/holidays/thanksgiving, /holidays/reading-and-listening): the shelves as a numbered run. */
+.sn-companion__parent { color: var(--site-muted); font-size: .95rem; margin: 20px 0 0; }
+.sn-companion__parent a { color: var(--sn-accent-soft); }
+.sn-days { counter-reset: sn-day; display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 30px 0 40px; padding: 0; }
+.sn-days li { counter-increment: sn-day; }
+.sn-days a {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  color: var(--site-text);
+  display: block;
+  height: 100%;
+  min-height: 44px;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+.sn-days a::before { color: var(--sn-accent); content: counter(sn-day, decimal-leading-zero); display: block; font-size: .8rem; font-weight: 800; letter-spacing: .08em; }
+.sn-days a:hover { border-color: var(--sn-accent); }
+.sn-days a:focus-visible { outline: 3px solid var(--sn-accent); outline-offset: 3px; }
+.sn-days span { color: var(--site-muted); display: block; font-size: .78rem; font-weight: 700; letter-spacing: .06em; margin-top: 6px; text-transform: uppercase; }
+.sn-days strong { display: block; font-size: 1.02rem; margin-top: 2px; }
+
 @media (max-width: 900px) {
+  .sn-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sn-scale__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sn-picks, .sn-nights { grid-template-columns: 1fr; }
   .sn-hero__moon { height: 110px; opacity: .22; top: 24px; width: 110px; }

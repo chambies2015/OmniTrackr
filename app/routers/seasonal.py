@@ -1,4 +1,5 @@
-"""Seasonal hubs (/halloween, /holidays), plus each member's progress and the dashboard card.
+"""Seasonal hubs (/halloween, /holidays), the guides beside the holiday hub, each member's
+progress and the dashboard card.
 
 The hub reads completely without scripts or an account. Members add one pick or
 a whole shelf to their library (title, year and creator only) and see which picks
@@ -14,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import challenges, funnel, pick, seasonal, title_pages, title_search
+from .. import browse, challenges, funnel, pick, seasonal, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
@@ -22,7 +23,7 @@ from ..seasonal_guides import SEASONS
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
-CSS_VERSION = "20261022-holidays-1"
+CSS_VERSION = "20261106-holiday-guides-1"
 JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
@@ -30,9 +31,12 @@ MAX_ADD = 30
 # Pages that sit beside a hub, shown on its dashboard card and in its "More for the season" cards.
 EXTRA_LINKS = {
     "holidays": [{"path": "/holidays/gifts", "name": "Gift guide",
-                  "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."}],
+                  "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."}]
+    + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"]}
+       for _, entry in seasonal.companions_of("holidays")],
 }
-FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music"}
+FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music",
+                  "manga": "manga", "podcast": "podcasts", "audiobook": "audiobooks"}
 
 
 def _e(value) -> str:
@@ -93,7 +97,7 @@ def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
     return (
         f'<article class="pick sn-pick" id="{_e(seasonal.anchor_id(item))}" data-season-pick="{pick_id}">'
         f'<div class="sn-pick__head">{art}<div><p class="eyebrow">{_e(_meta_line(item))}</p>'
-        f'<h3>{_e(item["title"])}</h3>{_level(entry, item["level"])}'
+        f'<h3>{_e(item["title"])}</h3>{_level(entry, item["level"]) if "level" in item else ""}'
         f'<p class="sn-pick__time">{_e(item["time"])}</p></div></div>'
         f'<p class="sn-pick__why">{_e(item["why"])}</p><p>{_e(item["note"])}</p>'
         f'<p class="caveat"><strong>Before you start:</strong> {_e(item["caveat"])}</p>'
@@ -107,10 +111,14 @@ def _shelf_html(entry: dict, shelf: dict, details: dict, signed_in: bool) -> str
     ids = [pooled["id"] for pooled in (seasonal.pool_entry(item) for item in shelf["picks"]) if pooled]
     shelf_action = (f'<button type="button" class="button button--ghost sn-shelf__all" data-season-add-shelf="{_e(" ".join(ids))}">'
                     f'Add all {len(ids)} to my library</button>' if signed_in else "")
-    levels = [item["level"] for item in shelf["picks"]]
+    if shelf.get("when"):
+        eyebrow = shelf["when"]
+    else:
+        levels = [item["level"] for item in shelf["picks"]]
+        eyebrow = f'{entry["scale_name"].upper()} {min(levels)} TO {max(levels)}'
     parts = [
         f'<section class="sn-shelf sn-shelf--{_e(shelf["key"])}" id="{_e(shelf["key"])}" aria-labelledby="shelf-{_e(shelf["key"])}">',
-        f'<header class="sn-shelf__head"><p class="eyebrow">{_e(entry["scale_name"].upper())} {min(levels)} TO {max(levels)}</p>',
+        f'<header class="sn-shelf__head"><p class="eyebrow">{_e(eyebrow)}</p>',
         f'<h2 id="shelf-{_e(shelf["key"])}">{_e(shelf["name"])}</h2><p class="sn-shelf__tagline">{_e(shelf["tagline"])}</p>',
         f'<div class="sn-shelf__intro">{_paragraphs(shelf["intro"])}</div>{shelf_action}',
         '<p class="sn-shelf__status" data-season-shelf-status role="status" aria-live="polite"></p></header>',
@@ -214,6 +222,82 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     return "".join(parts)
 
 
+def _companion_related(slug: str, entry: dict, today: date) -> str:
+    """Cards under a guide beside a hub: the hub, its other guides, then this month's edition and challenge."""
+    from ..discover_catalog import published_editions
+    parent_slug = entry["parent"]
+    parent = SEASONS[parent_slug]
+    links = [(parent["path"], f"{parent['name']} picks", parent["card"])]
+    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get(parent_slug, [])
+                 if extra["path"] != entry["path"])
+    editions = published_editions(today)
+    public = challenges.public_months(today)
+    number = f"{today.month:02d}" if f"{today.month:02d}" in parent["related_months"] else parent["related_months"][0]
+    edition = f'{date(today.year, int(number), 1).strftime("%B").lower()}-{today.year}'
+    if edition in editions:
+        links.append((f"/discover/monthly/{edition}", editions[edition]["name"],
+                      "This month's Discover edition: six picks around one idea, across formats."))
+    month = f"{today.year}-{number}"
+    if month in public:
+        links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
+                      challenges.CHALLENGES[month]["tagline"]))
+    links.append(("/pick", "Pick for me", "Still undecided? Get one suggestion at a time from every guide on the site."))
+    cards = "".join(f'<article><h3><a href="{_e(href)}">{_e(name)}</a></h3><p>{_e(text)}</p></article>'
+                    for href, name, text in links)
+    return ('<section class="guide-related" aria-labelledby="related-heading"><p class="eyebrow">MORE TO READ</p>'
+            f'<h2 id="related-heading">{_e(entry["related_heading"])}</h2><div class="guide-related-grid">{cards}</div></section>')
+
+
+def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
+    """A guide beside a hub: the hub's shelves, plans and questions, without the festive scale."""
+    items = seasonal.picks(entry)
+    formats = sorted({item["kind"] for item in items}, key=list(title_pages.KINDS).index)
+    parent = SEASONS[entry["parent"]]
+    jump = "".join(f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>' for shelf in entry["shelves"])
+    progress = ('<section class="sn-progress" data-season-progress="' + _e(slug) + '" data-season-name="' + _e(entry["short"]) + '" aria-labelledby="sn-progress-title" hidden>'
+                f'<p class="eyebrow">YOUR {_e(entry["short"].upper())} LIST</p><h2 id="sn-progress-title" data-season-progress-title>Your progress</h2>'
+                f'<div class="sn-meter" role="progressbar" aria-valuemin="0" aria-valuemax="{len(items)}" aria-valuenow="0" '
+                'aria-labelledby="sn-progress-title" data-season-meter><span class="sn-meter__fill" data-season-meter-fill></span></div>'
+                '<p class="sn-progress__text" data-season-progress-text></p></section>') if signed_in else ""
+    nights = "".join(f'<li><h3>{_e(night["name"])}</h3><p>{_e(night["plan"])}</p></li>' for night in entry["nights"])
+    faq = "".join(f'<details class="sn-faq__item"><summary>{_e(question)}</summary><p>{_e(answer)}</p></details>'
+                  for question, answer in entry["faq"])
+    days = "".join(f'<li><a href="#{_e(shelf["key"])}"><span>{_e(shelf["when"].title())}</span>'
+                   f'<strong>{_e(shelf["name"])}</strong></a></li>' for shelf in entry["shelves"])
+    reviewed = entry["reviewed"]
+    parts = [
+        f'<article class="trail-guide sn-hub sn-companion" data-season-theme="{_e(entry["theme"])}">',
+        '<header class="hero hero--guide sn-hero"><span class="sn-hero__moon" aria-hidden="true"></span>',
+        f'<p class="eyebrow">SEASONAL · {_e(entry["eyebrow"])}</p>',
+        f'<h1>{_e(entry["headline"])}</h1><p class="guide-deck">{_e(entry["deck"])}</p>',
+        '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
+        f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time> · '
+        f'{len(items)} picks across {_e(", ".join(FORMAT_PLURALS[kind] for kind in formats))}</p>',
+        f'<nav class="guide-jump" aria-label="Shelves">{jump}<a href="#plan">{_e(entry["plan_label"])}</a><a href="#faq">Questions</a></nav>',
+        f'<p class="sn-companion__parent">Part of the <a href="{_e(parent["path"])}">{_e(parent["name"].lower())} picks</a>.</p></header>',
+        progress,
+        f'<div class="guide-intro">{_paragraphs(entry["intro"])}</div>',
+        f'<ol class="sn-days" aria-label="The shelves in order">{days}</ol>',
+    ]
+    if not signed_in:
+        parts.append('<p class="yl-section-intro sn-guest-note">Save any pick to a list as you go, no account needed. '
+                     'Your list moves into a free library when you sign up.</p>')
+    parts.extend(_shelf_html(entry, shelf, details, signed_in) for shelf in entry["shelves"])
+    parts.extend([
+        _guest_bar(signed_in),
+        f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
+        f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
+        f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
+        _companion_related(slug, entry, today),
+        '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
+        _paragraphs(entry["method"]),
+        f'<p class="muted">First published {_e(_long_date(entry["published"]))}. Checked {_e(_long_date(reviewed))}. '
+        '<a href="/contact">Suggest a pick or send a correction</a> · <a href="/content-quality">Editorial standards</a></p>'
+        '</section></article>',
+    ])
+    return "".join(parts)
+
+
 def _structured(entry: dict) -> dict:
     url = SITE + entry["path"]
     return {"@context": "https://schema.org", "@graph": [
@@ -251,8 +335,24 @@ def _hub(slug: str):
     return view
 
 
+def _companion(slug: str):
+    def view(request: Request, db: Session = Depends(get_db)):
+        entry = seasonal.companion(slug)
+        signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
+        content = companion_content(slug, entry, _details(db), signed_in, date.today())
+        response = page(entry["search_title"], entry["summary"], entry["path"], content,
+                        structured_data=_structured(entry), head=_head(signed_in))
+        response.headers["Cache-Control"] = "private, no-cache"
+        response.headers["Vary"] = "Cookie"
+        return response
+    view.__name__ = f"holiday_guide_{slug.replace('-', '_')}"
+    return view
+
+
 for _slug, _entry in SEASONS.items():
     router.add_api_route(_entry["path"], _hub(_slug), methods=["GET"], include_in_schema=False)
+for _slug, _entry in seasonal.COMPANIONS.items():
+    router.add_api_route(_entry["path"], _companion(_slug), methods=["GET"], include_in_schema=False)
 
 
 # ---------------------------------------------------------------- member API
@@ -311,7 +411,11 @@ def seasonal_add(slug: str, payload: SeasonalAdd, request: Request, response: Re
         if pick_id in owned:
             existing.append({"id": pick_id, "title": known[pick_id]["title"]})
             continue
-        state, record = pick.add_to_library(db, user, known[pick_id], details.get(pick_id, {}).get("image"))
+        chosen = known[pick_id]
+        if "browse_kind" in chosen:  # A manga, podcast or audiobook pick: straight to its tracker.
+            state, record = browse.add_to_library(db, user, chosen["browse_kind"], chosen, details.get(pick_id, {}).get("image"))
+        else:
+            state, record = pick.add_to_library(db, user, chosen, details.get(pick_id, {}).get("image"))
         (added if state == "created" else existing).append({"id": pick_id, "title": record.title})
     db.commit()
     if added:

@@ -257,6 +257,12 @@
   async function refresh() {
     const request = ++state.request;
     if (!$('reviewInbox')) return;
+    // Hidden for now: the card wouldn't show, so don't ask the server to scan every review.
+    if (hiddenForNow()) {
+      state.data = null;
+      $('reviewInbox').hidden = true;
+      return;
+    }
     try {
       const response = await fetch(`${apiBase()}/api/review-inbox`, fetchOptions());
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
