@@ -310,8 +310,11 @@ test('cookie authentication works with blocked storage and existing token sessio
 test('public detail offers a real preview link with no automatic copy POST', () => {
   const template = fs.readFileSync(path.join(__dirname, '../app/templates/public_collection.html'), 'utf8');
   const actions = fs.readFileSync(path.join(__dirname, '../app/static/public-collections.js'), 'utf8');
-  assert.match(template, /<a rel="nofollow" href="\/collections\/public\/\{\{COLLECTION_ID\}\}\/save">Save a private copy<\/a>/);
+  // The public page's actions are filled in by the router (link-only lists have no save button).
+  const router = fs.readFileSync(path.join(__dirname, '../app/routers/collections.py'), 'utf8');
+  assert.match(router, /<a rel="nofollow" href="\/collections\/public\/\{collection\.id\}\/save">Save a private copy<\/a>/);
   assert.doesNotMatch(template, /data-collection-action="copy"/);
+  assert.doesNotMatch(router, /data-collection-action="copy"/);
   assert.doesNotMatch(actions, /\/copy|window\.location/);
   assert.match(actions, /\/helpful/);
   assert.match(actions, /\/report/);

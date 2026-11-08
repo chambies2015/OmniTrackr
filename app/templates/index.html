@@ -49,11 +49,11 @@
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <script src="/static/visit.js?v=20261030-people-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261031-push-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261106-lists-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261031-push-1">
+  <link rel="stylesheet" href="./styles.css?v=20261106-lists-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261030-design-1">
@@ -1874,12 +1874,21 @@
       <section class="collections-hero">
         <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
         <h2>Collections</h2>
-        <p>Bring together movies, TV shows, anime, games, music, books, manga, podcasts, and audiobooks around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
+        <p>Make a list of anything in your library: a ranked top 10, comfort rewatches, where a newcomer should start. Once it has three titles you can send it to anyone with a link. Write a short introduction and it can also go in the public gallery.</p>
       </section>
       <section class="card collections-create">
         <h3>Create a collection</h3>
         <form id="createCollectionForm" data-submit-action="create-collection">
-          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. My top 10 cozy anime">
+          <div class="collection-starters" role="group" aria-label="Ideas for a first list">
+            <span>Need an idea?</span>
+            <button type="button" data-action="collection-starter" data-starter-name="My all-time top 10" data-starter-ranked="1">All-time top 10</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Comfort rewatches">Comfort rewatches</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Where to start if you're new">Start here if you're new</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Best things I finished in 2026" data-starter-ranked="1">Best of my 2026</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Perfect for a rainy weekend">Rainy weekend</button>
+          </div>
+          <input id="collectionRanked" type="hidden" value="">
           <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
           <button type="submit" class="action-btn">Create collection</button>
         </form>
@@ -3715,10 +3724,22 @@
           <label for="collectionStudioName">Collection title</label>
           <input id="collectionStudioName" type="text" maxlength="80" required>
           <label for="collectionStudioDescription">Your introduction</label>
-          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="5" aria-describedby="collectionStudioHint" placeholder="Optional for a share link. What ties these together, and who is the list for?"></textarea>
           <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
           <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
-          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. Published collections are checked automatically for useful original context, complete thoughts, varied language, safe sharing, and at least three available titles.</p>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioRanked" type="checkbox"> Ranked list <span class="content-muted">(the shared page shows #1, #2, #3 in your order)</span></label>
+          <fieldset class="collection-studio-add">
+            <legend>Add titles from your library</legend>
+            <input id="collectionStudioSearch" type="search" maxlength="200" autocomplete="off" placeholder="Search your library by title, creator or genre" aria-describedby="collectionStudioCount">
+            <div id="collectionStudioResults" class="collection-studio-add__results" aria-live="polite"></div>
+            <p id="collectionStudioCount" class="collection-studio-modal__hint"></p>
+          </fieldset>
+          <section class="collection-studio-link" aria-labelledby="collectionStudioLinkTitle">
+            <h3 id="collectionStudioLinkTitle">Share by link</h3>
+            <p class="collection-studio-modal__hint">Anyone with the link sees the titles, their order and your notes, never your ratings or progress. Link-only lists stay out of search and the public gallery. Three titles is all it needs.</p>
+            <div id="collectionStudioLink" class="collection-studio-link__body"></div>
+          </section>
+          <p id="collectionStudioHint" class="collection-studio-modal__hint"><strong>Public gallery.</strong> Publishing puts the list on its own public page and, once it passes the automatic checks (a real introduction of at least 300 characters, three titles, safe wording), in the gallery, on title pages and in search.</p>
           <ul id="collectionReadinessChecklist" class="collection-readiness-checklist" aria-live="polite"></ul>
           <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
           <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>

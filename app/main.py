@@ -693,6 +693,16 @@ for route in collections.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_collection_helpful)
     elif route.path == "/collections/public/{collection_id}/report" and "POST" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_collection_report)
+    elif route.path == "/collections/link/{token}" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path == "/collections/link/{token}/report" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("2/hour")(route.endpoint))
+    elif route.path.endswith("/card.png") and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path.endswith("/entries/{entry_id}/library") and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path == "/collections/{collection_id}/link" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("20/hour")(route.endpoint))
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(release_radar.router)

@@ -905,6 +905,7 @@ function handleDelegatedClick(event) {
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
+    'collection-starter': () => applyCollectionStarter(target),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };

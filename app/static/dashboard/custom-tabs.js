@@ -935,6 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupReviewQualityCounters();
   document.getElementById('collectionStudioName')?.addEventListener('input', updateCollectionReadinessDraft);
   document.getElementById('collectionStudioDescription')?.addEventListener('input', updateCollectionReadinessDraft);
+  document.getElementById('collectionStudioSearch')?.addEventListener('input', searchCollectionStudioLibrary);
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {

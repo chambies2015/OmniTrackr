@@ -1476,6 +1476,7 @@ class CollectionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=80, description="Collection name")
     description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
     cover_url: Optional[str] = Field(None, max_length=1000, description="Optional public collection artwork URL")
+    ranked: bool = Field(False, description="Show the list as a ranking (#1, #2, #3) when shared")
 
     @field_validator("name")
     @classmethod
@@ -1498,6 +1499,7 @@ class CollectionUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     cover_url: Optional[str] = Field(None, max_length=1000)
     is_public: Optional[bool] = None
+    ranked: Optional[bool] = None
 
     _validate_cover_url = field_validator("cover_url")(validate_public_url)
 
@@ -1546,6 +1548,7 @@ class CollectionItem(BaseModel):
 
 class CollectionReadiness(BaseModel):
     share_ready: bool = False
+    link_ready: bool = False
     discover_ready: bool = False
     character_count: int = 0
     word_count: int = 0
@@ -1561,6 +1564,8 @@ class Collection(BaseModel):
     is_public: bool = False
     moderation_status: str = "pending"
     public_url: Optional[str] = None
+    ranked: bool = False
+    link_url: Optional[str] = None
     view_count: int = 0
     helpful_count: int = 0
     report_count: int = 0
