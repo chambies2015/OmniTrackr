@@ -127,7 +127,7 @@ def _related_html(kind: Optional[str]) -> str:
         ("/titles", "Most tracked titles", "What sits on the most member lists, old and new."),
         ("/new-this-week", "New this week", "This week's releases, with what members finished."),
         ("/release-radar", "Release Radar", "Release dates for the next few months."),
-        ("/best-of", "Best of 2026", "Our editors' picks for the year so far."),
+        ("/best-of", "Best of 2026", "Our picks of the year in nine formats."),
     ]
     cards = "".join(f'<a class="trend-link" href="{href}"><strong>{_e(label)}</strong><span>{_e(text)}</span></a>'
                     for href, label, text in links)

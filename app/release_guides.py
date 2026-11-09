@@ -409,7 +409,7 @@ GUIDES = {
             ("The Legend of Zelda in order", "/in-order/zelda"),
             ("November's Discover edition: The long way round", "/discover/monthly/november-2026"),
             ("Holiday picks for Thanksgiving and the winter break", "/holidays"),
-            ("The best games of 2026 so far", "/best-of/2026/games"),
+            ("The best games of 2026", "/best-of/2026/games"),
         ],
         "sources": [
             ("Sweety High: the biggest movies coming to theaters in November 2026", "https://www.sweetyhigh.com/read/the-biggest-movies-coming-to-theaters-in-november-2026"),
@@ -765,7 +765,7 @@ GUIDES = {
             ("Harry Potter in order", "/in-order/harry-potter"),
             ("If you liked Dune", "/if-you-liked/dune"),
             ("Holiday picks for Thanksgiving and the winter break", "/holidays"),
-            ("The best movies of 2026 so far", "/best-of/2026/movies"),
+            ("The best movies of 2026", "/best-of/2026/movies"),
         ],
         "sources": [
             ("The A.V. Club: Dune: Part Three and Avengers: Doomsday share December 18", "https://avclub.com/avengers-doomsday-dune-part-three-same-day-release-december-18"),
@@ -1113,7 +1113,7 @@ GUIDES = {
         "related": [
             ("If you liked Frieren", "/if-you-liked/frieren"),
             ("If you liked Jujutsu Kaisen", "/if-you-liked/jujutsu-kaisen"),
-            ("The best anime of 2026 so far", "/best-of/2026/anime"),
+            ("The best anime of 2026", "/best-of/2026/anime"),
             ("Monogatari in order", "/in-order/monogatari"),
             ("How to track anime and episodes on OmniTrackr", "/anime-tracker"),
         ],
