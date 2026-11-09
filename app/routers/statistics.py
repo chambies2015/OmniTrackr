@@ -13,6 +13,8 @@ from ..tasteprint import build_tasteprint
 from ..time_spent import estimate as estimate_time_spent
 from ..progress import get_checkpoint_map, serialize_checkpoint
 from .next_up import NOW_LABELS
+from .. import home_summary
+from ..title_pages import IMAGE_FIELD, LIBRARY_TO_KIND, _safe_image
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -77,6 +79,8 @@ def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
         "category_label": category["label"],
         "status_label": category["status_label"],
         "prompts": prompts,
+        # The member's own cover, so Continue can show it. Empty when they never set one.
+        "image": _safe_image(getattr(item, IMAGE_FIELD[LIBRARY_TO_KIND[category["key"]]], None)),
     }
 
 
@@ -351,6 +355,17 @@ def get_library_insights(
         "categories": category_summaries,
         "generated_at": datetime.now().isoformat()
     }
+
+
+@router.get("/home/", response_model=dict)
+def get_home_summary(
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The dashboard welcome strip: format counts, finishes and the latest covers. Read only."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return home_summary.build(db, current_user)
 
 
 @router.get("/pulse/", response_model=dict)

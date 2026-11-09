@@ -257,7 +257,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     parts = [
         '<article class="trail-guide sn-hub gg-guide bf-guide" data-season-theme="holiday">',
         '<header class="hero hero--guide sn-hero bf-hero"><span class="sn-hero__moon bf-tag" aria-hidden="true"></span>',
-        f'<p class="eyebrow">BLACK FRIDAY AND CYBER MONDAY {today.year}</p>',
+        f'<p class="eyebrow">BLACK FRIDAY AND CYBER MONDAY {BLACK_FRIDAY[:4]}</p>',
         f'<h1>{_e(GUIDE["headline"])}</h1><p class="guide-deck">{_e(GUIDE["deck"])}</p>',
         (f'<p class="bf-countdown">{_e(ticker)}</p>' if ticker else ""),
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',

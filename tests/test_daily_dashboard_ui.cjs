@@ -68,11 +68,11 @@ function setup() {
   return { context, get, tabs, rows, requests, loads, alerts, categories, buttons, action, Element, refreshPick };
 }
 
-test('Continue shows two recent titles, preserves all collapsed reflections, and never duplicates Next Up', () => {
+test('Continue shows four recent titles, preserves all collapsed reflections, and never duplicates Next Up', () => {
   const s = setup();
   const items = queue(6).map(item => ({ ...item, id: item.item_id, status_label: 'Not read' }));
   s.context.renderLibraryPulse({ continue_items: items, reflection_items: items, next_up_items: items });
-  assert.equal(s.get('libraryPulseContinue').children.length, 2);
+  assert.equal(s.get('libraryPulseContinue').children.length, 4);
   assert.equal(s.get('libraryPulseReflect').children.length, 6);
   assert.equal(s.get('libraryPulseReflections').hidden, false);
   assert.equal(s.get('libraryPulseReflections').open, undefined);

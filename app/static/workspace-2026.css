@@ -1,0 +1,427 @@
+/* Workspace refresh (Nov 2026): the welcome strip above the home board, a colour per
+   format carried through tabs, chips and library panels, cover tiles in Continue,
+   status pills in List, and Shelf on phones and tablets as well as wide screens.
+   Visual only on top of the earlier layers; rows, edit mode and handlers stay as
+   library.js renders them. Loaded after dashboard-2026.css, before a11y.css. */
+
+/* ---------- One hue per format ---------- */
+body.app-shell :is([data-format="movies"], [data-switch-tab="movies"], #movies-tab) { --fmt-hue: 262; }
+body.app-shell :is([data-format="tv-shows"], [data-switch-tab="tv-shows"], #tv-shows-tab) { --fmt-hue: 172; }
+body.app-shell :is([data-format="anime"], [data-switch-tab="anime"], #anime-tab) { --fmt-hue: 330; }
+body.app-shell :is([data-format="video-games"], [data-switch-tab="video-games"], #video-games-tab) { --fmt-hue: 217; }
+body.app-shell :is([data-format="music"], [data-switch-tab="music"], #music-tab) { --fmt-hue: 38; }
+body.app-shell :is([data-format="books"], [data-switch-tab="books"], #books-tab) { --fmt-hue: 152; }
+body.app-shell :is([data-format="manga"], [data-switch-tab="manga"], #manga-tab) { --fmt-hue: 350; }
+body.app-shell :is([data-format="podcasts"], [data-switch-tab="podcasts"], #podcasts-tab) { --fmt-hue: 199; }
+body.app-shell :is([data-format="audiobooks"], [data-switch-tab="audiobooks"], #audiobooks-tab) { --fmt-hue: 84; }
+body.app-shell :is(#manga-tab, #podcasts-tab, #audiobooks-tab) { --shelf-hue: calc(var(--fmt-hue) * 1deg); }
+body.app-shell { --fmt-dot-l: 52%; --fmt-ink-l: 34%; }
+body.app-shell.dark-mode { --fmt-dot-l: 66%; --fmt-ink-l: 78%; }
+
+/* ---------- Library tabs: colour dot and a quiet count ---------- */
+body.app-shell .library-nav__group:not(.library-nav__group--tools) .tab[data-switch-tab] { align-items: center; display: inline-flex; gap: 7px; }
+body.app-shell .library-nav__group:not(.library-nav__group--tools) .tab[data-switch-tab]::before {
+  background: hsl(var(--fmt-hue) 75% var(--fmt-dot-l));
+  border-radius: 50%;
+  content: "";
+  flex: none;
+  height: 7px;
+  opacity: .8;
+  width: 7px;
+}
+body.app-shell .library-nav__group:not(.library-nav__group--tools) .tab[data-switch-tab].active::before { opacity: 1; box-shadow: 0 0 0 3px hsl(var(--fmt-hue) 75% var(--fmt-dot-l) / .22); }
+body.app-shell .tabs .tab[data-count]::after {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  content: attr(data-count);
+  font-size: .7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+}
+body.app-shell .tabs .tab.active[data-count]::after { background: transparent; border-color: hsl(var(--fmt-hue) 70% var(--fmt-dot-l) / .45); color: var(--fg); }
+
+/* ---------- Welcome strip ---------- */
+body.app-shell .home-hero {
+  background:
+    radial-gradient(90% 140% at 100% 0%, color-mix(in srgb, var(--accent-solid) 16%, transparent), transparent 60%),
+    radial-gradient(60% 120% at 0% 100%, color-mix(in srgb, var(--teal) 9%, transparent), transparent 70%),
+    var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+  isolation: isolate;
+  margin: 4px 0 22px;
+  overflow: hidden;
+  padding: 28px 32px;
+  position: relative;
+}
+body.app-shell .home-hero[hidden] { display: none; }
+body.app-shell .home-hero.home-hero--covers { grid-template-columns: minmax(0, 1fr) minmax(300px, 440px); }
+body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"],
+  [data-active-tab="recommendations"], [data-active-tab="friends-feed"]) .home-hero { display: none; }
+
+body.app-shell .home-hero__wash {
+  filter: blur(56px) saturate(1.4);
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  opacity: .16;
+  pointer-events: none;
+  position: absolute;
+  transform: scale(1.3);
+  width: 100%;
+  z-index: -1;
+}
+body.app-shell.dark-mode .home-hero__wash { opacity: .24; }
+body.app-shell .home-hero__copy { align-content: center; display: grid; gap: 6px; min-width: 0; }
+body.app-shell .home-hero__date {
+  color: var(--teal);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+body.app-shell .home-hero__title {
+  color: var(--fg);
+  font: 700 clamp(1.6rem, 2.6vw, 2.15rem)/1.15 var(--font-display);
+  letter-spacing: -.025em;
+  margin: 0;
+}
+body.app-shell .home-hero__summary { color: var(--fg-secondary); font-size: .95rem; line-height: 1.55; margin: 2px 0 0; max-width: 52ch; }
+
+body.app-shell .home-hero__stats {
+  display: grid;
+  gap: 4px 0;
+  grid-template-columns: repeat(4, max-content);
+  margin: 18px 0 0;
+}
+body.app-shell .home-hero__stat { display: flex; flex-direction: column-reverse; gap: 2px; }
+body.app-shell .home-hero__stat dd {
+  color: var(--fg);
+  font: 700 1.55rem/1.1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+body.app-shell .home-hero__stat dt { color: var(--fg-secondary); font-size: var(--text-xs); font-weight: 600; }
+body.app-shell .home-hero__stat { padding: 0 26px; }
+body.app-shell .home-hero__stat:first-child { padding-left: 0; }
+body.app-shell .home-hero__stat + .home-hero__stat { border-left: 1px solid var(--border); }
+
+/* What the library is made of: one segment per format, in the tab colours. */
+body.app-shell .home-hero__mix {
+  background: var(--surface-muted);
+  border-radius: var(--radius-pill);
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  margin-top: 16px;
+  max-width: 460px;
+  overflow: hidden;
+}
+body.app-shell .home-hero__mix[hidden] { display: none; }
+body.app-shell .home-hero__mix-part {
+  background: hsl(var(--fmt-hue) 72% var(--fmt-dot-l));
+  flex: var(--share) 1 0;
+  min-width: 6px;
+}
+
+/* Latest covers, fanned like a hand of cards. */
+body.app-shell .home-hero__covers {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 190px;
+  padding: 14px 8px 18px;
+  position: relative;
+}
+body.app-shell .home-hero__cover:nth-child(n + 6) { display: none; }
+body.app-shell .home-hero__covers[hidden] { display: none; }
+body.app-shell .home-hero__cover {
+  --tilt: 0deg;
+  --drop: 0px;
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: var(--poster-radius);
+  box-shadow: 0 0 0 1px var(--poster-edge), var(--shadow-md);
+  cursor: pointer;
+  flex: none;
+  margin-left: -44px;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  transform: translateY(var(--drop)) rotate(var(--tilt));
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  width: 118px;
+  z-index: calc(10 - var(--i, 0));
+}
+body.app-shell .home-hero__cover:first-child { margin-left: 0; }
+body.app-shell .home-hero__cover img { aspect-ratio: 2 / 3; display: block; height: auto; object-fit: cover; width: 100%; }
+body.app-shell .home-hero__cover[data-format="music"] img,
+body.app-shell .home-hero__cover[data-format="podcasts"] img { aspect-ratio: 1; }
+body.app-shell .home-hero__cover:nth-child(1) { --tilt: -8deg; --drop: 12px; }
+body.app-shell .home-hero__cover:nth-child(2) { --tilt: -4deg; --drop: 2px; }
+body.app-shell .home-hero__cover:nth-child(3) { --tilt: 0deg; --drop: -2px; }
+body.app-shell .home-hero__cover:nth-child(4) { --tilt: 4deg; --drop: 2px; }
+body.app-shell .home-hero__cover:nth-child(5) { --tilt: 8deg; --drop: 12px; }
+body.app-shell .home-hero__cover:is(:hover, :focus-visible) {
+  box-shadow: 0 0 0 2px hsl(var(--fmt-hue) 75% var(--fmt-dot-l)), var(--shadow-lg);
+  transform: translateY(calc(var(--drop) - 12px)) rotate(0deg) scale(1.06);
+  z-index: 20;
+}
+
+/* ---------- Continue: cover tiles ---------- */
+body.app-shell .library-pulse__item-cover {
+  aspect-ratio: 2 / 3;
+  background: hsl(var(--fmt-hue, 262) 60% 50% / .14);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--poster-edge);
+  display: block;
+  flex: none;
+  overflow: hidden;
+  width: 44px;
+}
+body.app-shell .library-pulse__item-cover img { display: block; height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .library-pulse__item-cover--letter {
+  align-items: center;
+  color: hsl(var(--fmt-hue, 262) 70% var(--fmt-ink-l));
+  display: flex;
+  font: 700 1.1rem/1 var(--font-display);
+  justify-content: center;
+}
+body.app-shell .library-pulse__item:has(.library-pulse__item-cover) { align-items: center; display: flex; gap: 14px; text-align: left; }
+body.app-shell .library-pulse__item:has(.library-pulse__item-cover) .library-pulse__item-copy { flex: 1 1 auto; min-width: 0; }
+
+/* ---------- Library panel: tinted header and a stat line ---------- */
+body.app-shell .card.library-panel {
+  background:
+    radial-gradient(70% 220px at 0% 0%, hsl(var(--fmt-hue, 262) 70% 55% / .09), transparent 70%),
+    var(--card-bg);
+}
+body.app-shell.dark-mode .card.library-panel {
+  background:
+    radial-gradient(70% 240px at 0% 0%, hsl(var(--fmt-hue, 262) 70% 55% / .14), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .015)),
+    var(--card-bg);
+}
+body.app-shell .library-panel > .library-heading:has(+ .library-heading__stats) { margin-bottom: 4px; }
+body.app-shell .library-heading__stats {
+  color: var(--fg-secondary);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 18px 17px;
+}
+
+/* ---------- List: finished reads as a pill, not a lone tick ---------- */
+@media (min-width: 1025px) {
+  body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="status"] .watched-icon[aria-label] {
+    align-items: center;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--fg-secondary);
+    display: inline-flex;
+    font-size: 0;
+    gap: 5px;
+    height: auto;
+    line-height: 1;
+    padding: 5px 10px;
+    white-space: nowrap;
+    width: auto;
+  }
+  body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="status"] .watched-icon[aria-label]::after {
+    content: attr(aria-label);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+  body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="status"] .watched-icon.watched[aria-label] {
+    background: var(--success-soft);
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    color: var(--success);
+  }
+  body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="status"] .watched-icon.watched[aria-label]::before {
+    content: "✓";
+    font-size: var(--text-xs);
+    font-weight: 800;
+  }
+  /* Covers keep their portrait shape; the loaders set an inline 60px width. */
+  body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="cover"] img {
+    aspect-ratio: 2 / 3;
+    height: auto !important;
+    max-height: none !important;
+    object-fit: cover;
+    width: 52px !important;
+  }
+  body.app-shell:not(.library-view-shelf) :is(#musicTable, #podcastTable) td[data-card-field="cover"] img { aspect-ratio: 1; }
+  body.app-shell:not(.library-view-shelf) .library-table tbody tr:not(:has(input, textarea, select)):hover td {
+    background: hsl(var(--shelf-hue, 262deg) 70% 55% / .05);
+  }
+}
+
+/* ---------- Shelf: the finished mark sits on the cover ---------- */
+/* Cover and mark share the first grid cell, so the mark needs no positioning. */
+body.app-shell.library-view-shelf .library-table.mobile-library tbody tr:not(:has(input, textarea, select)) td[data-card-field="cover"] { grid-row: 1; }
+body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).library-table.mobile-library tbody tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"] {
+  align-self: start;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: start;
+  margin: 8px;
+  pointer-events: none;
+  position: relative;
+  z-index: 2;
+}
+body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .watched-icon.watched {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .watched-icon.unwatched {
+  clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; width: 1px;
+}
+
+/* ---------- Shelf on phones and tablets: two or three covers a row ---------- */
+@media (max-width: 1024px) {
+  body.app-shell .library-view-toggle { display: inline-flex; }
+  body.app-shell .library-heading__tools { flex-wrap: wrap; justify-content: flex-end; }
+  body.app-shell.library-view-shelf .library-table-wrap { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+  body.app-shell.library-view-shelf table.mobile-library.library-table { display: block; width: 100%; }
+  body.app-shell.library-view-shelf .mobile-library thead { clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; width: 1px; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tbody {
+    display: grid;
+    gap: 22px 14px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  /* Editing opens the card across the whole shelf, laid out as the List card. */
+  body.app-shell.library-view-shelf .library-table.mobile-library tbody tr:has(input, textarea, select) { grid-column: 1 / -1; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tbody tr:not(:has(input, textarea, select)) {
+    align-content: start;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    display: grid;
+    gap: 6px 8px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+  }
+  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr:not(:has(input, textarea, select)) td.library-cell {
+    border: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+    width: auto;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] {
+    border-radius: 12px;
+    box-shadow: var(--lib-cover-shadow);
+    grid-column: 1;
+    grid-row: auto;
+    margin-bottom: 4px;
+    overflow: hidden;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] img,
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"]:empty::after {
+    aspect-ratio: 2 / 3;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    display: block;
+    height: auto !important;
+    margin: 0;
+    max-height: none !important;
+    width: 100% !important;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"]:empty::after { display: grid; font-size: 2.6rem; place-items: center; }
+  body.app-shell.library-view-shelf #musicTable.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] :is(img),
+  body.app-shell.library-view-shelf #musicTable.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"]:empty::after,
+  body.app-shell.library-view-shelf #podcastTable.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] :is(img),
+  body.app-shell.library-view-shelf #podcastTable.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"]:empty::after { aspect-ratio: 1; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    align-self: start;
+    display: -webkit-box;
+    font-size: .92rem;
+    font-weight: 650;
+    grid-column: 1;
+    grid-row: auto;
+    line-height: 1.3;
+    overflow: hidden;
+    padding: 0 2px;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] { grid-column: 1; grid-row: auto; padding: 0 2px; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="detail"] { display: none; grid-column: 1; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr.card-expanded:not(:has(input, textarea, select)) td[data-card-field="detail"] { display: block; font-size: .8rem; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] {
+    border-top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    grid-column: 1;
+    margin-top: 2px;
+    padding-top: 0 !important;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions {
+    display: grid;
+    flex: 1 1 100%;
+    gap: 6px;
+    grid-template-columns: 1fr 1fr;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > * { min-width: 0; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary) {
+    font-size: var(--text-sm);
+    min-height: 40px;
+    padding: 0 8px;
+    width: 100%;
+  }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) .library-card-details {
+    flex: 1 1 100%;
+    font-size: .78rem;
+    min-height: 36px;
+    padding: 2px 0;
+    text-align: center;
+  }
+}
+
+/* ---------- Phone library heading ---------- */
+@media (max-width: 760px) {
+  /* The stat line already says how many; the heading keeps just the layout switch. */
+  body.app-shell .library-panel > .library-heading:has(+ .library-heading__stats) .library-count { display: none; }
+  body.app-shell .library-heading__stats { margin-left: 0; font-size: var(--text-sm); }
+}
+
+/* ---------- Phones: the strip stacks, covers become a row ---------- */
+@media (max-width: 900px) {
+  body.app-shell .home-hero,
+  body.app-shell .home-hero.home-hero--covers { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; gap: 18px; }
+  body.app-shell .home-hero__covers { justify-content: flex-start; min-height: 0; order: -1; padding: 6px 0 4px 6px; }
+  body.app-shell .home-hero__cover { margin-left: -24px; width: 76px; }
+  body.app-shell .home-hero__stats { gap: 12px 20px; grid-template-columns: repeat(4, minmax(0, max-content)); }
+  body.app-shell .home-hero__stat { padding: 0 16px; }
+  body.app-shell .home-hero__stat dd { font-size: 1.3rem; }
+}
+@media (max-width: 480px) {
+  body.app-shell .home-hero,
+  body.app-shell .home-hero.home-hero--covers { gap: 12px; padding: 18px 18px 20px; }
+  body.app-shell .home-hero__cover { margin-left: -16px; width: 56px; }
+  body.app-shell .home-hero__covers { padding: 4px 0 6px 4px; }
+  body.app-shell .home-hero__summary { font-size: .88rem; }
+  body.app-shell .home-hero__stats { margin-top: 12px; }
+  body.app-shell .home-hero__stat { padding: 0 11px; }
+  body.app-shell .home-hero__stat dd { font-size: 1.15rem; }
+  body.app-shell .home-hero__stat dt { font-size: .66rem; white-space: nowrap; }
+  body.app-shell .home-hero__mix { margin-top: 12px; height: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .home-hero__cover { transition: none; }
+  body.app-shell .home-hero__cover:is(:hover, :focus-visible) { transform: translateY(var(--drop)) rotate(var(--tilt)); }
+}
