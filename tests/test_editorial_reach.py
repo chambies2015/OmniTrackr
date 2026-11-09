@@ -38,7 +38,7 @@ def header(html):
 
 def test_editorial_index_lists_every_guide_newest_first():
     pieces = editorial_index.entries()
-    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + 1 + len(HOLIDAY_GUIDES) + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs, the gift guide and the guides beside the holiday hub, best-of lists, release guides
+    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + 2 + len(HOLIDAY_GUIDES) + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs, the gift and Black Friday guides, the guides beside the holiday hub, best-of lists, release guides
     dates = [piece["updated"] for piece in pieces]
     assert dates == sorted(dates, reverse=True)
     latest = editorial_index.latest(6)

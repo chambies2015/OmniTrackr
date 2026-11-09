@@ -49,7 +49,7 @@ function validateDiscoverAuthReturn(value) {
     const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
     if (poll && poll[0] === value) return value;
     // Daily, Pick for me, the start page, tier lists, the gift guide, "If you liked" and "In order" guides and the dashboard cards they link to.
-    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/gifts|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/(?:gifts|black-friday)|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
