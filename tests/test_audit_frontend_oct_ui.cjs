@@ -209,12 +209,13 @@ for (const kind of ['Music', 'Book']) {
     });
     context['save' + kind + 'Metadata'] = async () => {saves++;}; context['display' + kind + 'Poster'] = () => {};
     context['update' + kind + 'RowMetadata'] = () => {};
+    vm.runInContext(part('function normalizeCoverMatchText(', 'async function fetchMusicMetadata('), context);
     vm.runInContext(part('async function fetch' + kind + 'Metadata(', 'function update' + kind + 'RowMetadata('), context);
     const calls = [1, 2, 3].map(id => context['fetch' + kind + 'Metadata'](id, 'Title ' + id, 'Creator'));
     await settle(); assert.equal(responses.length, 1);
     for (let i=0; i<3; i++) {responses[i].resolve({ok:true, json:async()=>kind==='Music'
-      ? {results:[{artworkUrl100:'https://example.com/art.jpg',collectionName:'Album'}]}
-      : {docs:[{cover_i:10,title:'Book'}]}}); await settle();}
+      ? {results:[{artworkUrl100:'https://example.com/art.jpg',collectionName:'Title ' + (i + 1),artistName:'Creator'}]}
+      : {docs:[{cover_i:10,title:'Title ' + (i + 1),author_name:['Creator']}]}}); await settle();}
     await Promise.all(calls); assert.equal(peak, 1); assert.equal(saves, 3);
   });
   test(kind + ' delayed artwork skips an active editor', async () => {
@@ -226,9 +227,12 @@ for (const kind of ['Music', 'Book']) {
     });
     context['save' + kind + 'Metadata'] = async () => {saves++;}; context['display' + kind + 'Poster'] = () => {throw new Error('must not render');};
     context['update' + kind + 'RowMetadata'] = () => {throw new Error('must not replace inputs');};
+    vm.runInContext(part('function normalizeCoverMatchText(', 'async function fetchMusicMetadata('), context);
     vm.runInContext(part('async function fetch' + kind + 'Metadata(', 'function update' + kind + 'RowMetadata('), context);
     const loading = context['fetch' + kind + 'Metadata'](1,'Title','Creator'); await settle(); context.editingRowElement = row;
-    pending.resolve({ok:true, json:async()=>kind==='Music'?{results:[{artworkUrl100:'https://example.com/a.jpg'}]}:{docs:[{cover_i:1}]}});
+    pending.resolve({ok:true, json:async()=>kind==='Music'
+      ? {results:[{artworkUrl100:'https://example.com/a.jpg',collectionName:'Title',artistName:'Creator'}]}
+      : {docs:[{cover_i:1,title:'Title',author_name:['Creator']}]}});
     await loading; assert.equal(saves, 0);
   });
 }

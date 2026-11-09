@@ -1292,7 +1292,7 @@ async function loadMusic() {
         if (item.cover_art_url) {
           displayMusicPoster(item.id, item.cover_art_url, item.title);
         } else {
-          fetchMusicMetadata(item.id, item.title, item.artist);
+          fetchMusicMetadata(item.id, item.title, item.artist, { year: item.year, genre: item.genre });
         }
       });
     }
@@ -1327,7 +1327,75 @@ function displayMusicPoster(id, posterUrl, title = null) {
   }
 }
 
-async function fetchMusicMetadata(id, title, artist) {
+/* Cover lookups run unattended for every row without art, and a search's first
+   hit is often a different record ("Blonde" came back as "Moon River - Single").
+   So a lookup only takes a hit whose title and artist/author agree with what the
+   member saved, and it only ever fills the cover plus a blank year or genre: the
+   member's own title and artist/author are never rewritten. */
+function normalizeCoverMatchText(value) {
+  const raw = String(value ?? '').trim();
+  const text = raw
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/^(the|a|an) (?=\S)/, '');
+  // Titles made only of symbols (Ed Sheeran's "÷") still compare as typed.
+  return text || raw.toLowerCase();
+}
+
+function coverMatchTitle(value) {
+  let text = String(value ?? '').trim().replace(/\s+-\s+(single|ep)$/i, '');
+  // "(Deluxe Edition)", "[Remastered]" and other trailing tags name the same record.
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/\s*[([][^()[\]]*[)\]]$/, '').trim();
+  } while (text && text !== previous);
+  return normalizeCoverMatchText(text);
+}
+
+function coverCreatorsMatch(wanted, creators) {
+  const want = normalizeCoverMatchText(wanted);
+  if (!want) return false;
+  const wantTokens = want.split(' ');
+  return (creators || []).some((creator) => {
+    const have = normalizeCoverMatchText(creator);
+    if (!have) return false;
+    if (have.replace(/ /g, '') === want.replace(/ /g, '')) return true;
+    const haveTokens = have.split(' ');
+    // "Beyonce" matches "Beyonce & JAY-Z"; "Tolkien" matches "J.R.R. Tolkien".
+    const within = (small, big) => small.some(token => token.length >= 3) && small.every(token => big.includes(token));
+    return within(wantTokens, haveTokens) || within(haveTokens, wantTokens);
+  });
+}
+
+function coverTitlesMatch(wanted, candidate, allowSubtitle) {
+  const want = coverMatchTitle(wanted);
+  if (!want) return false;
+  if (coverMatchTitle(candidate) === want) return true;
+  if (!allowSubtitle) return false;
+  // "Sapiens" vs "Sapiens: A Brief History of Humankind", only once the creator agrees.
+  const main = text => coverMatchTitle(String(text ?? '').split(/:\s|\s[-–—]\s/)[0]);
+  return main(candidate) === want || coverMatchTitle(candidate) === main(wanted);
+}
+
+// The first search result that is confidently the member's record, or null.
+function pickConfidentCoverMatch(results, title, creator, describe) {
+  const hasCreator = Boolean(String(creator ?? '').trim());
+  const candidates = (results || []).filter(Boolean).map((entry) => ({entry, ...describe(entry)}));
+  // A full album or book beats a single or EP of the same name.
+  const isShort = candidate => /\s-\s(single|ep)\s*$/i.test(String(candidate.title ?? ''));
+  const ordered = candidates.filter(c => !isShort(c)).concat(candidates.filter(isShort));
+  const match = ordered.find((candidate) => {
+    if (hasCreator && !coverCreatorsMatch(creator, candidate.creators)) return false;
+    return coverTitlesMatch(title, candidate.title, hasCreator);
+  });
+  return match ? match.entry : null;
+}
+
+async function fetchMusicMetadata(id, title, artist, existing = {}) {
   const cacheKey = `music-${title}-${artist}`;
   const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
   const current = () => row && row !== editingRowElement
@@ -1396,18 +1464,15 @@ async function fetchMusicMetadata(id, title, artist) {
             console.warn(`iTunes API error for "${title}": ${data.errorMessage}`);
             return null;
           }
-          if (data && data.results && data.results.length > 0) {
-            const album = data.results[0];
-            const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
-            const normalizedTitle = album.collectionName || album.trackName || null;
-            const albumArtist = album.artistName || null;
-            const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
-            const albumGenres = album.primaryGenreName || null;
-
-            if (coverArtUrl) {
-
-              return { cover_art_url: coverArtUrl, artist: albumArtist, year: albumYear, genre: albumGenres, normalized_title: normalizedTitle };
-            }
+          const album = pickConfidentCoverMatch(data && data.results, title, artist, entry => ({
+            title: entry.collectionName || entry.trackName,
+            creators: [entry.artistName],
+          }));
+          const coverArtUrl = album ? (album.artworkUrl100 || album.artworkUrl60 || null) : null;
+          if (coverArtUrl) {
+            const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0], 10) || null : null;
+            const albumGenre = album.primaryGenreName || null;
+            return { cover_art_url: coverArtUrl, year: albumYear, genre: albumGenre };
           }
           return null;
         } catch (err) {
@@ -1427,10 +1492,13 @@ async function fetchMusicMetadata(id, title, artist) {
   try {
     const result = await pending;
     if (!result?.cover_art_url || !current()) return;
-    await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+    // Year and genre only fill blanks; title and artist stay exactly as the member saved them.
+    const year = existing?.year ? null : result.year;
+    const genre = existing?.genre ? null : result.genre;
+    await saveMusicMetadata(id, result.cover_art_url, year, genre);
     if (!current()) return;
-    displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
-    updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+    displayMusicPoster(id, result.cover_art_url, title);
+    updateMusicRowMetadata(id, null, year, genre, null);
   } catch (error) { console.error('Error fetching music metadata:', error); }
 }
 
@@ -1461,13 +1529,11 @@ function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   }
 }
 
-async function saveMusicMetadata(id, coverArtUrl, artist, year, genre, normalizedTitle) {
+async function saveMusicMetadata(id, coverArtUrl, year, genre) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
-    if (artist) updateData.artist = artist;
     if (year) updateData.year = year;
     if (genre) updateData.genre = genre;
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/music/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1621,7 +1687,7 @@ async function loadBooks() {
         if (book.cover_art_url) {
           displayBookPoster(book.id, book.cover_art_url, book.title);
         } else {
-          fetchBookMetadata(book.id, book.title, book.author);
+          fetchBookMetadata(book.id, book.title, book.author, { year: book.year, genre: book.genre });
         }
       });
     }
@@ -1656,7 +1722,7 @@ function displayBookPoster(id, posterUrl, title = null) {
   }
 }
 
-async function fetchBookMetadata(id, title, author) {
+async function fetchBookMetadata(id, title, author, existing = {}) {
   const cacheKey = `book-${title}-${author}`;
   const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
   const current = () => row && row !== editingRowElement
@@ -1717,19 +1783,19 @@ async function fetchBookMetadata(id, title, author) {
             return null;
           }
 
-          if (data && data.docs && data.docs.length > 0) {
-            const book = data.docs[0];
-            const coverId = book.cover_i || book.isbn?.[0] || null;
-            const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
-            const normalizedTitle = book.title || null;
-            const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : null;
+          // Only editions with art are worth matching; a bare record has no cover to give.
+          const withArt = (data && Array.isArray(data.docs) ? data.docs : []).filter(doc => doc && (doc.cover_i || doc.isbn?.[0]));
+          const book = pickConfidentCoverMatch(withArt, title, author, doc => ({
+            title: doc.title,
+            creators: Array.isArray(doc.author_name) ? doc.author_name : [],
+          }));
+          if (book) {
+            const coverArtUrl = book.cover_i
+              ? `https://covers.openlibrary.org/b/id/${encodeURIComponent(book.cover_i)}-L.jpg`
+              : `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(book.isbn[0])}-L.jpg`;
             const bookYear = book.first_publish_year || book.publish_year?.[0] || null;
-            const bookGenres = book.subject ? book.subject.slice(0, 3).join(', ') : null;
-
-            if (coverArtUrl) {
-
-              return { cover_art_url: coverArtUrl, author: bookAuthor, year: bookYear, genre: bookGenres, normalized_title: normalizedTitle };
-            }
+            const bookGenres = Array.isArray(book.subject) ? book.subject.slice(0, 3).join(', ') : null;
+            return { cover_art_url: coverArtUrl, year: bookYear, genre: bookGenres };
           }
           return null;
         } catch (err) {
@@ -1749,10 +1815,13 @@ async function fetchBookMetadata(id, title, author) {
   try {
     const result = await pending;
     if (!result?.cover_art_url || !current()) return;
-    await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+    // Year and genre only fill blanks; title and author stay exactly as the member saved them.
+    const year = existing?.year ? null : result.year;
+    const genre = existing?.genre ? null : result.genre;
+    await saveBookMetadata(id, result.cover_art_url, year, genre);
     if (!current()) return;
-    displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
-    updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+    displayBookPoster(id, result.cover_art_url, title);
+    updateBookRowMetadata(id, null, year, genre, null);
   } catch (error) { console.error('Error fetching book metadata:', error); }
 }
 
@@ -1783,13 +1852,11 @@ function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   }
 }
 
-async function saveBookMetadata(id, coverArtUrl, author, year, genre, normalizedTitle) {
+async function saveBookMetadata(id, coverArtUrl, year, genre) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
-    if (author) updateData.author = author;
     if (year) updateData.year = year;
     if (genre) updateData.genre = genre;
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/books/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
