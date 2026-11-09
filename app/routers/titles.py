@@ -1069,10 +1069,11 @@ def _tabs_html(nav: str, group, image: Optional[str], signed_in: bool) -> str:
         return ""
     thumb = f'<img src="{_e(image)}" alt="" width="28" height="42" loading="lazy" decoding="async">' if image else ""
     label = "Add to my library" if signed_in else "Save to my list"
+    join = "" if signed_in else '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-dock-join hidden>Join free</a>'
     return (f'<div class="title-tabs"><div class="site-wrap title-tabs__bar">{nav}'
             f'<div class="title-tabs__cta" data-title-dock hidden>{thumb}<span class="title-tabs__name">{_e(group.title)}</span>'
             f'<button type="button" class="site-btn site-btn--primary site-btn--sm" data-dock-save>{label}</button>'
-            f'{"" if signed_in else "<a class=\"site-btn site-btn--primary site-btn--sm\" href=\"/#signup\" data-dock-join hidden>Join free</a>"}'
+            f'{join}'
             '</div></div></div>')
 
 
