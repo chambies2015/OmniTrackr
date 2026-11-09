@@ -162,7 +162,7 @@ def test_guides_are_linked_from_the_hub_card_sitemap_and_loader(authenticated_cl
         assert f'href="{entry["path"]}"' in client.get("/site-map").text
     monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
     paths = [link["path"] for link in authenticated_client.get("/api/seasonal/current").json()["links"]]
-    assert paths == ["/holidays/gifts", "/holidays/thanksgiving", "/holidays/reading-and-listening"]
+    assert paths == ["/holidays/gifts", "/holidays/black-friday", "/holidays/thanksgiving", "/holidays/reading-and-listening"]
     loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
     assert "thanksgiving|reading-and-listening" in loader
 

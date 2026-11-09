@@ -105,6 +105,9 @@ def _source(section: str, href: str):
         from .seasonal_guides import SEASONS
         if href == GUIDE["path"]:
             return GUIDE
+        from .deal_guides import GUIDE as DEALS_GUIDE
+        if href == DEALS_GUIDE["path"]:
+            return DEALS_GUIDE
         from .holiday_guides import GUIDES as HOLIDAY_GUIDES
         companion = next((entry for entry in HOLIDAY_GUIDES.values() if entry["path"] == href), None)
         if companion:
