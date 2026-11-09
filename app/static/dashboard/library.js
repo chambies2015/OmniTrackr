@@ -3435,10 +3435,10 @@ function loadStatistics() {
 const categoryStatsCache = {};
 
 
-/* List or Shelf: how the six built-in libraries are laid out on wide screens.
-   The choice is a body class and this browser's preference; rows, edit mode
-   and every row handler stay exactly as library.js renders them. Phones keep
-   their card layout either way. */
+/* List or Shelf: how the built-in libraries are laid out. The choice is a body
+   class and this browser's preference (Shelf until the member picks); rows, edit
+   mode and every row handler stay exactly as library.js renders them. On phones
+   List is the card layout and Shelf is two or three covers a row. */
 (function () {
   const KEY = 'omnitrackr_library_view';
   const VIEWS = ['list', 'shelf'];
@@ -3446,9 +3446,10 @@ const categoryStatsCache = {};
   function saved() {
     try {
       const value = localStorage.getItem(KEY);
-      return VIEWS.includes(value) ? value : 'list';
+      // Members who never picked a layout get the covers; anyone who chose List keeps it.
+      return VIEWS.includes(value) ? value : 'shelf';
     } catch (_) {
-      return 'list';
+      return 'shelf';
     }
   }
 

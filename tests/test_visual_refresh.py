@@ -12,10 +12,11 @@ def test_dashboard_loads_shelf_styles_after_library_theme():
     assert html.index("/static/library-theme.css") < html.index("/static/library-shelf.css")
 
 
-def test_shelf_toggle_is_a_per_browser_preference_defaulting_to_list():
+def test_shelf_toggle_is_a_per_browser_preference_defaulting_to_shelf():
+    # Since Nov 9 2026 members who never picked a layout see covers; a saved "list" still wins.
     source = dashboard_assets.full_source()
     assert "omnitrackr_library_view" in source
-    assert "return VIEWS.includes(value) ? value : 'list';" in source
+    assert "return VIEWS.includes(value) ? value : 'shelf';" in source
     assert "library-view-shelf" in source
 
 
