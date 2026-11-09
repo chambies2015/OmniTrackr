@@ -1,6 +1,6 @@
-// Background cover lookups for music and books: they only take a search hit that
-// is confidently the member's record, and they never rewrite the member's title or
-// artist/author (a coverless "Blonde" once became "Moon River - Single").
+// Background cover lookups for every built-in library: they only take a search hit
+// that is confidently the member's record, and they never rewrite the member's title
+// or artist/author (a coverless "Blonde" once became "Moon River - Single").
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
@@ -66,8 +66,7 @@ test('a coverless album skips the wrong first hit and never rewrites title or ar
   assert.equal(puts[0].url, '/music/7');
   assert.deepEqual(puts[0].body, { cover_art_url: 'https://art.example/Blonde.jpg', year: 2016, genre: 'R&B/Soul' });
   assert.equal(shown[0][2], 'Blonde', 'the poster keeps the member\'s title for its alt text');
-  assert.equal(updates[0][1], null, 'artist cell untouched');
-  assert.equal(updates[0][4], null, 'title cell untouched');
+  assert.deepEqual([...updates[0]], [7, null, 2016, 'R&B/Soul'], 'only year and genre reach the row; title and artist stay');
 });
 
 for (const kind of Object.keys(KINDS)) {
@@ -127,4 +126,92 @@ test('title and creator matching tolerates spelling noise but not different reco
   assert.equal(m.coverCreatorsMatch('J.R.R. Tolkien', ['J. R. R. Tolkien']), true);
   assert.equal(m.coverCreatorsMatch('Tolkien', ['J.R.R. Tolkien']), true);
   assert.equal(m.coverCreatorsMatch('Jo', ['Jo Nesbø', 'Someone']), false, 'very short names are not enough');
+});
+
+// Movies, TV, anime and games.
+const POSTERS = {
+  Movie: { fn: 'fetchMoviePoster', slice: ['async function fetchMoviePoster(', 'async function deleteMovie('], display: 'displayMoviePoster' },
+  TV: { fn: 'fetchTVPoster', slice: ['async function fetchTVPoster(', 'async function fetchAnimePoster('], display: 'displayTVPoster' },
+  Anime: { fn: 'fetchAnimePoster', slice: ['async function fetchAnimePoster(', '// Video Game functions'], display: 'displayAnimePoster' },
+  VideoGame: { fn: 'fetchVideoGameMetadata', slice: ['async function fetchVideoGameMetadata(', 'async function deleteVideoGame('], display: 'displayVideoGamePoster' },
+};
+
+async function posterLookup(kind, body, ...args) {
+  const spec = POSTERS[kind];
+  const puts = [], shown = [], updates = [];
+  const context = vm.createContext({
+    API_BASE: '', AbortController, console, editingRowElement: null, encodeURIComponent,
+    posterFetchQueue: new Map(), posterFetchInProgress: new Set(), setTimeout: () => 1, clearTimeout() {},
+    waitForPosterSlot: async () => {}, releasePosterSlot() {},
+    cachedProxyFetch: async () => ({ ok: true, json: async () => body }),
+    authenticatedFetch: async (url, options) => { puts.push({ url, body: JSON.parse(options.body) }); return { ok: true }; },
+    updateVideoGameRowMetadata: (...a) => updates.push(a),
+  });
+  context[spec.display] = (...a) => shown.push(a);
+  vm.runInContext(helpers, context);
+  vm.runInContext(part(...spec.slice), context);
+  await context[spec.fn](7, ...args);
+  return { puts, shown, updates };
+}
+
+for (const [kind, path] of [['Movie', '/movies/7'], ['TV', '/tv-shows/7']]) {
+  test(kind + ' poster lookups keep the poster but never save OMDb\'s spelling of the title', async () => {
+    const { puts, shown } = await posterLookup(kind, { Title: 'Star Wars: Episode IV - A New Hope', Poster: 'https://img.example/sw.jpg' }, 'star wars', 1977);
+    assert.deepEqual(puts, [{ url: path, body: { poster_url: 'https://img.example/sw.jpg' } }]);
+    assert.equal(shown[0][2], 'star wars');
+  });
+}
+
+const jikan = (title, extra = {}) => ({ title, images: { jpg: { image_url: `https://cdn.example/${encodeURIComponent(title)}.jpg` } }, ...extra });
+
+test('anime poster lookups skip a different show and never rename', async () => {
+  const { puts, shown } = await posterLookup('Anime', { data: [
+    jikan('Sousou no Frieren 2nd Season', { title_english: "Frieren: Beyond Journey's End Season 2", year: 2026 }),
+    jikan('Sousou no Frieren', { title_english: "Frieren: Beyond Journey's End", year: 2023 }),
+  ] }, 'Sousou no Frieren', 2023);
+  assert.deepEqual(puts, [{ url: '/anime/7', body: { poster_url: 'https://cdn.example/Sousou%20no%20Frieren.jpg' } }]);
+  assert.equal(shown[0][2], 'Sousou no Frieren');
+});
+
+test('anime poster lookups match English names, synonyms and the member\'s year', async () => {
+  const twoVersions = { data: [
+    jikan('Hunter x Hunter', { year: 1999 }),
+    jikan('Hunter x Hunter (2011)', { title_english: 'Hunter x Hunter', aired: { prop: { from: { year: 2011 } } } }),
+  ] };
+  const remake = await posterLookup('Anime', twoVersions, 'Hunter x Hunter', 2011);
+  assert.equal(remake.puts[0].body.poster_url, 'https://cdn.example/Hunter%20x%20Hunter%20(2011).jpg');
+  const english = await posterLookup('Anime', { data: [jikan('Shingeki no Kyojin', { title_english: 'Attack on Titan' })] }, 'attack on titan', null);
+  assert.equal(english.puts.length, 1);
+  const synonym = await posterLookup('Anime', { data: [jikan('Kimetsu no Yaiba', { title_synonyms: ['KnY'] })] }, 'KnY', null);
+  assert.equal(synonym.puts.length, 1);
+  const unrelated = await posterLookup('Anime', { data: [jikan('Moon River')] }, 'Blonde', null);
+  assert.deepEqual(unrelated.puts, []);
+});
+
+test('game lookups skip a different game, keep the member\'s title, and only fill blanks', async () => {
+  const body = { results: [
+    { name: 'Hades II', background_image: 'https://media.example/h2.jpg', slug: 'hades-2', released: '2025-09-25', genres: [{ name: 'Action' }] },
+    { name: 'Hades', background_image: 'https://media.example/h1.jpg', slug: 'hades', released: '2020-09-17', genres: [{ name: 'Roguelike' }, { name: 'Action' }] },
+  ] };
+  const blank = await posterLookup('VideoGame', body, 'Hades');
+  assert.deepEqual(blank.puts, [{ url: '/video-games/7', body: {
+    cover_art_url: 'https://media.example/h1.jpg', genres: 'Roguelike, Action', rawg_link: 'https://rawg.io/games/hades', release_date: '2020-09-17',
+  } }]);
+  assert.equal(blank.shown[0][2], 'Hades');
+  assert.deepEqual([...blank.updates[0]], [7, 'Roguelike, Action', 'https://rawg.io/games/hades', '2020-09-17']);
+
+  const filled = await posterLookup('VideoGame', body, 'Hades', { genres: 'Mine', release_date: '2020-01-01', rawg_link: 'https://rawg.io/games/mine' });
+  assert.deepEqual(filled.puts[0].body, { cover_art_url: 'https://media.example/h1.jpg' });
+
+  const none = await posterLookup('VideoGame', { results: [body.results[0]] }, 'Hades');
+  assert.deepEqual(none.puts, [], 'Hades II is a different game');
+});
+
+test('no lookup can send a title: every save helper drops it', () => {
+  for (const name of ['saveMoviePosterUrl', 'saveTVPosterUrl', 'saveAnimePosterUrl', 'saveVideoGameMetadata', 'saveMusicMetadata', 'saveBookMetadata']) {
+    const a = source.indexOf(`async function ${name}(`);
+    const body = source.slice(a, source.indexOf('\n}\n', a));
+    assert.ok(a >= 0, name);
+    assert.doesNotMatch(body, /\.(title|artist|author)\s*=/, name + ' must not write a title or creator');
+  }
 });
