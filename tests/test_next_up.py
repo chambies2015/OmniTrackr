@@ -50,6 +50,7 @@ class TestNextUpQueue:
             "category_label": "Movie",
             "status_label": "Not watched",
             "prompts": [],
+            "image": None,
         }]
 
     def test_queue_requires_authentication(self, client):

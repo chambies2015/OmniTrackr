@@ -86,13 +86,14 @@
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261109-queue-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
+  <link rel="stylesheet" href="/static/workspace-2026.css?v=20261109-workspace-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}
+    html.dashboard-settling :is(.home-board,#homeHero,#movies-tab,#mainFooter){visibility:hidden}
     .dashboard-skeleton{display:none}
     .dashboard-skeleton-anchor{position:relative;height:0}
     html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -468,6 +469,17 @@
         </div>
       </div>
     </div>
+
+    <section id="homeHero" class="home-hero" aria-labelledby="homeHeroTitle" hidden>
+      <div class="home-hero__copy">
+        <p id="homeHeroDate" class="home-hero__date"></p>
+        <h2 id="homeHeroTitle" class="home-hero__title">Welcome back</h2>
+        <p id="homeHeroSummary" class="home-hero__summary"></p>
+        <dl id="homeHeroStats" class="home-hero__stats"></dl>
+        <div id="homeHeroMix" class="home-hero__mix" role="img" hidden></div>
+      </div>
+      <div id="homeHeroCovers" class="home-hero__covers" role="group" aria-label="Recently added" hidden></div>
+    </section>
 
     <section id="friendRecs" class="friend-recs" aria-labelledby="friendRecsTitle" hidden>
       <div class="friend-recs__header">
@@ -2390,6 +2402,7 @@
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/home-hero.js?v=20261109-workspace-1"></script>
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>

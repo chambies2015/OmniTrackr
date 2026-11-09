@@ -18,7 +18,7 @@ def _read(path: Path) -> str:
 
 def test_dashboard_keeps_home_cards_library_and_footer_still_until_settled():
     index = _read(TEMPLATES / "index.html")
-    assert "html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}" in index
+    assert "html.dashboard-settling :is(.home-board,#homeHero,#movies-tab,#mainFooter){visibility:hidden}" in index
     auth_js = _read(STATIC / "auth.js")
     assert "window.dashboardHomeCards = homeCards;" in auth_js
     for card in ("refreshForYou", "refreshYearGoals", "refreshMonthlyChallenge", "refreshSeasonCard", "refreshBadges",

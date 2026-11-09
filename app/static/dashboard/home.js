@@ -764,6 +764,7 @@ function resetDailyDashboard() {
   for (const id of ['libraryPulse', 'todaysPick', 'nextUpQueue']) {
     document.getElementById(id)?.setAttribute('hidden', '');
   }
+  window.OmniHomeHero?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -859,7 +860,7 @@ function renderLibraryPulseList(container, items, emptyMessage) {
     const action = document.createElement('span');
     action.className = 'library-pulse__item-action';
     action.textContent = 'Open →';
-    button.append(copy, action);
+    button.append(pulseCover(item), copy, action);
     if (typeof window !== 'undefined' && window.OmniProgress && ['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks'].includes(item.category)) {
       const row = document.createElement('div');
       row.className = 'library-pulse__progress-row';
@@ -869,6 +870,33 @@ function renderLibraryPulseList(container, items, emptyMessage) {
       container.appendChild(row);
     } else container.appendChild(button);
   });
+}
+
+// The member's cover for a Continue row, or the title's first letter in its format's colour.
+function pulseCover(item) {
+  const cover = document.createElement('span');
+  cover.className = 'library-pulse__item-cover';
+  cover.dataset.format = item.category;
+  cover.setAttribute('aria-hidden', 'true');
+  const image = typeof item.image === 'string' && /^https?:\/\//.test(item.image) ? item.image : '';
+  if (image) {
+    const img = document.createElement('img');
+    img.src = image;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => {
+      img.remove();
+      cover.className += ' library-pulse__item-cover--letter';
+      cover.textContent = (String(item.title || '').match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase();
+    }, { once: true });
+    cover.appendChild(img);
+  } else {
+    cover.className += ' library-pulse__item-cover--letter';
+    cover.textContent = (String(item.title || '').match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase();
+  }
+  return cover;
 }
 
 function renderLibraryPulse(pulse) {
@@ -886,7 +914,7 @@ function renderLibraryPulse(pulse) {
   }
   renderLibraryPulseList(
     document.getElementById('libraryPulseContinue'),
-    continueItems.slice(0, 2),
+    continueItems.slice(0, 4),
     'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
   );
   renderLibraryPulseList(
@@ -1742,6 +1770,7 @@ function runDashboardLayoutBatch() {
   launchpadDecisionRefreshRequested = false;
   const launchpadRequest = refreshLibraryLaunchpad();
   const queueRequest = refreshNextUpQueue();
+  const heroRequest = window.OmniHomeHero?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),
@@ -1753,7 +1782,7 @@ function runDashboardLayoutBatch() {
   firstDashboardLayoutBatchRan = true;
   window.dashboardHomeCards = null;
   if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
-  Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
+  Promise.allSettled([launchpadRequest, queueRequest, heroRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
 }
 
 // Startup work that has to finish before the library is revealed, outside a batch.
