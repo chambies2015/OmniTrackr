@@ -384,6 +384,9 @@ class NextUpItem(Base):
     item_id = Column(Integer, nullable=False)
     position = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Set by Start on the queue. NULL means not started yet, which is every row
+    # that existed before the column did.
+    started_at = Column(DateTime, nullable=True)
 
     owner = relationship("User", back_populates="next_up_items")
 

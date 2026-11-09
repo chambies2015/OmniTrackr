@@ -1337,6 +1337,16 @@ class NextUpItem(BaseModel):
     episode_progress: Optional[dict] = None
     finished: bool = False
     image: Optional[str] = None
+    started_at: Optional[str] = None
+    now_label: Optional[str] = None
+
+
+class NextUpSuggestion(BaseModel):
+    category: str
+    item_id: int
+    title: str
+    category_label: str
+    image: Optional[str] = None
 
 
 class NextUpFinished(BaseModel):
