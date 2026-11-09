@@ -250,7 +250,9 @@ def move_next_up(
     for position, entry in enumerate(entries):
         entry.position = position
     db.commit()
-    return _serialize_all(db, current_user.id, entries)
+    # The commit expired every row, so serialising them as they are would reload each one
+    # with its own query. One fresh read of the queue costs a single query instead.
+    return _serialize_all(db, current_user.id, _ordered_entries(db, current_user.id))
 
 
 @router.post("/{queue_id}/start", response_model=List[schemas.NextUpItem])
@@ -276,7 +278,9 @@ def start_next_up(
     for position, entry in enumerate(entries):
         entry.position = position
     db.commit()
-    return _serialize_all(db, current_user.id, entries)
+    # The commit expired every row, so serialising them as they are would reload each one
+    # with its own query. One fresh read of the queue costs a single query instead.
+    return _serialize_all(db, current_user.id, _ordered_entries(db, current_user.id))
 
 
 @router.delete("/{queue_id}/start", response_model=List[schemas.NextUpItem])
@@ -340,7 +344,7 @@ def clear_finished_next_up(
     for position, entry in enumerate(kept):
         entry.position = position
     db.commit()
-    return _serialize_all(db, current_user.id, kept)
+    return _serialize_all(db, current_user.id, _ordered_entries(db, current_user.id))
 
 
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)
