@@ -31,7 +31,9 @@ MAX_ADD = 30
 # Pages that sit beside a hub, shown on its dashboard card and in its "More for the season" cards.
 EXTRA_LINKS = {
     "holidays": [{"path": "/holidays/gifts", "name": "Gift guide",
-                  "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."}]
+                  "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."},
+                 {"path": "/holidays/black-friday", "name": "Black Friday guide",
+                  "tagline": "What tends to get cheaper on Black Friday, what rarely does, and what to check first."}]
     + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"]}
        for _, entry in seasonal.companions_of("holidays")],
 }

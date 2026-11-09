@@ -54,7 +54,7 @@ const libraryPages = new Map();
 const libraryFilters = new Map();
 let libraryBrowseEpoch = 0;
 const LIBRARY_PAGE_SIZE = 50;
-const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false };
+const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false, filter: '', suggestions: [], suggestionsKey: null, suggestionsRequest: 0 };
 
 function libraryPageConfig(category) {
   return {
@@ -875,6 +875,10 @@ function handleDelegatedClick(event) {
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
     'finish-next-up': () => finishNextUp(Number(target.dataset.nextUpId)),
     'clear-finished-next-up': clearFinishedNextUp,
+    'start-next-up': () => startNextUp(Number(target.dataset.nextUpId)),
+    'unstart-next-up': () => unstartNextUp(Number(target.dataset.nextUpId)),
+    'filter-next-up': () => filterNextUp(target.dataset.nextUpFilter || ''),
+    'add-next-up-suggestion': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,
