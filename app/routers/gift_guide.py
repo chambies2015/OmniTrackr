@@ -62,8 +62,11 @@ def _head(*, ads: bool) -> str:
 
 # ---------------------------------------------------------------- title pages and art for guide gifts
 
-def _title_pages(db: Session) -> dict[str, dict]:
-    """{gift id: {"url", "image"}} for guide gifts that are titles with a public page (never raises)."""
+def _title_pages(db: Session, gifts: Optional[dict] = None) -> dict[str, dict]:
+    """{gift id: {"url", "image"}} for guide gifts that are titles with a public page (never raises).
+
+    ``gifts`` defaults to this guide's; the Black Friday guide passes its own picks in the same shape.
+    """
     try:
         index = title_search.index(db)
     except Exception:
@@ -75,7 +78,7 @@ def _title_pages(db: Session) -> dict[str, dict]:
         if current is None or entry["members"] > current["members"]:
             by_base[(entry["kind"], entry["base"])] = entry
     found = {}
-    for gift_id, gift in GIFTS.items():
+    for gift_id, gift in (GIFTS if gifts is None else gifts).items():
         if gift["kind"] not in title_pages.KINDS or not gift.get("title"):
             continue
         base = title_pages.slugify(gift["title"])

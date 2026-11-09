@@ -69,7 +69,7 @@ def _seasonal() -> list[dict]:
     from .seasonal_guides import SEASONS
     return [{"section": "seasonal", "href": entry["path"], "name": f"{entry['name']} picks",
              "summary": entry["summary"], "updated": entry["reviewed"]}
-            for entry in SEASONS.values()] + [_gift_guide()] + _holiday_guides()
+            for entry in SEASONS.values()] + [_gift_guide(), _deals_guide()] + _holiday_guides()
 
 
 def _holiday_guides() -> list[dict]:
@@ -82,6 +82,12 @@ def _holiday_guides() -> list[dict]:
 def _gift_guide() -> dict:
     from .gift_guides import GUIDE
     return {"section": "seasonal", "href": GUIDE["path"], "name": "Holiday gift guide",
+            "summary": GUIDE["summary"], "updated": GUIDE["reviewed"]}
+
+
+def _deals_guide() -> dict:
+    from .deal_guides import GUIDE
+    return {"section": "seasonal", "href": GUIDE["path"], "name": GUIDE["name"],
             "summary": GUIDE["summary"], "updated": GUIDE["reviewed"]}
 
 

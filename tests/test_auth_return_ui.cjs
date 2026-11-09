@@ -445,7 +445,8 @@ test('collection return paths reject foreign hosts, invalid IDs, suffixes, encod
     '/collections/public/2147483648/save', '/collections/public/99999999999/save',
     '/collections/public/42/save/', '/collections/public/42/save?next=//evil.example',
     '/collections/public/42/save?', '/collections/public/42/save#', '/collections/public/42/save#confirm',
-    '/collections/public/42/copy', '/collections/public/42', '/collections/public//42/save',
+    // '/collections/public/42' itself is allowed since Nov 9 2026 (test_list_return_ui.cjs).
+    '/collections/public/42/copy', '/collections/public//42/save',
     '/collections/public/%34%32/save', '/collections/public/../42/save', '/collections/public/42%2fsave',
     '/collections/Public/42/save', '/collections/public/42/save\n', '/collections/public/42/save\r',
     '/collections/public/42/save\u0000', '/collections/public/42/save\u2028',

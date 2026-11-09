@@ -84,7 +84,7 @@
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261109-queue-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
@@ -653,7 +653,13 @@
               <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
             </div>
           </div>
+          <div id="nextUpQueueFilters" class="next-up-queue__filters" role="group" aria-label="Show in Next Up" hidden></div>
           <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+          <p id="nextUpQueueStatus" class="sr-only" role="status" aria-live="polite"></p>
+          <div id="nextUpQueueSuggest" class="next-up-queue__suggest" hidden>
+            <h3 id="nextUpQueueSuggestTitle" class="next-up-queue__suggest-title">Line up more from your library</h3>
+            <ul id="nextUpQueueSuggestList" class="next-up-queue__suggest-list" aria-labelledby="nextUpQueueSuggestTitle"></ul>
+          </div>
         </section>
 
         <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
@@ -2375,10 +2381,11 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261104-review-inbox-1"></script>
+  <script src="./auth.js?v=20261109-list-return-2"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
+  <script src="/static/next-up-drag.js?v=20261109-queue-1" defer></script>
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>

@@ -1,0 +1,191 @@
+/* Black Friday guide (/holidays/black-friday). Builds on discover.css, if-you-liked.css,
+   the holiday theme in seasonal.css and the gift guide's cards in gift-guide.css.
+   The hero swaps the wreath for a paper price tag, and the palette leans black and gold. */
+
+.bf-guide {
+  --sn-accent: #facc15;
+  --sn-accent-soft: #fef08a;
+  --sn-accent-ink: #1a1400;
+  --sn-glow: rgba(250, 204, 21, .2);
+  --bf-drop: #4ade80;
+  --bf-hold: #fca5a5;
+}
+
+/* Hero: a dark band with a hanging price tag where the holiday hub has its wreath. */
+.bf-hero {
+  background: radial-gradient(640px 300px at 92% 0%, rgba(250, 204, 21, .1), transparent 70%);
+}
+.bf-guide .sn-hero::before { opacity: .22; }
+.bf-guide .sn-hero__moon.bf-tag {
+  background: linear-gradient(150deg, #fde047 0%, #facc15 45%, #ca8a04 100%);
+  border-radius: 14px 14px 14px 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+  clip-path: polygon(50% 0, 100% 22%, 100% 100%, 0 100%, 0 22%);
+  filter: none;
+  height: 160px;
+  opacity: .42;
+  right: 1%;
+  top: 22px;
+  transform: rotate(14deg);
+  transform-origin: 50% 0;
+  width: 110px;
+}
+/* The hole and the stamped "%" on the tag. */
+.bf-guide .sn-hero__moon.bf-tag::before {
+  background: #0d0b1a;
+  border-radius: 50%;
+  content: "";
+  height: 18px;
+  left: calc(50% - 9px);
+  position: absolute;
+  top: 26px;
+  width: 18px;
+}
+.bf-guide .sn-hero__moon.bf-tag::after {
+  color: rgba(26, 20, 0, .78);
+  content: "%";
+  font: 900 3.6rem/1 var(--site-display, sans-serif);
+  left: 0;
+  position: absolute;
+  right: 0;
+  text-align: center;
+  top: 66px;
+}
+
+.bf-countdown {
+  background: rgba(250, 204, 21, .14);
+  border: 1px solid rgba(250, 204, 21, .45);
+  border-radius: 999px;
+  color: var(--sn-accent-soft);
+  display: inline-block;
+  font-size: .92rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  margin: 14px 0 0;
+  padding: 6px 14px;
+}
+
+.bf-lead { color: #d7dbee; max-width: 760px; }
+
+/* The week: a strip of day cards, with the two big days picked out. */
+.bf-week { margin: 44px 0 0; scroll-margin-top: 80px; }
+.bf-week h2 { margin: 0 0 6px; }
+.bf-days {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.bf-day {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  position: relative;
+}
+.bf-day h3 { color: #fff; font-size: 1.02rem; line-height: 1.25; margin: 6px 0 6px; }
+.bf-day p { color: #c3c8dd; font-size: .88rem; line-height: 1.5; margin: 0; }
+.bf-day__when { align-items: baseline; display: flex; flex-wrap: wrap; gap: 2px 8px; }
+.bf-day .bf-day__when span { color: var(--sn-accent); font-size: .74rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.bf-day .bf-day__when time { color: #eef0fa; font-size: .82rem; font-weight: 700; }
+.bf-day--big {
+  background: linear-gradient(180deg, rgba(250, 204, 21, .16), rgba(250, 204, 21, .04)), var(--site-surface);
+  border-color: rgba(250, 204, 21, .5);
+}
+.bf-day--big h3 { color: var(--sn-accent-soft); }
+.bf-day--now { box-shadow: 0 0 0 3px var(--sn-glow); }
+.bf-day__now {
+  background: var(--sn-accent);
+  border-radius: 999px;
+  color: var(--sn-accent-ink) !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  letter-spacing: .05em;
+  margin-left: auto;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+/* Member list and guest pitch reuse .gg-panel; the member one is two columns of rows. */
+.bf-mine__grid { display: grid; gap: 26px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 20px; }
+.bf-mine__grid h3 { margin-bottom: 4px; }
+.bf-mine__grid .gg-muted { margin: 0 0 12px; }
+.bf-mine__item { align-items: flex-start; }
+.bf-mine__links { align-items: center; display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 2px; }
+.bf-mine__buy, .bf-mine__open { align-items: center; display: inline-flex; font-size: .86rem; font-weight: 700; min-height: 32px; }
+.bf-mine__buy { color: var(--sn-accent-soft); }
+.bf-mine__open { color: #c3c8dd; }
+
+/* Five checks, numbered like receipts. */
+.bf-checks { margin: 44px 0 0; scroll-margin-top: 80px; }
+.bf-checks h2 { margin: 0; }
+.bf-checks__list { counter-reset: bf-check; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
+.bf-checks__list li {
+  background: var(--site-surface);
+  border: 1px dashed rgba(250, 204, 21, .35);
+  border-radius: 16px;
+  counter-increment: bf-check;
+  padding: 18px 20px 18px 64px;
+  position: relative;
+}
+.bf-checks__list li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.bf-checks__list li::before {
+  color: var(--sn-accent);
+  content: counter(bf-check);
+  font: 800 2rem/1 var(--site-display, sans-serif);
+  left: 20px;
+  position: absolute;
+  top: 18px;
+}
+.bf-checks__list h3 { color: #fff; font-size: 1.08rem; margin: 0 0 6px; }
+.bf-checks__list p { color: #d7dbee; font-size: .95rem; margin: 0; }
+
+/* Format sections: what drops and what holds, side by side, then the picks. */
+.bf-section .sn-shelf__head h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); }
+.bf-verdicts { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 22px 0 0; }
+.bf-verdict { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; padding: 16px 20px; }
+.bf-verdict h3 { font-size: .82rem; letter-spacing: .07em; margin: 0 0 10px; text-transform: uppercase; }
+.bf-verdict ul { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.bf-verdict li { color: #d7dbee; font-size: .94rem; line-height: 1.45; padding-left: 22px; position: relative; }
+.bf-verdict li::before { font-weight: 900; left: 0; position: absolute; top: 0; }
+.bf-verdict--drops { border-top: 3px solid var(--bf-drop); }
+.bf-verdict--drops h3 { color: var(--bf-drop); }
+.bf-verdict--drops li::before { color: var(--bf-drop); content: "↓"; }
+.bf-verdict--holds { border-top: 3px solid var(--bf-hold); }
+.bf-verdict--holds h3 { color: var(--bf-hold); }
+.bf-verdict--holds li::before { color: var(--bf-hold); content: "="; }
+.bf-watch { color: var(--sn-accent-soft); font-size: 1rem; letter-spacing: .02em; margin: 26px 0 0; }
+.bf-picks { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+.bf-pick { padding: 20px 22px; }
+.bf-pick h3 { font-size: 1.15rem; }
+
+/* A price-tag tile for picks without art. */
+.bf-guide .gg-box,
+.bf-guide .gg-gift:nth-child(4n + 2) .gg-box,
+.bf-guide .gg-gift:nth-child(4n + 3) .gg-box,
+.bf-guide .gg-idea:nth-child(3n + 2) .gg-box,
+.bf-guide .gg-idea:nth-child(3n) .gg-box {
+  background: linear-gradient(150deg, #3f3a1a, #1f1b0a);
+  border: 1px solid rgba(250, 204, 21, .4);
+}
+.bf-guide .gg-box span { background: rgba(250, 204, 21, .2); color: var(--sn-accent-soft); }
+
+@media (max-width: 1100px) {
+  .bf-days { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bf-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .bf-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bf-checks__list, .bf-verdicts, .bf-mine__grid, .bf-picks { grid-template-columns: 1fr; }
+  .bf-guide .sn-hero__moon.bf-tag { height: 100px; opacity: .26; right: 2%; top: 6px; width: 68px; }
+  .bf-guide .sn-hero__moon.bf-tag::after { font-size: 2.1rem; top: 42px; }
+  .bf-guide .sn-hero__moon.bf-tag::before { height: 10px; left: calc(50% - 5px); top: 16px; width: 10px; }
+}
+@media (max-width: 420px) {
+  .bf-days { grid-template-columns: 1fr; }
+  .bf-checks__list li { padding-left: 56px; }
+}
