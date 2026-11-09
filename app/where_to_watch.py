@@ -51,6 +51,9 @@ KINDS = VIDEO_KINDS + ("game",) + LISTEN_KINDS + READ_KINDS
 FRESH = {"ok": timedelta(days=7), "miss": timedelta(days=3), "error": timedelta(hours=6)}
 TMDB_API = "https://api.themoviedb.org/3"
 TMDB_LOGO = "https://image.tmdb.org/t/p/w92"
+# Wide stills for the title page hero. The path is stored; sizes are picked at render time.
+TMDB_BACKDROP = "https://image.tmdb.org/t/p/{size}{path}"
+BACKDROP_SIZES = ("w780", "w1280")
 LOGO_PATH = re.compile(r"^/[A-Za-z0-9_-]{1,64}\.(?:jpg|png|svg)$")
 STORE_DOMAIN = re.compile(r"^[a-z0-9.-]{3,80}\.[a-z]{2,10}$")
 # TMDB offer type -> heading, in the order people care about.
@@ -157,14 +160,27 @@ def _tmdb_auth() -> tuple[dict, dict]:
     return {"api_key": key}, {}
 
 
-async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadata: dict) -> Optional[tuple[str, int]]:
+def _backdrop_path(result: dict) -> Optional[str]:
+    path = result.get("backdrop_path") if isinstance(result, dict) else None
+    return path if isinstance(path, str) and LOGO_PATH.match(path) and not path.endswith(".svg") else None
+
+
+def backdrop_urls(where: Optional[dict]) -> dict:
+    """{"w780": url, "w1280": url} for the title's TMDB backdrop, or {} when there isn't one."""
+    path = (where or {}).get("backdrop")
+    if not isinstance(path, str) or not LOGO_PATH.match(path) or path.endswith(".svg"):
+        return {}
+    return {size: TMDB_BACKDROP.format(size=size, path=path) for size in BACKDROP_SIZES}
+
+
+async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadata: dict) -> Optional[tuple[str, int, Optional[str]]]:
     params, headers = _tmdb_auth()
     imdb = _source_url(metadata, r"imdb\.com/title/(tt\d{5,10})/")
     if imdb:
         data = await _get(client, f"{TMDB_API}/find/{imdb.group(1)}", {**params, "external_source": "imdb_id"}, headers) or {}
         for media, field in (("movie", "movie_results"), ("tv", "tv_results")):
             if data.get(field) and isinstance(data[field][0].get("id"), int):
-                return media, data[field][0]["id"]
+                return media, data[field][0]["id"], _backdrop_path(data[field][0])
     order = {"movie": ("movie",), "tv": ("tv",), "anime": ("tv", "movie")}[kind]
     for media in order:
         query = {**params, "query": title[:150]}
@@ -177,9 +193,10 @@ async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadat
                 [result.get("name"), result.get("original_name")]
             if isinstance(result.get("id"), int) and any(_title_matches(title, name or "") for name in names):
                 exact = any(_norm(name or "") == _norm(title) for name in names)
-                matches.append((not exact, len(matches), result["id"]))
+                matches.append((not exact, len(matches), result["id"], _backdrop_path(result)))
         if matches:
-            return media, min(matches)[2]
+            best = min(matches)
+            return media, best[2], best[3]
     return None
 
 
@@ -189,7 +206,7 @@ async def tmdb_providers(client, kind: str, title: str, year: Optional[int], met
     found = await _tmdb_find(client, kind, title, year, metadata)
     if not found:
         return {}
-    media, tmdb_id = found
+    media, tmdb_id, backdrop = found
     params, headers = _tmdb_auth()
     data = await _get(client, f"{TMDB_API}/{media}/{tmdb_id}/watch/providers", params, headers) or {}
     offers = (data.get("results") or {}).get(region()) or {}
@@ -209,7 +226,7 @@ async def tmdb_providers(client, kind: str, title: str, year: Optional[int], met
             groups.append({"label": label, "providers": providers[:GROUP_LIMIT]})
     if not groups:
         return {}
-    return {"groups": groups, "link": link, "justwatch": True}
+    return {"groups": groups, "link": link, "justwatch": True, **({"backdrop": backdrop} if backdrop else {})}
 
 
 # ---------------------------------------------------------------- free sources
@@ -500,6 +517,7 @@ async def fetch(client, kind: str, title: str, year: Optional[int], metadata: Op
         "groups": groups,
         "link": tmdb.get("link"),
         "justwatch": bool(tmdb.get("justwatch")),
+        **({"backdrop": tmdb["backdrop"]} if tmdb.get("backdrop") else {}),
         "credits": credits,
         "fetched": datetime.utcnow().strftime("%Y-%m-%d"),
     }

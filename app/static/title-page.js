@@ -275,5 +275,43 @@
     }, { rootMargin: '-35% 0px -55% 0px' });
     links.forEach((link, section) => observer.observe(section));
   }
-  if (typeof document.getElementById === 'function') setupTabs();
+  // ---------- Save button in the sticky bar once the hero's own button scrolls away ----------
+  // It presses the hero button, so guest-list.js and addToLibrary stay the only code that saves.
+  function setupDock() {
+    const dock = document.querySelector('[data-title-dock]');
+    const source = document.querySelector('.title-hero [data-guest-save], .title-hero [data-title-add]');
+    const bar = document.querySelector('.title-tabs');
+    if (!dock || !source || !bar || typeof IntersectionObserver !== 'function') return;
+    const button = dock.querySelector('[data-dock-save]');
+    const join = dock.querySelector('[data-dock-join]');
+    const sync = () => {
+      const pressed = source.getAttribute('aria-pressed');
+      // Once a guest has saved, the bar's job is the sign-up: a short "Saved" and a join link.
+      const saved = pressed === 'true' && Boolean(join);
+      button.textContent = saved ? 'Saved' : source.textContent;
+      button.disabled = source.disabled;
+      if (pressed !== null) button.setAttribute('aria-pressed', pressed);
+      if (join) join.hidden = !saved;
+    };
+    button.addEventListener('click', () => {
+      source.click();
+      setTimeout(sync, 0);
+    });
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(sync).observe(source, { attributes: true, childList: true, characterData: true, subtree: true });
+    }
+    sync();
+    dock.hidden = false;
+    new IntersectionObserver(([entry]) => {
+      const gone = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+      bar.classList.toggle('title-tabs--docked', gone);
+      dock.setAttribute('aria-hidden', String(!gone));
+      button.tabIndex = gone ? 0 : -1;
+    }).observe(source);
+  }
+
+  if (typeof document.getElementById === 'function') {
+    setupTabs();
+    setupDock();
+  }
 })();
