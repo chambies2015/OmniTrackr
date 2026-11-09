@@ -21,7 +21,7 @@ from .discover import page
 
 router = APIRouter(tags=["if-you-liked"])
 CSS_VERSION = "20261104-liked-2"
-JS_VERSION = "20261016-liked-1"
+JS_VERSION = "20261109-liked-2"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-16"

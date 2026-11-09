@@ -217,7 +217,7 @@ def _trailer_html(group, metadata: dict) -> str:
         return ""
     return (
         '<section class="title-section" aria-labelledby="trailer-title"><h2 id="trailer-title">Trailer</h2>'
-        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer">'
+        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer. Plays from YouTube (privacy-enhanced mode)">'
         f'<img src="https://i.ytimg.com/vi/{_e(video)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360">'
         '<span class="title-trailer__play" aria-hidden="true">▶</span>'
         '<span class="title-trailer__note">Plays from YouTube (privacy-enhanced mode)</span></button></section>'
@@ -1041,7 +1041,9 @@ def _where_teaser_html(group, summary: dict) -> str:
         else f'<span class="title-where__mono" aria-hidden="true">{_e(p["name"][:1].upper())}</span>'
         for p in providers)
     names = _join([p["name"] for p in providers])
-    extra = sum(len(entry["providers"]) for entry in groups) - len(providers)
+    # Count each service once: Apple TV under both Rent and Buy is one more place, not two.
+    shown = {p["name"].casefold() for p in providers}
+    extra = len({p["name"].casefold() for entry in groups for p in entry["providers"]} - shown)
     more = f'<span class="title-hero__where-more">+{extra} more</span>' if extra > 0 else ""
     return (f'<a class="title-hero__where" href="#where-title"><span class="title-hero__where-logos" aria-hidden="true">{logos}</span>'
             f'<span class="title-hero__where-text"><small>{_e(where_to_watch.heading(group.kind))} · {_e(first["label"])}</small>'
@@ -1052,7 +1054,7 @@ def _hero_backdrop(group, summary: dict, metadata: dict, image: Optional[str]) -
     """(html, wide): a real wide still when we have one, otherwise the poster as a soft colour wash."""
     wide = where_to_watch.backdrop_urls(summary.get("where"))
     if wide:
-        return (f'<img class="title-hero__backdrop" src="{_e(wide["w1280"])}" '
+        return (f'<img class="title-hero__backdrop" src="{_e(wide["w1280"])}" fetchpriority="high" '
                 f'srcset="{_e(wide["w780"])} 780w, {_e(wide["w1280"])} 1280w" sizes="100vw" alt="" aria-hidden="true">'), True
     backdrop = metadata.get("backdrop") or image
     if not backdrop:
@@ -1478,9 +1480,9 @@ def import_guest_list(
             from .. import browse
             browsed = browse.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
-            # A manga, podcast or audiobook saved from one of the guides beside the holiday hub.
-            from .. import seasonal
-            browsed = seasonal.find_extra(item.kind, item.slug)
+            # A manga, podcast or audiobook saved from one of the guides beside the holiday hub or a best-of list.
+            from .. import best_of, seasonal
+            browsed = seasonal.find_extra(item.kind, item.slug) or best_of.find_extra(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
             missing += 1
             continue

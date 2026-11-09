@@ -146,11 +146,11 @@ def test_indexed_pages_carry_one_breadcrumb_trail(client, path):
 
 # Sign-up prompt
 
+# /best-of asks once through its own "How many of these have you seen?" card (tests/test_best_of.py).
 @pytest.mark.parametrize("path, heading", [
     ("/discover", "Keep the ones that catch your eye"),
     ("/in-order", "Keep your place in the series"),
     ("/if-you-liked", "Keep the ones that catch your eye"),
-    ("/best-of", "Keep the ones that catch your eye"),
     ("/guides", "Try it with your own list"),
 ])
 def test_hubs_ask_signed_out_readers_to_join(client, path, heading):
