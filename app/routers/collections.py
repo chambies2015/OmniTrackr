@@ -442,6 +442,10 @@ def _serialize_collection(
     user_id: int,
     media_lookup: dict | None = None,
 ) -> dict:
+    if media_lookup is None and user_id == collection.user_id:
+        # One query per format instead of one per title for every check below (a 50-title
+        # list ran about 100 extra queries on each edit once share links were added).
+        media_lookup = _media_lookup_for_collections(db, [collection])
     items = sorted(collection.items, key=lambda item: (item.position, item.id))
     quality = _collection_quality(collection, db, media_lookup)
     suspended = _current_report_state_hides_collection(collection, db, media_lookup)
@@ -1766,8 +1770,9 @@ def create_share_link(
     collection = _get_collection(db, current_user.id, collection_id)
     if collection.moderation_status == "rejected":
         raise HTTPException(status_code=422, detail="This collection can't be shared.")
-    if not _link_ready(collection, db):
-        items = _available_items(collection, db, collection.user_id)
+    media_lookup = _media_lookup_for_collections(db, [collection])
+    if not _link_ready(collection, db, media_lookup):
+        items = _available_items(collection, db, collection.user_id, media_lookup)
         if len(items) < LINK_MIN_ITEMS:
             raise HTTPException(status_code=422, detail=f"Add at least {LINK_MIN_ITEMS} titles before sharing a link.")
         raise HTTPException(status_code=422, detail="Reword the title, introduction or notes before sharing this list.")
