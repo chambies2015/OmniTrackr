@@ -831,6 +831,7 @@ def run_migrations():
     add_public_diary_column()
     add_taste_match_link_column()
     add_calendar_episodes_column()
+    add_next_up_started_column()
     add_lookup_indexes()
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
@@ -883,6 +884,22 @@ def add_supporter_banner_column():
             print("Added banner column to supporters table")
     except Exception as e:
         print(f"Migration warning (supporter banner): {e}")
+
+
+def add_next_up_started_column():
+    """Add when a queued title was started. Existing queue rows keep NULL (not started), so queues look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("next_up_items"):
+            return
+        if "started_at" in {col["name"] for col in inspector.get_columns("next_up_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE next_up_items ADD COLUMN started_at TIMESTAMP"))
+            conn.commit()
+            print("Added started_at column to next_up_items table")
+    except Exception as e:
+        print(f"Migration warning (next up started): {e}")
 
 
 def add_membership_columns():

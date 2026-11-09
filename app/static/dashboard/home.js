@@ -753,6 +753,10 @@ function resetDailyDashboard() {
   dailyDashboardState.expanded = false;
   dailyDashboardState.mutationPending = false;
   dailyDashboardState.refreshAfterMutation = false;
+  dailyDashboardState.filter = '';
+  dailyDashboardState.suggestions = [];
+  dailyDashboardState.suggestionsKey = null;
+  dailyDashboardState.suggestionsRequest++;
   refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
   refreshLibraryPulse.request = (refreshLibraryPulse.request || 0) + 1;
   ++todaysPickRequest;
@@ -760,11 +764,12 @@ function resetDailyDashboard() {
   for (const id of ['libraryPulse', 'todaysPick', 'nextUpQueue']) {
     document.getElementById(id)?.setAttribute('hidden', '');
   }
-  for (const id of ['nextUpQueueItems', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
+  for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
   const reflections = document.getElementById('libraryPulseReflections');
   if (reflections) { reflections.open = false; reflections.hidden = true; }
+  document.getElementById('nextUpQueueSuggest')?.setAttribute('hidden', '');
   const toggle = document.getElementById('nextUpQueueToggle');
   if (toggle) { toggle.hidden = true; toggle.disabled = false; toggle.setAttribute('aria-expanded', 'false'); }
   const status = document.getElementById('libraryNavigationStatus');
@@ -1053,6 +1058,7 @@ function captureNextUpQueueFocus() {
     index: dailyDashboardState.items.findIndex(item => String(item.id) === row.dataset.nextUpRowId),
     action: focused.dataset.action,
     direction: focused.dataset.nextUpDirection,
+    handle: focused.dataset.nextUpHandle !== undefined,
   };
 }
 
@@ -1062,6 +1068,8 @@ function restoreNextUpQueueFocus(focus) {
   const rows = Array.from(container.children).filter(row => row.dataset.nextUpRowId);
   const row = rows.find(candidate => candidate.dataset.nextUpRowId === focus.id)
     || rows[Math.min(Math.max(focus.index, 0), rows.length - 1)];
+  const handle = focus.handle && row?.querySelector?.('[data-next-up-handle]');
+  if (handle && handle.focus) { handle.focus({ preventScroll: true }); return; }
   const buttons = row ? Array.from(row.querySelectorAll('button')).filter(button => !button.disabled) : [];
   const target = buttons.find(button => button.dataset.action === focus.action && button.dataset.nextUpDirection === focus.direction)
     || buttons.find(button => button.dataset.action === focus.action) || buttons[0]
@@ -1075,6 +1083,63 @@ function toggleNextUpQueue() {
   renderNextUpQueue(dailyDashboardState.items);
 }
 
+// Next Up can be narrowed to what you're in the mood for. Nine formats fold into four verbs.
+const NEXT_UP_GROUPS = [
+  { key: 'watch', label: 'Watch', verb: 'watch', categories: ['movies', 'tv-shows', 'anime'] },
+  { key: 'read', label: 'Read', verb: 'read', categories: ['books', 'manga'] },
+  { key: 'play', label: 'Play', verb: 'play', categories: ['video-games'] },
+  { key: 'listen', label: 'Listen', verb: 'listen to', categories: ['music', 'podcasts', 'audiobooks'] },
+];
+
+function nextUpGroup(category) {
+  return NEXT_UP_GROUPS.find(group => group.categories.includes(category)) || null;
+}
+
+function nextUpStartedLabel(item) {
+  const verb = item.now_label || 'Started';
+  const started = item.started_at ? new Date(item.started_at.endsWith('Z') || item.started_at.includes('+') ? item.started_at : `${item.started_at}Z`) : null;
+  if (!started || Number.isNaN(started.getTime())) return verb;
+  const today = new Date();
+  if (started.toDateString() === today.toDateString()) return `${verb} since today`;
+  return `${verb} since ${started.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
+function filterNextUp(key) {
+  if (dailyDashboardState.mutationPending) return;
+  dailyDashboardState.filter = NEXT_UP_GROUPS.some(group => group.key === key) && dailyDashboardState.filter !== key ? key : '';
+  renderNextUpQueue(dailyDashboardState.items);
+}
+
+function renderNextUpFilters(items) {
+  const container = document.getElementById('nextUpQueueFilters');
+  if (!container) return;
+  container.replaceChildren();
+  const counts = NEXT_UP_GROUPS.map(group => ({ group, count: items.filter(item => item.available && group.categories.includes(item.category)).length }))
+    .filter(entry => entry.count);
+  if (counts.length < 2 || items.length < 3) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  const chip = (key, label, count) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'next-up-queue__filter';
+    button.dataset.action = 'filter-next-up';
+    button.dataset.nextUpFilter = key;
+    button.setAttribute('aria-pressed', String(dailyDashboardState.filter === key));
+    button.disabled = dailyDashboardState.mutationPending;
+    const name = document.createElement('span');
+    name.textContent = label;
+    const number = document.createElement('span');
+    number.className = 'next-up-queue__filter-count';
+    number.textContent = String(count);
+    button.append(name, number);
+    return button;
+  };
+  container.append(chip('', 'All', items.length), ...counts.map(({ group, count }) => chip(group.key, group.label, count)));
+}
+
 function renderNextUpQueue(items) {
   const queueElement = document.getElementById('nextUpQueue');
   const container = document.getElementById('nextUpQueueItems');
@@ -1082,15 +1147,22 @@ function renderNextUpQueue(items) {
   const focus = captureNextUpQueueFocus();
   dailyDashboardState.items = Array.isArray(items) ? items : [];
   items = dailyDashboardState.items;
-  const shown = dailyDashboardState.expanded ? items : items.slice(0, 3);
+  const activeGroup = NEXT_UP_GROUPS.find(group => group.key === dailyDashboardState.filter);
+  const inGroup = activeGroup ? items.filter(item => activeGroup.categories.includes(item.category)) : items;
+  if (activeGroup && !inGroup.length) dailyDashboardState.filter = '';
+  const filtered = dailyDashboardState.filter ? inGroup : items;
+  const shown = dailyDashboardState.expanded ? filtered : filtered.slice(0, 3);
   const summary = document.getElementById('nextUpQueueSummary');
   if (summary) {
-    summary.textContent = items.length ? `${shown.length} of ${items.length} ${items.length === 1 ? 'title' : 'titles'} · Your order, your pace.` : 'Your next good story starts here.';
+    const noun = items.length === 1 ? 'title' : 'titles';
+    summary.textContent = !items.length ? 'Nothing lined up yet.'
+      : dailyDashboardState.filter ? `${shown.length} of ${filtered.length} to ${activeGroup.verb} · ${items.length} in your queue`
+        : `${shown.length} of ${items.length} ${noun} · Your order, your pace.`;
     summary.tabIndex = -1;
   }
   const toggle = document.getElementById('nextUpQueueToggle');
   if (toggle) {
-    toggle.hidden = items.length < 2;
+    toggle.hidden = filtered.length < 2 && !dailyDashboardState.expanded;
     toggle.disabled = dailyDashboardState.mutationPending;
     toggle.textContent = dailyDashboardState.expanded ? 'Show less' : `Manage queue (${items.length})`;
     toggle.setAttribute('aria-expanded', String(dailyDashboardState.expanded));
@@ -1102,21 +1174,42 @@ function renderNextUpQueue(items) {
     clearFinished.disabled = dailyDashboardState.mutationPending;
     clearFinished.textContent = `Clear finished (${finishedCount})`;
   }
+  renderNextUpFilters(items);
   syncNextUpButtons();
   container.setAttribute('aria-busy', String(dailyDashboardState.mutationPending));
   container.replaceChildren();
+  // Drag (and the arrow keys on the handle) reorder the whole queue, so they only appear unfiltered.
+  const canDrag = !dailyDashboardState.filter && items.length > 1;
   if (!items.length) {
     queueElement.setAttribute('hidden', '');
+    updateNextUpSuggestions();
     restoreNextUpQueueFocus(focus);
     return;
   } else {
-    shown.forEach((item, index) => {
+    shown.forEach((item) => {
+      const index = items.indexOf(item);
+      const started = Boolean(item.started_at) && item.available && !item.finished;
       const row = document.createElement('div');
-      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}${item.finished ? ' is-finished' : ''}`;
+      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}${item.finished ? ' is-finished' : ''}${started ? ' is-started' : ''}${canDrag ? ' has-handle' : ''}`;
       row.dataset.nextUpRowId = String(item.id);
+      row.dataset.nextUpIndex = String(index);
+      if (canDrag) {
+        const handle = document.createElement('span');
+        handle.className = 'next-up-queue__handle';
+        handle.dataset.nextUpHandle = '';
+        handle.dataset.nextUpId = String(item.id);
+        handle.dataset.nextUpIndex = String(index);
+        handle.dataset.nextUpTitle = item.title;
+        handle.tabIndex = 0;
+        handle.setAttribute('role', 'button');
+        handle.setAttribute('aria-roledescription', 'drag handle');
+        handle.setAttribute('aria-label', `Reorder ${item.title}, number ${index + 1} of ${items.length}. Drag it, or press the up and down arrow keys.`);
+        handle.setAttribute('aria-disabled', String(dailyDashboardState.mutationPending));
+        row.appendChild(handle);
+      }
       const order = document.createElement('span');
       order.className = 'next-up-queue__order';
-      order.textContent = item.finished ? '✓' : String(index + 1);
+      order.textContent = item.finished ? '✓' : started ? '▶' : String(index + 1);
       const cover = document.createElement(item.image ? 'img' : 'span');
       cover.className = 'next-up-queue__cover';
       if (item.image) {
@@ -1134,7 +1227,9 @@ function renderNextUpQueue(items) {
       const title = document.createElement('strong');
       title.textContent = item.title;
       const meta = document.createElement('span');
-      meta.textContent = !item.available ? 'This library item was deleted' : item.finished ? `${item.category_label} · Finished` : item.category_label;
+      meta.textContent = !item.available ? 'This library item was deleted' : item.finished ? `${item.category_label} · Finished`
+        : started ? `${item.category_label} · ${nextUpStartedLabel(item)}` : item.category_label;
+      if (started) meta.className = 'next-up-queue__now';
       copy.append(title, meta);
       if (typeof window !== 'undefined') {
         window.OmniProgress?.appendSummary(copy, item);
@@ -1143,6 +1238,18 @@ function renderNextUpQueue(items) {
       const controls = document.createElement('div');
       controls.className = 'next-up-queue__controls';
       if (item.available) {
+        if (!item.finished && !started && !item.progress) {
+          const start = document.createElement('button');
+          start.type = 'button';
+          start.className = 'next-up-queue__start';
+          start.dataset.action = 'start-next-up';
+          start.dataset.nextUpId = item.id;
+          start.disabled = dailyDashboardState.mutationPending;
+          // "Start watching", "Start reading", "Start playing", "Start listening".
+          start.textContent = item.now_label ? `Start ${item.now_label.toLowerCase()}` : 'Start';
+          start.setAttribute('aria-label', `Start ${item.title}. It moves to the top of Next Up and into Continue.`);
+          controls.appendChild(start);
+        }
         if (!item.finished) {
           const done = document.createElement('button');
           done.type = 'button';
@@ -1210,7 +1317,19 @@ function renderNextUpQueue(items) {
       if (dailyDashboardState.expanded) {
         // "To the top" only appears where it does more than the up arrow.
         if (index > 1) controls.append(top);
-        controls.append(up, down);
+        // A filtered view skips titles, so a one-step move would land somewhere unexpected.
+        if (!dailyDashboardState.filter) controls.append(up, down);
+        if (started) {
+          const unstart = document.createElement('button');
+          unstart.type = 'button';
+          unstart.className = 'next-up-queue__unstart';
+          unstart.dataset.action = 'unstart-next-up';
+          unstart.dataset.nextUpId = item.id;
+          unstart.disabled = dailyDashboardState.mutationPending;
+          unstart.textContent = 'Not started';
+          unstart.setAttribute('aria-label', `Mark ${item.title} as not started. It keeps its place.`);
+          controls.appendChild(unstart);
+        }
       }
       controls.appendChild(remove);
       row.append(order, cover, copy, controls);
@@ -1218,6 +1337,7 @@ function renderNextUpQueue(items) {
     });
   }
   queueElement.removeAttribute('hidden');
+  updateNextUpSuggestions();
   restoreNextUpQueueFocus(focus);
   // The weekly email's "Open Next Up" link lands on /#next-up.
   if (typeof window !== 'undefined' && window.location?.hash === '#next-up') {
@@ -1225,6 +1345,101 @@ function renderNextUpQueue(items) {
     try {
       window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
     } catch (error) { /* keep the hash */ }
+  }
+}
+
+// Suggestions from the member's own library: the way in while the queue is short,
+// and "line up more" while managing it. A queue of three or more doesn't ask for them.
+function nextUpSuggestionsWanted() {
+  return dailyDashboardState.items.length < 3 || dailyDashboardState.expanded;
+}
+
+function updateNextUpSuggestions() {
+  if (!document.getElementById('nextUpQueueSuggest')) return;
+  if (!nextUpSuggestionsWanted()) {
+    renderNextUpSuggestions();
+    return;
+  }
+  const key = dailyDashboardState.items.map(item => `${item.category}:${item.item_id}`).join(',');
+  if (dailyDashboardState.suggestionsKey === key) {
+    renderNextUpSuggestions();
+    return;
+  }
+  dailyDashboardState.suggestionsKey = key;
+  loadNextUpSuggestions();
+}
+
+async function loadNextUpSuggestions() {
+  if (typeof hasStoredAuth !== 'function' || !hasStoredAuth()) return;
+  const session = dailyDashboardSessionKey();
+  const request = ++dailyDashboardState.suggestionsRequest;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/suggestions`);
+    if (!response.ok) return;
+    const suggestions = await response.json();
+    if (request !== dailyDashboardState.suggestionsRequest || session !== dailyDashboardSessionKey()) return;
+    dailyDashboardState.suggestions = Array.isArray(suggestions) ? suggestions : [];
+    renderNextUpSuggestions();
+  } catch (error) {
+    // Suggestions are a convenience; the queue works without them.
+  }
+}
+
+function renderNextUpSuggestions() {
+  const panel = document.getElementById('nextUpQueueSuggest');
+  const list = document.getElementById('nextUpQueueSuggestList');
+  const queueElement = document.getElementById('nextUpQueue');
+  if (!panel || !list || !queueElement) return;
+  const empty = !dailyDashboardState.items.length;
+  const queued = nextUpQueuedKeys();
+  const suggestions = dailyDashboardState.suggestions.filter(entry => !queued.has(`${entry.category}:${entry.item_id}`));
+  list.replaceChildren();
+  if (!nextUpSuggestionsWanted() || !suggestions.length) {
+    panel.setAttribute('hidden', '');
+    if (empty) queueElement.setAttribute('hidden', '');
+    return;
+  }
+  const heading = document.getElementById('nextUpQueueSuggestTitle');
+  if (heading) heading.textContent = empty ? 'Pick what comes next from your library' : 'Line up more from your library';
+  suggestions.forEach(entry => {
+    const item = document.createElement('li');
+    item.className = 'next-up-queue__suggestion';
+    const cover = document.createElement(entry.image ? 'img' : 'span');
+    cover.className = 'next-up-queue__suggestion-cover';
+    if (entry.image) {
+      cover.src = entry.image;
+      cover.alt = '';
+      cover.loading = 'lazy';
+      cover.decoding = 'async';
+      cover.referrerPolicy = 'no-referrer';
+    } else {
+      cover.setAttribute('aria-hidden', 'true');
+      cover.textContent = (entry.title || '?').trim().charAt(0).toUpperCase() || '?';
+    }
+    const copy = document.createElement('span');
+    copy.className = 'next-up-queue__suggestion-copy';
+    const title = document.createElement('strong');
+    title.textContent = entry.title;
+    const label = document.createElement('span');
+    label.textContent = entry.category_label;
+    copy.append(title, label);
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'next-up-queue__suggestion-add';
+    add.dataset.action = 'add-next-up-suggestion';
+    add.dataset.nextUpCategory = entry.category;
+    add.dataset.nextUpItemId = String(entry.item_id);
+    add.disabled = dailyDashboardState.mutationPending;
+    add.textContent = '+ Add';
+    add.setAttribute('aria-label', `Add ${entry.title} to Next Up`);
+    item.append(cover, copy, add);
+    list.appendChild(item);
+  });
+  panel.removeAttribute('hidden');
+  if (empty) {
+    const summary = document.getElementById('nextUpQueueSummary');
+    if (summary) summary.textContent = 'Nothing lined up yet. Add a few things you want to get to, then drag them into order.';
+    queueElement.removeAttribute('hidden');
   }
 }
 
@@ -1410,6 +1625,34 @@ function finishNextUp(queueId) {
       await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
     },
     'Could not mark that title finished. Please try again.',
+  );
+}
+
+function startNextUp(queueId) {
+  if (!Number.isInteger(queueId) || queueId < 1) return;
+  const entry = dailyDashboardState.items.find(item => item.id === queueId);
+  return runNextUpMutation(
+    () => authenticatedFetch(`${API_BASE}/next-up/${queueId}/start`, { method: 'POST' }),
+    async items => {
+      renderNextUpQueue(items);
+      if (entry) showNotice(`Started “${entry.title}”. It's at the top of Next Up and first in Continue.`, 'success');
+      dailyDashboardState.refreshAfterMutation = false;
+      await Promise.all([refreshLibraryPulse(), refreshTodaysPick()]);
+    },
+    'Could not start that title. Please try again.',
+  );
+}
+
+function unstartNextUp(queueId) {
+  if (!Number.isInteger(queueId) || queueId < 1) return;
+  return runNextUpMutation(
+    () => authenticatedFetch(`${API_BASE}/next-up/${queueId}/start`, { method: 'DELETE' }),
+    async items => {
+      renderNextUpQueue(items);
+      dailyDashboardState.refreshAfterMutation = false;
+      await refreshLibraryPulse();
+    },
+    'Could not change that title. Please try again.',
   );
 }
 
