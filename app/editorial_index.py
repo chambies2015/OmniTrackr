@@ -106,9 +106,18 @@ def _new_releases() -> list[dict]:
             for slug, guide in new_releases.published().items()]
 
 
+def _new_year() -> list[dict]:
+    from . import new_year_challenge
+    from .new_year_challenge_guide import GUIDES
+    return [{"section": "seasonal", "href": new_year_challenge.path(year), "name": GUIDES[year]["title"],
+             "summary": GUIDES[year]["description"], "updated": edition["published"]}
+            for year, edition in new_year_challenge.EDITIONS.items()
+            if year in GUIDES and new_year_challenge.is_public(year)]
+
+
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _best_of() + _new_releases()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _best_of() + _new_releases()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 

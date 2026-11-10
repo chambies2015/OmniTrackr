@@ -430,3 +430,25 @@ body.app-shell .home-board__rail .install-card__actions { grid-column: 1 / -1; j
   body.app-shell .home-board .next-up-queue__items.is-sorting .next-up-queue__item:not(.is-dragging) { transition: none; }
   body.app-shell .home-board .library-pulse__item:hover { transform: none; }
 }
+
+/* ---------- New Year challenge card (Dec-Jan) ---------- */
+body.app-shell .home-board .ny-pledge-card {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(245, 158, 11, .16), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid var(--border);
+}
+body.app-shell .home-board .ny-pledge-card .year-goals__eyebrow { color: var(--warning, #d97706); }
+body.app-shell .home-board .ny-pledge-card__link {
+  align-items: center;
+  background: var(--accent-solid, #7c3aed);
+  border-radius: var(--radius-pill, 999px);
+  color: #fff;
+  display: inline-flex;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+body.app-shell .home-board .ny-pledge-card__link:hover { color: #fff; filter: brightness(1.08); }
+body.app-shell .home-board .ny-pledge-card__link:focus-visible { outline: 3px solid #14b8a6; outline-offset: 2px; }

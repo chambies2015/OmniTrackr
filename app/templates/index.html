@@ -84,7 +84,7 @@
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261109-queue-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261110-pledge-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261109-workspace-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -799,6 +799,20 @@
               <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
               <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
               <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+
+          <section id="newYearPledge" class="year-goals ny-pledge-card" aria-labelledby="newYearPledgeTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="newYearPledgeEyebrow" class="year-goals__eyebrow">New Year challenge</p>
+                <h2 id="newYearPledgeTitle">Pick what you'll finish next year</h2>
+                <p id="newYearPledgeSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <div class="year-goals__footer">
+              <a id="newYearPledgeLink" class="action-btn ny-pledge-card__link" href="/new-year-challenge">Make your pledge</a>
+              <button id="newYearPledgeDismiss" type="button" class="year-goals__dismiss">Hide</button>
             </div>
           </section>
 
@@ -2393,7 +2407,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261109-list-return-2"></script>
+  <script src="./auth.js?v=20261110-pledge-return-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
@@ -2414,6 +2428,7 @@
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
+  <script src="/static/new-year-challenge.js?v=20261110-pledge-1" defer></script>
   <script src="/static/seasonal-card.js?v=20261104-gifts-1"></script>
   <script src="/static/memories.js?v=20261030-audiobooks-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>

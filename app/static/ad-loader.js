@@ -21,6 +21,7 @@
       /^\/holidays$/.test(window.location.pathname) ||
       /^\/holidays\/(gifts|black-friday|thanksgiving|reading-and-listening)$/.test(window.location.pathname) ||
       /^\/binge-calculator$/.test(window.location.pathname) ||
+      /^\/new-year-challenge\/\d{4}$/.test(window.location.pathname) ||
       /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?)?$/.test(window.location.pathname);
   }
 

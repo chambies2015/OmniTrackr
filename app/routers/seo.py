@@ -316,6 +316,15 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
+    # New Year challenge guides from their opening day (December 1 of the year before).
+    from .. import new_year_challenge
+    for year, edition in new_year_challenge.EDITIONS.items():
+        if new_year_challenge.is_public(year):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{new_year_challenge.path(year)}</loc>"
+                f"<lastmod>{edition['published']}</lastmod>"
+                "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+            )
     # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
     # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
@@ -632,6 +641,13 @@ async def get_llms_txt():
     """Serve llms.txt/ai.txt for AI model discovery and site understanding."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     
+    from .. import new_year_challenge
+    new_year = new_year_challenge.current_year()
+    new_year_line = (
+        f"The New Year challenge at {base_url}{new_year_challenge.path(new_year)} lets members pledge how many titles in "
+        "each format they want to finish that year, with advice on picking a number and a table of what each format "
+        "typically costs in hours a week.\n" if new_year else ""
+    )
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
@@ -704,7 +720,7 @@ Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-t
 Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
 Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
-Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+{new_year_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
 The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime or book series takes and the finish date at a chosen pace, with worked examples for long series.
