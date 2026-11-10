@@ -25,7 +25,7 @@ from .titles import _script_json
 
 router = APIRouter()
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261031-browse-1"
+CSS_VERSION = "20261110-browse-2"
 JS_VERSION = "20261031-browse-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 PAGE_CACHE_SECONDS = 600
@@ -70,6 +70,7 @@ def _head(title: str, description: str, canonical_path: str, structured: str, ro
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/source-serif-4-latin-var-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/browse.css?v={CSS_VERSION}">
@@ -262,7 +263,8 @@ def render_kind(db: Session, kind: str, chart: Optional[dict], signed_in: bool) 
       {crumbs}
       <p class="site-eyebrow">Browse · {_e(page["label"])} · {len(items)} picks</p>
       <h1>{_e(page["heading"])}</h1>
-      <p>{_e(page["lead"])}</p>
+      <p class="browse-deck">{_e(page["lead"])}</p>
+      <p class="browse-byline">By <a href="/about">OmniTrackr</a> · <a href="#method">How this page is put together</a></p>
       <p class="title-hero__status browse-hero__status" role="status" aria-live="polite"></p>
       {_jump_links(kind, bool(browse.chart_items(chart)))}
     </div></section>

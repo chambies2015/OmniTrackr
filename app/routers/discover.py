@@ -151,7 +151,7 @@ def discover_index():
 def _notes_section(notes) -> str:
     if not notes:
         return ""
-    return (f'<section class="editorial edition-notes" aria-labelledby="edition-notes-heading">'
+    return (f'<section id="edition-notes" class="editorial edition-notes" aria-labelledby="edition-notes-heading">'
             f'<h2 id="edition-notes-heading">{escape(notes["heading"])}</h2>'
             + "".join(f'<p>{escape(text)}</p>' for text in notes["paragraphs"]) + '</section>')
 
@@ -161,15 +161,32 @@ def _long_date(value: str) -> str:
     return f"{parsed:%B} {parsed.day}, {parsed.year}"
 
 
+def _byline(trail, published) -> str:
+    """'By OmniTrackr' plus the last-checked date, or the publish date when a trail was never rechecked."""
+    if trail.get("reviewed"):
+        stamp = (f'Updated <time datetime="{escape(trail["reviewed"], quote=True)}">'
+                 f'{escape(_long_date(trail["reviewed"]))}</time>')
+    elif trail.get("published_date"):
+        stamp = (f'Published <time datetime="{escape(trail["published_date"], quote=True)}">'
+                 f'{escape(_long_date(trail["published_date"]))}</time>')
+    else:
+        stamp = f'Published {escape(published)}'
+    return f'<p class="guide-byline">By <a href="/about">OmniTrackr</a> · {stamp}</p>'
+
+
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
     items = "".join(f'<article class="pick"><p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></article>' for n, i in enumerate(trail["items"], 1))
     essay_section = ""
     if essay:
-        essay_section = f'<section class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
+        essay_section = f'<section id="essay" class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
+    jump = "".join(f'<a href="#{target}">{label}</a>' for target, label in (
+        ("essay", escape(essay["title"]) if essay else ""), ("start-here", "Where to start"), ("picks", "The picks"),
+        ("edition-notes", escape(trail["notes"]["heading"]) if trail.get("notes") else ""),
+        ("take-away", "Take something with you"), ("save-picks", "Save your picks")) if label)
     signin = '/?next=' + quote('/discover/' + api_path + '#save-picks', safe='') + '#landing-auth'
     checked = (f' · Updated <time datetime="{escape(trail["reviewed"], quote=True)}">{escape(_long_date(trail["reviewed"]))}</time>'
                if trail.get("reviewed") else "")
-    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div>{_notes_section(trail.get("notes"))}<section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}{checked}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
+    return f'<article class="trail-guide trail-edition"><header class="hero hero--guide"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p class="guide-deck">{escape(trail["intro"])}</p>{_byline(trail, published)}<nav class="guide-jump" aria-label="On this page">{jump}</nav></header>{essay_section}<section id="start-here" class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div id="picks" class="picks">{items}</div>{_notes_section(trail.get("notes"))}<section id="take-away" class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}{checked}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section></article>'
 
 
 def paragraphs(values):

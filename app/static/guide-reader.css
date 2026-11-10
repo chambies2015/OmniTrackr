@@ -1,0 +1,343 @@
+/* Written guides: a magazine reading layout on top of discover.css.
+   Loaded by app/guide_layout.py on any page built as <article class="trail-guide">,
+   which also wraps the body in .guide-columns and adds the .guide-rail. */
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url(/static/fonts/source-serif-4-latin-var-normal.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url(/static/fonts/source-serif-4-latin-var-italic.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.trail-guide {
+  --read-font: "Source Serif 4", "Iowan Old Style", Charter, "Sitka Text", Georgia, serif;
+  --read-size: 1.125rem;
+  --read-line: 1.7;
+  --read-text: #e2dff4;
+  --read-soft: #c4c0dc;
+  --read-measure: 40rem;
+  --rule: rgba(255, 255, 255, .1);
+  --rail-top: 88px;
+}
+
+/* ---------- Masthead ---------- */
+.trail-guide > .hero {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--space-8);
+  max-width: none;
+  padding-bottom: 34px;
+}
+.trail-guide > .hero > a:first-child {
+  color: var(--site-muted);
+  display: inline-flex;
+  font-size: var(--text-md);
+  font-weight: 600;
+  gap: 6px;
+  text-decoration: none;
+}
+.trail-guide > .hero > a:first-child:hover { color: var(--site-violet-soft); }
+.trail-guide > .hero > .eyebrow {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  letter-spacing: .14em;
+}
+.trail-guide > .hero > .eyebrow::before {
+  background: currentColor;
+  border-radius: 2px;
+  content: "";
+  flex: none;
+  height: 2px;
+  width: 28px;
+}
+.trail-guide > .hero h1 {
+  letter-spacing: -.035em;
+  line-height: 1.02;
+  max-width: 15em;
+  text-wrap: balance;
+}
+.trail-guide .guide-deck {
+  color: var(--read-text);
+  font-family: var(--read-font);
+  font-size: clamp(1.2rem, 1.1rem + .45vw, 1.42rem);
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 38em;
+  text-wrap: pretty;
+}
+
+/* Byline: a small mark beside the publisher, the date and the reading time. */
+.trail-guide .guide-byline {
+  color: var(--site-muted);
+  font-size: var(--text-md);
+  line-height: 1.55;
+  margin: 26px 0 0;
+  max-width: 44rem;
+  min-height: 36px;
+  padding: 7px 0 0 48px;
+  position: relative;
+}
+.trail-guide .guide-byline::before {
+  background: url(/static/vortex-mark.webp) center / cover no-repeat, var(--site-bg-3);
+  border: 1px solid var(--site-border-strong);
+  border-radius: 50%;
+  content: "";
+  height: 36px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 36px;
+}
+.trail-guide .guide-readtime { white-space: nowrap; }
+.trail-guide .guide-byline a { color: var(--site-text); font-weight: 700; text-decoration: none; }
+.trail-guide .guide-byline a:hover { color: var(--site-violet-soft); text-decoration: underline; }
+.trail-guide .guide-byline time { color: var(--site-soft); }
+
+/* Contents in the header: one swipeable row on small screens. */
+.trail-guide .guide-jump { gap: 8px; margin-top: 24px; }
+.trail-guide .guide-jump a {
+  background: transparent;
+  border-color: var(--site-border-strong);
+  color: var(--site-soft);
+  font-size: var(--text-md);
+  font-weight: 600;
+  min-height: 40px;
+  padding: 8px 14px;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.trail-guide .guide-jump a:hover { background: var(--site-surface-2); border-color: var(--site-violet-soft); color: #fff; }
+
+/* ---------- Columns ---------- */
+.guide-columns { position: relative; }
+.guide-body { min-width: 0; }
+.guide-rail { display: none; }
+
+@media (min-width: 1180px) {
+  .guide-columns {
+    align-items: start;
+    column-gap: 56px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 236px;
+  }
+  .guide-body { grid-column: 1; grid-row: 1; }
+  .guide-rail { display: block; grid-column: 2; grid-row: 1; position: sticky; top: var(--rail-top); }
+  .trail-guide:has(.guide-rail .guide-toc) > .hero .guide-jump { display: none; }
+}
+
+/* ---------- The rail ---------- */
+.guide-rail__inner {
+  display: grid;
+  gap: 26px;
+  max-height: calc(100vh - var(--rail-top) - 24px);
+  overflow-y: auto;
+  padding: 4px 2px 12px 0;
+  scrollbar-width: thin;
+}
+.guide-rail__label {
+  color: var(--site-muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1.4;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+.guide-toc ol { border-left: 1px solid var(--rule); list-style: none; margin: 0; padding: 0; }
+.guide-toc a {
+  border-left: 2px solid transparent;
+  color: var(--site-muted);
+  display: block;
+  font-size: var(--text-md);
+  line-height: 1.4;
+  margin-left: -1px;
+  padding: 7px 0 7px 14px;
+  text-decoration: none;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.guide-toc a:hover { color: var(--site-text); }
+.guide-toc a[aria-current] { border-left-color: var(--site-teal); color: var(--site-text); font-weight: 600; }
+.guide-rail__about {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  padding: 16px 16px 14px;
+}
+.guide-rail__about ul { color: var(--site-soft); display: grid; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
+.guide-rail__about p { line-height: 1.5; margin: 0; }
+.guide-rail__about p + p { margin-top: 4px; }
+.guide-rail__about a { font-weight: 600; text-decoration: none; }
+.guide-rail__about a:hover { text-decoration: underline; }
+
+/* ---------- Reading type ---------- */
+.guide-body > .guide-intro,
+.guide-body .guide-essay,
+.guide-body .editorial,
+.guide-body .guide-section-intro,
+.guide-body .yl-section-intro,
+.guide-body .io-section-intro { max-width: var(--read-measure); }
+
+.guide-body .guide-intro p,
+.guide-body .guide-essay p,
+.guide-body .editorial p:not(.muted):not(.eyebrow),
+.guide-body .guide-reflection p,
+.guide-body .yl-faq p,
+.guide-body .sn-faq p,
+.guide-body .gg-faq p {
+  color: var(--read-text);
+  font-family: var(--read-font);
+  font-size: var(--read-size);
+  line-height: var(--read-line);
+  text-wrap: pretty;
+}
+.guide-body .guide-intro { font-size: inherit; margin-bottom: 8px; }
+.guide-body .guide-intro p { margin: 0 0 1.1em; }
+
+
+.guide-body .guide-section-intro,
+.guide-body .yl-section-intro,
+.guide-body .io-section-intro {
+  color: var(--read-soft);
+  font-family: var(--read-font);
+  font-size: 1.06rem;
+  line-height: 1.65;
+}
+
+/* Section heads: kicker, then a heading with room above it. */
+.guide-body > section > .eyebrow:first-child,
+.guide-body > section > h2:first-child { margin-top: 0; }
+.guide-body section > h2 {
+  font-size: clamp(1.55rem, 1.2rem + 1.1vw, 2.05rem);
+  letter-spacing: -.02em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+.guide-body [id] { scroll-margin-top: var(--rail-top); }
+
+/* Boxed notes become open sections divided by a rule, like the rest of the text. */
+.guide-body .editorial {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--rule);
+  margin: 52px 0;
+  padding: 34px 0 0;
+}
+.guide-body .editorial h2 { font-size: clamp(1.35rem, 1.15rem + .6vw, 1.6rem); margin-bottom: 14px; }
+.guide-body .editorial h3 { color: var(--site-text); font-size: 1.05rem; line-height: 1.4; margin: 26px 0 6px; }
+.guide-body .editorial p + p { margin-top: 1em; }
+.guide-body .edition-essay { border-left: 0; }
+.guide-body > .editorial:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+
+/* A drop cap opens the first paragraph of the introduction, or of a monthly edition's essay. */
+.guide-body > .guide-intro > p:first-child::first-letter,
+.guide-body > .edition-essay:first-child > h2 + p::first-letter {
+  color: var(--site-violet-soft);
+  float: left;
+  font-family: var(--read-font);
+  font-size: 3.55em;
+  font-weight: 700;
+  line-height: .82;
+  margin: .1em .1em 0 0;
+}
+
+/* FAQ answers read as text, questions stay in the interface face. */
+.guide-body .yl-faq h3 + p,
+.guide-body .sn-faq p { margin-top: 0; }
+
+/* Picks: lighter cards so the words lead. */
+.guide-body .pick {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .015));
+  border-color: var(--site-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--dur) var(--ease);
+}
+.guide-body .pick:hover { border-color: var(--site-border-strong); }
+.guide-body .pick h2,
+.guide-body .pick h3 { letter-spacing: -.015em; }
+.guide-body .pick > p:not([class]),
+.guide-body .pick .yl-pick__why,
+.guide-body .pick .io-entry__note,
+.guide-body .pick .nr-pick__body p {
+  color: var(--read-text);
+  font-family: var(--read-font);
+  font-size: 1.06rem;
+  line-height: 1.66;
+}
+.guide-body .pick .yl-pick__why { color: #fff; font-weight: 500; }
+.guide-body .caveat {
+  border-left-color: var(--site-teal);
+  color: var(--read-soft) !important;
+  font-size: .95rem;
+}
+
+/* Related reading and the method note at the end. */
+.guide-body .guide-related { border-top: 1px solid var(--rule); padding-top: 34px; }
+.guide-body .guide-related-grid article { border-left-color: rgba(196, 181, 253, .45); transition: border-color var(--dur) var(--ease); }
+.guide-body .guide-related-grid article:hover { border-left-color: var(--site-violet-soft); }
+.guide-body .guide-related-grid h3 a { text-decoration: none; }
+.guide-body .guide-related-grid h3 a:hover { text-decoration: underline; }
+.guide-body .guide-sources { border-top-color: var(--rule); }
+.guide-body .guide-sources p:not(.muted) {
+  color: var(--read-soft);
+  font-family: var(--read-font);
+  font-size: 1rem;
+  line-height: 1.65;
+  max-width: var(--read-measure);
+}
+
+/* ---------- Reading progress ---------- */
+.guide-progress {
+  background: linear-gradient(90deg, var(--site-violet), var(--site-teal));
+  height: 3px;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: opacity var(--dur) var(--ease);
+  z-index: 70;
+}
+.guide-progress.is-on { opacity: 1; }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 760px) {
+  .trail-guide { --read-size: 1.0625rem; }
+  .trail-guide > .hero { margin-bottom: 26px; padding-bottom: 24px; }
+  .trail-guide .guide-byline { margin-top: 20px; }
+  .trail-guide .guide-jump {
+    flex-wrap: nowrap;
+    margin-inline: -16px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+    overflow-x: auto;
+    padding: 2px 16px 6px;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .trail-guide .guide-jump::-webkit-scrollbar { display: none; }
+  .trail-guide .guide-jump a { flex: none; white-space: nowrap; }
+  .guide-body .editorial { margin: 40px 0; padding: 28px 0 0; }
+  .guide-body > .guide-intro > p:first-child::first-letter,
+  .guide-body > .edition-essay:first-child > h2 + p::first-letter { font-size: 3.1em; }
+}
+@media (max-width: 520px) {
+  .trail-guide > .hero h1 { font-size: clamp(2.3rem, 11vw, 3.1rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-progress, .guide-toc a, .trail-guide .guide-jump a, .guide-body .pick { transition: none; }
+}
