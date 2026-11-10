@@ -934,16 +934,29 @@ for route in challenges_router.router.routes:
 app.include_router(challenges_router.router)
 
 from .routers import new_year_challenge as new_year_challenge_router
+# The card loads with the dashboard; the state call reads two years of finishes.
+rate_limited_pledge_home_card = limiter.limit("60/minute")(new_year_challenge_router.challenge_card)
+rate_limited_pledge_state = limiter.limit("60/minute")(new_year_challenge_router.challenge_state)
 rate_limited_pledge_save = limiter.limit("30/minute")(new_year_challenge_router.make_pledge)
+rate_limited_pledge_leave = limiter.limit("30/minute")(new_year_challenge_router.leave_pledge)
 rate_limited_pledge_share = limiter.limit("20/minute")(new_year_challenge_router.share_pledge)
+rate_limited_pledge_unshare = limiter.limit("20/minute")(new_year_challenge_router.unshare_pledge)
 rate_limited_pledge_page = limiter.limit("60/minute")(new_year_challenge_router.shared_pledge_page)
 rate_limited_pledge_card = limiter.limit("30/minute")(new_year_challenge_router.shared_pledge_card)
 for route in new_year_challenge_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
-    if path == "/api/new-year-challenge/{year}/pledge" and "PUT" in methods:
+    if path == "/api/new-year-challenge" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_home_card)
+    elif path == "/api/new-year-challenge/{year}" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_state)
+    elif path == "/api/new-year-challenge/{year}/pledge" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_pledge_save)
+    elif path == "/api/new-year-challenge/{year}/pledge" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_leave)
     elif path == "/api/new-year-challenge/{year}/share" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_pledge_share)
+    elif path == "/api/new-year-challenge/{year}/share" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_unshare)
     elif path == "/pledge/{token}":
         bind_rate_limited_endpoint(route, rate_limited_pledge_page)
     elif path == "/pledge/{token}/card.png":

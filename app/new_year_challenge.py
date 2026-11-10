@@ -237,29 +237,56 @@ def pledge(db: Session, user: models.User, year: int, targets: dict,
     for key, value in cleaned.items():
         if value is not None:
             goals.validate(year, key, value, today)
-    existing = {row.category: row for row in db.query(models.YearlyGoal).filter_by(user_id=user.id, year=year).all()}
+    # Read the id once: every commit below expires the member row, and reading it again reloads it.
+    user_id = user.id
+    existing = {row.category: row for row in db.query(models.YearlyGoal).filter_by(user_id=user_id, year=year).all()}
     remaining = {key for key in existing if cleaned.get(key, existing[key].target) is not None}
     remaining |= {key for key, value in cleaned.items() if value is not None}
     if not remaining:
         raise ValueError("Pick at least one goal.")
+    row = get(db, user_id, year)
+    created = row is None
+    try:
+        # One transaction for the whole form, so a pledge is saved in full or not at all.
+        for key, value in cleaned.items():
+            goal = existing.get(key)
+            if value is None:
+                if goal is not None:
+                    # Same as goals.remove: the "reached" moment and its share link go with the goal.
+                    db.query(models.GoalAchievement).filter_by(user_id=user_id, year=year, category=key).delete()
+                    db.delete(goal)
+            elif goal is None:
+                db.add(models.YearlyGoal(user_id=user_id, year=year, category=key, target=value))
+            elif goal.target != value:
+                goal.target = value
+        if row is None:
+            row = models.YearPledge(user_id=user_id, year=year)
+            db.add(row)
+        else:
+            row.updated_at = datetime.utcnow()
+        db.commit()
+        return row, created
+    except IntegrityError:
+        # A second tab saved one of the same rows first. Save goal by goal instead:
+        # goals.save applies the target to the row that got there first.
+        db.rollback()
     for key, value in cleaned.items():
         if value is None:
-            if key in existing:
-                goals.remove(db, user.id, year, key)
+            goals.remove(db, user_id, year, key)
         else:
-            goals.save(db, user.id, year, key, value, today)
-    row = get(db, user.id, year)
+            goals.save(db, user_id, year, key, value, today)
+    row = get(db, user_id, year)
     if row is not None:
         row.updated_at = datetime.utcnow()
         db.commit()
         return row, False
-    row = models.YearPledge(user_id=user.id, year=year)
+    row = models.YearPledge(user_id=user_id, year=year)
     db.add(row)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        return get(db, user.id, year), False
+        return get(db, user_id, year), False
     return row, True
 
 
@@ -363,16 +390,18 @@ def card_payload(db: Session, user: models.User, today: Optional[date] = None) -
 
 def public_counts(db: Session, year: int) -> dict:
     """Aggregate pledge numbers for the guide. Nothing below the floor is shown."""
-    rows = (db.query(models.YearPledge.user_id)
-            .join(models.User, models.User.id == models.YearPledge.user_id)
-            .filter(models.YearPledge.year == year, models.User.is_active.is_(True))
-            .all())
-    members = [user_id for (user_id,) in rows]
-    result = {"pledged": len(members), "show": len(members) >= MIN_PUBLIC_COUNT, "categories": [], "titles": 0}
+    active = (models.User.id == models.YearPledge.user_id, models.YearPledge.year == year,
+              models.User.is_active.is_(True))
+    pledged = db.query(models.YearPledge.id).join(models.User, active[0]).filter(*active[1:]).count()
+    result = {"pledged": pledged, "show": pledged >= MIN_PUBLIC_COUNT, "categories": [], "titles": 0}
     if not result["show"]:
         return result
+    # Joined to the pledges, not filtered by a list of member ids: that list grows with every pledge.
     goal_rows = (db.query(models.YearlyGoal.category, models.YearlyGoal.target)
-                 .filter(models.YearlyGoal.year == year, models.YearlyGoal.user_id.in_(members))
+                 .join(models.YearPledge, (models.YearPledge.user_id == models.YearlyGoal.user_id)
+                       & (models.YearPledge.year == models.YearlyGoal.year))
+                 .join(models.User, active[0])
+                 .filter(models.YearlyGoal.year == year, *active[1:])
                  .all())
     by_category: dict[str, list[int]] = {}
     for category, target in goal_rows:

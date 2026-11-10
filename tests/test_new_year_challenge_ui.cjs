@@ -53,3 +53,27 @@ test('sample years only use real goal categories', () => {
   const known = ['all', 'movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks'];
   Object.values(nyc.SAMPLES).forEach(sample => Object.keys(sample).forEach(key => assert.ok(known.includes(key), key)));
 });
+
+test('a draft from before signing in keeps goals the member already has', () => {
+  const inputs = { books: { value: '10' }, anime: { value: '9' }, movies: { value: '' } };
+  const rows = Object.keys(inputs).map(category => ({ dataset: { category }, querySelector: () => inputs[category] }));
+  const page = { querySelectorAll: () => rows };
+  // The draft has its own number for books and movies, and nothing for anime.
+  nyc.fill(page, { books: 24, movies: 12 }, true);
+  assert.deepEqual([inputs.books.value, inputs.anime.value, inputs.movies.value], ['24', '9', '12']);
+  // Presets and "Clear" still replace the whole form.
+  nyc.fill(page, { books: 6 });
+  assert.deepEqual([inputs.books.value, inputs.anime.value, inputs.movies.value], ['6', '', '']);
+  // A draft that isn't an object changes nothing.
+  nyc.fill(page, null, true);
+  assert.equal(inputs.books.value, '6');
+});
+
+test('the dashboard card is only asked for from November to January (UTC)', () => {
+  const on = month => nyc.cardSeason(new Date(Date.UTC(2026, month, 15)));
+  assert.deepEqual([10, 11, 0].map(on), [true, true, true]);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9].map(on), Array(9).fill(false));
+  // The month is read in UTC, like the server's opening day.
+  assert.equal(nyc.cardSeason(new Date('2027-01-31T23:59:00Z')), true);
+  assert.equal(nyc.cardSeason(new Date('2027-02-01T00:00:00Z')), false);
+});

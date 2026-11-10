@@ -63,7 +63,8 @@ def _contents(header: str) -> list[tuple[str, str]]:
 
 
 def _rail(links: list[tuple[str, str]], minutes: int, checked) -> str:
-    items = "".join(f'<li><a href="{escape(href, quote=True)}">{label}</a></li>' for href, label in links)
+    # The links are copied from finished HTML, so an href is already escaped once.
+    items = "".join(f'<li><a href="{escape(unescape(href), quote=True)}">{label}</a></li>' for href, label in links)
     toc = (f'<nav class="guide-toc" aria-label="Contents"><p class="guide-rail__label">On this page</p>'
            f'<ol>{items}</ol></nav>') if links else ""
     when = (f'<li>Checked <time datetime="{escape(checked[0], quote=True)}">{checked[1]}</time></li>'

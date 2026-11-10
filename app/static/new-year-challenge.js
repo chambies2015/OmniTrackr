@@ -77,10 +77,16 @@
     return { values, count, invalid };
   }
 
-  function fill(form, numbers) {
+  // keepOthers leaves a row alone when `numbers` has nothing for it. A draft from before
+  // signing in is filled that way, so goals the member already has stay in the form and
+  // are not sent as blanks (a blank removes the goal).
+  function fill(form, numbers, keepOthers) {
+    const picked = numbers && typeof numbers === 'object' ? numbers : {};
     form.querySelectorAll('.nyc-row').forEach(row => {
-      const value = numbers[row.dataset.category];
-      row.querySelector('input').value = Number.isInteger(value) && value > 0 ? String(value) : '';
+      const value = picked[row.dataset.category];
+      const input = row.querySelector('input');
+      if (Number.isInteger(value) && value > 0) input.value = String(value);
+      else if (!keepOthers) input.value = '';
     });
   }
 
@@ -161,7 +167,7 @@
       try {
         const numbers = JSON.parse(draft);
         if (member && form.dataset.pledged !== '1') {
-          fill(form, numbers);
+          fill(form, numbers, true);
           status('These are the numbers you picked before signing up. Press "Make my pledge" to save them.');
         } else if (!member) {
           fill(form, numbers);
@@ -306,9 +312,17 @@
     section.hidden = false;
   }
 
+  // The server shows the card from opening day (December 1, or a day in November if it is
+  // moved earlier) to January 31, by UTC. Outside those three months there is nothing to ask for.
+  function cardSeason(now) {
+    const month = (now || new Date()).getUTCMonth();
+    return month >= 10 || month === 0;
+  }
+
   async function refreshNewYearPledge() {
     const section = $('newYearPledge');
     if (!section) return;
+    if (!cardSeason()) { section.hidden = true; return; }
     const request = ++card.request;
     try {
       const response = await fetch('/api/new-year-challenge', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
@@ -349,7 +363,7 @@
     window.resetNewYearPledge = resetNewYearPledge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { hoursLabel, weeklyHours, totalText, collect, cardCopy, SAMPLES };
+    module.exports = { hoursLabel, weeklyHours, totalText, collect, fill, cardCopy, cardSeason, SAMPLES };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
