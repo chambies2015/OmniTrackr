@@ -125,6 +125,7 @@
 .nyc-typical span { color: #aeb6d2; font-size: .84rem; }
 
 .nyc-table-wrap { margin: 4px 0 16px; overflow-x: auto; }
+.nyc-table-wrap:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 3px; }
 .nyc-table { border-collapse: collapse; font-size: .94rem; min-width: 520px; width: 100%; }
 .nyc-table caption { color: #aeb6d2; font-size: .86rem; margin-bottom: 8px; text-align: left; }
 .nyc-table th, .nyc-table td { border-bottom: 1px solid var(--site-border); padding: 9px 10px; text-align: left; vertical-align: top; }
