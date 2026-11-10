@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import funnel, goals, models, new_year_challenge as nyc
+from .. import funnel, goals, models, new_year_challenge as nyc, year_in_review
 from ..admin_access import is_site_admin
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
@@ -23,8 +23,8 @@ from .profiles import _CardCache
 
 router = APIRouter(tags=["new-year-challenge"])
 _CARDS = _CardCache(size=64)
-CSS_VERSION = "20261110-pledge-2"
-JS_VERSION = "20261110-pledge-1"
+CSS_VERSION = "20261110-pledge-3"
+JS_VERSION = "20261110-pledge-2"
 
 
 class PledgeBody(BaseModel):
@@ -60,14 +60,14 @@ def _label(key: str) -> str:
 # ---------------------------------------------------------------- member API
 
 @router.get("/api/new-year-challenge")
-def challenge_card(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def challenge_card(request: Request, response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """The dashboard card. ``show`` is false outside the December-January window."""
     _no_store(response)
     return nyc.card_payload(db, user)
 
 
 @router.get("/api/new-year-challenge/{year}")
-def challenge_state(year: int, response: Response, user: models.User = Depends(get_current_user),
+def challenge_state(year: int, request: Request, response: Response, user: models.User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     _no_store(response)
     _year_or_404(year, user)
@@ -92,7 +92,7 @@ def make_pledge(year: int, body: PledgeBody, request: Request, response: Respons
 
 
 @router.delete("/api/new-year-challenge/{year}/pledge")
-def leave_pledge(year: int, response: Response, user: models.User = Depends(get_current_user),
+def leave_pledge(year: int, request: Request, response: Response, user: models.User = Depends(get_current_user),
                  db: Session = Depends(get_db)):
     _no_store(response)
     _year_or_404(year, user)
@@ -116,6 +116,9 @@ def share_pledge(year: int, request: Request, response: Response,
     """Make the public pledge card. It shows numbers for public shelves only, never titles."""
     _no_store(response)
     row = _pledge_or_404(db, user, year)
+    # The signed-in member is loaded with a handful of columns. Fetch the shelf privacy
+    # switches together, or each one is its own query when public_goals reads it.
+    db.refresh(user, attribute_names=[details[4] for details in year_in_review.CATEGORIES.values()])
     if not nyc.public_goals(db, user, year):
         raise HTTPException(status_code=422, detail="Your goals are all on private shelves, so there's nothing to share.")
     first = not row.share_token
@@ -126,7 +129,7 @@ def share_pledge(year: int, request: Request, response: Response,
 
 
 @router.delete("/api/new-year-challenge/{year}/share")
-def unshare_pledge(year: int, response: Response, user: models.User = Depends(get_current_user),
+def unshare_pledge(year: int, request: Request, response: Response, user: models.User = Depends(get_current_user),
                    db: Session = Depends(get_db)):
     _no_store(response)
     row = _pledge_or_404(db, user, year)
@@ -277,7 +280,9 @@ def _cost_table() -> str:
         fifty_two = nyc.hours_label(nyc.weekly_hours({key: 52})).replace("about ", "")
         rows.append(f'<tr><th scope="row">{_e(_label(key))}</th><td>{_e(nyc.HOURS_BASIS[key])}</td>'
                     f'<td>{_e(twelve)}</td><td>{_e(fifty_two)}</td></tr>')
-    return ('<div class="nyc-table-wrap"><table class="nyc-table"><caption>Roughly how much time a goal takes each week</caption>'
+    # Scrolls sideways on phones, so it takes keyboard focus and has a name for screen readers.
+    return ('<div class="nyc-table-wrap" role="region" aria-label="Time each format takes" tabindex="0">'
+            '<table class="nyc-table"><caption>Roughly how much time a goal takes each week</caption>'
             '<thead><tr><th scope="col">Format</th><th scope="col">One title, typically</th>'
             '<th scope="col">12 a year</th><th scope="col">52 a year</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>')
