@@ -450,6 +450,13 @@ def _states(db: Session, user, year: int) -> Optional[dict]:
         return None
 
 
+def _cache_headers(response: Response, signed_in: bool, guest: str) -> None:
+    # A member's page carries their own library counts, so the browser shouldn't keep it.
+    # Guests all get the same page (the hub was cached for ten minutes before the scorecard).
+    response.headers["Cache-Control"] = "private, no-store" if signed_in else guest
+    response.headers["Vary"] = "Cookie"
+
+
 @router.get(best_of.BASE_PATH, include_in_schema=False)
 def best_of_index(user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     signed_in = user is not None
@@ -458,8 +465,7 @@ def best_of_index(user=Depends(get_optional_current_user), db: Session = Depends
     response = page(HUB_TITLE, HUB_DESCRIPTION, best_of.BASE_PATH, content, structured_data=_hub_structured(),
                     head=(f'<link rel="stylesheet" href="/static/if-you-liked.css?v={LIKED_CSS_VERSION}">'
                           f'<link rel="stylesheet" href="/static/best-of.css?v={CSS_VERSION}">'), member=signed_in)
-    response.headers["Cache-Control"] = "private, no-cache"
-    response.headers["Vary"] = "Cookie"
+    _cache_headers(response, signed_in, guest="public, max-age=600")
     return response
 
 
@@ -481,8 +487,7 @@ def best_of_guide(year: int, fmt: str, user=Depends(get_optional_current_user), 
     content = guide_content(slug, entry, all_details(db), signed_in, _states(db, user, year))
     response = page(entry["search_title"], entry["summary"], best_of.path(slug), content,
                     structured_data=_structured(slug, entry), head=_head(signed_in), member=signed_in)
-    response.headers["Cache-Control"] = "private, no-cache"
-    response.headers["Vary"] = "Cookie"
+    _cache_headers(response, signed_in, guest="private, no-cache")
     return response
 
 

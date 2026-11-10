@@ -83,12 +83,15 @@ def build(db: Session, user: models.User, *, now: datetime | None = None) -> dic
 
     # Every finish writes a "completed" journal entry, whether or not the member reflects on it.
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    finished_this_month = db.query(
+    shown_keys = [library["key"] for library in libraries if library["visible"]]
+    finished_this_month = 0 if not shown_keys else db.query(
         models.ActivityEntry.category, models.ActivityEntry.item_id,
     ).filter(
         models.ActivityEntry.user_id == user.id,
         models.ActivityEntry.action == "completed",
         models.ActivityEntry.occurred_at >= month_start,
+        # Hidden tabs stay out of every other number on the strip, so out of this one too.
+        models.ActivityEntry.category.in_(shown_keys),
     ).distinct().count()
 
     shown = [library for library in libraries if library["visible"]]

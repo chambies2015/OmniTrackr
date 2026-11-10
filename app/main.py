@@ -648,6 +648,8 @@ app.include_router(podcasts.router)
 app.include_router(audiobooks.router)
 rate_limited_return_deck = limiter.limit("30/minute")(statistics.get_return_deck)
 rate_limited_return_engagement = limiter.limit("10/minute")(statistics.record_return_deck_engagement)
+# The welcome strip runs about 20 queries and refreshes after edits and when the tab comes back.
+rate_limited_home_summary = limiter.limit("60/minute")(statistics.get_home_summary)
 for route in statistics.router.routes:
     if not hasattr(route, "path") or not hasattr(route, "methods"):
         continue
@@ -655,6 +657,8 @@ for route in statistics.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_return_deck)
     elif route.path == "/statistics/return-deck/engagement" and "POST" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_return_engagement)
+    elif route.path == "/statistics/home/" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_home_summary)
 app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
@@ -982,6 +986,11 @@ from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)
 
 from .routers import best_of as best_of_router
+# Same limit as /api/pick/add, which saves the other six formats from these lists.
+rate_limited_best_of_add = limiter.limit("30/minute")(best_of_router.best_of_add)
+for route in best_of_router.router.routes:
+    if getattr(route, "path", None) == "/api/best-of/add":
+        bind_rate_limited_endpoint(route, rate_limited_best_of_add)
 app.include_router(best_of_router.router)
 from .routers import new_releases as new_releases_router
 app.include_router(new_releases_router.router)

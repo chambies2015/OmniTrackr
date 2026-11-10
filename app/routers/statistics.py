@@ -359,6 +359,7 @@ def get_library_insights(
 
 @router.get("/home/", response_model=dict)
 def get_home_summary(
+    request: Request,
     response: Response,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
