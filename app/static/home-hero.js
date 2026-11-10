@@ -12,7 +12,9 @@
     'September', 'October', 'November', 'December'];
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const COVER_LIMIT = 5;
-  const state = { request: null, epoch: 0, timer: null, data: null };
+  const state = { request: null, epoch: 0, timer: null, data: null, loadedAt: 0 };
+  // Coming back to the tab only refetches when the numbers are this old; edits refetch straight away.
+  const STALE_MS = 60 * 1000;
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -171,6 +173,7 @@
     const section = $('homeHero');
     if (!section || !data) return;
     state.data = data;
+    state.loadedAt = Date.now();
     const libraries = Array.isArray(data.libraries) ? data.libraries : [];
     renderTabCounts(libraries);
     renderHeadings(libraries);
@@ -234,7 +237,7 @@
       counts.forEach(node => observer.observe(node, { childList: true, characterData: true, subtree: true }));
     }
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && state.data) refreshSoon();
+      if (document.visibilityState === 'visible' && state.data && Date.now() - state.loadedAt > STALE_MS) refreshSoon();
     });
   }
 
