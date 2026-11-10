@@ -51,6 +51,9 @@ function validateDiscoverAuthReturn(value) {
     // Daily, Pick for me, the start page, tier lists, the gift guide, "If you liked" and "In order" guides and the dashboard cards they link to.
     const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/(?:gifts|black-friday)|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;
+    // The New Year challenge guide, back at the pledge form.
+    const pledge = value.match(/^\/new-year-challenge\/20\d{2}#pledge$/);
+    if (pledge && pledge[0] === value) return value;
     // A list someone shared: its public page or its share link, so signing in from a
     // "+ Add to my library" button comes back to the list.
     const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);
@@ -284,6 +287,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetSeasonCard?.();
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
+    window.resetNewYearPledge?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -767,6 +771,7 @@ function showAuthModal() {
     window.resetSeasonCard?.();
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
+    window.resetNewYearPledge?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -824,6 +829,7 @@ function showMainUI() {
         window.refreshOnThisDay?.());
     window.dashboardHomeCards = homeCards;
     window.refreshYearSoFar?.();
+    window.refreshNewYearPledge?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();

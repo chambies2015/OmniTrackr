@@ -49,6 +49,7 @@ PARENTS = {
     "/new-this-week/": "/new-this-week/archive",
     "/collections/public/": "/collections/explore",
     "/daily/archive": "/daily",
+    "/new-year-challenge/": "/challenges",
 }
 
 _CANONICAL = re.compile(r'<link rel="canonical" href="(https://[^"]+)"', re.I)

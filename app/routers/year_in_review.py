@@ -572,6 +572,26 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
             '<a class="site-btn site-btn--ghost" href="/supporters">How supporting works</a></p></section>')
 
 
+def _next_year_box(db: Session, user: models.User, year: int) -> str:
+    """On last year's recap, while the next New Year challenge takes pledges: a link to it."""
+    from .. import new_year_challenge
+    upcoming = year + 1
+    if not new_year_challenge.is_open(upcoming):
+        return ""
+    href = _e(new_year_challenge.path(upcoming) + "#pledge")
+    if new_year_challenge.get(db, user.id, upcoming) is not None:
+        heading, lead, label = (f"You're in for {upcoming}", "Your pledge is set. Check your numbers against this "
+                                "recap, and raise or lower them while the year is young.", "See your pledge")
+    else:
+        heading, lead, label = (f"Pick what you'll finish in {upcoming}",
+                                f"The {upcoming} challenge form shows your {year} counts next to each format, so you can "
+                                "start from this year. Each number becomes a yearly goal you can change any time.",
+                                "Make your pledge")
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-next-year">'
+            f'<h2 id="recap-next-year">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
+
+
 def _summary(recap: dict) -> str:
     bits = [f"{_plural(recap.get('finished_total', 0), 'title')} finished"]
     top = recap.get("top_category")
@@ -639,7 +659,8 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box + ("" if recap.get("is_empty") else _support_box(db, user, year)),
+        body=_body(recap, private=True) + share_box + _next_year_box(db, user, year)
+        + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),
     )

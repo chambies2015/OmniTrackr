@@ -1202,6 +1202,25 @@ class MonthlyChallengeEntry(Base):
     __table_args__ = (UniqueConstraint("user_id", "month", name="uq_monthly_challenge_entry"),)
 
 
+class YearPledge(Base):
+    """A member who signed up for a New Year challenge, e.g. the 2027 challenge (Nov 2026).
+
+    A new table only. The targets themselves are ordinary ``YearlyGoal`` rows, so
+    leaving the challenge keeps the goals. ``share_token`` exists only while the
+    member shares their pledge card.
+    """
+    __tablename__ = "year_pledges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_year_pledge"),)
+
+
 class YearInReviewShare(Base):
     """A member's opt-in public Year in Review link: a frozen snapshot at /recap/<token>.
 

@@ -929,6 +929,23 @@ for route in challenges_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_challenge_card)
 app.include_router(challenges_router.router)
 
+from .routers import new_year_challenge as new_year_challenge_router
+rate_limited_pledge_save = limiter.limit("30/minute")(new_year_challenge_router.make_pledge)
+rate_limited_pledge_share = limiter.limit("20/minute")(new_year_challenge_router.share_pledge)
+rate_limited_pledge_page = limiter.limit("60/minute")(new_year_challenge_router.shared_pledge_page)
+rate_limited_pledge_card = limiter.limit("30/minute")(new_year_challenge_router.shared_pledge_card)
+for route in new_year_challenge_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/new-year-challenge/{year}/pledge" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_save)
+    elif path == "/api/new-year-challenge/{year}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_share)
+    elif path == "/pledge/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_pledge_page)
+    elif path == "/pledge/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_pledge_card)
+app.include_router(new_year_challenge_router.router)
+
 from .routers import badges as badges_router
 rate_limited_badges_list = limiter.limit("120/minute")(badges_router.list_badges)
 rate_limited_badges_seen = limiter.limit("30/minute")(badges_router.badges_seen)
