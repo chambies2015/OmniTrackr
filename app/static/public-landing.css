@@ -163,18 +163,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp-auth__list { display: grid; gap: 12px; list-style: none; margin: 24px 0 0; padding: 0; }
 .lp-auth__list li { align-items: center; color: var(--lp-soft); display: flex; gap: 10px; }
 .lp-auth__list .lp-icon { color: var(--lp-teal); flex: none; }
-.lp .lp-auth__card { backdrop-filter: blur(14px); background: rgba(20, 17, 42, .82); border: 1px solid var(--lp-border-strong); border-radius: 22px; box-shadow: 0 30px 70px rgba(0, 0, 0, .45); max-width: none; padding: 34px; width: auto; }
-.lp .lp-auth__card h2 { color: var(--lp-text); font-size: 1.6rem; margin: 0 0 6px; text-align: left; }
-.lp .lp-auth__card .auth-context, .lp .lp-auth__card .auth-helper-text { color: var(--lp-muted); font-size: .95rem; margin: 0 0 18px; text-align: left; }
-.lp .lp-auth__card .auth-form input { background: rgba(11, 10, 24, .7); border: 1px solid var(--lp-border-strong); border-radius: 12px; color: var(--lp-text); font: 1rem Inter, sans-serif; margin: 0 0 12px; padding: 14px 16px; }
-.lp .lp-auth__card .auth-form input::placeholder { color: #807ca3; }
-.lp .lp-auth__card .auth-form input:focus { border-color: var(--lp-violet); box-shadow: 0 0 0 3px rgba(139, 92, 246, .25); outline: none; }
-.lp .lp-auth__card .auth-form button { background: linear-gradient(135deg, var(--lp-violet), var(--lp-violet-2)); border-radius: 12px; box-shadow: 0 10px 26px rgba(139, 92, 246, .35); font: 600 1rem Inter, sans-serif; margin-top: 4px; padding: 14px; transform: none; }
-.lp .lp-auth__card .auth-form button:hover { box-shadow: 0 12px 32px rgba(139, 92, 246, .5); filter: brightness(1.08); }
-.lp .lp-auth__card .auth-toggle { color: var(--lp-muted); font-size: .93rem; }
-.lp .lp-auth__card .auth-toggle a { color: var(--lp-violet-soft); font-weight: 600; }
-.lp #authError { color: #fca5a5; min-height: 0; }
-.lp #authError:empty { margin: 0; }
+/* The card itself (fields, buttons, messages) is drawn by auth-forms.css. */
 
 /* ---------- Example library showcase (used in the preview section) ---------- */
 .landing-library-showcase { min-width: 0; padding: 26px 10px 26px; position: relative; }
@@ -252,7 +241,6 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .showcase-float { display: none; }
   .showcase-recent { grid-template-columns: 32px minmax(0, 1fr); }
   .showcase-status { display: none; }
-  .lp .lp-auth__card { padding: 24px; }
 }
 @media (max-width: 440px) {
 }
@@ -260,7 +248,6 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .lp-orbit, .lp-orbit__tile { animation: none; }
   .lp-btn, .lp-feature, .lp-try, .lp-radar-card__art { transition: none; }
 }
-.lp .lp-auth__card .auth-hint { color: var(--lp-muted); font-size: .82rem; line-height: 1.4; margin: -6px 0 12px; text-align: left; }
 
 /* Start your list (guest picks) */
 .lp-picks { background: var(--lp-bg); border-top: 1px solid var(--lp-border); padding: 56px 0 64px; }
@@ -326,12 +313,6 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp-hero__copy { min-width: 0; } /* long result titles ellipsize instead of widening the hero on phones */
 
 /* Sign in with Google (shown only once the owner configures it) */
-.lp .lp-auth__card .auth-google { align-items: center; background: #fff; border: 1px solid #dadce0; border-radius: 12px; color: #1f1f1f; display: flex; font: 600 1rem Inter, sans-serif; gap: 12px; justify-content: center; min-height: 50px; padding: 12px 16px; text-decoration: none; transition: background-color .15s ease, box-shadow .15s ease; }
-.lp .lp-auth__card .auth-google:hover { background: #f8f9fa; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-.lp .lp-auth__card .auth-google:focus-visible { box-shadow: 0 0 0 3px rgba(139, 92, 246, .55); outline: none; }
-.lp .lp-auth__card .auth-google__logo { flex: none; }
-.lp .lp-auth__card .auth-or { align-items: center; color: var(--lp-muted); display: flex; font-size: .85rem; gap: 12px; margin: 16px 0; }
-.lp .lp-auth__card .auth-or::before, .lp .lp-auth__card .auth-or::after { background: var(--lp-border-strong); content: ""; flex: 1; height: 1px; }
 
 /* ---------- Sign up from the hero, and the sign-up pop-up ---------- */
 .lp-btn--google { background: #fff; border-color: #dadce0; color: #1f1f1f; }
@@ -348,18 +329,28 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .lp-lead { margin-bottom: 22px; }
 }
 
-.lp-auth-dialog { background: transparent; border: 0; color: var(--lp-text); margin: auto; max-height: calc(100dvh - 32px); max-width: min(460px, calc(100vw - 32px)); overflow: auto; padding: 0; width: 100%; }
+.lp-auth-dialog { background: transparent; border: 0; color: var(--lp-text); margin: auto; max-height: calc(100dvh - 32px); max-width: min(460px, calc(100vw - 32px)); overflow: auto; overscroll-behavior: contain; padding: 0; width: 100%; }
+.lp-auth-dialog[open] { animation: lp-auth-in var(--dur, .2s) var(--ease, ease); }
+@keyframes lp-auth-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+.lp-auth-dialog__brand { display: none; }
 .lp-auth-dialog::backdrop { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); background: rgba(6, 5, 16, .72); }
 .lp-auth-dialog__slot { position: relative; }
-.lp-auth-dialog .lp-auth__card { background: #15122d; }
+.lp .lp-auth-dialog .lp-auth__card { --auth-surface: #15122d; max-width: none; }
 .lp-auth-dialog__close { align-items: center; background: rgba(255, 255, 255, .08); border: 1px solid var(--lp-border-strong); border-radius: 50%; color: var(--lp-text); cursor: pointer; display: flex; font: 600 1.3rem/1 Inter, sans-serif; height: 36px; justify-content: center; position: absolute; right: 14px; top: 14px; width: 36px; z-index: 2; }
 .lp-auth-dialog__close:hover { background: rgba(255, 255, 255, .16); }
 .lp-auth-dialog .lp-auth__card h2 { padding-right: 44px; }
+/* On a phone the pop-up is a full page: the form starts at the top, nothing scrolls behind it, and the keyboard has room. */
+@media (max-width: 560px) {
+  .lp-auth-dialog { background: #110f24; height: 100vh; height: 100dvh; margin: 0; max-height: none; max-width: none; width: 100vw; }
+  .lp-auth-dialog[open] { animation-name: lp-auth-up; }
+  .lp-auth-dialog__brand { align-items: center; border-bottom: 1px solid var(--lp-border); color: var(--lp-text); display: flex; font: 700 1.05rem Poppins, sans-serif; gap: 9px; height: 56px; margin: 0; padding: 0 16px; }
+  .lp-auth-dialog__close { right: 12px; top: 10px; }
+  .lp .lp-auth-dialog .lp-auth__card { -webkit-backdrop-filter: none; backdrop-filter: none; background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 22px 16px calc(28px + env(safe-area-inset-bottom)); }
+  .lp-auth-dialog .lp-auth__card h2 { padding-right: 0; }
+}
+@keyframes lp-auth-up { from { opacity: 0; transform: translateY(24px); } }
+@media (prefers-reduced-motion: reduce) { .lp-auth-dialog[open] { animation: none; } }
 
-.lp .lp-auth__card .auth-password { position: relative; }
-.lp .lp-auth__card .auth-password input { padding-right: 76px; width: 100%; }
-.lp .lp-auth__card .auth-form .auth-password__toggle { background: transparent; border: 0; border-radius: 8px; box-shadow: none; color: var(--lp-violet-soft); cursor: pointer; font: 600 .88rem Inter, sans-serif; margin: 0; padding: 8px 10px; position: absolute; right: 8px; top: 7px; width: auto; }
-.lp .lp-auth__card .auth-form .auth-password__toggle:hover { background: rgba(255, 255, 255, .08); box-shadow: none; filter: none; }
 
 /* New from the guides: the latest written guides, server rendered. */
 .lp-reads { padding-top: 0; }
