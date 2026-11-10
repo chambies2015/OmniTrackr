@@ -21,7 +21,10 @@
     var slot = dialog && dialog.querySelector('[data-auth-dialog-slot]');
     var card = document.querySelector('.lp-auth__card');
     if (!dialog || !slot || !card) return false;
-    if (dialog.open) return true;
+    if (dialog.open) {
+      focusAuthCard(card);
+      return true;
+    }
     if (!authHome) authHome = {parent: card.parentNode, next: card.nextSibling};
     slot.appendChild(card);
     try {
@@ -31,7 +34,27 @@
       return false;
     }
     document.body.style.overflow = 'hidden';
+    focusAuthCard(card);
     return true;
+  }
+
+  // Where the cursor starts when the pop-up opens or changes form. With a mouse and
+  // keyboard: the first box, ready to type. On a touch screen: the title, so the
+  // keyboard doesn't cover the Google button before anyone has chosen how to sign up.
+  function focusAuthCard(card) {
+    if (typeof card.querySelectorAll !== 'function') return;
+    var finePointer = typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    var target = null;
+    if (finePointer) {
+      var boxes = card.querySelectorAll('input:not([type="checkbox"])');
+      for (var i = 0; i < boxes.length && !target; i += 1) {
+        if (boxes[i].offsetParent !== null && !boxes[i].value) target = boxes[i];
+      }
+    }
+    if (!target) target = card.querySelector('#authTitle');
+    if (target && typeof target.focus === 'function') {
+      try { target.focus({preventScroll: true}); } catch (error) { target.focus(); }
+    }
   }
 
   function returnAuthCard() {
