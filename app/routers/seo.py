@@ -390,6 +390,16 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # "How long does it take" guides: hand-written, with a checked part-by-part breakdown.
+    from .. import binge_calculator
+    from ..binge_guides import GUIDES as BINGE_GUIDES
+    for slug, guide in BINGE_GUIDES.items():
+        if binge_calculator.is_indexable(guide):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{binge_calculator.path(slug)}</loc>"
+                f"<lastmod>{guide['reviewed']}</lastmod>"
+                "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+            )
     # Title pages join only when they have real substance (see title_pages.is_indexable).
     try:
         from .titles import sitemap_entries
@@ -723,7 +733,7 @@ Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows,
 {new_year_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
-The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime or book series takes and the finish date at a chosen pace, with worked examples for long series.
+The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime, film series, book series, audiobook or game takes, and either the finish date at a chosen pace or the daily time needed to finish by a chosen date. "How long does it take" guides (for example {base_url}/binge-calculator/breaking-bad and {base_url}/binge-calculator/harry-potter) give hand-checked lengths season by season, book by book or film by film, with what the total leaves out.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 

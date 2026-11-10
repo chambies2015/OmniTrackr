@@ -139,7 +139,7 @@ OTHER_PAGES = {
     "reviews": ReaderPage("/reviews", "Member reviews", "tools",
         "Reviews members chose to share, across every kind of media.", ()),
     "binge_calculator": ReaderPage("/binge-calculator", "Binge calculator", "tools",
-        "How long a show, anime or book series takes, and the day you'd finish.", ()),
+        "How long a show, anime, film or book series takes, and the day you'd finish.", ()),
 }
 KINDS = {"guides": "Guide", "about": "About OmniTrackr", "tools": "Try it"}
 

@@ -67,6 +67,8 @@ GUEST = (
     ("pick_saved", "Pick for me suggestion saved to a list or library"),
     ("liked_saved", "If you liked guide: a pick saved to a list or library"),
     ("order_saved", "In order guide: entries saved to a list or library"),
+    ("binge_planned", "Binge calculator: a plan changed by a visitor"),
+    ("binge_saved", "Binge calculator guide: a series saved to a list or library"),
     ("seasonal_saved", "Seasonal hubs (Halloween, Holiday): a pick saved to a list or library"),
     ("gift_list_started", "Gift guide: a member started a gift list"),
     ("gift_list_link_opened", "Gift guide: a gift list link opened by a visitor without an account"),
@@ -154,7 +156,7 @@ SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST
 # Events a browser may report; everything else is recorded on the server only.
 CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
-                 "order_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
+                 "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
                  "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared",

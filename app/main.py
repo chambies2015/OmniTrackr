@@ -1211,10 +1211,17 @@ for route in follows_router.router.routes:
 app.include_router(follows_router.router)
 
 from .routers import binge_calculator as binge_calculator_router
-rate_limited_binge_length = limiter.limit("60/minute")(binge_calculator_router.binge_length)
+rate_limited_binge = {
+    "/api/binge-calculator/length": limiter.limit("60/minute")(binge_calculator_router.binge_length),
+    # These read (or add to) the member's whole library, so they get limits like the other library reads.
+    "/api/binge-calculator/mine": limiter.limit("30/minute")(binge_calculator_router.binge_mine),
+    "/api/binge-calculator/{slug}/progress": limiter.limit("60/minute")(binge_calculator_router.binge_progress),
+    "/api/binge-calculator/{slug}/add": limiter.limit("20/minute")(binge_calculator_router.binge_add),
+}
+rate_limited_binge_length = rate_limited_binge["/api/binge-calculator/length"]
 for route in binge_calculator_router.router.routes:
-    if getattr(route, "path", None) == "/api/binge-calculator/length":
-        bind_rate_limited_endpoint(route, rate_limited_binge_length)
+    if getattr(route, "path", None) in rate_limited_binge:
+        bind_rate_limited_endpoint(route, rate_limited_binge[route.path])
 app.include_router(binge_calculator_router.router)
 
 from .routers import review_inbox as review_inbox_router

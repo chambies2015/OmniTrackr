@@ -706,6 +706,21 @@ def _minutes_phrase(value: str) -> Optional[str]:
     return f"{minutes} minutes ({clock})"
 
 
+def _binge_link(group, guide_only: bool = False) -> str:
+    """A link that opens the binge calculator on this title, or its own guide when one is written."""
+    from urllib.parse import urlencode
+    from .. import binge_calculator
+    slug = binge_calculator.for_title(group.kind, group.title, group.year)
+    if slug:
+        return (f' There is a <a href="{binge_calculator.path(slug)}">part-by-part breakdown and planner</a> '
+                'for it in the binge calculator.')
+    if guide_only:
+        return ""
+    query = urlencode({"lookup": group.kind, "title": group.title, **({"year": group.year} if group.year else {})})
+    return (f' <a href="{binge_calculator.BASE_PATH}?{_e(query)}">Work out when you would finish</a> '
+            'in the binge calculator.')
+
+
 def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
     """(question, text, html) about how long the title takes, or empty strings."""
     kind, title, facts = group.kind, group.title, _facts(metadata)
@@ -713,7 +728,7 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         length = _minutes_phrase(facts.get("Running time") or facts.get("Length"))
         tracks = f" across {facts['Tracks']} tracks" if kind == "album" and facts.get("Tracks") else ""
         text = f"{title} runs {length}{tracks}."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group, guide_only=True) if kind == "movie" else "")
     if kind in ("tv", "anime"):
         parts = []
         if facts.get("Seasons", "").isdigit():
@@ -725,14 +740,14 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         each = facts.get("Episode length", "")
         each = each.removesuffix(".").removesuffix(" per ep").strip()
         text = f"{title} has {_join(parts)}" + (f", about {each} each" if each else "") + "."
-        html = (_e(text) + ' Work out a full binge, with breaks, in the <a href="/binge-calculator">binge calculator</a>.')
+        html = _e(text) + _binge_link(group)
         return f"How many episodes does {title} have?", text, html
     if kind == "game" and facts.get("Average playtime"):
         text = f"Players spend about {facts['Average playtime']} on {title} on average, according to RAWG."
         return f"How long does it take to beat {title}?", text, _e(text)
     if kind in ("book", "audiobook") and facts.get("Pages", "").isdigit():
         text = f"{title} is about {facts['Pages']} pages long in print."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group) if kind == "book" else "")
     if kind == "manga" and (facts.get("Volumes") or facts.get("Chapters")):
         parts = [f"{facts[label]} {label.lower()}" for label in ("Volumes", "Chapters") if facts.get(label)]
         text = f"{title} runs {_join(parts)}" + (f" and is {facts['Status'].lower()}" if facts.get("Status") else "") + "."
@@ -1483,6 +1498,10 @@ def import_guest_list(
             # A manga, podcast or audiobook saved from one of the guides beside the holiday hub or a best-of list.
             from .. import best_of, seasonal
             browsed = seasonal.find_extra(item.kind, item.slug) or best_of.find_extra(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A series saved from a "how long does it take" guide that no member tracks yet.
+            from .. import binge_calculator
+            curated = binge_calculator.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
             missing += 1
             continue
