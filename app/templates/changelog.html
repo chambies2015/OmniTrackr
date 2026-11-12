@@ -63,6 +63,20 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov12-2026-heading">
+        <h2 id="security-nov12-2026-heading">November 12, 2026: Security and speed check of the new sign-up forms and the binge calculator guides</h2>
+        <p>We went over the two things that shipped on November 10: the new sign-up, log-in and password forms, and the 30 "how long does it take" pages in the binge calculator. We loaded the guides in a browser as a visitor and as a member, at desktop and phone sizes, opened plan links with made-up values, and went through signing up, asking for a reset link and opening one. No page had a script error or a broken link, and all 30 guides are long enough to be listed in search. These are the fixes.</p>
+        <ul>
+          <li>Password reset and email confirmation links open the homepage with a one-time key in the address. The homepage also reports visits to Google Analytics, and Analytics records the address of the page it counts, so the key was sent along with it. A reset key works for an hour, or until it is used. The key is now taken out of the address Analytics is given.</li>
+          <li>Confirming an email was the one step of signing up with no limit on how often it could be called. It now has one, like signing up, logging in and resetting a password.</li>
+          <li>"What you have left" on the binge calculator compared every unfinished title in your library with every title in all 30 guides, twice. For a library with 1,600 unfinished titles that took about 290 milliseconds on the server. The guides are now indexed once and the same library takes about 40.</li>
+          <li>Each guide page worked out its links to title pages from the whole site search list on every view. They are now worked out once each time that list is rebuilt, which is every ten minutes.</li>
+          <li>The name of a plan can come from a shared link, and it goes into the file you get from "Add the finish date to my calendar". A name with one kind of line break in it could have added lines of its own to that file. It is now written out as text like the other kinds.</li>
+          <li>Fifteen of the guides had a page title too long for a search result, so the hours were the part that got cut off. Those now use a shorter question, such as "How long to read A Song of Ice and Fire? About 148 hours". The heading on the page is unchanged.</li>
+        </ul>
+        <p>Your account, your password and your library are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="binge-guides-nov10-2026-heading">
         <h2 id="binge-guides-nov10-2026-heading">November 10, 2026: How long 30 series take, and a planner that works back from a date</h2>
         <p>The <a href="/binge-calculator">binge calculator</a> now has a page for each of 30 series, such as <a href="/binge-calculator/breaking-bad">Breaking Bad</a>, <a href="/binge-calculator/one-piece">One Piece</a>, <a href="/binge-calculator/harry-potter">the Harry Potter books</a> and <a href="/binge-calculator/marvel-infinity-saga">the Marvel films</a>. Each one gives the total, then breaks it down season by season, arc by arc, book by book or film by film, and says what the total leaves out.</p>
