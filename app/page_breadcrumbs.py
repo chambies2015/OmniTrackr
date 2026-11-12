@@ -38,6 +38,7 @@ HUBS = {
     "/people": "People",
     "/studios": "Studios",
     "/guides": "Guides",
+    "/awards": "Awards season",
     "/holidays": "Holiday picks",
     "/holidays/gifts": "Gift guide",
     "/holidays/black-friday": "Black Friday",

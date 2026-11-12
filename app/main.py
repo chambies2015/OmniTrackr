@@ -593,6 +593,10 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+        elif route.path == "/auth/verify-email" and 'GET' in route.methods:
+            # The page calls this once for each emailed link that is opened. It was the one
+            # step of signing up that anyone could call as often as they liked.
+            bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:
@@ -963,6 +967,28 @@ for route in new_year_challenge_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_pledge_card)
 app.include_router(new_year_challenge_router.router)
 
+from .routers import awards as awards_router
+# Awards season ballots. The card loads with the dashboard; a ballot saves one click at a time.
+AWARDS_LIMITS = {
+    ("/api/awards/card", "GET"): ("60/minute", awards_router.ballot_card),
+    ("/api/awards/{slug}", "GET"): ("60/minute", awards_router.ballot_state),
+    ("/api/awards/{slug}/ballot", "PUT"): ("120/minute", awards_router.save_ballot),
+    ("/api/awards/{slug}/ballot", "DELETE"): ("20/minute", awards_router.clear_ballot),
+    ("/api/awards/{slug}/follow", "PUT"): ("20/minute", awards_router.follow_show),
+    ("/api/awards/{slug}/share", "PUT"): ("20/minute", awards_router.share_ballot),
+    ("/api/awards/{slug}/share", "DELETE"): ("20/minute", awards_router.unshare_ballot),
+    ("/api/awards/{slug}/add", "POST"): ("60/minute", awards_router.add_nominee),
+    ("/api/awards/{slug}/results", "PUT"): ("120/minute", awards_router.mark_winner),
+    ("/ballot/{token}", "GET"): ("60/minute", awards_router.shared_ballot_page),
+    ("/ballot/{token}/card.png", "GET"): ("30/minute", awards_router.shared_ballot_card),
+}
+for route in awards_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    for (limited_path, method), (rate, endpoint) in AWARDS_LIMITS.items():
+        if path == limited_path and method in methods:
+            bind_rate_limited_endpoint(route, limiter.limit(rate)(endpoint))
+app.include_router(awards_router.router)
+
 from .routers import badges as badges_router
 rate_limited_badges_list = limiter.limit("120/minute")(badges_router.list_badges)
 rate_limited_badges_seen = limiter.limit("30/minute")(badges_router.badges_seen)
@@ -1034,6 +1060,14 @@ for route in tonight_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_tonight_create)
     elif path == "/api/tonight/{token}/vote" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_tonight_vote)
+    elif path == "/tonight/{token}/card.png":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif path == "/api/tonight/{token}/where":
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path in ("/api/tonight/{token}/again", "/api/tonight/{token}/keep"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/tonight/starters":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
 app.include_router(tonight_router.router)
 
 from .routers import weekly_roundup as weekly_roundup_router

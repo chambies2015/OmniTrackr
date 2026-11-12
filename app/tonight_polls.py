@@ -11,8 +11,15 @@
 * A visitor who votes and then signs up in the same browser keeps their vote,
   now under their username.
 
-Options copy the title (kind, name, year, art) when the poll is made and never read
-or change anyone's library afterwards. Only new tables are used.
+* A closed poll can go another round: the owner starts a new poll from the same
+  titles (usually without the winner) and the old link points at the new one, so
+  the group keeps using the link already in their chat.
+* Visitors build a shortlist before signing up. It is kept in their browser and
+  nothing is stored for them here until they have an account.
+
+Options copy the title (kind, name, year, art) when the poll is made. Voting never reads
+or changes anyone's library; a member who keeps the winner gets it added like any other
+title, and a title they already have is left as it is.
 """
 from __future__ import annotations
 
@@ -27,7 +34,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import models, title_pages, title_search
+from . import image_sizes, models, title_pages, title_search
 from .shared_lists import KIND_LABELS, _initials
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -41,6 +48,9 @@ VOTES_MAX = 200
 SUGGESTIONS_MAX = 24
 MY_POLLS_SHOWN = 12
 NAMES_SHOWN = 12
+STARTERS_MAX = 18
+STARTER_KINDS = ("movie", "tv", "anime")
+LOOKUP_MAX = OPTIONS_MAX
 VERB = {"movie": "watch", "tv": "watch", "anime": "watch", "game": "play", "book": "read", "album": "play",
         "manga": "read", "podcast": "play", "audiobook": "play"}
 LIBRARY = {
@@ -135,6 +145,38 @@ def suggestions(db: Session, user) -> list[dict]:
     return found[:SUGGESTIONS_MAX]
 
 
+def starters(db: Session) -> list[dict]:
+    """Titles a visitor can start a shortlist from: what members track most, then the editors' picks."""
+    indexed = _index_map(db)
+    found: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+
+    def keep(kind: str, title: str, year, slug: Optional[str]) -> None:
+        key = (kind, title_pages.normalize(title))
+        entry = indexed.get((kind, slug)) if slug else None
+        if key in seen or entry is None or not entry.get("image"):
+            return
+        seen.add(key)
+        found.append({"kind": kind, "label": KIND_LABELS.get(kind, "Title"), "title": entry["title"][:200],
+                      "year": _clean_year(entry["year"]), "slug": entry["slug"],
+                      "image": image_sizes.sized(title_pages._safe_image(entry["image"]), 200)})
+
+    per_kind = {kind: title_pages.popular(db, kind, limit=8, min_members=2) for kind in STARTER_KINDS}
+    while any(per_kind.values()) and len(found) < STARTERS_MAX:
+        for kind in STARTER_KINDS:
+            if per_kind[kind]:
+                item = per_kind[kind].pop(0)
+                keep(kind, item["title"], item["year"], item["url"].rsplit("/", 1)[1])
+    if len(found) < STARTERS_MAX:
+        from . import pick
+        for entry in pick.candidates():
+            if len(found) >= STARTERS_MAX:
+                break
+            if entry["kind"] in STARTER_KINDS:
+                keep(entry["kind"], entry["title"], entry["year"], entry["slug"])
+    return found[:STARTERS_MAX]
+
+
 def _clean_year(year) -> Optional[int]:
     return year if isinstance(year, int) and not isinstance(year, bool) and 1800 <= year <= 2100 else None
 
@@ -171,7 +213,8 @@ def _made_today(db: Session, user_id: int) -> int:
         models.TonightPoll.created_at > _now() - timedelta(days=1)).scalar() or 0
 
 
-def create(db: Session, user, question: str, options: list[dict], hours: int) -> models.TonightPoll:
+def create(db: Session, user, question: str, options: list[dict], hours: int,
+           previous: Optional[models.TonightPoll] = None) -> models.TonightPoll:
     if hours not in HOURS:
         raise PollError("Pick how long voting stays open.")
     if _made_today(db, user.id) >= DAILY_POLLS:
@@ -189,10 +232,16 @@ def create(db: Session, user, question: str, options: list[dict], hours: int) ->
         raise PollError(f"Add at least {OPTIONS_MIN} different titles to vote on.")
     if len(picked) > OPTIONS_MAX:
         raise PollError(f"A poll holds up to {OPTIONS_MAX} titles.")
+    return _store(db, user, question, picked, hours, previous)
+
+
+def _store(db: Session, user, question: str, picked: list[dict], hours: int,
+           previous: Optional[models.TonightPoll] = None) -> models.TonightPoll:
     question = " ".join((question or "").split())[:120] or default_question(picked)
     now = _now()
     poll = models.TonightPoll(token=secrets.token_urlsafe(12), owner_id=user.id, question=question,
-                              created_at=now, closes_at=now + timedelta(hours=hours))
+                              created_at=now, closes_at=now + timedelta(hours=hours),
+                              previous_id=previous.id if previous is not None else None)
     db.add(poll)
     db.flush()
     for position, option in enumerate(picked):
@@ -201,6 +250,57 @@ def create(db: Session, user, question: str, options: list[dict], hours: int) ->
     db.commit()
     db.refresh(poll)
     return poll
+
+
+# ------------------------------------------------------------------ another round
+
+def next_round(db: Session, poll: models.TonightPoll) -> Optional[models.TonightPoll]:
+    """The newest poll started from this one, if it is still there."""
+    return (db.query(models.TonightPoll).filter(models.TonightPoll.previous_id == poll.id)
+            .order_by(models.TonightPoll.id.desc()).first())
+
+
+def round_number(db: Session, poll: models.TonightPoll) -> int:
+    """1 for a first poll, 2 for the round started from it, and so on. Stops counting at ten."""
+    number, current = 1, poll
+    while current.previous_id is not None and number < 10:
+        current = db.get(models.TonightPoll, current.previous_id)
+        if current is None:
+            break
+        number += 1
+    return number
+
+
+def again(db: Session, poll: models.TonightPoll, user, keep_winner: bool = False) -> tuple[models.TonightPoll, bool]:
+    """Start another round from a closed poll. Returns (the new poll, True when it was made just now)."""
+    if poll.owner_id != user.id:
+        raise PollError("Only whoever made this poll can start another round.", 403)
+    refresh(db, poll)
+    if poll.closed_at is None:
+        raise PollError("This round is still open. Close it first, then start the next one.", 409)
+    running = next_round(db, poll)
+    if running is not None:
+        return running, False
+    if _made_today(db, user.id) >= DAILY_POLLS:
+        raise PollError("That's a lot of polls for one day. Try again tomorrow.", 429)
+    picked = [{"kind": option.kind, "title": option.title, "year": option.year, "slug": option.slug, "image": option.image}
+              for option in poll.options if keep_winner or option.id != poll.winner_id]
+    if len(picked) < OPTIONS_MIN:
+        raise PollError("There is only one title left. Make a new poll to add more.")
+    # As long as the last round when it ran its full time. Closing early moves closes_at, so the
+    # length that was picked is gone by then and the round gets the usual three hours.
+    lasted = (poll.closes_at - poll.created_at).total_seconds() / 3600
+    hours = next((value for value in HOURS if abs(value - lasted) < 0.01), DEFAULT_HOURS)
+    fresh = _store(db, user, poll.question, picked, hours, previous=poll)
+    voters = {user_id for user_id, in db.query(models.TonightPollVote.user_id).filter(
+        models.TonightPollVote.poll_id == poll.id, models.TonightPollVote.user_id.isnot(None))}
+    voters.discard(user.id)
+    active = {row.id for row in db.query(models.User.id).filter(models.User.id.in_(voters), models.User.is_active.is_(True))} if voters else set()
+    for user_id in sorted(active):
+        db.add(models.Notification(user_id=user_id, type="tonight_poll", link=f"/tonight/{fresh.token}",
+                                   message=f'{user.username} started another round: "{fresh.question}"'[:250]))
+    db.commit()
+    return fresh, True
 
 
 def default_question(options: list[dict]) -> str:
@@ -391,6 +491,66 @@ def mark_seen(db: Session, poll: models.TonightPoll, user) -> None:
     db.commit()
 
 
+# ------------------------------------------------------------------ keeping a title
+
+def _own_row(db: Session, user, option: models.TonightPollOption):
+    model = title_pages.KINDS[option.kind][0]
+    normalized = title_pages.normalize(option.title)
+    rows = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).all()
+    # Two editions with one name: the one from the option's year, else the first.
+    return next((row for row in rows if title_pages.item_year(option.kind, row) == option.year), rows[0] if rows else None)
+
+
+def keep(db: Session, poll: models.TonightPoll, user, option_id: Optional[int], queue: bool) -> dict:
+    """Put a title from the poll in the member's library (not started) and, if asked, at the end of Next Up.
+
+    A title the member already has is left exactly as it is. Does not change the poll.
+    """
+    from .progress import lock_progress_owner
+    option = next((entry for entry in poll.options if entry.id == (option_id or poll.winner_id)), None)
+    if option is None:
+        raise PollError("That title isn't on this poll.", 404)
+    lock_progress_owner(db, user.id)
+    row, state = _own_row(db, user, option), "existing"
+    if row is None:
+        group = title_pages.find(db, option.kind, option.slug) if option.slug else None
+        if group is not None:
+            from .routers.titles import add_group_to_library
+            state, row = add_group_to_library(db, user, group)
+        else:
+            model, _, _, _, creator = title_pages.KINDS[option.kind]
+            fields = {"user_id": user.id, "title": option.title}
+            if option.kind == "game":
+                fields["release_date"] = datetime(option.year, 1, 1) if option.year else None
+            else:
+                fields["year"] = option.year
+            if creator:
+                fields[creator] = ""
+            image = title_pages._safe_image(option.image)
+            if image:
+                fields[title_pages.IMAGE_FIELD[option.kind]] = image
+            row = model(**fields)
+            db.add(row)
+            db.flush()
+            state = "created"
+    category = title_pages.KINDS[option.kind][2]
+    queued = False
+    if queue:
+        waiting = db.query(models.NextUpItem).filter_by(user_id=user.id, category=category, item_id=row.id).first()
+        if waiting is None:
+            last = db.query(func.max(models.NextUpItem.position)).filter(models.NextUpItem.user_id == user.id).scalar()
+            db.add(models.NextUpItem(user_id=user.id, category=category, item_id=row.id,
+                                     position=(last if last is not None else -1) + 1))
+            queued = True
+    try:
+        db.commit()
+    except IntegrityError:
+        # The same title queued from two tabs at once: it is in Next Up either way.
+        db.rollback()
+        queued = False
+    return {"state": state, "queued": queued, "in_queue": bool(queue), "title": option.title, "category": category}
+
+
 # ------------------------------------------------------------------ what pages show
 
 def _option_dict(option: models.TonightPollOption) -> dict:
@@ -447,7 +607,17 @@ def state(db: Session, poll: models.TonightPoll, owner, viewer, visitor: Optiona
     closed = poll.closed_at is not None
     leader = max(counts.values()) if counts else 0
     is_owner = viewer is not None and viewer.id == poll.owner_id
+    following = next_round(db, poll) if closed else None
+    if following is not None:
+        refresh(db, following)
+    before = db.get(models.TonightPoll, poll.previous_id) if poll.previous_id else None
+    before_winner = _winner(before) if before is not None else None
     return {
+        "round": round_number(db, poll) if before is not None else 1,
+        "next": {"path": f"/tonight/{following.token}", "closed": following.closed_at is not None,
+                 "closes_label": closes_label(following)} if following is not None else None,
+        "previous": {"path": f"/tonight/{before.token}",
+                     "winner": before_winner.title if before_winner is not None else None} if before is not None else None,
         "token": poll.token, "question": poll.question, "url": url_for(poll),
         "owner": {"name": owner.username, "initials": _initials(owner.username), "you": is_owner},
         "created_at": poll.created_at.isoformat() + "Z", "closes_at": poll.closes_at.isoformat() + "Z",
@@ -481,3 +651,36 @@ def mine(db: Session, user) -> list[dict]:
             "created_at": poll.created_at.isoformat() + "Z",
         })
     return found
+
+
+# ------------------------------------------------------------------ link previews
+
+def _title_list(titles: list[str], limit: int = 3) -> str:
+    shown = titles[:limit]
+    if len(titles) > limit:
+        return ", ".join(shown) + f" and {len(titles) - limit} more"
+    return shown[0] if len(shown) == 1 else ", ".join(shown[:-1]) + " or " + shown[-1]
+
+
+def preview_line(poll: models.TonightPoll, owner) -> str:
+    """The sentence chat apps show under a poll link."""
+    winner = _winner(poll) if poll.closed_at is not None else None
+    if winner is not None:
+        return f"The group picked {winner.title}. See how the vote went."
+    if poll.closed_at is not None:
+        return f"{owner.username}'s poll has closed."
+    return (f"{owner.username} wants your vote: {_title_list([option.title for option in poll.options])}. "
+            "One tap, no account needed.")
+
+
+def card_facts(db: Session, poll: models.TonightPoll, owner) -> dict:
+    """What the preview image shows. An open poll's card has no counts, so it stays the same while votes come in."""
+    winner = _winner(poll) if poll.closed_at is not None else None
+    counts = _tally(db, poll) if winner is not None else {}
+    return {
+        "question": poll.question, "owner": owner.username, "closed": poll.closed_at is not None,
+        "options": [(KIND_LABELS.get(option.kind, "Title"), option.title, option.year) for option in poll.options],
+        "winner": (winner.title, KIND_LABELS.get(winner.kind, "Title"), winner.year) if winner is not None else None,
+        "winner_votes": counts.get(winner.id, 0) if winner is not None else 0,
+        "total": sum(counts.values()),
+    }

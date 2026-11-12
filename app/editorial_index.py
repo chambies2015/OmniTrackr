@@ -115,9 +115,20 @@ def _new_year() -> list[dict]:
             if year in GUIDES and new_year_challenge.is_public(year)]
 
 
+def _awards() -> list[dict]:
+    from . import awards, awards_data
+    season = awards_data.SEASON
+    listed = [{"section": "seasonal", "href": awards.BASE_PATH, "name": season["name"],
+               "summary": season["description"], "updated": season["reviewed"]}]
+    listed += [{"section": "seasonal", "href": awards.path(slug), "name": show["title"],
+                "summary": show["description"], "updated": show["reviewed"]}
+               for slug, show in awards.ordered()]
+    return listed
+
+
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _best_of() + _new_releases()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _awards() + _best_of() + _new_releases()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 

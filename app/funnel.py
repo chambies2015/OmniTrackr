@@ -91,6 +91,11 @@ GUEST = (
     ("pledge_link_created", "New Year challenge: pledge card link created"),
     ("pledge_link_opened", "New Year challenge: shared pledge opened by a visitor without an account"),
     ("pledge_signup_clicked", "New Year challenge: sign-up pressed with numbers filled in"),
+    ("ballot_started", "Awards ballot: a member made their first pick for a show"),
+    ("ballot_link_created", "Awards ballot: share link created"),
+    ("ballot_link_opened", "Awards ballot: shared ballot opened by a visitor without an account"),
+    ("ballot_signup_clicked", "Awards ballot: sign-up pressed with picks made"),
+    ("ballot_title_added", "Awards ballot: a nominee or past winner added to a library"),
     ("supporters_kofi_clicked", "Ko-fi link opened from the supporters page"),
     ("calendar_subscribe_clicked", "Release calendar subscribe button used"),
     ("tier_list_started", "Tier list: a title ranked"),
@@ -115,6 +120,14 @@ GUEST = (
     ("tonight_poll_guest_voted", "Group poll: a visitor without an account voted"),
     ("tonight_poll_voted", "Group poll: a member voted"),
     ("tonight_poll_signup_clicked", "Group poll: sign-up button pressed"),
+    ("tonight_poll_draft_started", "Group poll: a visitor without an account started a shortlist"),
+    ("tonight_poll_draft_signup", "Group poll: a visitor pressed Get the link and went to sign up"),
+    ("tonight_poll_draft_sent", "Group poll: a shortlist built before sign-up became a poll"),
+    ("tonight_poll_shared", "Group poll: a share button used"),
+    ("tonight_poll_next_round", "Group poll: another round started from a closed poll"),
+    ("tonight_poll_winner_kept", "Group poll: a member added the winner to their library or Next Up"),
+    ("tonight_poll_winner_saved", "Group poll: a visitor saved the winner to their list"),
+    ("tonight_poll_where_clicked", "Group poll: a where-to-watch link opened from a result"),
     ("friend_rec_sent", "Recommend to a friend: a title sent to friends"),
     ("friend_rec_link_opened", "Recommend to a friend: link opened by a visitor without an account"),
     ("friend_rec_claimed", "Recommend to a friend: link saved into someone's inbox"),
@@ -160,7 +173,9 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
                  "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared",
-                 "collection_signup_clicked", "pledge_signup_clicked"}
+                 "tonight_poll_draft_started", "tonight_poll_draft_signup", "tonight_poll_draft_sent", "tonight_poll_shared",
+                 "tonight_poll_winner_saved", "tonight_poll_where_clicked",
+                 "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

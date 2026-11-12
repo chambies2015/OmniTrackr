@@ -54,6 +54,9 @@ function validateDiscoverAuthReturn(value) {
     // The New Year challenge guide, back at the pledge form.
     const pledge = value.match(/^\/new-year-challenge\/20\d{2}#pledge$/);
     if (pledge && pledge[0] === value) return value;
+    // An awards show's page, back at the ballot.
+    const ballot = value.match(/^\/awards\/[a-z0-9-]{1,60}#ballot$/);
+    if (ballot && ballot[0] === value) return value;
     // A list someone shared: its public page or its share link, so signing in from a
     // "+ Add to my library" button comes back to the list.
     const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);
@@ -111,12 +114,28 @@ function captureDiscoverAuthReturn() {
     }
 }
 
+// A group poll shortlist built before signing up waits in this browser (tonight.js). The
+// email confirmation link opens a new tab, where the ?next= return is gone, so a draft the
+// visitor asked the link for still brings them back to finish it.
+function pendingPollDraft() {
+    try {
+        const draft = JSON.parse(localStorage.getItem('omnitrackr_poll_draft'));
+        const now = Date.now();
+        return Boolean(draft && draft.waiting === true && Array.isArray(draft.options) && draft.options.length >= 2
+            && Number.isFinite(draft.at) && draft.at <= now && now - draft.at < DISCOVER_AUTH_RETURN_TTL);
+    } catch (error) {
+        return false;
+    }
+}
+
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
     const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (start ? `/?start=${start}` : '/');
+    if (path) return path;
+    if (start) return `/?start=${start}`;
+    return pendingPollDraft() ? '/tonight' : '/';
 }
 
 function clearDemoStartIntent() {
@@ -288,6 +307,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -1054,6 +1074,7 @@ function showAuthModal() {
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -1112,6 +1133,7 @@ function showMainUI() {
     window.dashboardHomeCards = homeCards;
     window.refreshYearSoFar?.();
     window.refreshNewYearPledge?.();
+    window.refreshAwardsBallot?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
@@ -1197,7 +1219,9 @@ function showRegisterForm(scroll = true, { report = true } = {}) {
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
     const saved = savedGuestTitles();
-    setAuthContext(saved
+    setAuthContext(pendingPollDraft()
+        ? 'Your shortlist is saved. Make a free account and the poll link is yours.'
+        : saved
         ? `Free and private by default. The ${saved === 1 ? 'title' : `${saved} titles`} you saved move${saved === 1 ? 's' : ''} into your library when you log in.`
         : 'Free, private by default, ready in a minute.');
     document.getElementById('authError').textContent = '';

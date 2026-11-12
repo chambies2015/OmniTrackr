@@ -325,6 +325,17 @@ def _database_parts(db: Session) -> list[str]:
                 f"<lastmod>{edition['published']}</lastmod>"
                 "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
             )
+    # Awards season: the calendar and one written page per show. Shared ballots are never listed.
+    from .. import awards, awards_data
+    sitemap_parts.append(
+        f"<url><loc>{base_url}{awards.BASE_PATH}</loc><lastmod>{awards_data.SEASON['reviewed']}</lastmod>"
+        "<changefreq>weekly</changefreq><priority>0.8</priority></url>"
+    )
+    for awards_slug, awards_show in awards.ordered():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{awards.path(awards_slug)}</loc><lastmod>{awards_show['reviewed']}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
     # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
     # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
