@@ -15,12 +15,29 @@
     return;
   }
 
+  // Links in our emails carry a one-time key in the address (/?reset_token=...,
+  // /?token=..., /?email_change_token=...). Google Analytics records the address
+  // of every page it counts, and a reset key works for an hour, so the keys are
+  // taken out of the address Analytics is given. If the address can't be read,
+  // Analytics gets the path alone.
+  const PRIVATE_PARAMS = ['token', 'reset_token', 'email_change_token'];
+  function pageLocation() {
+    try {
+      const url = new URL(window.location.href);
+      PRIVATE_PARAMS.forEach(name => url.searchParams.delete(name));
+      return url.toString();
+    } catch (error) {
+      return `${window.location.origin}${window.location.pathname}`;
+    }
+  }
+
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() {
     window.dataLayer.push(arguments);
   };
   window.gtag('js', new Date());
   window.gtag('config', MEASUREMENT_ID, {
+    page_location: pageLocation(),
     anonymize_ip: true,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
