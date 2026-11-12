@@ -26,7 +26,7 @@ from .discover import page
 
 router = APIRouter(tags=["binge-calculator"])
 CSS_VERSION = "20261110-binge-2"
-JS_VERSION = "20261110-binge-2"
+JS_VERSION = "20261112-sweep-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 TITLE = "Binge calculator: how long to watch a show or read a series"
@@ -348,6 +348,22 @@ def _card_line(entry: dict) -> str:
     return f"{_plural(sums['episodes'], 'episode')} · about {_hours(sums['minutes'])} hours{' so far' if entry.get('ongoing') else ''}"
 
 
+TITLE_ROOM = 62  # what a search result shows before it cuts the title off (the Discover guides keep to it too)
+
+
+def page_title(entry: dict) -> str:
+    """The question and its answer, short enough that a search result shows the answer.
+
+    The full question is used when it fits. A long series name gets the shorter
+    "How long to watch ..." so the hours are not the part that is cut off.
+    """
+    kind, total = entry["kind"], binge.totals(entry)["minutes"]
+    answer = _clock(total) if kind == "film" else f"About {_hours(total)} hours{' so far' if entry.get('ongoing') else ''}"
+    short = f"How long to {binge.VERBS[kind]} {entry['name']}?"
+    choices = (f"{binge.heading(entry).rstrip('?')}? {answer}", f"{short} {answer}", f"{short} {answer.removeprefix('About ')}")
+    return next((title for title in choices if len(title) <= TITLE_ROOM), choices[-1])
+
+
 def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str:
     kind = entry["kind"]
     reviewed = entry["reviewed"]
@@ -394,12 +410,20 @@ def _guide_structured(slug: str, entry: dict) -> list:
     ]
 
 
+_details_cache: dict = {"index": None, "details": None}
+
+
 def _details(db: Session) -> dict:
     """{saveable id: {"url", "image"}} for guide titles with a public title page (never raises)."""
     try:
-        by_slug = {(row["kind"], row["slug"]): row for row in title_search.index(db)}
+        index = title_search.index(db)
     except Exception:
         return {}
+    # The index is one list that is swapped for a new one every ten minutes, so the
+    # answer is kept until then and a guide page view no longer walks every title on the site.
+    if _details_cache["index"] is index and _details_cache["details"] is not None:
+        return _details_cache["details"]
+    by_slug = {(row["kind"], row["slug"]): row for row in index}
     details = {}
     for entry in GUIDES.values():
         for item in binge.titles(entry):
@@ -407,6 +431,7 @@ def _details(db: Session) -> dict:
             match = by_slug.get((fields["kind"], fields["slug"]))
             if match is not None:
                 details[fields["id"]] = {"url": f"/titles/{match['kind']}/{match['slug']}", "image": match.get("image")}
+    _details_cache["index"], _details_cache["details"] = index, details
     return details
 
 
@@ -617,8 +642,7 @@ def binge_guide_page(slug: str, request: Request, db: Session = Depends(get_db))
     if entry is None:
         raise HTTPException(404, "Guide not found")
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    title = f"{binge.heading(entry).rstrip('?')}? {_card_line(entry).split(' · ', 1)[1].capitalize()}"
-    response = page(title, entry["summary"], binge.path(slug), guide_content(slug, entry, _details(db), signed_in),
+    response = page(page_title(entry), entry["summary"], binge.path(slug), guide_content(slug, entry, _details(db), signed_in),
                     indexable=binge.is_indexable(entry), structured_data=_guide_structured(slug, entry),
                     head=_head(signed_in, guest_list=True), member=signed_in)
     response.headers["Cache-Control"] = "private, no-cache"

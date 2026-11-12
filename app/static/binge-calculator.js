@@ -233,7 +233,8 @@
 
   // ------------------------------------------------------------ calendar file and share link
   function icsEscape(text) {
-    return String(text || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
+    // A lone carriage return also ends a line in some calendar apps, and the name can come from a shared link.
+    return String(text || '').replace(/\\/g, '\\\\').replace(/\r\n?|\n/g, '\\n').replace(/([,;])/g, '\\$1');
   }
 
   function icsDate(date) {
