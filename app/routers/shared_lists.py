@@ -17,8 +17,8 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["shared-lists"])
-CSS_VERSION = "20261027-a11y-speed-1"
-JS_VERSION = "20261026-clubs-1"
+CSS_VERSION = "20261112-poll-1"
+JS_VERSION = "20261112-poll-1"
 DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends, or run it as a watch club: "
                "pick one title, finish it by a date and talk it over.")
 

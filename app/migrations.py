@@ -832,6 +832,7 @@ def run_migrations():
     add_taste_match_link_column()
     add_calendar_episodes_column()
     add_next_up_started_column()
+    add_poll_round_column()
     add_lookup_indexes()
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
@@ -884,6 +885,24 @@ def add_supporter_banner_column():
             print("Added banner column to supporters table")
     except Exception as e:
         print(f"Migration warning (supporter banner): {e}")
+
+
+def add_poll_round_column():
+    """Add the link from a group poll to the round before it. Existing polls keep NULL (no earlier round)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("tonight_polls"):
+            return
+        if "previous_id" not in {col["name"] for col in inspector.get_columns("tonight_polls")}:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE tonight_polls ADD COLUMN previous_id INTEGER"))
+                conn.commit()
+                print("Added previous_id column to tonight_polls table")
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tonight_polls_previous_id ON tonight_polls(previous_id)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (poll rounds): {e}")
 
 
 def add_next_up_started_column():
