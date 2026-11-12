@@ -765,7 +765,7 @@ function handleDelegatedClick(event) {
     event.stopPropagation();
   }
 
-  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-category-accordion], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
+  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
   if (!target) return;
 
   if (target.dataset.closeOnBackdrop && event.target === target) {
@@ -794,11 +794,6 @@ function handleDelegatedClick(event) {
 
   if (target.dataset.toggleCollapsible) {
     toggleCollapsible(target.dataset.toggleCollapsible);
-    return;
-  }
-
-  if (target.dataset.toggleCategoryAccordion) {
-    toggleCategoryAccordion(target.dataset.toggleCategoryAccordion);
     return;
   }
 

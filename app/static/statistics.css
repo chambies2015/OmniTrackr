@@ -1,0 +1,425 @@
+/* Statistics tab (Nov 2026): a library overview, one format at a time, then the
+   existing Time spent, Monthly Replay and Tasteprint sections in the same card style.
+   Colours come from the tokens in app-theme.css, so night mode and supporter themes
+   carry through. Bar and column sizes are custom properties set by statistics.js. */
+
+body.app-shell #statistics-tab {
+  --stats-bar: var(--accent-solid);
+  --stats-bar-rest: color-mix(in srgb, var(--accent-solid) 24%, var(--surface-muted));
+  --stats-track: color-mix(in srgb, var(--fg) 8%, transparent);
+  --stats-surface: var(--surface-muted);
+}
+body.app-shell.dark-mode #statistics-tab {
+  --stats-bar: color-mix(in srgb, var(--primary) 80%, var(--accent-solid));
+  --stats-bar-rest: color-mix(in srgb, var(--primary) 26%, var(--surface-muted));
+  --stats-track: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+/* ---------- Page heading ---------- */
+body.app-shell .stats-head {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  justify-content: space-between;
+  margin: var(--space-2) 0 var(--space-5);
+}
+body.app-shell .stats-head__copy { min-width: 0; }
+body.app-shell .stats-head__eyebrow {
+  color: var(--teal);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+body.app-shell .stats-head h2 {
+  color: var(--fg);
+  font: 700 clamp(1.6rem, 2.6vw, 2.15rem)/1.15 var(--font-display);
+  letter-spacing: -.025em;
+  margin: 0;
+}
+body.app-shell .stats-head__lede { color: var(--fg-secondary); font-size: .95rem; line-height: 1.55; margin: 6px 0 0; }
+body.app-shell .stats-head__jump { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+body.app-shell .stats-head__jump :is(button, a) {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: var(--control-sm);
+  padding: 0 14px;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+body.app-shell .stats-head__jump :is(button, a):hover { background: var(--surface-hover); border-color: var(--border-strong); }
+body.app-shell .stats-head__jump a { color: var(--primary); }
+body.app-shell .stats-head__jump a::after { content: "\2192"; margin-left: 6px; }
+/* Monthly Replay only appears once there is a month to show. */
+body.app-shell #statistics-tab:has(#monthlyReplay[hidden]) #statsJumpReplay,
+body.app-shell #statistics-tab:has(#statsFormats[hidden]) [data-stats-jump="statsFormats"] { display: none; }
+
+/* ---------- Loading and empty states ---------- */
+body.app-shell .stats-loading {
+  align-items: center;
+  color: var(--fg-secondary);
+  display: flex;
+  font-size: var(--text-md);
+  gap: 10px;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+body.app-shell .stats-loading[hidden] { display: none; }
+body.app-shell .stats-spinner {
+  animation: spin 1s linear infinite;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  height: 18px;
+  width: 18px;
+}
+body.app-shell .stats-empty { color: var(--fg-secondary); font-size: var(--text-md); line-height: 1.5; margin: 0; }
+body.app-shell .stats-blank { display: grid; gap: var(--space-2); justify-items: center; padding: var(--space-8) var(--space-4); text-align: center; }
+body.app-shell .stats-blank p { color: var(--fg-secondary); line-height: 1.55; margin: 0; max-width: 46ch; }
+body.app-shell .stats-blank .stats-blank__title { color: var(--fg); font: 700 var(--text-xl)/1.3 var(--font-display); }
+body.app-shell .stats-blank .action-btn { margin: var(--space-2) 0 0; }
+body.app-shell #statistics-tab .content-error { color: var(--danger); margin: 0; }
+
+/* ---------- Page sections ---------- */
+body.app-shell .stats-page > * + * { margin-top: var(--space-5); }
+body.app-shell .stats-panel,
+body.app-shell #statistics-tab :is(.time-spent, .monthly-replay, .tasteprint) {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0;
+  padding: var(--space-6) 28px;
+}
+body.app-shell .stats-panel[hidden] { display: none; }
+body.app-shell .stats-panel:focus,
+body.app-shell #statistics-tab :is(.time-spent, .monthly-replay, .tasteprint):focus { outline: none; }
+body.app-shell .stats-panel:focus-visible,
+body.app-shell #statistics-tab :is(.time-spent, .monthly-replay, .tasteprint):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+body.app-shell .stats-panel__head { display: grid; gap: 4px; margin-bottom: var(--space-4); }
+body.app-shell .stats-panel__title,
+body.app-shell #statistics-tab :is(.time-spent__header, .monthly-replay, .tasteprint__header) h3 {
+  color: var(--fg);
+  font: 700 var(--text-xl)/1.25 var(--font-display);
+  letter-spacing: -.01em;
+  margin: 0;
+}
+body.app-shell .stats-overview > .stats-panel__title { margin-bottom: var(--space-4); }
+body.app-shell .stats-panel__hint { color: var(--fg-secondary); font-size: var(--text-md); line-height: 1.5; margin: 0; }
+
+/* ---------- Stat tiles: hairlines between cells, whatever the wrap ---------- */
+body.app-shell .stats-tiles {
+  --tile-bg: var(--card-bg);
+  background: var(--tile-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: 0;
+  overflow: hidden;
+}
+/* Each cell draws its own right and bottom rule into the 1px gap; the frame clips the outer ones. */
+body.app-shell .stats-tile { align-content: start; background: var(--tile-bg); box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border); display: grid; gap: 2px; padding: var(--space-4) 18px; }
+body.app-shell .stats-tile dt { color: var(--fg-secondary); font-size: var(--text-sm); font-weight: 600; }
+body.app-shell .stats-tile dd { margin: 0; }
+body.app-shell .stats-tile__value {
+  color: var(--fg);
+  font: 700 1.75rem/1.15 var(--font-display);
+  letter-spacing: -.02em;
+}
+body.app-shell .stats-tile__note { color: var(--fg-secondary); font-size: var(--text-sm); line-height: 1.4; }
+body.app-shell .stats-tiles--inset { margin-bottom: var(--space-4); }
+body.app-shell .stats-tiles--inset { --tile-bg: var(--card-bg); }
+body.app-shell .stats-tiles--inset .stats-tile__value { font-size: 1.4rem; }
+
+body.app-shell .stats-meter {
+  background: var(--stats-track);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  margin: var(--space-3) 0 var(--space-5);
+  overflow: hidden;
+}
+body.app-shell .stats-meter__fill { background: var(--stats-bar); border-radius: inherit; display: block; height: 100%; width: var(--w, 0%); }
+
+/* ---------- Cards inside a section ---------- */
+body.app-shell .stats-cards { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.app-shell .stats-cards--overview { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); margin-top: var(--space-4); }
+body.app-shell .stats-card {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  min-width: 0;
+  padding: 18px var(--space-5);
+}
+body.app-shell .stats-card--wide { grid-column: 1 / -1; }
+body.app-shell .stats-card__title { color: var(--fg); font: 700 var(--text-lg)/1.3 var(--font-body); margin: 0 0 var(--space-3); }
+body.app-shell .stats-card h5 { color: var(--fg-secondary); font: 600 var(--text-sm)/1.3 var(--font-body); margin: 0 0 var(--space-1); }
+body.app-shell .stats-card__note { color: var(--fg-secondary); font-size: var(--text-sm); line-height: 1.5; margin: var(--space-3) 0 0; }
+body.app-shell .stats-pair { display: grid; gap: var(--space-4) var(--space-6); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.app-shell .stats-card--stacked .stats-pair { grid-template-columns: minmax(0, 1fr); }
+body.app-shell .stats-hist + .stats-pair { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-4); }
+
+/* ---------- Finished, by format ---------- */
+body.app-shell .stats-legend { align-items: center; color: var(--fg-secondary); display: flex; font-size: var(--text-xs); gap: 6px; margin: 0 0 var(--space-2); }
+body.app-shell .stats-legend__key { border-radius: 3px; height: 10px; width: 10px; }
+body.app-shell .stats-legend__key--done { background: var(--stats-bar); }
+body.app-shell .stats-legend__key--left { background: var(--stats-bar-rest); margin-left: var(--space-3); }
+body.app-shell .stats-mix { display: grid; gap: 2px; list-style: none; margin: 0 -8px; padding: 0; }
+body.app-shell .stats-mix__row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  cursor: pointer;
+  display: grid;
+  font-size: var(--text-md);
+  gap: var(--space-3);
+  grid-template-columns: 7.5em minmax(0, 1fr) 5.5em;
+  min-height: 36px;
+  padding: 4px 8px;
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease);
+  width: 100%;
+}
+body.app-shell .stats-mix__row:hover { --stats-surface: var(--surface-hover); background: var(--surface-hover); }
+body.app-shell .stats-mix__label { align-items: center; display: flex; font-weight: 600; gap: 8px; min-width: 0; }
+body.app-shell :is(.stats-mix__dot, .stats-tab__dot) {
+  background: hsl(var(--fmt-hue, 262) 75% var(--fmt-dot-l));
+  border-radius: 50%;
+  flex: none;
+  height: 8px;
+  width: 8px;
+}
+body.app-shell .stats-mix__track { display: block; height: 10px; }
+body.app-shell .stats-mix__total { background: var(--stats-bar-rest); border-radius: 0 4px 4px 0; display: block; height: 100%; overflow: hidden; width: var(--w, 0%); }
+/* The 2px edge in the card colour keeps the two parts apart without a stroke. */
+body.app-shell .stats-mix__done { background: var(--stats-bar); border-right: 2px solid var(--stats-surface); box-sizing: border-box; display: block; height: 100%; width: var(--w, 0%); }
+body.app-shell .stats-mix__done[data-stats-w="0.0"] { border-right: 0; }
+body.app-shell .stats-mix__value { color: var(--fg-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+body.app-shell .stats-mix__value strong { color: var(--fg); }
+
+/* ---------- Rating columns ---------- */
+body.app-shell .stats-hist {
+  display: grid;
+  gap: 4px;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  height: 168px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.app-shell .stats-hist__col { display: grid; grid-template-rows: minmax(0, 1fr) 22px; min-width: 0; }
+/* 18px of headroom so the count above a full-height column still fits. */
+body.app-shell .stats-hist__plot { border-bottom: 1px solid var(--border-strong); margin-top: 18px; position: relative; }
+body.app-shell .stats-hist__bar {
+  background: var(--stats-bar);
+  border-radius: 4px 4px 0 0;
+  bottom: 0;
+  height: var(--h, 0%);
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  transition: filter var(--dur-fast) var(--ease);
+  width: min(28px, 72%);
+}
+body.app-shell .stats-hist__col:hover .stats-hist__bar { filter: brightness(1.15); }
+body.app-shell .stats-hist__count {
+  bottom: calc(var(--h, 0%) + 3px);
+  color: var(--fg);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  left: 0;
+  line-height: 1;
+  position: absolute;
+  right: 0;
+  text-align: center;
+}
+body.app-shell .stats-hist__label { align-self: end; color: var(--fg-secondary); font-size: var(--text-xs); font-variant-numeric: tabular-nums; text-align: center; }
+
+/* ---------- Horizontal bars ---------- */
+body.app-shell .stats-bars { display: grid; gap: 8px var(--space-3); grid-template-columns: fit-content(42%) minmax(0, 1fr) max-content; list-style: none; margin: 0; padding: 0; }
+body.app-shell .stats-bars__row { align-items: center; display: grid; gap: var(--space-3); grid-column: 1 / -1; grid-template-columns: 5.5em minmax(0, 1fr) 3ch; }
+@supports (grid-template-columns: subgrid) {
+  body.app-shell .stats-bars__row { grid-template-columns: subgrid; }
+}
+body.app-shell .stats-bars__label { color: var(--fg); font-size: var(--text-md); font-weight: 500; overflow-wrap: anywhere; }
+body.app-shell .stats-bars__track { background: var(--stats-track); border-radius: 0 4px 4px 0; display: block; height: 10px; }
+body.app-shell .stats-bars__fill { background: var(--stats-bar); border-radius: 0 4px 4px 0; display: block; height: 100%; min-width: 3px; width: var(--w, 0%); }
+body.app-shell .stats-bars__value { color: var(--fg); font-size: var(--text-md); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+
+/* ---------- Ranked lists ---------- */
+body.app-shell .stats-rank { list-style: none; margin: 0; padding: 0; }
+body.app-shell .stats-rank li {
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: 9px 0;
+}
+body.app-shell .stats-rank li:last-child { border-bottom: 0; padding-bottom: 0; }
+body.app-shell .stats-rank__name { color: var(--fg); font-size: var(--text-md); font-weight: 500; min-width: 0; overflow-wrap: break-word; }
+body.app-shell .stats-rank__value { color: var(--fg); flex: none; font-size: var(--text-md); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+body.app-shell .stats-rank__value small { color: var(--fg-secondary); font-size: var(--text-xs); font-weight: 500; margin-left: 4px; }
+
+/* ---------- Format tabs ---------- */
+/* Positioned so the screen-reader-only text inside each tab scrolls with it on phones. */
+body.app-shell .stats-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); position: relative; }
+body.app-shell .stats-tab {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: var(--text-md);
+  font-weight: 600;
+  gap: 8px;
+  min-height: var(--control-md);
+  padding: 0 14px;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+body.app-shell .stats-tab:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .stats-tab[aria-selected="true"] {
+  background: hsl(var(--fmt-hue, 262) 70% 50% / .13);
+  border-color: hsl(var(--fmt-hue, 262) 60% var(--fmt-dot-l) / .7);
+  color: var(--fg);
+}
+body.app-shell .stats-tab[aria-selected="true"] .stats-tab__count { color: var(--fg); }
+body.app-shell .stats-tab__count { color: var(--fg-secondary); font-size: var(--text-xs); font-variant-numeric: tabular-nums; font-weight: 600; }
+body.app-shell .stats-format { margin-top: var(--space-5); }
+body.app-shell .stats-format[hidden] { display: none; }
+body.app-shell .stats-format:focus-visible { border-radius: var(--radius-md); outline: 3px solid var(--primary); outline-offset: 4px; }
+
+/* ---------- Time spent, Monthly Replay ---------- */
+body.app-shell #statistics-tab :is(.time-spent__eyebrow, .monthly-replay__eyebrow, .tasteprint__eyebrow) {
+  color: var(--teal);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin: 0 0 6px;
+}
+body.app-shell #statistics-tab .time-spent { --time-spent-bar: var(--stats-bar); --time-spent-track: var(--stats-track); }
+body.app-shell #statistics-tab :is(.time-spent__header, .tasteprint__header) p:last-child { color: var(--fg-secondary); font-size: var(--text-md); margin-top: 6px; opacity: 1; }
+body.app-shell #statistics-tab :is(.time-spent__status, .time-spent__compare, .time-spent__year, .tasteprint__status, .tasteprint__note, .monthly-replay__empty) { color: var(--fg-secondary); opacity: 1; }
+body.app-shell #statistics-tab .time-spent__total strong { font-family: var(--font-display); letter-spacing: -.03em; }
+body.app-shell #statistics-tab .time-spent__row { font-size: var(--text-md); }
+body.app-shell #statistics-tab .time-spent__label { font-weight: 600; }
+body.app-shell #statistics-tab .time-spent__track { border-radius: 0 4px 4px 0; height: 10px; }
+body.app-shell #statistics-tab .time-spent__value small { color: var(--fg-secondary); opacity: 1; }
+body.app-shell #statistics-tab .time-spent__method { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-3); }
+body.app-shell #statistics-tab .time-spent__method summary { border-radius: var(--radius-sm); }
+body.app-shell #statistics-tab .time-spent__actions { flex: none; }
+body.app-shell #statistics-tab .time-spent__actions .action-btn { margin: 0; white-space: nowrap; }
+/* Wide screens: the total on the left, the bars for each format on the right. */
+@media (min-width: 1100px) {
+  body.app-shell #statistics-tab .time-spent:has(.time-spent__bars) { align-items: start; column-gap: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: repeat(3, auto) 1fr; }
+  body.app-shell #statistics-tab .time-spent:has(.time-spent__bars) > * { grid-column: 1; }
+  body.app-shell #statistics-tab #timeSpentContent { display: contents; }
+  body.app-shell #statistics-tab .time-spent__hero { grid-column: 1; }
+  body.app-shell #statistics-tab .time-spent__bars { grid-column: 2; grid-row: 1 / -1; margin: 0; }
+  body.app-shell #statistics-tab .time-spent__method { align-self: start; grid-column: 1; }
+}
+
+body.app-shell #statistics-tab .monthly-replay__period { color: var(--fg-secondary); font-size: var(--text-sm); opacity: 1; }
+body.app-shell #statistics-tab .monthly-replay__stats {
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  gap: 1px;
+  margin: var(--space-4) 0;
+  overflow: hidden;
+}
+body.app-shell #statistics-tab .monthly-replay__stat { background: var(--surface-muted); border: 0; border-radius: 0; padding: var(--space-3) var(--space-2); }
+body.app-shell #statistics-tab .monthly-replay__stat strong { font: 700 1.4rem/1.2 var(--font-display); }
+body.app-shell #statistics-tab .monthly-replay__stat span { color: var(--fg-secondary); font-size: var(--text-sm); opacity: 1; }
+body.app-shell #statistics-tab .monthly-replay__highlight { background: var(--surface-muted); border-left-color: var(--stats-bar); border-radius: var(--radius-sm); }
+body.app-shell #statistics-tab .monthly-replay__highlight span { color: var(--fg-secondary); opacity: 1; }
+body.app-shell #statistics-tab .monthly-replay__highlight p { color: var(--fg); opacity: 1; }
+body.app-shell #statistics-tab .monthly-replay__highlights { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+@media (min-width: 1100px) {
+  body.app-shell #statistics-tab #monthlyReplayContent { align-items: start; column-gap: var(--space-8); display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); }
+  body.app-shell #statistics-tab #monthlyReplayContent > :last-child { margin-top: var(--space-4); }
+  body.app-shell #statistics-tab .monthly-replay__stats { margin-bottom: 0; }
+}
+
+/* ---------- Tasteprint: controls beside the card on wide screens ---------- */
+body.app-shell #statistics-tab .tasteprint__privacy { background: var(--teal-soft); border-color: transparent; color: var(--teal); }
+body.app-shell #statistics-tab .tasteprint__category { background: transparent; border-color: var(--border); min-height: var(--control-sm); }
+body.app-shell #statistics-tab .tasteprint__category:has(input:checked) { background: var(--accent-soft); border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
+body.app-shell #statistics-tab .tasteprint__category small { color: var(--fg-secondary); opacity: 1; }
+body.app-shell #statistics-tab .tasteprint__category:focus-within { outline: 3px solid var(--primary); outline-offset: 2px; }
+body.app-shell #statistics-tab .tasteprint__category input:focus-visible { outline: none; }
+body.app-shell #statistics-tab .tasteprint-card__brand { flex-wrap: wrap; gap: 4px 12px; }
+@media (min-width: 1100px) {
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) {
+    align-items: start;
+    column-gap: var(--space-8);
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    grid-template-rows: repeat(5, auto) 1fr;
+  }
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) > * { grid-column: 1; }
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) > .tasteprint-card { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) .tasteprint__header { flex-direction: column; gap: var(--space-3); }
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) .tasteprint__name-choice { flex-basis: 100%; margin: 0; order: 3; }
+}
+
+/* ---------- Narrower screens ---------- */
+@media (max-width: 1180px) {
+  body.app-shell .stats-cards--overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.app-shell .stats-cards--overview > .stats-card--mix { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  body.app-shell .stats-head { align-items: stretch; flex-direction: column; flex-wrap: nowrap; margin-top: 0; }
+  body.app-shell .stats-head__jump,
+  body.app-shell .stats-tabs {
+    flex-wrap: nowrap;
+    margin-inline: -16px;
+    overflow-x: auto;
+    padding: 4px 16px;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  body.app-shell :is(.stats-head__jump, .stats-tabs)::-webkit-scrollbar { display: none; }
+  body.app-shell .stats-head__jump :is(button, a),
+  body.app-shell .stats-tab { min-height: 44px; }
+  body.app-shell .stats-panel,
+  body.app-shell #statistics-tab :is(.time-spent, .monthly-replay, .tasteprint) { border-radius: var(--radius-md); padding: 18px var(--space-4); }
+  body.app-shell .stats-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.app-shell .stats-tile { padding: var(--space-3) 14px; }
+  body.app-shell .stats-tile__value { font-size: 1.45rem; }
+  body.app-shell .stats-cards,
+  body.app-shell .stats-cards--overview,
+  body.app-shell .stats-pair { grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .stats-card { padding: var(--space-4) 14px; }
+  body.app-shell .stats-mix__row { gap: var(--space-2); grid-template-columns: 7.4em minmax(0, 1fr) 4.4em; min-height: 44px; }
+  body.app-shell .stats-hist { gap: 2px; height: 150px; }
+  body.app-shell #statistics-tab .tasteprint__category { min-height: 44px; padding-inline: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .stats-spinner { animation: none; }
+  body.app-shell :is(.stats-tab, .stats-mix__row, .stats-hist__bar, .stats-head__jump :is(button, a)) { transition: none; }
+}
+@media (forced-colors: active) {
+  body.app-shell :is(.stats-bars__fill, .stats-hist__bar, .stats-mix__done, .stats-meter__fill, .stats-legend__key--done) { background: CanvasText; forced-color-adjust: none; }
+  body.app-shell :is(.stats-bars__track, .stats-mix__total, .stats-meter, .stats-legend__key--left) { background: Canvas; border: 1px solid CanvasText; box-sizing: border-box; }
+  body.app-shell .stats-tab[aria-selected="true"] { border: 2px solid Highlight; }
+}

@@ -570,6 +570,7 @@
     }
     await window.openAccountModal();
     const section = $('supporterSection');
+    window.OmniSettings?.reveal(section);
     if (section && section.scrollIntoView) section.scrollIntoView({ block: 'start' });
     try {
       window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
@@ -580,6 +581,7 @@
     if (typeof window.openAccountModal !== 'function') return;
     await window.openAccountModal();
     const section = $('supporterSection');
+    window.OmniSettings?.reveal(section);
     if (section && section.scrollIntoView) section.scrollIntoView({ block: 'start' });
   }
 

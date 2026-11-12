@@ -303,6 +303,7 @@
     }
     await window.openAccountModal();
     const section = $('followSettings');
+    window.OmniSettings?.reveal(section);
     if (section && section.scrollIntoView) section.scrollIntoView({ block: 'start' });
     if (section && typeof section.focus === 'function') section.focus({ preventScroll: true });
     try {

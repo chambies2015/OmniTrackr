@@ -1,5 +1,5 @@
-// Settings dialog: the section menu, links like /#settings-privacy, and a short
-// "Saved" note that stays in view while the page scrolls. Saving itself stays in
+// Settings dialog: the section menu (one section shown at a time), links like
+// /#settings-privacy, and a short "Saved" note that stays in view while the page scrolls. Saving itself stays in
 // dashboard/account.js and the scripts that own each section (push.js fills the
 // phone notifications panel).
 (function () {
@@ -21,48 +21,47 @@
     });
   }
 
+  // One section at a time: choosing a menu item swaps the column to that section,
+  // so nobody scrolls past six others to find a switch.
   function showGroup(key, { focus = true } = {}) {
     const group = $(`settings-${key}`);
     if (!group) return;
     markCurrent(key);
-    // Scroll only the settings column, so the dialog's header and menu stay put.
     const panels = $('accountSettingsPanels');
-    const top = Math.max(0, group.offsetTop - 4);
+    document.querySelectorAll('[data-settings-group]').forEach(other => {
+      if (other.classList) other.classList.toggle('is-current', other === group);
+    });
+    if (panels && panels.classList) panels.classList.add('account-settings__panels--paged');
+    // Start the section at its top. Only the settings column scrolls; the header and menu stay put.
     if (panels && typeof panels.scrollTo === 'function') {
       // Older browsers reject 'instant'; a plain jump is fine there.
-      try { panels.scrollTo({ top, behavior: 'instant' }); } catch (error) { panels.scrollTop = top; }
-    } else if (typeof group.scrollIntoView === 'function') group.scrollIntoView({ block: 'start' });
+      try { panels.scrollTo({ top: 0, behavior: 'instant' }); } catch (error) { panels.scrollTop = 0; }
+    }
     if (focus && typeof group.focus === 'function') group.focus({ preventScroll: true });
     // The section menu scrolls sideways on phones; keep the chosen item in view.
     const link = document.querySelector(`[data-settings-link="${key}"]`);
     if (link && typeof link.scrollIntoView === 'function') link.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
-  // The section being read: the last one whose top has passed the upper third
-  // of the column, or the last one when the column is scrolled to the end.
-  function currentGroup(panels) {
-    const groups = Array.from(panels.querySelectorAll('[data-settings-group]'));
-    if (!groups.length) return null;
-    if (panels.scrollTop + panels.clientHeight >= panels.scrollHeight - 2) return groups[groups.length - 1].dataset.settingsGroup;
-    const line = panels.scrollTop + panels.clientHeight / 3;
-    let current = groups[0];
-    groups.forEach(group => { if (group.offsetTop <= line) current = group; });
-    return current.dataset.settingsGroup;
+  // Other scripts scroll to a card by id (the import studio, supporter perks, followers).
+  // Bring that card's section forward first, or the scroll has nowhere to go.
+  function reveal(target) {
+    const element = typeof target === 'string' ? $(target) : target;
+    const group = element && typeof element.closest === 'function' ? element.closest('[data-settings-group]') : null;
+    if (group && group.dataset.settingsGroup) showGroup(group.dataset.settingsGroup, { focus: false });
+    return element || null;
   }
 
-  function watchScroll() {
-    const panels = $('accountSettingsPanels');
-    if (!panels) return;
-    let queued = false;
-    panels.addEventListener('scroll', () => {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(() => {
-        queued = false;
-        const key = currentGroup(panels);
-        if (key) markCurrent(key);
-      });
-    }, { passive: true });
+  // Settings opens on Profile each time, whichever section was open when it closed.
+  function watchOpen() {
+    const modal = $('accountModal');
+    if (!modal || typeof MutationObserver !== 'function') return;
+    let open = false;
+    new MutationObserver(() => {
+      const visible = Boolean(modal.style.display) && modal.style.display !== 'none';
+      if (visible && !open) showGroup('profile', { focus: false });
+      open = visible;
+    }).observe(modal, { attributes: true, attributeFilter: ['style'] });
   }
 
   // A success message often appears far down a long form, after a scroll. Repeat
@@ -131,13 +130,14 @@
         showGroup(link.dataset.settingsLink);
       }
     });
-    watchScroll();
+    showGroup('profile', { focus: false });
+    watchOpen();
     watchMessages();
     openFromHash();
     window.addEventListener('hashchange', () => openFromHash());
   }
 
-  window.OmniSettings = { groupFromHash, showGroup, showToast };
+  window.OmniSettings = { groupFromHash, showGroup, reveal, showToast };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 }());
