@@ -114,12 +114,28 @@ function captureDiscoverAuthReturn() {
     }
 }
 
+// A group poll shortlist built before signing up waits in this browser (tonight.js). The
+// email confirmation link opens a new tab, where the ?next= return is gone, so a draft the
+// visitor asked the link for still brings them back to finish it.
+function pendingPollDraft() {
+    try {
+        const draft = JSON.parse(localStorage.getItem('omnitrackr_poll_draft'));
+        const now = Date.now();
+        return Boolean(draft && draft.waiting === true && Array.isArray(draft.options) && draft.options.length >= 2
+            && Number.isFinite(draft.at) && draft.at <= now && now - draft.at < DISCOVER_AUTH_RETURN_TTL);
+    } catch (error) {
+        return false;
+    }
+}
+
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
     const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (start ? `/?start=${start}` : '/');
+    if (path) return path;
+    if (start) return `/?start=${start}`;
+    return pendingPollDraft() ? '/tonight' : '/';
 }
 
 function clearDemoStartIntent() {
@@ -1203,7 +1219,9 @@ function showRegisterForm(scroll = true, { report = true } = {}) {
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
     const saved = savedGuestTitles();
-    setAuthContext(saved
+    setAuthContext(pendingPollDraft()
+        ? 'Your shortlist is saved. Make a free account and the poll link is yours.'
+        : saved
         ? `Free and private by default. The ${saved === 1 ? 'title' : `${saved} titles`} you saved move${saved === 1 ? 's' : ''} into your library when you log in.`
         : 'Free, private by default, ready in a minute.');
     document.getElementById('authError').textContent = '';

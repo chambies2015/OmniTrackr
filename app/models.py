@@ -1698,6 +1698,8 @@ class TonightPoll(Base):
     # Set when the poll closes, early by the owner or on the first look after closes_at.
     closed_at = Column(DateTime, nullable=True)
     winner_id = Column(Integer, nullable=True)
+    # Nov 2026: the poll this one is another round of. Polls made before then keep NULL.
+    previous_id = Column(Integer, nullable=True, index=True)
 
     options = relationship("TonightPollOption", cascade="all, delete-orphan", order_by="TonightPollOption.position")
     votes = relationship("TonightPollVote", cascade="all, delete-orphan")

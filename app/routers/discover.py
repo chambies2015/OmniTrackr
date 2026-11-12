@@ -38,12 +38,24 @@ NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("
                 ("/best-of", "best-of"), ("/new-releases", "new-releases"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""), ("/binge-calculator", ""), ("/awards", "awards"), ("/start", ""))
 
 
-def page(title, description, path, content, *, indexable=True, structured_data=None, head='', member=False):
+DEFAULT_SHARE_IMAGE = ('<meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">'
+                       '<meta name="twitter:card" content="summary">')
+
+
+def page(title, description, path, content, *, indexable=True, structured_data=None, head='', member=False,
+         share_image=None):
     template = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
     nav = next((key for prefix, key in NAV_SECTIONS if path == prefix or path.startswith(prefix + "/")), "discover")
     # Pages only signed-in members see point the header at their library, not at signing up.
     html = apply_site_chrome(template.replace("<!--SITE_NAV:discover-->", f"<!--SITE_NAV:{nav}-->", 1), member=member)
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
+    if share_image:
+        # A 1200x630 card of the page's own (a full https URL) in place of the site logo.
+        image = escape(share_image, quote=True)
+        html = html.replace(DEFAULT_SHARE_IMAGE, (
+            f'<meta property="og:image" content="{image}"><meta property="og:image:width" content="1200">'
+            '<meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">'
+            f'<meta name="twitter:image" content="{image}">'), 1)
     for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
         html = html.replace("{{" + key + "}}", value)
     # Escape script delimiters even though the editorial catalog is maintained in code.

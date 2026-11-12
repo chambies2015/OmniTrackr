@@ -593,6 +593,10 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+        elif route.path == "/auth/verify-email" and 'GET' in route.methods:
+            # The page calls this once for each emailed link that is opened. It was the one
+            # step of signing up that anyone could call as often as they liked.
+            bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:
@@ -1056,6 +1060,14 @@ for route in tonight_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_tonight_create)
     elif path == "/api/tonight/{token}/vote" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_tonight_vote)
+    elif path == "/tonight/{token}/card.png":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif path == "/api/tonight/{token}/where":
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path in ("/api/tonight/{token}/again", "/api/tonight/{token}/keep"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/tonight/starters":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
 app.include_router(tonight_router.router)
 
 from .routers import weekly_roundup as weekly_roundup_router

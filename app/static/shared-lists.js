@@ -434,6 +434,23 @@
     output.hidden = false;
   }
 
+  // Hands the list's most wanted titles to the group poll page (/tonight) as a shortlist to send.
+  // The shortlist waits in this browser under the key tonight.js reads; nothing is made until they press the button there.
+  function startPoll(items, name) {
+    const options = items.slice().sort((a, b) => b.votes.length - a.votes.length).slice(0, 8).map(item => ({
+      kind: item.kind, title: item.title, year: item.year || null,
+      slug: item.url ? item.url.split('/').pop() : null, image: item.image || null,
+    }));
+    try {
+      localStorage.setItem('omnitrackr_poll_draft', JSON.stringify({
+        at: Date.now(), question: '', hours: 3, waiting: false, from: `"${String(name || 'your list').slice(0, 60)}"`, options,
+      }));
+    } catch (error) {
+      flashStatus('Your browser didn\'t let us carry the list over. Open Group poll and add the titles there.');
+      return;
+    }
+    window.location.href = '/tonight';
+  }
 
   // ------------------------------------------------------------------ watch club
 
@@ -875,7 +892,10 @@
       const output = el('p', 'sl-pick');
       output.hidden = true;
       output.setAttribute('role', 'status');
-      top.appendChild(button('Pick one for us', 'sl-action', () => pickOne(shown.length ? shown : data.open, output)));
+      const tools = el('div', 'sl-section__tools');
+      tools.appendChild(button('Pick one for us', 'sl-action', () => pickOne(shown.length ? shown : data.open, output)));
+      tools.appendChild(button('Put it to a vote', 'sl-action', () => startPoll(shown.length ? shown : data.open, data.name)));
+      top.appendChild(tools);
       upNext.appendChild(top);
       upNext.appendChild(output);
     } else {

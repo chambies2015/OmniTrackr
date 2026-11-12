@@ -58,33 +58,57 @@ def by_kind() -> dict[str, list[str]]:
     return {kind: [slug for slug, entry in GUIDES.items() if entry["kind"] == kind] for kind in KIND_ORDER}
 
 
+_TITLE_INDEX: dict = {}
+
+
+def _title_index() -> dict:
+    """{(library kind, normalized name): [(slug, guide, its titles, the title)]} in guide order.
+
+    The guides never change while the app runs, so this is built once. Without it every
+    lookup walked all the guides and normalized each name again, and "what you have left"
+    does two lookups for every unfinished title in a library.
+    """
+    if not _TITLE_INDEX:
+        built: dict = {}
+        for slug, entry in GUIDES.items():
+            items = titles(entry)
+            for item in items:
+                for name in in_order.names(item):
+                    built.setdefault((item["kind"], name), []).append((slug, entry, items, item))
+        # Filled in one step, so a request on another thread never reads half an index.
+        _TITLE_INDEX.update(built)
+    return _TITLE_INDEX
+
+
+def _title_matches(kind: str, title: str, year=None):
+    """Guide titles a library title could be, first match first."""
+    for match in _title_index().get((kind, title_pages.normalize(title)), ()):
+        if in_order._same_year(match[3], year):
+            yield match
+
+
 def known_length(kind: str, title: str, year=None) -> dict:
     """Checked numbers for one library title, where a guide covers it.
 
     ``total`` is minutes at the default pace. Shows also get ``episodes`` and books ``pages``.
     """
-    wanted = title_pages.normalize(title)
-    for entry in GUIDES.values():
-        items = titles(entry)
-        for item in items:
-            if not (item["kind"] == kind and wanted in in_order.names(item) and in_order._same_year(item, year)):
-                continue
-            if item["part"] is not None:
-                part = entry["parts"][int(item["part"])]
-                known = {"total": minutes(entry, part)}
-                if entry["kind"] == "book":
-                    known["pages"] = pages(part)
-                return known
-            parts = [part for part in core(entry) if unit(entry, part) == "episode"]
-            if len(items) > 1:
-                # A guide over two shows (Naruto, then Shippuden) names a part after each.
-                parts = [part for part in parts if title_pages.normalize(part["name"]) == title_pages.normalize(item["title"])]
-            episode_count = sum(count(part) for part in parts)
-            if not episode_count:
-                return {}
-            seasonal = all(part["name"] == f"Season {index}" for index, part in enumerate(parts, 1))
-            return {"total": sum(minutes(entry, part) for part in parts), "episodes": episode_count,
-                    "seasons": [count(part) for part in parts] if seasonal else None}
+    for _, entry, items, item in _title_matches(kind, title, year):
+        if item["part"] is not None:
+            part = entry["parts"][int(item["part"])]
+            known = {"total": minutes(entry, part)}
+            if entry["kind"] == "book":
+                known["pages"] = pages(part)
+            return known
+        parts = [part for part in core(entry) if unit(entry, part) == "episode"]
+        if len(items) > 1:
+            # A guide over two shows (Naruto, then Shippuden) names a part after each.
+            parts = [part for part in parts if title_pages.normalize(part["name"]) == title_pages.normalize(item["title"])]
+        episode_count = sum(count(part) for part in parts)
+        if not episode_count:
+            return {}
+        seasonal = all(part["name"] == f"Season {index}" for index, part in enumerate(parts, 1))
+        return {"total": sum(minutes(entry, part) for part in parts), "episodes": episode_count,
+                "seasons": [count(part) for part in parts] if seasonal else None}
     return {}
 
 
@@ -230,12 +254,7 @@ def find(kind: str, slug: str) -> Optional[dict]:
 
 def for_title(kind: str, title: str, year=None) -> Optional[str]:
     """The guide whose series is (or includes) this title page's title, if there is one."""
-    wanted = title_pages.normalize(title)
-    for slug, entry in GUIDES.items():
-        for item in titles(entry):
-            if item["kind"] == kind and wanted in in_order.names(item) and in_order._same_year(item, year):
-                return slug
-    return None
+    return next((slug for slug, _, _, _ in _title_matches(kind, title, year)), None)
 
 
 def _watched(db: Session, user_id: int, kind: str, row_id: int) -> Optional[int]:

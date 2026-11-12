@@ -194,6 +194,7 @@
 .sl-manual__label { color: var(--site-soft); font-size: .92rem; font-weight: 600; }
 .sl-section__head { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
 .sl-section__head h2 { font-size: 1.35rem; margin: 0; }
+.sl-section__tools { align-items: center; display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .sl-pick {
   align-items: baseline;
   background: rgba(251, 191, 36, .1);
