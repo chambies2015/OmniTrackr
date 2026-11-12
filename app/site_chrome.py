@@ -31,6 +31,7 @@ NAV_MENUS = (
     ("explore", "Explore", (
         ("discover", "Discover", "/discover", "Trails that connect film, TV, games, books and more"),
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
+        ("awards", "Awards season", "/awards", "Dates, nominees and a ballot for each big show"),
         ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
         ("new-releases", "Release guides", "/new-releases", "The month's new releases worth your time"),
         ("titles", "Popular & trending", "/titles", "Most tracked, trending now and top rated"),
@@ -87,6 +88,7 @@ FOOTER_GROUPS = (
     ("Explore", (
         ("Discover", "/discover"),
         ("Best of 2026", "/best-of"),
+        ("Awards season", "/awards"),
         ("Release Radar", "/release-radar"),
         ("Release guides", "/new-releases"),
         ("New this week", "/new-this-week"),

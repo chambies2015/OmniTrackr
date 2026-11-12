@@ -54,6 +54,9 @@ function validateDiscoverAuthReturn(value) {
     // The New Year challenge guide, back at the pledge form.
     const pledge = value.match(/^\/new-year-challenge\/20\d{2}#pledge$/);
     if (pledge && pledge[0] === value) return value;
+    // An awards show's page, back at the ballot.
+    const ballot = value.match(/^\/awards\/[a-z0-9-]{1,60}#ballot$/);
+    if (ballot && ballot[0] === value) return value;
     // A list someone shared: its public page or its share link, so signing in from a
     // "+ Add to my library" button comes back to the list.
     const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);
@@ -288,6 +291,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -1054,6 +1058,7 @@ function showAuthModal() {
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -1112,6 +1117,7 @@ function showMainUI() {
     window.dashboardHomeCards = homeCards;
     window.refreshYearSoFar?.();
     window.refreshNewYearPledge?.();
+    window.refreshAwardsBallot?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();

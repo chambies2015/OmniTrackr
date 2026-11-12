@@ -91,6 +91,11 @@ GUEST = (
     ("pledge_link_created", "New Year challenge: pledge card link created"),
     ("pledge_link_opened", "New Year challenge: shared pledge opened by a visitor without an account"),
     ("pledge_signup_clicked", "New Year challenge: sign-up pressed with numbers filled in"),
+    ("ballot_started", "Awards ballot: a member made their first pick for a show"),
+    ("ballot_link_created", "Awards ballot: share link created"),
+    ("ballot_link_opened", "Awards ballot: shared ballot opened by a visitor without an account"),
+    ("ballot_signup_clicked", "Awards ballot: sign-up pressed with picks made"),
+    ("ballot_title_added", "Awards ballot: a nominee or past winner added to a library"),
     ("supporters_kofi_clicked", "Ko-fi link opened from the supporters page"),
     ("calendar_subscribe_clicked", "Release calendar subscribe button used"),
     ("tier_list_started", "Tier list: a title ranked"),
@@ -160,7 +165,7 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
                  "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared",
-                 "collection_signup_clicked", "pledge_signup_clicked"}
+                 "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:
