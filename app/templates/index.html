@@ -49,11 +49,11 @@
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <script src="/static/visit.js?v=20261030-people-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261106-lists-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261112-stats-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261106-lists-1">
+  <link rel="stylesheet" href="./styles.css?v=20261112-stats-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261030-design-1">
@@ -71,6 +71,7 @@
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
+  <link rel="stylesheet" href="/static/statistics.css?v=20261112-stats-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261030-steam-3">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261104-gifts-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
@@ -79,7 +80,7 @@
   <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261110-signin-1">
-  <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -1975,20 +1976,62 @@
 
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
-      <div class="card">
-        <div class="stats-page-heading">
-          <p class="stats-page-heading__eyebrow">Your numbers</p>
-          <h2>Statistics</h2>
+      <header class="stats-head">
+        <div class="stats-head__copy">
+          <p class="stats-head__eyebrow">Your numbers</p>
+          <h2 id="statsTitle">Statistics</h2>
+          <p class="stats-head__lede" id="statsLede">Everything you have saved, counted up.</p>
         </div>
-        <div id="statsLoading" style="text-align: center; padding: 40px;">
-          <div
-            style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
-          </div>
-          <p style="margin-top: 16px; color: var(--fg); font-size: 1.1rem;">Loading statistics...</p>
-        </div>
+        <nav class="stats-head__jump" aria-label="Sections on this page">
+          <button type="button" data-stats-jump="statsFormats">By format</button>
+          <button type="button" data-stats-jump="timeSpent">Time spent</button>
+          <button type="button" data-stats-jump="monthlyReplay" id="statsJumpReplay">This month</button>
+          <button type="button" data-stats-jump="tasteprint">Tasteprint</button>
+          <a href="/year-in-review">Year in review</a>
+        </nav>
+      </header>
+      <div id="statsLoading" class="stats-loading" role="status">
+        <span class="stats-spinner" aria-hidden="true"></span>
+        <span>Loading your statistics…</span>
       </div>
 
-      <div id="statsContent" style="display: none;">
+      <div id="statsContent" class="stats-page">
+        <section id="statsOverview" class="stats-panel stats-overview" aria-labelledby="statsOverviewTitle">
+          <h3 id="statsOverviewTitle" class="stats-panel__title">Your whole library</h3>
+          <div id="libraryInsightsStatsLoading" class="stats-loading" role="status" hidden>
+            <span class="stats-spinner" aria-hidden="true"></span>
+            <span>Counting your library…</span>
+          </div>
+          <div id="libraryInsightsStatsData"></div>
+        </section>
+
+        <section id="statsFormats" class="stats-panel stats-formats" aria-labelledby="statsFormatsTitle" tabindex="-1">
+          <div class="stats-panel__head">
+            <h3 id="statsFormatsTitle" class="stats-panel__title">One format at a time</h3>
+            <p class="stats-panel__hint">Ratings, release decades and the details that only make sense for one kind of title.</p>
+          </div>
+          <div id="statsFormatTabs" class="stats-tabs" role="tablist" aria-labelledby="statsFormatsTitle"></div>
+          <div id="statsFormatPanels" class="stats-format-panels"></div>
+        </section>
+
+        <section id="timeSpent" class="time-spent" aria-labelledby="timeSpentTitle">
+          <div class="time-spent__header">
+            <div>
+              <p class="time-spent__eyebrow">Estimated from your library</p>
+              <h3 id="timeSpentTitle">Time spent</h3>
+              <p>Roughly how long your finished titles took, plus what you've got through on the ones you're partway into.</p>
+            </div>
+            <div class="time-spent__actions">
+              <button type="button" class="action-btn" id="timeSpentDownload" data-action="time-spent-download" disabled>Download PNG</button>
+            </div>
+          </div>
+          <div id="timeSpentStatus" class="time-spent__status" role="status" aria-live="polite">Adding up your library…</div>
+          <div id="timeSpentContent"></div>
+          <details class="time-spent__method">
+            <summary>How this is counted</summary>
+            <div id="timeSpentMethod"></div>
+          </details>
+        </section>
         <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
           <div class="monthly-replay__header">
             <div>
@@ -2029,162 +2072,6 @@
           </article>
           <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
         </section>
-        <section id="timeSpent" class="time-spent" aria-labelledby="timeSpentTitle">
-          <div class="time-spent__header">
-            <div>
-              <p class="time-spent__eyebrow">Estimated from your library</p>
-              <h3 id="timeSpentTitle">Time spent</h3>
-              <p>Roughly how long your finished titles took, plus what you've got through on the ones you're partway into.</p>
-            </div>
-            <div class="time-spent__actions">
-              <button type="button" class="action-btn" id="timeSpentDownload" data-action="time-spent-download" disabled>Download PNG</button>
-            </div>
-          </div>
-          <div id="timeSpentStatus" class="time-spent__status" role="status" aria-live="polite">Adding up your library…</div>
-          <div id="timeSpentContent"></div>
-          <details class="time-spent__method">
-            <summary>How this is counted</summary>
-            <div id="timeSpentMethod"></div>
-          </details>
-        </section>
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="library-insights">
-            <h3>Library Insights</h3>
-            <span class="accordion-icon" id="libraryInsightsStatsIcon">&#9654;</span>
-          </div>
-          <div class="accordion-content" id="libraryInsightsStatsContent" style="display: none;">
-            <div id="libraryInsightsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="libraryInsightsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Movies Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="movies">
-            <h3>🎬 Movies</h3>
-            <span class="accordion-icon" id="moviesStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="moviesStatsContent" style="display: none;">
-            <div id="moviesStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="moviesStatsData"></div>
-          </div>
-        </div>
-
-        <!-- TV Shows Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="tv-shows">
-            <h3>📺 TV Shows</h3>
-            <span class="accordion-icon" id="tvShowsStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="tvShowsStatsContent" style="display: none;">
-            <div id="tvShowsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="tvShowsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Anime Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="anime">
-            <h3>🎌 Anime</h3>
-            <span class="accordion-icon" id="animeStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="animeStatsContent" style="display: none;">
-            <div id="animeStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="animeStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Video Games Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="video-games">
-            <h3>🎮 Video Games</h3>
-            <span class="accordion-icon" id="videoGamesStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="videoGamesStatsContent" style="display: none;">
-            <div id="videoGamesStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="videoGamesStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Music Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="music">
-            <h3>🎵 Music</h3>
-            <span class="accordion-icon" id="musicStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="musicStatsContent" style="display: none;">
-            <div id="musicStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="musicStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Books Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="books">
-            <h3>📚 Books</h3>
-            <span class="accordion-icon" id="booksStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="booksStatsContent" style="display: none;">
-            <div id="booksStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="booksStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Manga Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="manga">
-            <h3>🗯️ Manga</h3>
-            <span class="accordion-icon" id="mangaStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="mangaStatsContent" style="display: none;">
-            <div id="mangaStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="mangaStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Podcasts Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="podcasts">
-            <h3>🎙️ Podcasts</h3>
-            <span class="accordion-icon" id="podcastsStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="podcastsStatsContent" style="display: none;">
-            <div id="podcastsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="podcastsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Audiobooks Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="audiobooks">
-            <h3>🎧 Audiobooks</h3>
-            <span class="accordion-icon" id="audiobooksStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="audiobooksStatsContent" style="display: none;">
-            <div id="audiobooksStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="audiobooksStatsData"></div>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -2445,9 +2332,9 @@
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
-  <script src="/static/public-profile.js?v=20261030-compare-1"></script>
-  <script src="/static/supporter.js?v=20261104-styles-1"></script>
-  <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
+  <script src="/static/public-profile.js?v=20261112-settings-1"></script>
+  <script src="/static/supporter.js?v=20261112-settings-1"></script>
+  <script src="/static/account-settings.js?v=20261112-settings-1" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
@@ -2461,7 +2348,7 @@
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/follows.js?v=20261029-follows-1"></script>
+  <script src="/static/follows.js?v=20261112-settings-1"></script>
   <script src="/static/push.js?v=20261031-push-4" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>

@@ -3429,26 +3429,13 @@ document.addEventListener('keydown', event => {
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  // Library edits since the last visit should show here: drop cached numbers so the
+  // overview and the open format are both read again.
+  Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
+  renderStatsPage();
+  loadTimeSpent();
   loadMonthlyReplay();
   loadTasteprint(false);
-  loadTimeSpent();
-  // Library edits since the last visit should show here: drop cached numbers and
-  // reload any section that is already open.
-  Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
-  let insightsOpen = false;
-  Object.entries({
-    'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
-    'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts',
-    audiobooks: 'audiobooks',
-  }).forEach(([category, idPrefix]) => {
-    const content = document.getElementById(`${idPrefix}StatsContent`);
-    if (!content || !isElementShown(content)) return;
-    if (category === 'library-insights') insightsOpen = true;
-    loadCategoryStatistics(category);
-  });
-  if (!insightsOpen) {
-    toggleCategoryAccordion('library-insights');
-  }
 }
 
 const categoryStatsCache = {};

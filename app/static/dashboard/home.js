@@ -579,16 +579,14 @@ function openLaunchpadAddItem(category = 'movies') {
 }
 
 function openLaunchpadInsights() {
+  // The library overview is the first thing on the Statistics tab.
   switchTab('statistics');
-  const insights = document.getElementById('libraryInsightsStatsContent');
-  if (insights && !isElementShown(insights)) {
-    toggleCategoryAccordion('library-insights');
-  }
 }
 
 function openLaunchpadImport() {
   // Reuse the existing preview-first importer; opening it performs no import.
   window.openAccountModal();
+  window.OmniSettings?.reveal('importStudio');
   document.getElementById('importStudio')?.scrollIntoView({ block: 'start' });
   document.getElementById('importStudioSource')?.focus({ preventScroll: true });
 }
