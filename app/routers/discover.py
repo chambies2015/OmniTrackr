@@ -35,7 +35,7 @@ def monthly_for(slug):
 # Sections that share this layout but have their own item in the site header.
 NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"), ("/lists", "lists"),
                 ("/pick", "pick"), ("/tonight", "tonight"), ("/taste-quiz", "taste-quiz"), ("/tier-list", "tier-list"), ("/challenges", "challenges"), ("/new-year-challenge", "challenges"),
-                ("/best-of", "best-of"), ("/new-releases", "new-releases"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""), ("/binge-calculator", ""), ("/start", ""))
+                ("/best-of", "best-of"), ("/new-releases", "new-releases"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""), ("/binge-calculator", ""), ("/awards", "awards"), ("/start", ""))
 
 
 DEFAULT_SHARE_IMAGE = ('<meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">'

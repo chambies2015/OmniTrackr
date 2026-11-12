@@ -1221,6 +1221,47 @@ class YearPledge(Base):
     __table_args__ = (UniqueConstraint("user_id", "year", name="uq_year_pledge"),)
 
 
+class AwardBallot(Base):
+    """A member's picks for one awards show, e.g. The Game Awards 2026 (Nov 2026).
+
+    A new table only. ``picks`` is a JSON object of category key to nominee key,
+    checked against the show's data (app/awards_data.py) on every save. A row with
+    no picks is a member who asked to hear when the nominees are in.
+    ``share_token`` exists only while the member shares the ballot.
+    """
+    __tablename__ = "award_ballots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    show = Column(String(60), nullable=False, index=True)
+    picks = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+    # Set once each, when the "nominees are in" and "winners are in" notes go out.
+    opened_notice_at = Column(DateTime, nullable=True)
+    results_notice_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "show", name="uq_award_ballot"),)
+
+
+class AwardResult(Base):
+    """The winner of one category of an awards show, entered by a site admin on the night.
+
+    A new table only. A winner written into the show's data wins over a row here.
+    """
+    __tablename__ = "award_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    show = Column(String(60), nullable=False, index=True)
+    category = Column(String(80), nullable=False)
+    nominee = Column(String(120), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("show", "category", name="uq_award_result"),)
+
+
 class YearInReviewShare(Base):
     """A member's opt-in public Year in Review link: a frozen snapshot at /recap/<token>.
 
