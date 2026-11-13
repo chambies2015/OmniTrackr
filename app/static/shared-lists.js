@@ -178,10 +178,16 @@
       body.appendChild(title);
       if (list.description) body.appendChild(el('p', 'sl-card__about', list.description));
       if (list.club) {
-        const club = el('p', 'sl-card__club');
-        club.appendChild(el('span', 'sl-card__club-label', 'Club pick'));
-        club.appendChild(el('strong', null, list.club.title));
-        club.appendChild(el('span', null, dueText(list.club.days_left, list.club.ends_label)));
+        const club = el('div', 'sl-card__club');
+        const thumb = poster(list.club);
+        thumb.classList.add('sl-card__club-poster');
+        club.appendChild(thumb);
+        const text = el('p', 'sl-card__club-text');
+        text.appendChild(el('span', 'sl-card__club-label', 'Club pick'));
+        text.appendChild(el('strong', null, list.club.title));
+        text.appendChild(el('span', list.club.days_left < 0 ? 'sl-card__club-due sl-card__club-due--late' : 'sl-card__club-due',
+          dueText(list.club.days_left, list.club.ends_label)));
+        club.appendChild(text);
         body.appendChild(club);
       }
       const meta = el('p', 'sl-card__meta');
@@ -505,13 +511,15 @@
 
   function postItem(post, roundId, live) {
     const item = el('li', post.new ? 'sl-post sl-post--new' : 'sl-post');
+    if (post.author && post.author.you) item.classList.add('sl-post--mine');
+    item.appendChild(post.author ? avatar(post.author) : el('span', 'sl-avatar sl-avatar--more', '?'));
+    const bubble = el('div', 'sl-post__bubble');
     const head = el('p', 'sl-post__head');
-    if (post.author) head.appendChild(avatar(post.author, true));
     head.appendChild(el('strong', null, post.author ? (post.author.you ? 'You' : post.author.username) : 'Someone'));
     head.appendChild(el('span', 'sl-muted', ago(post.at)));
     if (post.spoiler) head.appendChild(el('span', 'sl-spoiler-tag', 'Spoilers'));
     if (post.new) head.appendChild(el('span', 'sl-new', 'New'));
-    item.appendChild(head);
+    bubble.appendChild(head);
     const body = el('p', 'sl-post__body', post.body);
     if (post.folded) {
       body.hidden = true;
@@ -519,16 +527,17 @@
       const fold = el('p', 'sl-post__fold');
       fold.appendChild(el('span', null, 'Hidden until you finish.'));
       fold.appendChild(reveal);
-      item.appendChild(fold);
+      bubble.appendChild(fold);
     }
-    item.appendChild(body);
+    bubble.appendChild(body);
+    item.appendChild(bubble);
     if (post.can_delete) {
       const remove = button('Delete', 'sl-action sl-action--quiet sl-post__delete', event => {
         if (window.confirm && !window.confirm('Delete this post?')) return;
         act(event.currentTarget, () => api(`/api/lists/${listId()}/club/${roundId}/posts/${post.id}`, { method: 'DELETE' }));
       });
       remove.setAttribute('aria-label', 'Delete this post');
-      item.appendChild(remove);
+      bubble.appendChild(remove);
     }
     if (!live) item.classList.add('sl-post--past');
     return item;
@@ -587,11 +596,25 @@
     info.appendChild(el('p', 'sl-item__meta', [round.label, round.year].filter(Boolean).join(' · ')));
     const due = el('p', round.days_left < 0 ? 'sl-club__due sl-club__due--late' : 'sl-club__due', dueText(round.days_left, round.ends_label));
     info.appendChild(due);
+    // How far the club has got: one segment per member, filled for done and half for on it.
+    const progress = el('div', 'sl-club__progress');
     const tally = [`${round.finished_count} of ${round.members.length} ${round.done_word}`];
     if (round.average !== null) tally.push(`club score ${round.average}/10`);
-    info.appendChild(el('p', 'sl-club__tally', tally.join(' · ')));
+    progress.appendChild(el('p', 'sl-club__tally', tally.join(' · ')));
+    const bar = el('div', 'sl-club__bar');
+    bar.setAttribute('aria-hidden', 'true');
+    round.members.forEach(person => bar.appendChild(el('span', `sl-club__seg sl-club__seg--${person.status || 'none'}`)));
+    progress.appendChild(bar);
+    info.appendChild(progress);
     if (round.started_by) info.appendChild(el('p', 'sl-item__credit', `Picked by ${round.started_by.you ? 'you' : round.started_by.username}`));
     top.appendChild(info);
+    if (round.average !== null) {
+      const badge = el('p', 'sl-club__score-badge');
+      badge.appendChild(el('strong', null, String(round.average)));
+      badge.appendChild(el('span', null, 'club score'));
+      badge.setAttribute('aria-hidden', 'true');
+      top.appendChild(badge);
+    }
     panel.appendChild(top);
 
     // Where am I?

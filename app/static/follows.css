@@ -1,68 +1,61 @@
-/* People you follow (friends feed tab) and follower settings. Uses the dashboard theme tokens (app-theme.css). */
-.ffollow {
-  --ffeed-bg: var(--card-bg, #191f2c);
-  --ffeed-fg: var(--fg, #edf0f7);
-  --ffeed-soft: var(--fg-secondary, #a4aec2);
-  --ffeed-line: var(--border, #30394c);
-  --ffeed-muted: var(--surface-muted, #151b27);
-  --ffeed-accent: var(--primary, #baa9fb);
-  --ffeed-soft-accent: var(--accent-soft, #2c2542);
-  color: var(--ffeed-fg);
-  margin: 28px auto 0;
-  max-width: 820px;
-}
+/* People you follow (Following view on the friends feed tab) and follower settings.
+   Uses the dashboard tokens in app-theme.css; cards match the friends feed. */
+body.app-shell .ffollow { color: var(--fg); }
 
-.ffollow__head {
+body.app-shell .ffollow__head {
   align-items: flex-start;
-  border-top: 1px solid var(--ffeed-line);
   display: flex;
-  gap: 16px;
+  gap: var(--space-4);
   justify-content: space-between;
-  margin-bottom: 14px;
-  padding-top: 22px;
+  margin: 0 0 var(--space-4);
 }
-.ffollow__head h2 { font-size: 1.2rem; line-height: 1.2; margin: 0; }
-.ffollow__refresh { flex-shrink: 0; }
+body.app-shell .ffollow__head h3 { color: var(--fg); font: 700 var(--text-xl)/1.25 var(--font-display); margin: 0; }
+body.app-shell .ffollow__lede { color: var(--fg-secondary); font-size: var(--text-md); line-height: 1.55; margin: 4px 0 0; max-width: 60ch; }
+body.app-shell .ffollow__refresh { flex-shrink: 0; }
 
-.ffollow__suggest {
-  background: var(--ffeed-muted);
-  border: 1px solid var(--ffeed-line);
-  border-radius: var(--radius, 14px);
-  margin: 0 0 14px;
-  padding: 14px 16px;
-}
-.ffollow__suggest h3 { font-size: .95rem; margin: 0 0 8px; }
+body.app-shell .ffollow__suggest .follow-people { margin: 0; }
 
-.ffollow__list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
-.ffollow__item {
-  background: var(--ffeed-bg);
-  border: 1px solid var(--ffeed-line);
-  border-radius: var(--radius, 14px);
+body.app-shell .ffollow__list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+body.app-shell .ffollow__item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
-  gap: 12px;
-  grid-template-columns: 48px minmax(0, 1fr);
-  padding: 12px 14px;
+  gap: var(--space-4);
+  grid-template-columns: 56px minmax(0, 1fr);
+  padding: 14px 18px;
 }
-.ffollow__cover {
+body.app-shell .ffollow__cover {
   align-items: center;
   aspect-ratio: 2 / 3;
-  background: var(--ffeed-soft-accent);
-  border-radius: 8px;
-  color: var(--ffeed-accent);
+  background: var(--accent-soft);
+  border-radius: var(--poster-radius);
+  box-shadow: 0 0 0 1px var(--poster-edge);
+  color: var(--primary);
   display: flex;
-  font-weight: 800;
+  font: 700 1.2rem/1 var(--font-display);
   justify-content: center;
   overflow: hidden;
-  width: 48px;
+  width: 56px;
 }
-.ffollow__cover img { height: 100%; object-fit: cover; width: 100%; }
-.ffollow__body { min-width: 0; }
-.ffollow__line { line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
-.ffollow__who { color: var(--ffeed-fg); font-weight: 700; }
-.ffollow__title { color: var(--ffeed-accent); font-weight: 700; }
-.ffollow__meta { color: var(--ffeed-soft); font-size: .8rem; margin: 2px 0 0; }
-.ffollow__excerpt { color: var(--ffeed-soft); font-size: .88rem; line-height: 1.5; margin: 6px 0 0; }
-.ffollow__excerpt--spoiler { font-style: italic; }
+body.app-shell .ffollow__cover img { height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .ffollow__body { min-width: 0; }
+body.app-shell .ffollow__line { color: var(--fg-secondary); line-height: 1.45; margin: 0; overflow-wrap: anywhere; }
+body.app-shell .ffollow__who { color: var(--fg); font-weight: 700; text-decoration: none; }
+body.app-shell .ffollow__title { color: var(--fg); font-family: var(--font-display); font-weight: 700; text-decoration: none; }
+body.app-shell a:is(.ffollow__who, .ffollow__title):hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+body.app-shell .ffollow__meta { color: var(--fg-secondary); font-size: var(--text-sm); margin: 4px 0 0; }
+body.app-shell .ffollow__excerpt {
+  background: var(--surface-muted);
+  border-radius: var(--radius-md);
+  color: var(--fg);
+  font-size: var(--text-md);
+  line-height: 1.55;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+}
+body.app-shell .ffollow__excerpt--spoiler { color: var(--fg-secondary); font-style: italic; }
 
 .follow-people { display: grid; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
 .follow-person { align-items: center; display: flex; flex-wrap: wrap; gap: 6px 12px; min-height: 36px; }
@@ -70,6 +63,11 @@
 .follow-person__name { font-weight: 700; }
 .follow-person__why { color: var(--fg-secondary, #a4aec2); flex: 1 1 160px; font-size: .82rem; }
 .follow-person__btn { margin-left: auto; }
+body.app-shell .social-rail .follow-person { border-top: 1px solid var(--border); padding-top: var(--space-2); }
+body.app-shell .social-rail .follow-person:first-child { border-top: 0; padding-top: 0; }
+body.app-shell .social-rail .follow-person__name { color: var(--fg); text-decoration: none; }
+body.app-shell .social-rail .follow-person__why { flex-basis: 100%; order: 3; }
+body.app-shell .social-rail button.follow-person__btn { border-radius: var(--radius-pill); min-height: var(--control-sm); padding: 0 14px; }
 .follow-person__btn--quiet {
   background: transparent;
   border: 1px solid var(--border, #30394c);
@@ -88,7 +86,9 @@
 .follow-settings h6 { font-size: .85rem; margin: 14px 0 6px; }
 .follow-settings__hint { margin: -2px 0 6px; }
 
-@media (max-width: 600px) {
-  .ffollow__head { flex-direction: column; }
+@media (max-width: 640px) {
+  body.app-shell .ffollow__head { flex-direction: column; }
+  body.app-shell .ffollow__item { gap: var(--space-3); grid-template-columns: 48px minmax(0, 1fr); padding: 12px 14px; }
+  body.app-shell .ffollow__cover { width: 48px; }
   .follow-person__btn { margin-left: 0; }
 }

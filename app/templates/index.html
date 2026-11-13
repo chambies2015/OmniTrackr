@@ -76,8 +76,8 @@
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261104-gifts-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
-  <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
-  <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
+  <link rel="stylesheet" href="/static/friends-feed.css?v=20261113-social-1">
+  <link rel="stylesheet" href="/static/follows.css?v=20261113-social-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261110-signin-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
@@ -1712,49 +1712,63 @@
     </div>
 
     <div id="friends-feed-tab" class="tab-content">
-      <section class="ffeed" aria-labelledby="friendsFeedTitle">
-        <header class="ffeed__head">
-          <div class="ffeed__intro">
-            <p class="ffeed__eyebrow">From your friends</p>
+      <div class="social" data-social-view="friends">
+        <header class="social-head">
+          <div class="social-head__copy">
+            <p class="social-head__eyebrow">Your people</p>
             <h2 id="friendsFeedTitle">Friends feed</h2>
-            <p class="ffeed__lede">What your friends added, finished, rated and reviewed in the last 30 days. Cheer them on, or put a title on your own Next Up in one tap.</p>
+            <p class="social-head__lede">What your friends added, finished, rated and reviewed in the last 30 days. Cheer them on, or put a title on your own Next Up in one tap.</p>
           </div>
-          <div class="ffeed__side">
-            <button id="friendsFeedAddFriend" type="button" class="action-btn">+ Add a friend</button>
-            <label class="ffeed__share">
-              <input type="checkbox" id="friendsFeedSharing" checked>
-              <span>Share my updates with friends</span>
-            </label>
-            <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
-          </div>
+          <button id="friendsFeedAddFriend" type="button" class="action-btn social-head__add">+ Add a friend</button>
         </header>
-        <section id="bestRecommenders" class="best-recs" aria-labelledby="bestRecommendersTitle" hidden>
-          <p class="best-recs__eyebrow">Only you see this</p>
-          <h3 id="bestRecommendersTitle">Your best recommenders</h3>
-          <p id="bestRecommendersSummary" class="best-recs__summary"></p>
-          <ol id="bestRecommendersList" class="best-recs__list"></ol>
-        </section>
-        <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
-        <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
-        <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
-        <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
-      </section>
-      <section id="followingFeed" class="ffollow" aria-labelledby="followingFeedTitle">
-        <header class="ffollow__head">
-          <div>
-            <p class="ffeed__eyebrow">From public profiles</p>
-            <h2 id="followingFeedTitle">People you follow</h2>
-            <p class="ffeed__lede">New public reviews, collections and diary entries from members you follow, friends or not. You only see what their profile already shows everyone.</p>
+        <div class="social-layout">
+          <div class="social-main">
+            <div class="social-bar">
+              <div class="social-switch" role="tablist" aria-label="Whose updates">
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabFriends" aria-controls="friendsFeedPanel" aria-selected="true" data-social-tab="friends">Friends</button>
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabFollowing" aria-controls="followingFeed" aria-selected="false" tabindex="-1" data-social-tab="following">Following<span id="followingCount" class="social-switch__count" hidden></span></button>
+              </div>
+              <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
+            </div>
+            <section id="friendsFeedPanel" class="ffeed" role="tabpanel" aria-labelledby="socialTabFriends">
+              <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
+              <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
+            </section>
+            <section id="followingFeed" class="ffollow" role="tabpanel" aria-labelledby="socialTabFollowing" hidden>
+              <header class="ffollow__head">
+                <div>
+                  <h3 id="followingFeedTitle">People you follow</h3>
+                  <p class="ffollow__lede">New public reviews, collections and diary entries from members you follow, friends or not. You only see what their profile already shows everyone.</p>
+                </div>
+                <button id="followingRefresh" type="button" class="ffeed-btn ffollow__refresh">Refresh</button>
+              </header>
+              <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
+            </section>
           </div>
-          <button id="followingRefresh" type="button" class="action-btn ffollow__refresh">Refresh</button>
-        </header>
-        <section id="followSuggestions" class="ffollow__suggest" aria-labelledby="followSuggestionsTitle" hidden>
-          <h3 id="followSuggestionsTitle">People you might follow</h3>
-          <ul id="followSuggestionsList" class="follow-people"></ul>
-        </section>
-        <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
-        <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
-      </section>
+          <aside class="social-rail" aria-label="Feed settings and people">
+            <section class="social-card ffeed-share" aria-labelledby="friendsFeedShareTitle">
+              <h3 id="friendsFeedShareTitle" class="social-card__title">Your updates</h3>
+              <label class="ffeed__share">
+                <input type="checkbox" id="friendsFeedSharing" role="switch" checked>
+                <span>Share my updates with friends</span>
+              </label>
+              <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
+            </section>
+            <section id="bestRecommenders" class="best-recs social-card" aria-labelledby="bestRecommendersTitle" hidden>
+              <p class="best-recs__eyebrow">Only you see this</p>
+              <h3 id="bestRecommendersTitle">Your best recommenders</h3>
+              <p id="bestRecommendersSummary" class="best-recs__summary"></p>
+              <ol id="bestRecommendersList" class="best-recs__list"></ol>
+            </section>
+            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
+              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
+              <ul id="followSuggestionsList" class="follow-people"></ul>
+            </section>
+          </aside>
+        </div>
+      </div>
     </div>
 
     <!-- Private Activity Journal Tab Content -->
@@ -2347,8 +2361,8 @@
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/follows.js?v=20261112-settings-1"></script>
+  <script src="/static/friends-feed.js?v=20261113-social-1"></script>
+  <script src="/static/follows.js?v=20261113-social-1"></script>
   <script src="/static/push.js?v=20261031-push-4" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>

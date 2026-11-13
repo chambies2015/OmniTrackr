@@ -22,7 +22,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["discussions"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261028-discussions-1"
+ASSET_VERSION = "20261113-discussions-2"
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
                 "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 
@@ -60,6 +60,18 @@ def _poster(db: Session, group) -> Optional[str]:
         if image:
             return image
     return None
+
+
+AVATAR_HUES = 8
+
+
+def _avatar_html(author: Optional[boards.Author], small: bool = False) -> str:
+    """An initial in a coloured circle. The colour comes from the name, so it stays the same everywhere."""
+    name = author.username if author else ""
+    bucket = sum(ord(char) for char in name) % AVATAR_HUES if name else 0
+    size = " disc-avatar--small" if small else ""
+    return (f'<span class="disc-avatar disc-avatar--h{bucket}{size}" aria-hidden="true">'
+            f'{_e(name[:1].upper() or "?")}</span>')
 
 
 def _author_html(author: Optional[boards.Author]) -> str:
@@ -176,10 +188,12 @@ def thread_row_html(thread: models.TitleDiscussion, author: Optional[boards.Auth
         excerpt = f'<p class="disc-row__excerpt">{_e(boards.plain_excerpt(thread.body, 160))}</p>'
     replies = thread.reply_count or 0
     flags = '<span class="disc-tag disc-tag--muted">Locked</span> ' if thread.locked_at else ""
-    return (f'<li class="disc-row"><a class="disc-row__link" href="{_e(boards.thread_path(thread))}">'
+    return (f'<li class="disc-row">{_avatar_html(author)}<div class="disc-row__main">'
+            f'<a class="disc-row__link" href="{_e(boards.thread_path(thread))}">'
             f'<strong class="disc-row__subject">{flags}{_e(thread.subject)}</strong></a>{excerpt}'
-            f'<p class="disc-row__meta">{_author_html(author)} · {_time_html(thread.created_at)}</p>'
-            f'<span class="disc-row__count"><strong>{replies}</strong> repl{"y" if replies == 1 else "ies"}</span></li>')
+            f'<p class="disc-row__meta">{_author_html(author)} · {_time_html(thread.created_at)}</p></div>'
+            f'<span class="disc-row__count{" disc-row__count--none" if not replies else ""}"><strong>{replies}</strong> '
+            f'repl{"y" if replies == 1 else "ies"}</span></li>')
 
 
 def title_section_html(db: Session, group) -> str:
@@ -347,7 +361,8 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
         opening = ('<article class="disc-post disc-post--op" id="post"><p class="disc-muted">The person who started this '
                    'discussion deleted their post. The replies below are still here.</p></article>')
     else:
-        opening = (f'<article class="disc-post disc-post--op" id="post"><header class="disc-post__head">{_author_html(starter)}'
+        opening = (f'<article class="disc-post disc-post--op" id="post"><header class="disc-post__head">'
+                   f'{_avatar_html(starter)}{_author_html(starter)} <span class="disc-tag disc-tag--op">Started it</span>'
                    f'<span class="disc-post__when">{_time_html(thread.created_at)}{edited}</span></header>'
                    f'{_hidden_note(thread)}<div class="disc-post__content" data-raw="{_e(thread.body)}" data-spoiler="{str(thread.spoiler).lower()}">'
                    f'{_body_html(thread)}</div>{_post_actions(kind, thread, user, is_thread=True, thread=thread)}</article>')
@@ -358,7 +373,7 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
         starter_tag = ' <span class="disc-tag disc-tag--op">Started it</span>' if post.user_id == thread.user_id else ""
         reply_cards.append(
             f'<article class="disc-post{mine}" id="reply-{post.id}"><header class="disc-post__head">'
-            f'{_author_html(people.get(post.user_id))}{starter_tag}'
+            f'{_avatar_html(people.get(post.user_id), small=True)}{_author_html(people.get(post.user_id))}{starter_tag}'
             f'<span class="disc-post__when"><a href="#reply-{post.id}">#{number}</a> · {_time_html(post.created_at)}{post_edited}</span></header>'
             f'{_hidden_note(post)}<div class="disc-post__content" data-raw="{_e(post.body)}" data-spoiler="{str(post.spoiler).lower()}">'
             f'{_body_html(post)}</div>{_post_actions(kind, post, user, is_thread=False, thread=thread)}</article>')
