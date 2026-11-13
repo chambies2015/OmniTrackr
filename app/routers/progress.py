@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import episodes, models
+from .. import episode_notes, episodes, models
 from ..dependencies import get_current_user, get_db
 from ..progress import (
     EpisodeWrite, PositiveItemId, ProgressCategory, ProgressClear, ProgressWrite,
@@ -27,6 +27,9 @@ def _episode_guide(db: Session, user_id: int, category: str, item_id: int, fetch
     entry = _checkpoint_query(db, user_id, category, item_id).first()
     result["layout"] = layout
     result["episodes"] = episodes.summarize(layout, entry)
+    notes = episode_notes.for_item(db, user_id, category, item_id)
+    result["episode_notes"] = notes
+    result["episode_note_summary"] = episode_notes.summary(notes)
     return result
 
 
@@ -56,6 +59,33 @@ def write_episode(
 ):
     """Set the last watched episode, keeping the member's private reminder."""
     save_episode(db, current_user.id, category, item_id, payload)
+    return _episode_guide(db, current_user.id, category, item_id)
+
+
+@router.put("/{category}/{item_id}/episode-notes")
+def write_episode_note(
+    request: Request,
+    category: EpisodeCategory,
+    item_id: PositiveItemId,
+    payload: episode_notes.EpisodeNoteWrite,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rate an episode or keep a private note on it. Empty rating and note removes the entry."""
+    episode_notes.save(db, current_user.id, category, item_id, payload)
+    return _episode_guide(db, current_user.id, category, item_id)
+
+
+@router.delete("/{category}/{item_id}/episode-notes")
+def remove_episode_note(
+    request: Request,
+    category: EpisodeCategory,
+    item_id: PositiveItemId,
+    payload: episode_notes.EpisodeRef,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    episode_notes.remove(db, current_user.id, category, item_id, payload)
     return _episode_guide(db, current_user.id, category, item_id)
 
 
