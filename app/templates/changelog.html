@@ -63,6 +63,18 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov13-2026-heading">
+        <h2 id="security-nov13-2026-heading">November 13, 2026: Security and speed check of group polls, awards ballots and the new Statistics tab</h2>
+        <p>We went over what shipped on November 12: the group poll upgrades on <a href="/tonight">/tonight</a>, the <a href="/awards">awards season</a> ballots and their share links, and the rebuilt Statistics tab and Settings. We checked every new address for limits, who can read and change what, and how much database work each page does. Share links, ballots and polls only show what their owner chose to share, and everything you type is shown as text. These are the fixes.</p>
+        <ul>
+          <li>Several group poll actions from October had no limit on how often they could be called: reading a poll, taking back a vote, closing a poll and deleting one. A poll's results can be read by anyone with its link, so they now have limits like making a poll and voting do. An open poll page refreshes every 20 seconds, which stays well under its limit.</li>
+          <li>"Where to watch" on a finished poll looked the poll up in a way that made the rest of the site wait while it did. That part now runs on its own, like the streaming lookups after it.</li>
+          <li>The popular titles a visitor starts a shortlist from were worked out from every member's library on each visit to /tonight. They are now worked out once every ten minutes, the same as the homepage's "Start your list".</li>
+          <li>The new Statistics overview asked for the whole old statistics summary to show ratings and release years. That summary also recounts every shelf and ranks directors, which the overview doesn't show. It now asks for ratings and years only, about a third less database work each time the tab opens.</li>
+        </ul>
+        <p>Your account, your library, your polls and your ballots are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="stats-settings-nov12-2026-heading">
         <h2 id="stats-settings-nov12-2026-heading">November 12, 2026: A new Statistics page, and Settings one section at a time</h2>
         <p>The Statistics tab used to be ten collapsed rows, one per format plus a library summary, and you had to open each to see anything. It now opens on your whole library: titles saved, how many you've finished, your average rating, how you spread your ratings from 1 to 10, and which decades your titles come from.</p>
