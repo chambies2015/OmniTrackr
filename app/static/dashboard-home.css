@@ -452,3 +452,29 @@ body.app-shell .home-board .ny-pledge-card__link {
 }
 body.app-shell .home-board .ny-pledge-card__link:hover { color: #fff; filter: brightness(1.08); }
 body.app-shell .home-board .ny-pledge-card__link:focus-visible { outline: 3px solid #14b8a6; outline-offset: 2px; }
+
+/* ---------- Advent calendar card (December): a strip of the 24 doors ---------- */
+body.app-shell .home-board .advent-card {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(248, 113, 113, .14), transparent 70%),
+    radial-gradient(360px 160px at 0% 100%, rgba(34, 197, 94, .10), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+}
+body.app-shell .home-board .advent-card__doors {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  list-style: none;
+  margin: 12px 0 14px;
+  max-width: 420px;
+  padding: 0;
+}
+body.app-shell .home-board .advent-card__doors li {
+  aspect-ratio: 1;
+  background: var(--surface-muted, rgba(127, 127, 127, .14));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+body.app-shell .home-board .advent-card__doors li.is-ready { border-color: var(--warning, #d97706); }
+body.app-shell .home-board .advent-card__doors li.is-opened { background: var(--warning, #d97706); border-color: transparent; }
+body.app-shell .home-board .advent-card__doors li.is-today { box-shadow: 0 0 0 2px var(--accent-solid, #7c3aed); }

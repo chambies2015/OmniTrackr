@@ -19,7 +19,7 @@
       /^\/new-releases\/[a-z0-9-]{1,60}$/.test(window.location.pathname) ||
       /^\/halloween$/.test(window.location.pathname) ||
       /^\/holidays$/.test(window.location.pathname) ||
-      /^\/holidays\/(gifts|black-friday|thanksgiving|reading-and-listening)$/.test(window.location.pathname) ||
+      /^\/holidays\/(gifts|black-friday|thanksgiving|reading-and-listening|advent-calendar)$/.test(window.location.pathname) ||
       /^\/binge-calculator(\/[a-z0-9-]{1,80})?$/.test(window.location.pathname) ||
       /^\/new-year-challenge\/\d{4}$/.test(window.location.pathname) ||
       /^\/awards(\/[a-z0-9-]{1,60})?$/.test(window.location.pathname) ||

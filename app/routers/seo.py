@@ -325,6 +325,15 @@ def _database_parts(db: Session) -> list[str]:
                 f"<lastmod>{edition['published']}</lastmod>"
                 "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
             )
+    # The December advent calendar from opening day; the one-door share pages are never listed.
+    from .. import advent_calendar
+    advent_year = advent_calendar.current_year()
+    if advent_year is not None:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{advent_calendar.BASE_PATH}</loc>"
+            f"<lastmod>{max(advent_calendar.edition(advent_year)['published'], advent_calendar.edition(advent_year)['reviewed'])}</lastmod>"
+            "<changefreq>daily</changefreq><priority>0.8</priority></url>"
+        )
     # Awards season: the calendar and one written page per show. Shared ballots are never listed.
     from .. import awards, awards_data
     sitemap_parts.append(
@@ -669,6 +678,12 @@ async def get_llms_txt():
         "each format they want to finish that year, with advice on picking a number and a table of what each format "
         "typically costs in hours a week.\n" if new_year else ""
     )
+    from .. import advent_calendar
+    advent_line = (
+        f"The December advent calendar at {base_url}{advent_calendar.BASE_PATH} opens one door a day from December 1 "
+        "to 24, each with one written pick across the nine formats, how long it takes and a caveat.\n"
+        if advent_calendar.current_year() else ""
+    )
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
@@ -741,7 +756,7 @@ Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-t
 Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
 Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
-{new_year_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+{new_year_line}{advent_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
 The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime, film series, book series, audiobook or game takes, and either the finish date at a chosen pace or the daily time needed to finish by a chosen date. "How long does it take" guides (for example {base_url}/binge-calculator/breaking-bad and {base_url}/binge-calculator/harry-potter) give hand-checked lengths season by season, book by book or film by film, with what the total leaves out.

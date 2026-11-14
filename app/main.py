@@ -1130,6 +1130,24 @@ for route in gift_guide_router.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
 app.include_router(gift_guide_router.router)
 
+from .routers import advent_calendar as advent_calendar_router
+# The card loads with the dashboard; a door opens with one tap.
+ADVENT_LIMITS = {
+    ("/api/advent-calendar", "GET"): "60/minute",
+    ("/api/advent-calendar/{year}", "GET"): "60/minute",
+    ("/api/advent-calendar/{year}/open", "POST"): "60/minute",
+    ("/api/advent-calendar/{year}/doors/{day}/add", "POST"): "30/minute",
+    ("/api/advent-calendar/{year}/reminder", "PUT"): "20/minute",
+    ("/holidays/advent-calendar/{year}/{day}", "GET"): "60/minute",
+    ("/holidays/advent-calendar/{year}/{day}/card.png", "GET"): "30/minute",
+}
+for route in advent_calendar_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = ADVENT_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(advent_calendar_router.router)
+
 from .routers import deals_guide as deals_guide_router
 app.include_router(deals_guide_router.router)
 

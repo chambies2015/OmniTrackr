@@ -37,6 +37,20 @@ EXTRA_LINKS = {
     + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"]}
        for _, entry in seasonal.companions_of("holidays")],
 }
+
+
+def extra_links(slug: str) -> list[dict]:
+    """EXTRA_LINKS for a hub, with the advent calendar first while it is open (December on)."""
+    links = list(EXTRA_LINKS.get(slug, []))
+    if slug == "holidays":
+        from .. import advent_calendar
+        year = advent_calendar.current_year()
+        if year is not None:
+            links.insert(0, {"path": advent_calendar.BASE_PATH, "name": "Advent calendar",
+                             "tagline": advent_calendar.edition(year)["card"]})
+    return links
+
+
 FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music",
                   "manga": "manga", "podcast": "podcasts", "audiobook": "audiobooks"}
 
@@ -163,7 +177,7 @@ def _related(slug: str, entry: dict, today: date) -> str:
         if month in public:
             links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
                           challenges.CHALLENGES[month]["tagline"]))
-    links[:0] = [(extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get(slug, [])]
+    links[:0] = [(extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(slug)]
     links.extend((other["path"], f"{other['name']} picks", other["card"])
                  for other_slug, other in SEASONS.items() if other_slug != slug)
     links.extend([
@@ -230,7 +244,7 @@ def _companion_related(slug: str, entry: dict, today: date) -> str:
     parent_slug = entry["parent"]
     parent = SEASONS[parent_slug]
     links = [(parent["path"], f"{parent['name']} picks", parent["card"])]
-    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get(parent_slug, [])
+    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(parent_slug)
                  if extra["path"] != entry["path"])
     editions = published_editions(today)
     public = challenges.public_months(today)
@@ -380,7 +394,7 @@ def seasonal_current(request: Request, response: Response, user=Depends(get_curr
         "year": date.today().year, "card": entry["card"], "cta": entry["card_cta"], "days_left": seasonal.days_left(entry),
         "shelves": [{"key": shelf["key"], "name": shelf["name"], "tagline": shelf["tagline"]} for shelf in entry["shelves"]],
         "total": progress["total"], "tracked": progress["tracked"], "done": progress["done"],
-        "links": EXTRA_LINKS.get(slug, []),
+        "links": extra_links(slug),
     }
 
 

@@ -2026,3 +2026,37 @@ class ReviewShareChoice(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     __table_args__ = (UniqueConstraint("user_id", "category", "item_id", name="uq_review_share_choice_item"),)
+
+
+class AdventDoor(Base):
+    """A door a member opened on the December advent calendar (Nov 2026). A new table only.
+
+    One row per member, year and day. Rows are only ever added, so the Door Opener
+    badge counts them straight from here.
+    """
+    __tablename__ = "advent_doors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    day = Column(Integer, nullable=False)
+    opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "day", name="uq_advent_door"),)
+
+
+class AdventReminder(Base):
+    """A member who asked for a morning notification when each advent door opens. A new table only.
+
+    ``last_day`` is the last door they were told about, so each door is announced once.
+    Turning the reminder off deletes the row.
+    """
+    __tablename__ = "advent_reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_day = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_advent_reminder"),)

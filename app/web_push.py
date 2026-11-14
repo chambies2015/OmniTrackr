@@ -94,6 +94,7 @@ TITLES = {
     "new_follower": "New follower",
     "awards_ballot_open": "The nominees are in",
     "awards_results": "The winners are in",
+    "advent_door": "A new door is open",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -131,7 +132,8 @@ TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
 # Pushed whatever the switches say: the confirmation that push works, and notices about the member's own content.
 # "awards_ballot_open" goes only to members who pressed "Tell me when the ballot opens".
-ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted", "awards_ballot_open"}
+# "advent_door" goes only to members who pressed "Remind me each morning" on the advent calendar.
+ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted", "awards_ballot_open", "advent_door"}
 # Anything new that isn't listed above follows the quietest switch until it's given a home.
 FALLBACK_TOPIC = "milestones"
 TIME_ZONE = re.compile(r"^[A-Za-z][A-Za-z0-9_+\-]*(/[A-Za-z0-9_+\-]+){0,2}$")
@@ -691,8 +693,15 @@ def _hourly_jobs(session_factory) -> dict:
             db.rollback()
             logger.exception("Awards ballot notes failed")
             ballots = 0
+        try:
+            from . import advent_calendar
+            doors = advent_calendar.send_reminders(db)["members"]
+        except Exception:
+            db.rollback()
+            logger.exception("Advent calendar reminders failed")
+            doors = 0
         return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away,
-                "year_so_far": so_far, "awards": ballots}
+                "year_so_far": so_far, "awards": ballots, "advent": doors}
     finally:
         db.close()
 
