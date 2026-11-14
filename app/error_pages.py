@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from html import escape
+from urllib.parse import urlencode
 
 from fastapi import Request
 from fastapi.exception_handlers import http_exception_handler
@@ -75,10 +76,15 @@ def search_hint(path: str) -> str:
     return hint[:60].strip() if len(hint) >= 2 else ""
 
 
+def _search_href(hint: str) -> str:
+    """Where the search link goes without scripts: the /search page, already searching for the hint."""
+    return "/search?" + urlencode({"q": hint}) if hint else "/search"
+
+
 def _search_and_places(hint: str) -> str:
     label = f'Search for &ldquo;{escape(hint)}&rdquo;' if hint else "Search movies, shows, anime, games, books…"
     search = (
-        f'    <a class="site-message__search" href="/titles" data-site-search-open data-search-hint="{escape(hint, quote=True)}">'
+        f'    <a class="site-message__search" href="{escape(_search_href(hint), quote=True)}" data-site-search-open data-search-hint="{escape(hint, quote=True)}">'
         '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" '
         'stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
         f'<span>{label}</span></a>\n'

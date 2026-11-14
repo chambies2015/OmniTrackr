@@ -477,6 +477,18 @@ function showQuickCaptureShare(shared) {
   note.hidden = false;
 }
 
+// Open Add anything already searching for `query` (the site search and Ctrl+K hand off here).
+function openQuickCaptureSearch(query, category) {
+  const input = document.getElementById('quickCaptureQuery');
+  if (!input) return;
+  const search = String(query || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  openQuickCapture();
+  input.value = search;
+  selectQuickCaptureCategory(QUICK_CAPTURE_CATEGORIES[category] ? category : 'all');
+  if (search.length < 2) return;
+  return searchQuickCapture({ preventDefault() {} });
+}
+
 function openSharedTitle(shared) {
   const query = document.getElementById('quickCaptureQuery');
   if (!query || !shared) return;

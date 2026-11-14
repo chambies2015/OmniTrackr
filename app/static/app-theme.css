@@ -137,9 +137,29 @@ body.app-shell .library-search__field { background: var(--field-bg); border-colo
 body.app-shell .library-search__field input, body.app-shell .library-search__field input:focus { background: transparent; color: var(--fg); box-shadow: none; border: 0; }
 body.app-shell .library-search__field input::placeholder { color: var(--fg-secondary); opacity: 1; }
 body.app-shell .library-search__field:focus-within { border-color: var(--accent-solid); box-shadow: var(--ring); }
+/* The pill already shows focus with its ring; a second outline on the input inside it doubled up. */
+body.app-shell .library-search__field input:focus-visible { outline: none; }
 body.app-shell .library-search kbd { background: var(--surface-muted); border-color: var(--border); color: var(--fg-secondary); }
 body.app-shell .library-search__results { border-color: var(--border); box-shadow: var(--shadow-lg); }
 body.app-shell .library-search__result:hover, body.app-shell .library-search__result:focus-visible { background: var(--accent-soft); }
+/* Ctrl+K panel: grouped results with covers, one-tap adds and jumps (core.js renderLibrarySearch). */
+body.app-shell .library-search__results { background: var(--card-bg); border-radius: var(--radius-lg); gap: 0; max-height: min(520px, 70vh); padding: 6px; }
+body.app-shell .library-search__group + .library-search__group { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 4px; }
+body.app-shell .library-search__head { align-items: center; display: flex; justify-content: space-between; padding-right: 6px; }
+body.app-shell .library-search__label { color: var(--fg-secondary); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; margin: 8px 10px 4px; text-transform: uppercase; }
+body.app-shell .library-search__clear { background: none; border: 0; color: var(--fg-secondary); cursor: pointer; font: inherit; font-size: var(--text-xs); font-weight: 600; padding: 4px 6px; }
+body.app-shell .library-search__clear:hover { color: var(--fg); }
+body.app-shell .library-search__result { border-radius: var(--radius-md); gap: var(--space-3); justify-content: flex-start; min-height: 52px; padding: 6px 10px; }
+body.app-shell .library-search__result[aria-selected="true"] { background: var(--accent-soft); }
+body.app-shell .library-search__result-copy { flex: 1; }
+body.app-shell .library-search__result-action { margin-top: 0; opacity: 1; background: var(--surface-muted); border-radius: var(--radius-pill); color: var(--fg); padding: 4px 10px; }
+body.app-shell .library-search__result--add .library-search__result-action { background: var(--accent-solid); color: var(--on-accent); }
+body.app-shell .library-search__result--add.is-added .library-search__result-action { background: var(--success-soft); color: var(--success); }
+body.app-shell .library-search__result--everywhere strong { color: var(--primary); }
+body.app-shell .library-search__art { margin-top: 0; opacity: 1; align-items: center; background: var(--surface-muted); border-radius: 6px; display: flex; flex: none; height: 48px; justify-content: center; overflow: hidden; width: 34px; }
+body.app-shell .library-search__art img { display: block; height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .library-search__art--mark { border-radius: var(--radius-md); color: var(--primary); font-weight: 700; height: 34px; width: 34px; }
+body.app-shell .library-search__tips { color: var(--fg-secondary); font-size: var(--text-sm); line-height: 1.5; margin: 0; padding: 10px 12px; }
 body.app-shell .quick-capture-trigger { background: var(--accent-solid); color: var(--on-accent); border: 1px solid var(--accent-solid); border-radius: 10px; box-shadow: none; backdrop-filter: none; min-height: 46px; font-weight: 600; }
 body.app-shell .quick-capture-trigger:hover, body.app-shell .quick-capture-trigger:focus-visible { box-shadow: none; transform: none; outline-color: var(--primary); }
 body.app-shell .quick-capture-trigger kbd { background: transparent; border-color: currentColor; opacity: .6; }
