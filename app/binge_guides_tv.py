@@ -190,7 +190,7 @@ GUIDES = {
         ],
     },
     "game-of-thrones": {
-        "name": "Game of Thrones", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Game of Thrones", "kind": "tv", "reviewed": REVIEWED, "in_order": "game-of-thrones",
         "summary": "Game of Thrones is 73 episodes over eight seasons, about 71 hours. Season lengths, the long final episodes, and a finish-date planner.",
         "titles": [{"kind": "tv", "title": "Game of Thrones", "year": 2011}],
         "see_also": ["a-song-of-ice-and-fire", "the-sopranos", "succession"],

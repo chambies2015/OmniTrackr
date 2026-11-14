@@ -14,7 +14,7 @@ def _film(name, year, minutes, **extra):
 
 GUIDES = {
     "marvel-infinity-saga": {
-        "name": "the Marvel Infinity Saga", "kind": "film", "reviewed": REVIEWED,
+        "name": "the Marvel Infinity Saga", "kind": "film", "reviewed": REVIEWED, "in_order": "marvel-cinematic-universe",
         "card": "Marvel: the Infinity Saga",
         "heading": "How long does it take to watch every Marvel film in the Infinity Saga?",
         "summary": "The 23 Marvel films from Iron Man to Spider-Man: Far From Home run 49 hours 58 minutes. Every running time, and a marathon planner.",

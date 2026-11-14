@@ -1485,15 +1485,16 @@ def import_guest_list(
             # An OmniTrackr Daily answer no member tracks yet.
             from .. import daily
             curated = daily.find_answer(item.kind, item.slug)
+        browsed = None
         if group is None and curated is None:
+            # A manga, podcast or audiobook saved from a browse shelf (or its chart). Checked before the
+            # "In order" guides because a shelf entry carries more details (volumes, host) for the same title.
+            from .. import browse
+            browsed = browse.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
             # An entry saved from an "In order" guide that no member tracks yet.
             from .. import in_order
             curated = in_order.find(item.kind, item.slug)
-        browsed = None
-        if group is None and curated is None:
-            # A manga, podcast or audiobook saved from a browse shelf (or its chart).
-            from .. import browse
-            browsed = browse.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
             # A manga, podcast or audiobook saved from one of the guides beside the holiday hub or a best-of list.
             from .. import best_of, seasonal
