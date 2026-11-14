@@ -503,7 +503,9 @@
   }
 
   // Friends / Following switch at the top of the tab. Remembers the last choice.
-  function showView(view, focus) {
+  // `load` is false while the page starts: the Following list is fetched when the tab opens
+  // (library.js), not on every dashboard visit by someone who last left it on Following.
+  function showView(view, focus, load = true) {
     const root = document.querySelector('.social[data-social-view]');
     if (!root) return;
     const wanted = view === 'following' ? 'following' : 'friends';
@@ -519,7 +521,7 @@
       if (on && focus) tab.focus();
     });
     try { localStorage.setItem(VIEW_KEY, wanted); } catch (error) { /* storage off */ }
-    if (wanted === 'following' && window.OmniFollowing && typeof window.OmniFollowing.load === 'function') window.OmniFollowing.load();
+    if (load && wanted === 'following' && window.OmniFollowing && typeof window.OmniFollowing.load === 'function') window.OmniFollowing.load();
   }
 
   function initSwitch() {
@@ -536,7 +538,7 @@
     });
     let saved = 'friends';
     try { saved = localStorage.getItem(VIEW_KEY) || 'friends'; } catch (error) { /* storage off */ }
-    showView(saved);
+    showView(saved, false, false);
   }
 
   function init() {
@@ -563,7 +565,7 @@
   window.refreshFriendFeed = refresh;
   window.resetFriendFeed = reset;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { action, ago, dayLabel, matches, parseTime, rating, safePath, spoilerParts };
+    module.exports = { action, ago, dayLabel, initSwitch, matches, parseTime, rating, safePath, showView, spoilerParts };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
