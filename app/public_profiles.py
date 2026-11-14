@@ -9,10 +9,16 @@ Nothing about a member is public until they switch their profile on. Even then:
   social number is how many people joined through the member's invite link
   (a count, never who), shown only alongside the library stats,
 - the diary of recent finishes and revisits (dates and titles, never notes) is
-  off until the member switches it on.
+  off until the member switches it on,
+- the "Right now" shelf (titles started from the Up next queue and the next few
+  queued) is off until the member switches it on. Episode and page progress is
+  never shown,
+- a note on a pinned showcase title is written by the member for the profile and
+  passes the same safety check as a bio.
 """
 from __future__ import annotations
 
+import math
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -34,6 +40,16 @@ COLLECTIONS_LIMIT = 6
 SHOWCASE_LIMIT = 3
 SUPPORTER_SHOWCASE_LIMIT = 6
 SHOWCASE_SEARCH_LIMIT = 12
+SHOWCASE_NOTE_MAX_CHARS = 140
+# The "Right now" shelf: started titles from the Up next queue, then the next few still waiting.
+NOW_LIMIT = 4
+QUEUED_LIMIT = 4
+# The verb a started title gets on the shelf (kept in step with NOW_LABELS in routers/next_up.py).
+NOW_VERBS = {
+    "movies": "Watching", "tv-shows": "Watching", "anime": "Watching",
+    "video-games": "Playing", "books": "Reading", "manga": "Reading",
+    "music": "Listening", "podcasts": "Listening", "audiobooks": "Listening",
+}
 # Usernames made of these characters get a readable /u/<username> address.
 # (Kept in step with PUBLIC_PROFILE_PATH in middleware.py, which lets these through the bot filter.)
 HANDLE_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}")
@@ -53,7 +69,7 @@ CATEGORIES = {
 }
 REVIEW_CATEGORY_TO_LIBRARY = {review: library for _, (_, review, library, _, _) in title_pages.KINDS.items()}
 SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections", "show_diary",
-                   "show_taste_match")
+                   "show_taste_match", "show_now")
 
 
 class BioError(ValueError):
@@ -83,6 +99,21 @@ def clean_bio(value: Optional[str]) -> Optional[str]:
     return text
 
 
+def clean_showcase_note(value) -> Optional[str]:
+    """One short line about a pinned title, or None. Same safety rules as a bio."""
+    if value is None:
+        return None
+    text = unicodedata.normalize("NFC", str(value))
+    text = " ".join(CONTROL_RE.sub("", text).split())
+    if not text:
+        return None
+    if len(text) > SHOWCASE_NOTE_MAX_CHARS:
+        raise ShowcaseError(f"Keep each note to {SHOWCASE_NOTE_MAX_CHARS} characters.")
+    if not is_public_review_safe(text):
+        raise ShowcaseError("Notes can't include links, email addresses, phone numbers or promotions.")
+    return text
+
+
 def get_settings(db: Session, user_id: int) -> Optional[models.PublicProfile]:
     return db.query(models.PublicProfile).filter(models.PublicProfile.user_id == user_id).first()
 
@@ -91,7 +122,8 @@ def settings_payload(user: models.User, profile: Optional[models.PublicProfile],
     showcase = {}
     if db is not None:
         showcase = {"showcase": showcase_items(db, user), "showcase_limit": showcase_limit(db, user),
-                    "showcase_supporter_limit": SUPPORTER_SHOWCASE_LIMIT}
+                    "showcase_supporter_limit": SUPPORTER_SHOWCASE_LIMIT,
+                    "showcase_note_max_chars": SHOWCASE_NOTE_MAX_CHARS}
     return {**showcase,
         "enabled": bool(profile and profile.enabled),
         "bio": (profile.bio if profile else None) or "",
@@ -101,6 +133,7 @@ def settings_payload(user: models.User, profile: Optional[models.PublicProfile],
         "show_collections": profile.show_collections if profile else True,
         "show_diary": bool(profile and profile.show_diary),
         "show_taste_match": bool(profile and profile.show_taste_match),
+        "show_now": bool(profile and profile.show_now),
         "url": profile_path(user),
         "match_url": profile_path(user) + "/match",
         "bio_max_chars": BIO_MAX_CHARS,
@@ -130,9 +163,9 @@ def showcase_limit(db: Session, user: models.User) -> int:
     return SUPPORTER_SHOWCASE_LIMIT if supporters.is_active(supporters.get_supporter(db, user.id)) else SHOWCASE_LIMIT
 
 
-def _showcase_entry(category: str, item) -> dict:
+def _showcase_entry(category: str, item, note: Optional[str] = None) -> dict:
     kind = CATEGORIES[category][0]
-    return {
+    return {"note": note or None,
         "category": category, "id": item.id, "kind": kind, "label": title_pages.KINDS[kind][3],
         "title": item.title.strip(), "year": title_pages.item_year(kind, item), "rating": item.rating,
         "image": title_pages._safe_image(getattr(item, title_pages.IMAGE_FIELD[kind], None)),
@@ -162,7 +195,7 @@ def showcase_items(db: Session, user: models.User, limit: Optional[int] = None) 
         item = found.get((pin.category, pin.item_id))
         if item is None or not (item.title or "").strip():
             continue
-        shown.append(_showcase_entry(pin.category, item))
+        shown.append(_showcase_entry(pin.category, item, pin.note))
         if limit is not None and len(shown) >= limit:
             break
     return shown
@@ -185,13 +218,18 @@ def showcase_search(db: Session, user: models.User, query: str = "") -> list[dic
 
 
 def save_showcase(db: Session, user: models.User, picks: list) -> list[dict]:
-    """Replace the member's pins with ``picks`` ([{"category", "id"}, ...] in order)."""
+    """Replace the member's pins with ``picks`` ([{"category", "id", "note"?}, ...] in order).
+
+    A pick without a "note" keeps the note its pin already had, so a page that predates
+    notes can still reorder pins without wiping them. An empty note clears it.
+    """
     limit = showcase_limit(db, user)
+    existing = {(pin.category, pin.item_id): pin.note for pin in db.query(models.ProfileShowcaseItem).filter(
+        models.ProfileShowcaseItem.user_id == user.id)}
     if len(picks) > limit:
         # A supporter whose support lapsed keeps their extra pins (the page shows the first
         # few); they can still take pins off or reorder them, just not add new ones.
-        current = {(pin.category, pin.item_id) for pin in db.query(models.ProfileShowcaseItem).filter(
-            models.ProfileShowcaseItem.user_id == user.id)}
+        current = set(existing)
         chosen = {(pick.get("category"), pick.get("id")) for pick in picks}
         if not chosen <= current or len(picks) > len(current):
             raise ShowcaseError(f"You can pin up to {limit} titles.")
@@ -209,7 +247,9 @@ def save_showcase(db: Session, user: models.User, picks: list) -> list[dict]:
         if db.query(model.id).filter(model.id == item_id, model.user_id == user.id).first() is None:
             raise ShowcaseError("Pick titles from your own library.")
         seen.add((category, item_id))
-        rows.append(models.ProfileShowcaseItem(user_id=user.id, category=category, item_id=item_id, position=position))
+        note = existing.get((category, item_id)) if pick.get("note") is None else clean_showcase_note(pick.get("note"))
+        rows.append(models.ProfileShowcaseItem(user_id=user.id, category=category, item_id=item_id, position=position,
+                                               note=note))
     db.query(models.ProfileShowcaseItem).filter(models.ProfileShowcaseItem.user_id == user.id).delete()
     db.add_all(rows)
     db.commit()
@@ -321,6 +361,54 @@ def _favorites(db: Session, user: models.User) -> list[dict]:
     return chosen
 
 
+def _now(db: Session, user: models.User) -> dict:
+    """The member's "Right now" shelf from their Up next queue: started titles, then what's queued next.
+
+    Only unfinished titles in shareable shelves. Nothing about how far along they are.
+    """
+    visible = set(_visible_categories(user))
+    entries = [entry for entry in db.query(models.NextUpItem).filter(models.NextUpItem.user_id == user.id).order_by(
+        models.NextUpItem.position, models.NextUpItem.id).limit(200).all() if entry.category in visible]
+    wanted: dict = {}
+    for entry in entries:
+        wanted.setdefault(entry.category, set()).add(entry.item_id)
+    found = {}
+    for category, ids in wanted.items():
+        model = _model(category)
+        found.update({(category, item.id): item for item in
+                      db.query(model).filter(model.id.in_(ids), model.user_id == user.id)})
+    current, queued = [], []
+    started = sorted((e for e in entries if e.started_at), key=lambda e: e.started_at, reverse=True)
+    for entry in [*started, *(e for e in entries if not e.started_at)]:
+        item = found.get((entry.category, entry.item_id))
+        if item is None or not (item.title or "").strip():
+            continue
+        kind = CATEGORIES[entry.category][0]
+        if getattr(item, title_pages.COMPLETE_FIELD[kind], False):
+            continue
+        shelf, cap = (current, NOW_LIMIT) if entry.started_at else (queued, QUEUED_LIMIT)
+        if len(shelf) >= cap:
+            continue
+        shelf.append({**_showcase_entry(entry.category, item), "verb": NOW_VERBS.get(entry.category, "On"),
+                      "since": entry.started_at.date() if entry.started_at else None})
+    return {"current": current, "queued": queued} if current or queued else {}
+
+
+def _rating_spread(db: Session, user: models.User) -> list[int]:
+    """How many titles the member rated 1, 2, ... 10 (rounded half up), across the shelves they share."""
+    counts = [0] * 10
+    for category in _visible_categories(user):
+        model = _model(category)
+        for rating, count in db.query(model.rating, func.count(model.id)).filter(
+                model.user_id == user.id, model.rating.isnot(None)).group_by(model.rating):
+            try:
+                bucket = min(10, max(1, math.floor(float(rating) + 0.5)))
+            except (TypeError, ValueError):
+                continue
+            counts[bucket - 1] += int(count)
+    return counts if sum(counts) else []
+
+
 def _reviews(db: Session, user: models.User) -> list[dict]:
     from .routers.reviews import _current_state_hides_review
     reviews = []
@@ -399,6 +487,8 @@ class ProfileView:
     badges: list = field(default_factory=list)
     diary: list = field(default_factory=list)
     hours: int = 0  # estimated, from the shelves the member hasn't made private
+    now: dict = field(default_factory=dict)  # {"current": [...], "queued": [...]} when the member shows it
+    spread: list = field(default_factory=list)  # titles rated 1..10, with the library stats
 
     @property
     def path(self) -> str:
@@ -435,6 +525,8 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         badges=badges.public_badges(db, user) if profile.show_stats and not user.statistics_private else [],
         diary=diary.public_entries(db, user, _visible_categories(user)) if profile.show_diary else [],
         hours=time_spent.public_hours(db, user) if profile.show_stats and not user.statistics_private else 0,
+        now=_now(db, user) if getattr(profile, "show_now", False) else {},
+        spread=_rating_spread(db, user) if profile.show_stats and not user.statistics_private else [],
     )
 
 
