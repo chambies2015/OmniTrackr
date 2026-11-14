@@ -63,6 +63,19 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov14b-2026-heading">
+        <h2 id="security-nov14b-2026-heading">November 14, 2026: Security and speed check of the advent calendar and profile spotlight</h2>
+        <p>We went over what shipped on November 14: the December advent calendar, pinned-title notes and the Right now shelf on public profiles, and the earlier speed fixes for episode notes. We checked who can see each door before it opens, that notes and the Right now shelf only show what you chose to share, and how much work each page does. These are the fixes.</p>
+        <ul>
+          <li>Two badges, Podcast Regular and Regular, were saved under the same name. Both showed whichever tier was higher, so a member who had visited on 30 days but never listened to a podcast saw a silver Podcast Regular badge. If you reached both at the same moment, no new badge of any kind could be saved for you. Podcast Regular now has its own record. Each badge keeps the tier it actually earned, and you won't be told again about a badge you already had.</li>
+          <li>Before December 1, only site admins can open the advent calendar to try it out. The share image for a door was marked as fine for shared caches to keep for an hour, so an admin's preview could have shown that door's pick to other people before it opened. Those images are no longer cached before opening day.</li>
+          <li>The morning door reminder looked at the first 500 members who asked for it each hour. Members still waiting for their 8am could fill that list, and anyone after them would never be reminded. It now goes through everyone, and skips members who already heard about the newest door.</li>
+          <li>The calendar and each door page matched the 24 picks against every title page on the site on every view. That match is now kept until the title list itself changes.</li>
+          <li>A public profile read the member's supporter details three times and their rating spread with one query per shelf. It now reads both once, which takes a profile from 67 database reads to 57.</li>
+        </ul>
+        <p>Your library, your badges, your opened doors and your profile settings are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="advent-nov14-2026-heading">
         <h2 id="advent-nov14-2026-heading">November 14, 2026: An advent calendar for December</h2>
         <p>From December 1 there is an advent calendar in the holiday picks: 24 doors, one opening each day until Christmas Eve, each with one pick written up for that day.</p>

@@ -839,6 +839,7 @@ def run_migrations():
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
     fold_private_link_pages()
+    split_shared_regular_badge()
 
 
 def add_notification_link_column():
@@ -1239,3 +1240,86 @@ def fold_private_link_pages():
             print(f"Folded {folded} share-link page row(s) in Site stats")
     except Exception as e:
         print(f"Migration warning (share-link pages): {e}")
+
+
+REGULAR_BADGE_FIX = "split-regular-badge-2026-11"
+
+
+def split_shared_regular_badge():
+    """Give the Podcast Regular badge its own stored row (Nov 2026 security and speed check).
+
+    Until now the Podcast Regular track (podcasts listened to) and the Regular track
+    (days visited) both saved their tier under the key "regular", so a member had one
+    row for the two. Its tier was the higher of the two tracks, both badges showed it,
+    and a member who reached both at once could not save any new badge at all (the
+    second insert broke the unique key and rolled the whole save back).
+
+    Podcast Regular is now "podcaster". Visit days only ever go up, so for each old row:
+
+    - if the member's visit days still reach its tier, the row is the Regular badge and
+      stays. Podcast Regular gets its own row at the tier their podcasts reach today;
+    - otherwise the tier can only have come from podcasts, so the row moves to
+      "podcaster" with its tier and dates, and Regular gets a row at the tier their
+      visit days reach (none if they haven't reached bronze).
+
+    No tier a track actually reached is lowered. New rows are marked seen so nobody is
+    told about a badge they already had. Runs once, recorded in data_fixes.
+    """
+    try:
+        from datetime import datetime
+        from sqlalchemy.exc import IntegrityError
+        from . import badges
+        inspector = inspect(engine)
+        if not inspector.has_table("user_badges") or not inspector.has_table("users"):
+            return
+        models.DataFix.__table__.create(bind=engine, checkfirst=True)
+        podcasts, visits = badges.BY_KEY["podcaster"], badges.BY_KEY["regular"]
+        now = datetime.utcnow()
+        moved = added = 0
+        try:
+            with engine.begin() as conn:
+                if conn.execute(text("SELECT 1 FROM data_fixes WHERE name = :name"),
+                                {"name": REGULAR_BADGE_FIX}).first():
+                    return
+                # Claimed first, so a second worker starting at the same moment stops here.
+                conn.execute(text("INSERT INTO data_fixes (name, ran_at) VALUES (:name, :now)"),
+                             {"name": REGULAR_BADGE_FIX, "now": now})
+                rows = conn.execute(text(
+                    "SELECT b.id, b.user_id, b.tier, b.earned_at, b.seen_at, COALESCE(u.visit_days, 0) AS visit_days "
+                    "FROM user_badges b JOIN users u ON u.id = b.user_id WHERE b.badge = 'regular'"
+                )).fetchall()
+                if not rows:
+                    return
+                has_podcaster = {user_id for (user_id,) in conn.execute(text(
+                    "SELECT user_id FROM user_badges WHERE badge = 'podcaster'")).fetchall()}
+                listened = {}
+                if inspector.has_table("podcasts"):
+                    listened = {user_id: int(count) for user_id, count in conn.execute(text(
+                        "SELECT user_id, COUNT(id) FROM podcasts WHERE listened = :yes GROUP BY user_id"
+                    ), {"yes": True}).fetchall()}
+                insert = text("INSERT INTO user_badges (user_id, badge, tier, earned_at, seen_at) "
+                              "VALUES (:user_id, :badge, :tier, :earned_at, :seen_at)")
+                for row in rows:
+                    if row.user_id in has_podcaster:
+                        continue
+                    visit_tier = badges.tier_for(visits, int(row.visit_days or 0))
+                    podcast_tier = badges.tier_for(podcasts, listened.get(row.user_id, 0))
+                    seen = row.seen_at or now
+                    if visit_tier >= row.tier:
+                        if podcast_tier:
+                            conn.execute(insert, {"user_id": row.user_id, "badge": "podcaster", "tier": podcast_tier,
+                                                  "earned_at": row.earned_at, "seen_at": seen})
+                            added += 1
+                        continue
+                    conn.execute(text("UPDATE user_badges SET badge = 'podcaster' WHERE id = :id"), {"id": row.id})
+                    moved += 1
+                    if visit_tier:
+                        conn.execute(insert, {"user_id": row.user_id, "badge": "regular", "tier": visit_tier,
+                                              "earned_at": row.earned_at, "seen_at": seen})
+                        added += 1
+        except IntegrityError:
+            return  # another worker ran it
+        if moved or added:
+            print(f"Split the shared 'regular' badge: {moved} row(s) moved to Podcast Regular, {added} added")
+    except Exception as e:
+        print(f"Migration warning (regular badge split): {e}")
