@@ -76,6 +76,17 @@
         <p>Pins you already made keep their order and have no note until you write one. The Right now section only appears on profiles whose owners switch it on.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov14-2026-heading">
+        <h2 id="security-nov14-2026-heading">November 14, 2026: Security and speed check of episode scores and the new friends feed</h2>
+        <p>We went over what shipped on November 13: scores and notes on single episodes, the refreshed friends feed, watch clubs and title discussions. We checked who can read and change each episode note, that notes stay out of every public page, feed and share link, that everything typed into notes, club chat and discussions is shown as text, and how much work each page and backup does. Your episode notes are only ever sent to you. These are the fixes.</p>
+        <ul>
+          <li>Restoring a backup counted the episode notes a show already had by going through every note in your account, once for each show in the file. A file that named the same show thousands of times could keep the server busy for over a minute. Each show's count is now worked out once at the start, and a show named more than once is looked up once.</li>
+          <li>If you last left the friends feed on Following, the dashboard fetched the Following list and its suggestions every time it opened, even when you never went to that tab. It now waits until you open the friends feed, like it did before the refresh. It still opens on Following.</li>
+          <li>Saving a score or note read your show and your place in it twice before sending the guide back. Each save now does three fewer database reads, and opening the episode guide does three fewer.</li>
+        </ul>
+        <p>Your library, your episode notes and your clubs are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="social-nov13-2026-heading">
         <h2 id="social-nov13-2026-heading">November 13, 2026: A new look for the friends feed, watch clubs and discussions</h2>
         <p>The three places where you talk to other people on OmniTrackr now match the rest of the app.</p>
