@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
+from .. import affiliate, models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -27,8 +27,9 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261031-sweep-1"
-JS_VERSION = "20261025-title-refresh-1"
+CSS_VERSION = "20261103-where-1"
+JS_VERSION = "20261109-title-detail-1"
+DETAIL_CSS_VERSION = "20261109-title-detail-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
@@ -147,7 +148,8 @@ async def _load(request: Request, db: Session, kind: str, slug: str):
     metadata = await title_metadata.get_or_fetch(
         db, client, kind, group.normalized, group.title, group.year, _metadata_creator(kind, summary))
     summary["where"] = await where_to_watch.get_or_fetch(
-        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4)
+        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4,
+        creator=_metadata_creator(kind, summary))
     return group, summary, metadata
 
 
@@ -215,7 +217,7 @@ def _trailer_html(group, metadata: dict) -> str:
         return ""
     return (
         '<section class="title-section" aria-labelledby="trailer-title"><h2 id="trailer-title">Trailer</h2>'
-        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer">'
+        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer. Plays from YouTube (privacy-enhanced mode)">'
         f'<img src="https://i.ytimg.com/vi/{_e(video)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360">'
         '<span class="title-trailer__play" aria-hidden="true">▶</span>'
         '<span class="title-trailer__note">Plays from YouTube (privacy-enhanced mode)</span></button></section>'
@@ -287,40 +289,64 @@ def _fact_value_html(kind: str, label: str, value, links: dict) -> str:
     return ", ".join(f'<a href="{_e(links[name])}">{_e(name)}</a>' if name in links else _e(name) for name in names)
 
 
-WHERE_HEADINGS = {"game": "Where to play {title}"}
+def _where_chip(provider: dict, rel: str = "noopener nofollow") -> str:
+    logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
+            if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
+    inner = f'{logo}<span>{_e(provider["name"])}</span>'
+    if provider.get("url"):
+        return f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="{rel}">{inner}</a></li>'
+    return f'<li><span class="title-where__provider">{inner}</span></li>'
 
 
 def _where_html(group, summary: dict) -> str:
-    """Services that stream, rent, sell or first aired the title, with the credits the data needs."""
+    """Services that stream, sell, lend or first aired the title, with the credits the data needs.
+
+    Amazon links (when the Associates tag is set) and search links on other services are
+    added here at render time; they are never cached as if we had checked them.
+    """
     where = summary.get("where") or {}
-    if not where.get("groups"):
+    creator = summary.get("creator") or ""
+    buy = affiliate.links_for(group.kind, group.title, creator)
+    lookups = where_to_watch.searches(group.kind, group.title, creator)
+    if not where.get("groups") and not buy and not lookups:
         return ""
     rows = []
-    for entry in where["groups"]:
-        chips = []
-        for provider in entry["providers"]:
-            logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
-                    if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
-            inner = f'{logo}<span>{_e(provider["name"])}</span>'
-            chips.append(f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="noopener nofollow">{inner}</a></li>'
-                         if provider.get("url") else f'<li><span class="title-where__provider">{inner}</span></li>')
-        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{"".join(chips)}</ul></div>')
-    heading = WHERE_HEADINGS.get(group.kind, "Where to watch {title}").format(title=group.title)
+    for entry in where.get("groups") or []:
+        chips = "".join(_where_chip(provider) for provider in entry["providers"])
+        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{chips}</ul></div>')
+    if buy:
+        chips = "".join(_where_chip({"name": link["merchant"], "url": link["url"]}, "sponsored noopener") for link in buy)
+        rows.append(f'<div class="title-where__group title-where__group--buy"><h3>Buy a copy</h3><ul>{chips}</ul></div>')
+    heading = where_to_watch.heading(group.kind, group.title)
+    searches = ""
+    if lookups:
+        links = "".join(f'<li><a href="{_e(link["url"])}" target="_blank" rel="noopener nofollow">{_e(link["name"])} ↗</a></li>'
+                        for link in lookups)
+        searches = (f'<div class="title-where__search"><h3>Search other services</h3><ul>{links}</ul>'
+                    f'<p class="title-where__note">These open a search on each site, so check the result is the right one.</p></div>')
     notes = []
     if where.get("region"):
         checked = _pretty_date(where.get("fetched")) or where.get("fetched") or ""
         notes.append(f'<p class="title-where__note">Showing {_e(where["region"])} availability, checked {_e(checked)}. Services change their catalogues often.</p>')
+    checked = ""
+    if not where.get("region") and where.get("groups") and where.get("fetched") and group.kind not in where_to_watch.VIDEO_KINDS:
+        checked = f'Checked {_e(_pretty_date(where["fetched"]) or where["fetched"])}. '
     credits = where.get("credits") or []
     if credits:
-        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' for c in credits)
+        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' if c.get("url") else _e(c["name"])
+                          for c in credits)
         tmdb = " This product uses the TMDB API but is not endorsed or certified by TMDB." if where.get("justwatch") else ""
-        notes.append(f'<p class="title-where__note">Data from {named}.{tmdb}</p>')
+        notes.append(f'<p class="title-where__note">{checked}Data from {named}.{tmdb}</p>')
+    elif checked:
+        notes.append(f'<p class="title-where__note">{checked.strip()}</p>')
+    if buy:
+        notes.append(affiliate.disclosure_html("title-where__note"))
     more = ""
     if group.kind in where_to_watch.VIDEO_KINDS:
         more = (f'<a class="title-where__more" href="{_e(where.get("link") or where_to_watch.justwatch_search(group.title))}" '
                 f'target="_blank" rel="noopener nofollow">Compare every service{" on JustWatch" if not where.get("link") else ""} ↗</a>')
     return (f'<section class="title-section title-where" aria-labelledby="where-title"><h2 id="where-title">{_e(heading)}</h2>'
-            f'<div class="title-where__groups">{"".join(rows)}</div>{more}'
+            f'<div class="title-where__groups">{"".join(rows)}</div>{more}{searches}'
             f'{"".join(notes)}</section>')
 
 
@@ -489,7 +515,7 @@ def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
     facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
     services = where_to_watch.names(summary.get("where"))
     if services:
-        facts.append(("Where to play" if group.kind == "game" else "Where to watch",
+        facts.append((where_to_watch.heading(group.kind),
                       f'<a href="#where-title">{_e(", ".join(services))}</a>'))
     if _genres(metadata):
         facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
@@ -523,7 +549,7 @@ def _section_nav(sections: list[tuple[str, str, str]]) -> str:
     links = "".join(f'<a href="#{_e(anchor)}">{_e(label)}</a>' for html, anchor, label in sections if html)
     if links.count("<a ") < 3:
         return ""
-    return f'<nav class="title-tabs" aria-label="On this page"><div class="site-wrap title-tabs__inner">{links}</div></nav>'
+    return f'<nav class="title-tabs__inner" aria-label="On this page">{links}</nav>'
 
 
 def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
@@ -680,6 +706,21 @@ def _minutes_phrase(value: str) -> Optional[str]:
     return f"{minutes} minutes ({clock})"
 
 
+def _binge_link(group, guide_only: bool = False) -> str:
+    """A link that opens the binge calculator on this title, or its own guide when one is written."""
+    from urllib.parse import urlencode
+    from .. import binge_calculator
+    slug = binge_calculator.for_title(group.kind, group.title, group.year)
+    if slug:
+        return (f' There is a <a href="{binge_calculator.path(slug)}">part-by-part breakdown and planner</a> '
+                'for it in the binge calculator.')
+    if guide_only:
+        return ""
+    query = urlencode({"lookup": group.kind, "title": group.title, **({"year": group.year} if group.year else {})})
+    return (f' <a href="{binge_calculator.BASE_PATH}?{_e(query)}">Work out when you would finish</a> '
+            'in the binge calculator.')
+
+
 def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
     """(question, text, html) about how long the title takes, or empty strings."""
     kind, title, facts = group.kind, group.title, _facts(metadata)
@@ -687,7 +728,7 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         length = _minutes_phrase(facts.get("Running time") or facts.get("Length"))
         tracks = f" across {facts['Tracks']} tracks" if kind == "album" and facts.get("Tracks") else ""
         text = f"{title} runs {length}{tracks}."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group, guide_only=True) if kind == "movie" else "")
     if kind in ("tv", "anime"):
         parts = []
         if facts.get("Seasons", "").isdigit():
@@ -699,14 +740,14 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         each = facts.get("Episode length", "")
         each = each.removesuffix(".").removesuffix(" per ep").strip()
         text = f"{title} has {_join(parts)}" + (f", about {each} each" if each else "") + "."
-        html = (_e(text) + ' Work out a full binge, with breaks, in the <a href="/binge-calculator">binge calculator</a>.')
+        html = _e(text) + _binge_link(group)
         return f"How many episodes does {title} have?", text, html
     if kind == "game" and facts.get("Average playtime"):
         text = f"Players spend about {facts['Average playtime']} on {title} on average, according to RAWG."
         return f"How long does it take to beat {title}?", text, _e(text)
     if kind in ("book", "audiobook") and facts.get("Pages", "").isdigit():
         text = f"{title} is about {facts['Pages']} pages long in print."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group) if kind == "book" else "")
     if kind == "manga" and (facts.get("Volumes") or facts.get("Chapters")):
         parts = [f"{facts[label]} {label.lower()}" for label in ("Volumes", "Chapters") if facts.get(label)]
         text = f"{title} runs {_join(parts)}" + (f" and is {facts['Status'].lower()}" if facts.get("Status") else "") + "."
@@ -736,6 +777,20 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
             lines.append(f"get it on {_join(names)}")
         elif label == "Originally aired on":
             lines.append(f"find it on {_join(names)}, where it first aired")
+        elif label == "Listen on":
+            lines.append(f"listen on {_join(names)}")
+        elif label == "Listen free on":
+            lines.append(f"listen free on {_join(names)}")
+        elif label == "Any podcast app":
+            lines.append("add its RSS feed to any podcast app")
+        elif label == "Buy or listen on":
+            lines.append(f"get it on {_join(names)}")
+        elif label == "Read free":
+            lines.append(f"read it free on {_join(names)}")
+        elif label == "Borrow free":
+            lines.append(f"borrow it free from {_join(names)}")
+        elif label == "Read officially on":
+            lines.append(f"read it officially on {_join(names)}")
     if not lines:
         return "", "", ""
     region = f" in the {where['region']}" if where.get("region") == "US" else (f" in {where['region']}" if where.get("region") else "")
@@ -743,7 +798,7 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
     text = text[:1].upper() + text[1:]
     if where.get("fetched"):
         text += f" Checked {_pretty_date(where['fetched'])}."
-    verb = "play" if group.kind == "game" else "watch"
+    verb = where_to_watch.verb(group.kind) + (" to" if group.kind in where_to_watch.LISTEN_KINDS else "")
     return f"Where can I {verb} {title}?", text, _e(text) + ' <a href="#where-title">See every option</a>.'
 
 
@@ -942,11 +997,108 @@ def _sources_html(metadata: dict) -> str:
             'member data is aggregated from OmniTrackr libraries and never identifies who tracks a title.</p>')
 
 
+# ---------------------------------------------------------------- hero (Nov 2026 redesign)
+
+def _length_fact(kind: str, metadata: dict) -> Optional[str]:
+    """The one length people check first: running time, episodes, pages, playtime."""
+    facts = _facts(metadata)
+    if kind in ("movie", "album") and (facts.get("Running time") or facts.get("Length")):
+        return facts.get("Running time") or facts.get("Length")
+    if kind in ("tv", "anime"):
+        if facts.get("Seasons", "").isdigit() and facts["Seasons"] != "1":
+            return f"{facts['Seasons']} seasons"
+        if facts.get("Episodes", "").isdigit():
+            return f"{facts['Episodes']} episode{'s' if facts['Episodes'] != '1' else ''}"
+    if kind == "game" and facts.get("Average playtime"):
+        return f"{facts['Average playtime']} to play"
+    if kind in ("book", "audiobook") and facts.get("Pages", "").isdigit():
+        return f"{facts['Pages']} pages"
+    if kind == "manga" and facts.get("Volumes"):
+        return f"{facts['Volumes']} volumes"
+    return None
+
+
+LOGO_FILE = re.compile(r"(?:^|[/_%-])(?:logo|wordmark|logotype)(?:[._%-]|$)", re.I)
+
+
+def _poster_image(metadata: dict, summary: dict) -> Optional[str]:
+    """The cover to show. Wikipedia sometimes only has the series logo, and a member's cover beats a cropped logo."""
+    poster = metadata.get("poster")
+    if poster and summary.get("image") and LOGO_FILE.search(poster.split("?", 1)[0].rsplit("/", 1)[-1]):
+        return summary["image"]
+    return poster or summary.get("image")
+
+
+def _lead_repeats_kicker(lead: str, group, summary: dict) -> bool:
+    """Wikidata leads like "2001 film by Hayao Miyazaki" only repeat the line above the title."""
+    creator, text = (summary.get("creator") or "").casefold(), lead.casefold()
+    return bool(creator) and creator in text and (not group.year or str(group.year) in text) and len(lead) <= 80
+
+
+def _kicker_html(group, summary: dict, metadata: dict, kind_label: str) -> str:
+    release = _pretty_date(metadata.get("release_date")) or (str(group.year) if group.year else None)
+    rest = [(part, "") for part in (release, _length_fact(group.kind, metadata)) if part]
+    if summary.get("creator"):
+        rest.append((summary["creator"], ' class="title-hero__credit"'))
+    items = "".join(f'<span{attrs}>{_e(part)}</span>' for part, attrs in rest)
+    return f'<p class="title-hero__meta"><span class="title-hero__kind">{_e(kind_label)}</span>{items}</p>'
+
+
+def _where_teaser_html(group, summary: dict) -> str:
+    """One line in the hero saying where the title is, linked to the full section below."""
+    groups = (summary.get("where") or {}).get("groups") or []
+    if not groups:
+        return ""
+    first = groups[0]
+    providers = first["providers"][:3]
+    logos = "".join(
+        f'<img src="{_e(p["logo"])}" alt="" width="28" height="28" loading="lazy" decoding="async">' if p.get("logo")
+        else f'<span class="title-where__mono" aria-hidden="true">{_e(p["name"][:1].upper())}</span>'
+        for p in providers)
+    names = _join([p["name"] for p in providers])
+    # Count each service once: Apple TV under both Rent and Buy is one more place, not two.
+    shown = {p["name"].casefold() for p in providers}
+    extra = len({p["name"].casefold() for entry in groups for p in entry["providers"]} - shown)
+    more = f'<span class="title-hero__where-more">+{extra} more</span>' if extra > 0 else ""
+    return (f'<a class="title-hero__where" href="#where-title"><span class="title-hero__where-logos" aria-hidden="true">{logos}</span>'
+            f'<span class="title-hero__where-text"><small>{_e(where_to_watch.heading(group.kind))} · {_e(first["label"])}</small>'
+            f'<strong>{_e(names)}</strong></span>{more}<span class="title-hero__where-go" aria-hidden="true">→</span></a>')
+
+
+def _hero_backdrop(group, summary: dict, metadata: dict, image: Optional[str]) -> tuple[str, bool]:
+    """(html, wide): a real wide still when we have one, otherwise the poster as a soft colour wash."""
+    wide = where_to_watch.backdrop_urls(summary.get("where"))
+    if wide:
+        return (f'<img class="title-hero__backdrop" src="{_e(wide["w1280"])}" fetchpriority="high" '
+                f'srcset="{_e(wide["w780"])} 780w, {_e(wide["w1280"])} 1280w" sizes="100vw" alt="" aria-hidden="true">'), True
+    backdrop = metadata.get("backdrop") or image
+    if not backdrop:
+        return "", False
+    # Game backdrops are screenshots, so they are wide too; elsewhere it is usually the poster again.
+    shot = group.kind == "game" and bool(metadata.get("backdrop")) and metadata.get("backdrop") != image
+    return (f'<img class="title-hero__backdrop" src="{_e(backdrop)}" alt="" aria-hidden="true" decoding="async" '
+            'fetchpriority="low">'), shot
+
+
+def _tabs_html(nav: str, group, image: Optional[str], signed_in: bool) -> str:
+    """The sticky "on this page" bar, with a save button that appears once the hero scrolls away."""
+    if not nav:
+        return ""
+    thumb = f'<img src="{_e(image)}" alt="" width="28" height="42" loading="lazy" decoding="async">' if image else ""
+    label = "Add to my library" if signed_in else "Save to my list"
+    join = "" if signed_in else '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-dock-join hidden>Join free</a>'
+    return (f'<div class="title-tabs"><div class="site-wrap title-tabs__bar">{nav}'
+            f'<div class="title-tabs__cta" data-title-dock hidden>{thumb}<span class="title-tabs__name">{_e(group.title)}</span>'
+            f'<button type="button" class="site-btn site-btn--primary site-btn--sm" data-dock-save>{label}</button>'
+            f'{join}'
+            '</div></div></div>')
+
+
 def render(group, summary: dict, metadata: Optional[dict], indexable: bool, signed_in: bool, take=None) -> str:
     metadata = metadata or {}
     kind_label = title_pages.KINDS[group.kind][3]
     canonical = SITE_URL + group.path
-    image = metadata.get("poster") or summary.get("image")
+    image = _poster_image(metadata, summary)
     year = f" ({group.year})" if group.year else ""
     page_title = f"{group.title}{year}: reviews, trailer and details | OmniTrackr"
     lead = metadata.get("short_description") or ""
@@ -958,31 +1110,31 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     streaming = where_to_watch.stream_names(summary.get("where"), limit=2)
     if streaming and group.kind in where_to_watch.VIDEO_KINDS:
         description_bits.append("where to watch it (" + " and ".join(streaming) + ")")
+    elif streaming and group.kind in where_to_watch.LISTEN_KINDS + where_to_watch.READ_KINDS:
+        description_bits.append(f"where to {where_to_watch.verb(group.kind)} it (" + " and ".join(streaming) + ")")
     if metadata.get("trailer"):
         description_bits.append("trailer")
     meta_description = _excerpt(", ".join(description_bits) + ".", 158)
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     poster = (f'<img class="title-hero__poster" src="{_e(image)}" alt="{_e(group.title)} poster" width="300" height="450" fetchpriority="high">'
               if image else f'<div class="title-hero__poster title-hero__poster--empty" aria-hidden="true">{_e(group.title[:1].upper())}</div>')
-    backdrop = metadata.get("backdrop") or image
-    backdrop_html = f'<img class="title-hero__backdrop" src="{_e(backdrop)}" alt="" aria-hidden="true">' if backdrop else ""
+    backdrop_html, wide = _hero_backdrop(group, summary, metadata, image)
+    hero_lead = "" if _lead_repeats_kicker(lead, group, summary) else lead
     genres = "".join(f'<span class="site-chip">{_e(g)}</span>' for g in _genres(metadata)[:4])
-    release = _pretty_date(metadata.get("release_date"))
-    meta_line = " · ".join(filter(None, [kind_label, release or (str(group.year) if group.year else None),
-                                         summary.get("creator")]))
     track = ('<button type="button" class="site-btn site-btn--primary" data-title-add '
              f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}">Add to my library</button>'
              if signed_in else
              ('<button type="button" class="site-btn site-btn--primary" data-guest-save aria-pressed="false" '
               f'data-guest-kind="{_e(group.kind)}" data-guest-slug="{_e(group.path.rsplit("/", 1)[1])}" '
-              f'data-guest-title="{_e(group.title)}">Save to my list</button>'
-              '<a class="site-btn site-btn--ghost" href="/#signup">Create free account</a>'))
+              f'data-guest-title="{_e(group.title)}">Save to my list</button>'))
     ask = (f'<button type="button" class="site-btn site-btn--ghost" id="ask-friend" data-take-ask '
            f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}" '
            f'data-take-title="{_e(group.title)}">Ask a friend for their take</button>' if signed_in else "")
     recommend = (f'<button type="button" class="site-btn site-btn--ghost" data-friend-rec-open '
                  f'data-rec-kind="{_e(group.kind)}" data-rec-slug="{_e(group.path.rsplit("/", 1)[1])}" '
                  f'data-rec-title="{_e(group.title)}">Recommend to a friend</button>' if signed_in else "")
+    join = ('' if signed_in else '<p class="title-hero__join">Saving works without an account. '
+            '<a href="/#signup">Create free account</a> and your list moves into a library you can rate, review and share.</p>')
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
@@ -993,7 +1145,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
         (summary.get("discussions_html", ""), "discussions-title", "Discussions"),
         (_trailer_html(group, metadata), "trailer-title", "Trailer"),
-        (_where_html(group, summary), "where-title", "Where to play" if group.kind == "game" else "Where to watch"),
+        (_where_html(group, summary), "where-title", where_to_watch.heading(group.kind)),
         (_about_html(group, summary, metadata), "about-title", "About"),
         (_faq_html(group, faq), "faq-title", "Quick answers"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
@@ -1006,7 +1158,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_tracks_html(metadata), "tracks-title", "Track list"),
     ]
     body = "".join(html for html, _, _ in sections)
-    nav = _section_nav([section for section in sections if section[1] != "write-review"])
+    nav = _tabs_html(_section_nav([section for section in sections if section[1] != "write-review"]), group, image, signed_in)
     glance = _glance_html(group, summary, metadata, signed_in)
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
@@ -1031,8 +1183,9 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
+  <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
-  <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
+  <link rel="stylesheet" href="/static/discussions.css?v=20261113-discussions-2">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261031-browse-1" defer></script>'}
@@ -1040,23 +1193,27 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image, faq)}
 </head>
-<body class="site title-page">
+<body class="site title-page title-detail">
   <!--SITE_NAV:-->
   <main>
-    <section class="title-hero">
-      {backdrop_html}
+    <section class="title-hero title-hero--{'wide' if wide else 'wash'}">
+      <div class="title-hero__media" aria-hidden="true">{backdrop_html}</div>
       <div class="site-wrap title-hero__inner">
-        {poster}
-        <div class="title-hero__copy">
+        <div class="title-hero__art">{poster}</div>
+        <div class="title-hero__head">
           <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> <a href="/titles/{_e(group.kind)}">{_e(KIND_PLURALS[group.kind])}</a></nav>
+          {_kicker_html(group, summary, metadata, kind_label)}
           <h1>{_e(group.title)}{f' <span class="title-hero__year">{_e(group.year)}</span>' if group.year else ''}</h1>
-          <p class="title-hero__meta">{_e(meta_line)}</p>
+        </div>
+        <div class="title-hero__copy">
           {_rank_html(group, summary)}
-          {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
+          {f'<p class="title-hero__lead">{_e(hero_lead[:1].upper() + hero_lead[1:])}</p>' if hero_lead else ''}
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
+          {_where_teaser_html(group, summary)}
           <div class="title-hero__actions">{track}{reviews_link}{recommend}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
+          {join}
           {_links_html(metadata)}
         </div>
       </div>
@@ -1338,6 +1495,22 @@ def import_guest_list(
             from .. import browse
             browsed = browse.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
+            # A manga, podcast or audiobook saved from one of the guides beside the holiday hub or a best-of list.
+            from .. import best_of, seasonal
+            browsed = seasonal.find_extra(item.kind, item.slug) or best_of.find_extra(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A series saved from a "how long does it take" guide that no member tracks yet.
+            from .. import binge_calculator
+            curated = binge_calculator.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A pick saved from an opened door of the December advent calendar.
+            from .. import advent_calendar
+            door = advent_calendar.find(item.kind, item.slug)
+            if door is not None and "browse_kind" in door:
+                browsed = (door["browse_kind"], door)
+            else:
+                curated = door
+        if group is None and curated is None and browsed is None:
             missing += 1
             continue
         if group is not None:
@@ -1362,7 +1535,7 @@ async def where_to_watch_lookup(request: Request, response: Response,
                                 title: str = Query(..., min_length=1, max_length=300),
                                 year: Optional[int] = Query(None, ge=1800, le=2200),
                                 user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Where a library title streams or sells, for the member's own rows (works for private libraries too)."""
+    """Where a library title streams, sells or lends, for the member's own rows (works for private libraries too)."""
     response.headers["Cache-Control"] = "private, no-store"
     if kind not in where_to_watch.KINDS:
         raise HTTPException(404, "Not available for this kind of title")
@@ -1382,6 +1555,10 @@ async def where_to_watch_lookup(request: Request, response: Response,
         "credits": where.get("credits") or [],
         "tmdb_notice": bool(where.get("justwatch")),
         "more": (where.get("link") or where_to_watch.justwatch_search(display)) if kind in where_to_watch.VIDEO_KINDS else None,
+        "heading": where_to_watch.heading(kind),
+        "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
+        "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
+        "searches": where_to_watch.searches(kind, display),
     }
 
 
@@ -1514,8 +1691,11 @@ def _chart_entry_html(entry: dict) -> str:
     if entry.get("quote"):
         q = entry["quote"]
         who = (f'<a href="{_e(q["profile_url"])}">{_e(q["username"])}</a>' if q.get("profile_url") else _e(q["username"]))
+        # Short reviews have no page of their own (it would be a 404), so they link to the title's reviews.
+        more = (f'<a href="{_e(q["url"])}">full review</a>' if q.get("standalone")
+                else f'<a href="{_e(entry["url"])}#community-title">more reviews</a>')
         quote = (f'<blockquote class="title-chart__quote"><p>“{_e(q["text"])}”</p>'
-                 f'<footer>{who} · <a href="{_e(q["url"])}">full review</a></footer></blockquote>')
+                 f'<footer>{who} · {more}</footer></blockquote>')
     return (f'<li class="title-chart__entry" id="rank-{entry["rank"]}">'
             f'<span class="title-chart__rank" aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>'
             f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'

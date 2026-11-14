@@ -1,4 +1,4 @@
-// Public profiles (/u/<username>): section tabs, the phone join bar for visitors, sign-up clicks.
+// Public profiles (/u/<username>): section tabs, the phone join bar for visitors, sign-up clicks, favorites filter.
 (function () {
   'use strict';
 
@@ -65,6 +65,24 @@
     [actions, closing].forEach(node => { if (node) observer.observe(node); });
   }
 
+  // ---------- Favorites filter: show one format at a time ----------
+  function setupFilter() {
+    const group = document.querySelector('[data-profile-filter]');
+    const grid = group && group.parentElement.querySelector('.profile-poster-grid');
+    if (!grid) return;
+    const buttons = Array.from(group.querySelectorAll('button[data-filter]'));
+    group.addEventListener('click', event => {
+      const button = event.target.closest && event.target.closest('button[data-filter]');
+      if (!button) return;
+      const format = button.dataset.filter;
+      buttons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+      grid.querySelectorAll('.profile-poster').forEach(card => {
+        card.hidden = Boolean(format) && card.dataset.format !== format;
+      });
+    });
+    group.hidden = false;
+  }
+
   // ---------- Follow button for signed-in visitors ----------
   async function toggleFollow(button) {
     if (button.disabled) return;
@@ -112,7 +130,7 @@
     const follow = event.target.closest && event.target.closest('button[data-follow]');
     if (follow) toggleFollow(follow);
   });
-  const start = () => { setupTabs(); setupJoinbar(); };
+  const start = () => { setupTabs(); setupJoinbar(); setupFilter(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();

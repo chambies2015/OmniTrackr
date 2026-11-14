@@ -197,6 +197,132 @@ body.app-shell .home-board .next-up-queue__remove { background: transparent; bor
 body.app-shell .home-board .next-up-queue__remove:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: transparent; }
 body.app-shell .home-board .next-up-queue__controls .progress-update { background: var(--teal-soft); border-color: transparent; }
 
+/* Next Up: drag handle, started titles, Watch/Read/Play/Listen filters, library suggestions */
+/* Title and details on the first line, buttons on the second, both beside the cover.
+   Started titles carry Start/Done/progress/episode buttons, which don't fit in one line. */
+body.app-shell .home-board .next-up-queue__item { align-items: center; column-gap: 12px; grid-template-columns: 24px 44px minmax(0, 1fr); row-gap: 8px; }
+body.app-shell .home-board .next-up-queue__item.has-handle { grid-template-columns: 20px 24px 44px minmax(0, 1fr); padding-left: 6px; }
+body.app-shell .home-board .next-up-queue__item > :not(.next-up-queue__copy):not(.next-up-queue__controls) { grid-row: span 2; }
+body.app-shell .home-board .next-up-queue__controls { flex-wrap: wrap; grid-column: -2 / -1; }
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__remove { margin-left: auto; }
+body.app-shell .home-board .next-up-queue__handle {
+  align-items: center;
+  align-self: stretch;
+  border-radius: var(--radius-sm, 8px);
+  color: var(--fg-secondary);
+  cursor: grab;
+  display: inline-flex;
+  font-size: 1.05rem;
+  justify-content: center;
+  letter-spacing: -2px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.app-shell .home-board .next-up-queue__handle::before { content: "⋮⋮"; }
+body.app-shell .home-board .next-up-queue__handle:hover { background: var(--accent-soft); color: var(--primary); }
+body.app-shell .home-board .next-up-queue__handle:focus-visible { box-shadow: var(--ring); outline: 2px solid var(--primary); outline-offset: 1px; }
+body.app-shell .home-board .next-up-queue__handle[aria-disabled="true"] { cursor: default; opacity: .4; }
+body.app-shell .home-board .next-up-queue__items.is-sorting .next-up-queue__item:not(.is-dragging) { transition: transform var(--dur-fast, .15s) var(--ease, ease); }
+body.app-shell .home-board .next-up-queue__item.is-dragging {
+  background: var(--card-bg);
+  border-color: var(--primary);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .22);
+  cursor: grabbing;
+  position: relative;
+  z-index: 3;
+}
+html.next-up-dragging, html.next-up-dragging * { cursor: grabbing !important; user-select: none; }
+body.app-shell .home-board .next-up-queue__item.is-started {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--teal) 14%, transparent), transparent 70%);
+  border-color: color-mix(in srgb, var(--teal) 45%, var(--border));
+}
+body.app-shell .home-board .next-up-queue__item.is-started .next-up-queue__order { background: var(--teal); color: #06211f; font-size: .62rem; }
+body.app-shell .home-board .next-up-queue__copy .next-up-queue__now { color: var(--teal); font-weight: 600; }
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__start {
+  background: var(--accent-solid);
+  border: 1px solid var(--accent-solid);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__start:hover:not(:disabled) { filter: brightness(1.08); }
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__unstart { background: transparent; border: 1px solid var(--border); box-shadow: none; color: var(--fg-secondary); }
+
+body.app-shell .home-board .next-up-queue__filters { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+body.app-shell .home-board .next-up-queue__filters[hidden] { display: none; }
+body.app-shell .home-board .next-up-queue__filter {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+}
+body.app-shell .home-board .next-up-queue__filter:hover:not(:disabled) { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
+body.app-shell .home-board .next-up-queue__filter[aria-pressed="true"] { background: var(--accent-soft); border-color: transparent; color: var(--primary); }
+body.app-shell .home-board .next-up-queue__filter:focus-visible { box-shadow: var(--ring); outline: none; }
+body.app-shell .home-board .next-up-queue__filter-count { color: var(--fg-secondary); font-size: .72rem; font-variant-numeric: tabular-nums; }
+body.app-shell .home-board .next-up-queue__filter[aria-pressed="true"] .next-up-queue__filter-count { color: inherit; }
+
+body.app-shell .home-board .next-up-queue__suggest { border-top: 1px dashed var(--border); margin-top: 14px; padding-top: 14px; }
+body.app-shell .home-board .next-up-queue__items:empty + .sr-only + .next-up-queue__suggest { border-top: 0; margin-top: 0; padding-top: 0; }
+body.app-shell .home-board .next-up-queue__suggest-title { color: var(--fg-secondary); font-size: .82rem; font-weight: 600; letter-spacing: .01em; margin: 0 0 10px; }
+body.app-shell .home-board .next-up-queue__suggest-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.app-shell .home-board .next-up-queue__suggestion {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  padding: 8px 8px 8px 10px;
+}
+body.app-shell .home-board .next-up-queue__suggestion-cover {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--teal) 32%, transparent), color-mix(in srgb, var(--primary) 28%, transparent));
+  border-radius: 6px;
+  color: var(--fg);
+  display: flex;
+  font-weight: 800;
+  justify-content: center;
+  object-fit: cover;
+  overflow: hidden;
+  width: 34px;
+}
+body.app-shell .home-board .next-up-queue__suggestion-copy { min-width: 0; }
+body.app-shell .home-board .next-up-queue__suggestion-copy strong { display: block; font-size: .86rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.app-shell .home-board .next-up-queue__suggestion-copy span { color: var(--fg-secondary); display: block; font-size: .74rem; }
+body.app-shell .home-board .next-up-queue__suggestion-add {
+  background: var(--accent-soft);
+  border: 0;
+  border-radius: var(--radius-pill, 999px);
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+body.app-shell .home-board .next-up-queue__suggestion-add:hover:not(:disabled) { background: var(--accent-solid); color: var(--on-accent); }
+body.app-shell .home-board .next-up-queue__suggestion-add:focus-visible { box-shadow: var(--ring); outline: none; }
+
 /* ---------- Coming up ---------- */
 body.app-shell .home-board .coming-up { padding: 20px 22px; }
 body.app-shell .home-board .coming-up .for-you-grid--wide { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
@@ -287,6 +413,11 @@ body.app-shell .home-board__rail .install-card__actions { grid-column: 1 / -1; j
 
   /* Next Up: cover and title on top, all buttons on one row under them. */
   body.app-shell .home-board .next-up-queue__item { grid-template-columns: 22px 38px minmax(0, 1fr); padding: 10px; }
+  body.app-shell .home-board .next-up-queue__item.has-handle { grid-template-columns: 22px 22px 38px minmax(0, 1fr); padding-left: 4px; }
+  body.app-shell .home-board .next-up-queue__handle { min-height: 44px; }
+  body.app-shell .home-board .next-up-queue__filters { flex-wrap: nowrap; margin-inline: -16px; overflow-x: auto; padding-inline: 16px; scrollbar-width: none; }
+  body.app-shell .home-board .next-up-queue__filter { flex-shrink: 0; min-height: 40px; }
+  body.app-shell .home-board .next-up-queue__item > :not(.next-up-queue__copy):not(.next-up-queue__controls) { grid-row: auto; }
   body.app-shell .home-board .next-up-queue__cover { width: 38px; }
   body.app-shell .home-board .next-up-queue__controls { grid-column: 1 / -1; flex-wrap: wrap; }
   body.app-shell .home-board .next-up-queue__controls button { font-size: .74rem; min-height: 40px; min-width: 40px; padding: 0 9px; }
@@ -296,5 +427,54 @@ body.app-shell .home-board__rail .install-card__actions { grid-column: 1 / -1; j
 
 @media (prefers-reduced-motion: reduce) {
   body.app-shell .home-board :is(.library-pulse__item, .next-up-queue__item) { transition: none; }
+  body.app-shell .home-board .next-up-queue__items.is-sorting .next-up-queue__item:not(.is-dragging) { transition: none; }
   body.app-shell .home-board .library-pulse__item:hover { transform: none; }
 }
+
+/* ---------- New Year challenge card (Dec-Jan) ---------- */
+body.app-shell .home-board .ny-pledge-card {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(245, 158, 11, .16), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid var(--border);
+}
+body.app-shell .home-board .ny-pledge-card .year-goals__eyebrow { color: var(--warning, #d97706); }
+body.app-shell .home-board .ny-pledge-card__link {
+  align-items: center;
+  background: var(--accent-solid, #7c3aed);
+  border-radius: var(--radius-pill, 999px);
+  color: #fff;
+  display: inline-flex;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+body.app-shell .home-board .ny-pledge-card__link:hover { color: #fff; filter: brightness(1.08); }
+body.app-shell .home-board .ny-pledge-card__link:focus-visible { outline: 3px solid #14b8a6; outline-offset: 2px; }
+
+/* ---------- Advent calendar card (December): a strip of the 24 doors ---------- */
+body.app-shell .home-board .advent-card {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(248, 113, 113, .14), transparent 70%),
+    radial-gradient(360px 160px at 0% 100%, rgba(34, 197, 94, .10), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+}
+body.app-shell .home-board .advent-card__doors {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  list-style: none;
+  margin: 12px 0 14px;
+  max-width: 420px;
+  padding: 0;
+}
+body.app-shell .home-board .advent-card__doors li {
+  aspect-ratio: 1;
+  background: var(--surface-muted, rgba(127, 127, 127, .14));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+body.app-shell .home-board .advent-card__doors li.is-ready { border-color: var(--warning, #d97706); }
+body.app-shell .home-board .advent-card__doors li.is-opened { background: var(--warning, #d97706); border-color: transparent; }
+body.app-shell .home-board .advent-card__doors li.is-today { box-shadow: 0 0 0 2px var(--accent-solid, #7c3aed); }

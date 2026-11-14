@@ -470,6 +470,7 @@
     const { invites, supporters, weekly_email: email, takes } = growth;
     const calendar = growth.calendar || {};
     const push = growth.push || {};
+    const reviews = growth.reviews || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -513,6 +514,13 @@
         ...(push.sent_by_kind || []).map(item => ({ label: `Sent: ${item.kind}`, count: item.count })),
         { label: 'Away reminders sent', count: push.away_reminders || 0 },
       ],
+      growthReviews: [
+        { label: 'Reviews shared from the card', count: reviews.shared || 0 },
+        { label: 'Members who shared one', count: reviews.sharers || 0 },
+        { label: 'Reviews kept private', count: reviews.kept || 0 },
+        { label: 'Private reviews that could be shared (now)', count: reviews.waiting || 0 },
+        { label: 'Members with one waiting (now)', count: reviews.waiting_members || 0 },
+      ],
     };
   }
 
@@ -523,6 +531,7 @@
     growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
     growthPush: 'Phone and browser notifications',
+    growthReviews: 'Share your reviews card',
   };
 
   function growthReport(data) {
@@ -539,7 +548,7 @@
     if (!card) return;
     card.hidden = !data.growth;
     if (!data.growth) return;
-    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend" and phone notifications in the last ${data.days} days. Rows marked "now" are current totals.`;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications and the "Share your reviews" card in the last ${data.days} days. Rows marked "now" are current totals.`;
     Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
       const list = $(id);
       list.replaceChildren();

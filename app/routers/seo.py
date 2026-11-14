@@ -15,6 +15,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
+from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
@@ -67,6 +68,10 @@ CORE_SITEMAP_PATHS = (
     ("/in-order", "monthly", "0.75"),
     ("/halloween", "weekly", "0.75"),
     ("/holidays", "weekly", "0.75"),
+    ("/holidays/gifts", "weekly", "0.75"),
+    ("/holidays/black-friday", "weekly", "0.75"),
+    ("/holidays/thanksgiving", "weekly", "0.75"),
+    ("/holidays/reading-and-listening", "weekly", "0.75"),
     ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
@@ -124,7 +129,7 @@ def _database_parts(db: Session) -> list[str]:
             ).limit(200).all()
             ready_count = len(visible_search_ready(category, category_candidates))
             search_ready_total += ready_count
-            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
+            if ready_count >= review_quality.MIN_INDEXED_CATEGORY_REVIEWS:
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -297,7 +302,7 @@ def _database_parts(db: Session) -> list[str]:
     for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
-            f"<lastmod>{edition['published_date']}</lastmod>"
+            f"<lastmod>{edition.get('reviewed', edition['published_date'])}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
     # Monthly challenge guides that have started; future months stay unpublished.
@@ -311,12 +316,42 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
-    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    # New Year challenge guides from their opening day (December 1 of the year before).
+    from .. import new_year_challenge
+    for year, edition in new_year_challenge.EDITIONS.items():
+        if new_year_challenge.is_public(year):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{new_year_challenge.path(year)}</loc>"
+                f"<lastmod>{edition['published']}</lastmod>"
+                "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+            )
+    # The December advent calendar from opening day; the one-door share pages are never listed.
+    from .. import advent_calendar
+    advent_year = advent_calendar.current_year()
+    if advent_year is not None:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{advent_calendar.BASE_PATH}</loc>"
+            f"<lastmod>{max(advent_calendar.edition(advent_year)['published'], advent_calendar.edition(advent_year)['reviewed'])}</lastmod>"
+            "<changefreq>daily</changefreq><priority>0.8</priority></url>"
+        )
+    # Awards season: the calendar and one written page per show. Shared ballots are never listed.
+    from .. import awards, awards_data
+    sitemap_parts.append(
+        f"<url><loc>{base_url}{awards.BASE_PATH}</loc><lastmod>{awards_data.SEASON['reviewed']}</lastmod>"
+        "<changefreq>weekly</changefreq><priority>0.8</priority></url>"
+    )
+    for awards_slug, awards_show in awards.ordered():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{awards.path(awards_slug)}</loc><lastmod>{awards_show['reviewed']}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
+    # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
+    # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
     daily_numbers = daily.archive_numbers()
     if daily_numbers:
         sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
-    for number in daily_numbers:
+    for number in (daily_numbers if daily.INDEX_PAST_PUZZLES else []):
         sitemap_parts.append(
             f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
             "<changefreq>yearly</changefreq><priority>0.5</priority></url>"
@@ -375,6 +410,16 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # "How long does it take" guides: hand-written, with a checked part-by-part breakdown.
+    from .. import binge_calculator
+    from ..binge_guides import GUIDES as BINGE_GUIDES
+    for slug, guide in BINGE_GUIDES.items():
+        if binge_calculator.is_indexable(guide):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{binge_calculator.path(slug)}</loc>"
+                f"<lastmod>{guide['reviewed']}</lastmod>"
+                "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+            )
     # Title pages join only when they have real substance (see title_pages.is_indexable).
     try:
         from .titles import sitemap_entries
@@ -548,6 +593,7 @@ Allow: /ads.txt
 Allow: /sellers.json
 Disallow: /auth/
 Disallow: /api/
+Disallow: /share
 Disallow: /account/
 Disallow: /friends
 Disallow: /movies/
@@ -625,6 +671,19 @@ async def get_llms_txt():
     """Serve llms.txt/ai.txt for AI model discovery and site understanding."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     
+    from .. import new_year_challenge
+    new_year = new_year_challenge.current_year()
+    new_year_line = (
+        f"The New Year challenge at {base_url}{new_year_challenge.path(new_year)} lets members pledge how many titles in "
+        "each format they want to finish that year, with advice on picking a number and a table of what each format "
+        "typically costs in hours a week.\n" if new_year else ""
+    )
+    from .. import advent_calendar
+    advent_line = (
+        f"The December advent calendar at {base_url}{advent_calendar.BASE_PATH} opens one door a day from December 1 "
+        "to 24, each with one written pick across the nine formats, how long it takes and a caveat.\n"
+        if advent_calendar.current_year() else ""
+    )
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
@@ -691,16 +750,16 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
 "If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
-Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
+Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel. The Thanksgiving weekend guide at {base_url}/holidays/thanksgiving has twenty picks across all nine formats for the four days of the long weekend, from audiobooks for the drive to party games for after dinner. The December reading and listening guide at {base_url}/holidays/reading-and-listening has twenty books, audiobooks, podcasts, manga and albums for wrapping, travelling, the week after Christmas and late at night. The holiday gift guide at {base_url}/holidays/gifts has four gift ideas for each kind of fan (movies, TV, anime, games, music, books, manga, podcasts and audiobooks), each with what to check before buying, and members can turn their library into a gift list to share with family. The Black Friday guide at {base_url}/holidays/black-friday says, format by format, which box sets, games, manga, records, books and audiobooks tend to get cheaper on Black Friday and Cyber Monday and which rarely do, with the 2026 dates and five checks to make before buying.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
 Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
-Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games and books of each year (for example {base_url}/best-of/2026/movies), with release details, why each pick made the list, a caveat and the sources checked.
-Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
+{new_year_line}{advent_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
-The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime or book series takes and the finish date at a chosen pace, with worked examples for long series.
+The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime, film series, book series, audiobook or game takes, and either the finish date at a chosen pace or the daily time needed to finish by a chosen date. "How long does it take" guides (for example {base_url}/binge-calculator/breaking-bad and {base_url}/binge-calculator/harry-potter) give hand-checked lengths season by season, book by book or film by film, with what the total leaves out.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 

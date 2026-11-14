@@ -1,11 +1,30 @@
 /* Browse shelves (/browse/manga, /browse/podcasts, /browse/audiobooks). Sits on title-page.css. */
+
+/* Reading type shared with the written guides (guide-reader.css): Source Serif 4, OFL. */
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url(/static/fonts/source-serif-4-latin-var-normal.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+.browse-page { --read-font: "Source Serif 4", "Iowan Old Style", Charter, "Sitka Text", Georgia, serif; }
+.browse-page .site-hero .browse-deck { color: #e2dff4; font-family: var(--read-font); font-size: clamp(1.2rem, 1.1rem + .45vw, 1.4rem); line-height: 1.55; max-width: 38em; text-wrap: pretty; }
+.browse-byline { color: var(--site-muted); font-size: var(--text-md); line-height: 1.55; margin: 20px 0 0; min-height: 36px; padding: 7px 0 0 48px; position: relative; }
+.browse-byline::before { background: url(/static/vortex-mark.webp) center / cover no-repeat, var(--site-bg-3); border: 1px solid var(--site-border-strong); border-radius: 50%; content: ""; height: 36px; left: 0; position: absolute; top: 0; width: 36px; }
+.browse-byline a { color: var(--site-text); font-weight: 700; text-decoration: none; }
+.browse-byline a + a { color: var(--site-violet-soft); font-weight: 600; }
+.browse-byline a:hover { text-decoration: underline; }
+.browse-shelf .title-section__lead { color: var(--site-soft); font-family: var(--read-font); font-size: 1.04rem; line-height: 1.6; max-width: 44rem; }
 .browse-body { gap: 44px; }
 .browse-hero__status { color: var(--site-soft); font-size: .92rem; margin-top: 12px; min-height: 1.4em; }
 .browse-hero__status:empty { display: none; }
 .browse-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .browse-jump a { background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: var(--radius-pill); color: var(--site-text); font-size: .86rem; font-weight: 600; padding: 7px 14px; text-decoration: none; transition: border-color .15s ease, background .15s ease; }
 .browse-jump a:hover { background: var(--site-surface-2); border-color: rgba(196, 181, 253, .55); }
-.browse-intro p { color: var(--site-soft); font-size: 1.04rem; line-height: 1.7; margin: 0 0 14px; max-width: 760px; }
+.browse-intro p { color: #e2dff4; font-family: var(--read-font); font-size: 1.125rem; line-height: 1.7; margin: 0 0 1.05em; max-width: 40rem; text-wrap: pretty; }
+.browse-intro p:first-child::first-letter { color: var(--site-violet-soft); float: left; font-family: var(--read-font); font-size: 3.4em; font-weight: 700; line-height: .82; margin: .1em .1em 0 0; }
 .browse-intro p:last-child { margin-bottom: 0; }
 
 /* Search within the page: only shown once the script can act on it. */
@@ -69,7 +88,8 @@
 .browse-related__list li { display: grid; gap: 2px; }
 .browse-related__list a { color: var(--site-text); font-weight: 600; }
 .browse-related__list span { color: var(--site-muted); font-size: .88rem; }
-.browse-method p { color: var(--site-soft); line-height: 1.65; margin: 0 0 10px; max-width: 760px; }
+.browse-method p { color: var(--site-soft); font-family: var(--read-font); font-size: 1rem; line-height: 1.65; margin: 0 0 10px; max-width: 40rem; }
+.browse-method p.muted { font-family: var(--site-font); }
 .browse-method .muted { color: var(--site-muted); font-size: .84rem; }
 
 @media (max-width: 640px) {

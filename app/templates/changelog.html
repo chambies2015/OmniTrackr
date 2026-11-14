@@ -63,6 +63,516 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="advent-nov14-2026-heading">
+        <h2 id="advent-nov14-2026-heading">November 14, 2026: An advent calendar for December</h2>
+        <p>From December 1 there is an advent calendar in the holiday picks: 24 doors, one opening each day until Christmas Eve, each with one pick written up for that day.</p>
+        <ul>
+          <li>Every format is in there at least twice: films, TV, anime, games, books, albums, manga, podcasts and audiobooks. None repeat the other holiday guides.</li>
+          <li>Each door says how long the pick takes and what to know first, and has a button to add it to your library as not started. Anything you already have is left as it is.</li>
+          <li>Missed a day? Opened doors stay open, so you can catch up whenever you like.</li>
+          <li>Open 6, 12 or all 24 doors in one December for the new Door Opener badge.</li>
+          <li>If you have notifications on, you can ask for one each morning when a new door opens. It repeats the hint on the door and never names the pick, and it follows your quiet hours.</li>
+          <li>Each door has its own share link with a picture card, and a card on your dashboard shows today's door during December.</li>
+        </ul>
+        <p>Visitors without an account can open doors and save picks in their browser, and both carry over to the account they sign up with.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="profile-nov14-2026-heading">
+        <h2 id="profile-nov14-2026-heading">November 14, 2026: Say why you pinned it, and show what you're into right now</h2>
+        <p>Public profiles got another pass, mostly at the top of the page.</p>
+        <ul>
+          <li>Your first pinned title now gets a big spot of its own, with its score and a line from you about why it's there. The rest of your pins sit under it as cards, each with room for a note too. Write the notes in Account → Public profile, under Showcase. They're optional and up to 140 characters.</li>
+          <li>A new "Right now" section can show what you've started from your Up next queue and what's waiting next in it. It's off until you tick it in Account → Public profile, and it never says how far along you are.</li>
+          <li>The About box has a small chart of how you rate, from 1 to 10, when your profile shows library counts.</li>
+          <li>Visitors can filter your favorites by movies, games, books and so on.</li>
+          <li>The diary is laid out as cards, so a few months of finishes take up a lot less scrolling.</li>
+        </ul>
+        <p>Pins you already made keep their order and have no note until you write one. The Right now section only appears on profiles whose owners switch it on.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov14-2026-heading">
+        <h2 id="security-nov14-2026-heading">November 14, 2026: Security and speed check of episode scores and the new friends feed</h2>
+        <p>We went over what shipped on November 13: scores and notes on single episodes, the refreshed friends feed, watch clubs and title discussions. We checked who can read and change each episode note, that notes stay out of every public page, feed and share link, that everything typed into notes, club chat and discussions is shown as text, and how much work each page and backup does. Your episode notes are only ever sent to you. These are the fixes.</p>
+        <ul>
+          <li>Restoring a backup counted the episode notes a show already had by going through every note in your account, once for each show in the file. A file that named the same show thousands of times could keep the server busy for over a minute. Each show's count is now worked out once at the start, and a show named more than once is looked up once.</li>
+          <li>If you last left the friends feed on Following, the dashboard fetched the Following list and its suggestions every time it opened, even when you never went to that tab. It now waits until you open the friends feed, like it did before the refresh. It still opens on Following.</li>
+          <li>Saving a score or note read your show and your place in it twice before sending the guide back. Each save now does three fewer database reads, and opening the episode guide does three fewer.</li>
+        </ul>
+        <p>Your library, your episode notes and your clubs are untouched.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="social-nov13-2026-heading">
+        <h2 id="social-nov13-2026-heading">November 13, 2026: A new look for the friends feed, watch clubs and discussions</h2>
+        <p>The three places where you talk to other people on OmniTrackr now match the rest of the app.</p>
+        <ul>
+          <li>The friends feed has a Friends / Following switch at the top, so updates from people you follow are one tap away instead of at the bottom of a long page. Updates are grouped under Today, Yesterday, This week and Earlier.</li>
+          <li>Your sharing switch, your best recommenders and people you might follow sit in a column beside the feed on a wide screen.</li>
+          <li>A review in the feed that hides a twist in ||double bars|| keeps it covered until you tap it, the same as in discussions.</li>
+          <li>On a watch club, a bar shows who has finished and who is partway through, and the club score gets its own badge. Club talk reads like a chat, with your own posts tinted.</li>
+          <li>List cards on the shared lists page show their first four covers on a shelf, and the current club pick with its poster and finish-by date.</li>
+          <li>Discussion boards and threads show each member's initial in a coloured circle, and the reply count sits in a speech bubble beside each thread.</li>
+        </ul>
+        <p>Nothing about your lists, clubs, posts or feed settings changes.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="episode-notes-nov13-2026-heading">
+        <h2 id="episode-notes-nov13-2026-heading">November 13, 2026: Score single episodes and keep notes on them</h2>
+        <p>The episode guide for a TV show or anime has a second setting called "Rate and note". Switch to it and tapping an episode opens that episode instead of moving your place in the show. Give it a score from 1 to 10, write a note, or both.</p>
+        <ul>
+          <li>A score saves as soon as you tap it. The arrows at the top move to the episode before or after, so you can score a whole season in a row.</li>
+          <li>Episodes you've scored show the number on their square in the grid, and a dot marks the ones with a note. Each season shows your average for it.</li>
+          <li>Once you've scored three episodes, the guide lists your top three at the top.</li>
+          <li>Tick "It has spoilers" on a note and the guide keeps it hidden in the list until you tap it.</li>
+          <li>After you mark an episode watched, the toast and the guide both offer to rate it.</li>
+          <li>Your scores and notes go into the JSON backup, and restoring a backup adds them back without touching anything you've written since.</li>
+        </ul>
+        <p>Only you can see them. They're stored apart from the show itself, so its rating, review, finished status and your place in it stay exactly as they were. The guide opens in "Mark watched" like before, and remembers which setting you used last.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov13-2026-heading">
+        <h2 id="security-nov13-2026-heading">November 13, 2026: Security and speed check of group polls, awards ballots and the new Statistics tab</h2>
+        <p>We went over what shipped on November 12: the group poll upgrades on <a href="/tonight">/tonight</a>, the <a href="/awards">awards season</a> ballots and their share links, and the rebuilt Statistics tab and Settings. We checked every new address for limits, who can read and change what, and how much database work each page does. Share links, ballots and polls only show what their owner chose to share, and everything you type is shown as text. These are the fixes.</p>
+        <ul>
+          <li>Several group poll actions from October had no limit on how often they could be called: reading a poll, taking back a vote, closing a poll and deleting one. A poll's results can be read by anyone with its link, so they now have limits like making a poll and voting do. An open poll page refreshes every 20 seconds, which stays well under its limit.</li>
+          <li>"Where to watch" on a finished poll looked the poll up in a way that made the rest of the site wait while it did. That part now runs on its own, like the streaming lookups after it.</li>
+          <li>The popular titles a visitor starts a shortlist from were worked out from every member's library on each visit to /tonight. They are now worked out once every ten minutes, the same as the homepage's "Start your list".</li>
+          <li>The new Statistics overview asked for the whole old statistics summary to show ratings and release years. That summary also recounts every shelf and ranks directors, which the overview doesn't show. It now asks for ratings and years only, about a third less database work each time the tab opens.</li>
+        </ul>
+        <p>Your account, your library, your polls and your ballots are untouched.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="stats-settings-nov12-2026-heading">
+        <h2 id="stats-settings-nov12-2026-heading">November 12, 2026: A new Statistics page, and Settings one section at a time</h2>
+        <p>The Statistics tab used to be ten collapsed rows, one per format plus a library summary, and you had to open each to see anything. It now opens on your whole library: titles saved, how many you've finished, your average rating, how you spread your ratings from 1 to 10, and which decades your titles come from.</p>
+        <ul>
+          <li>"Finished, by format" shows how far along each shelf is. Pick a row to see that format on its own below.</li>
+          <li>Formats are tabs now, so one click swaps between movies, TV shows, anime, games, music, books, manga, podcasts and audiobooks. Each tab keeps what the old rows had: ratings, release decades, directors, seasons and episodes, volumes and chapters, listening hours and genres.</li>
+          <li>Time spent, Monthly Replay and Tasteprint sit on the same page as before, and buttons at the top jump to each one.</li>
+          <li>The format tabs work from the keyboard with the arrow keys. The old rows could only be opened with a mouse or a tap.</li>
+        </ul>
+        <p>Settings shows one section at a time. Choosing Privacy or Notifications in the menu swaps the page to that section. Before, the menu scrolled you through one long column that ran to about 18 phone screens. Links that open a particular setting, such as the ones in emails, still land in the right place.</p>
+        <ul>
+          <li>Switches that are off are easier to tell from the page behind them in the light theme.</li>
+          <li>"See memberships" and "Support on Ko-fi" look like buttons again. They had lost their padding and looked like highlighted text.</li>
+          <li>The four supporter tiers fit on one row on a wide screen, and the showcase search results scroll inside their own box.</li>
+        </ul>
+        <p>Nothing in your library or your saved settings changes. Both pages work in light and dark and in every supporter theme.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="awards-nov12-2026-heading">
+        <h2 id="awards-nov12-2026-heading">November 12, 2026: Awards season, with a ballot for each show</h2>
+        <p>A new page at <a href="/awards">/awards</a> keeps the dates for The Game Awards, the Golden Globes, the Grammys and the Oscars in one place, with a written page for each: when nominees come out, who votes, where to watch and last year's winners.</p>
+        <ul>
+          <li>When a show announces its nominees, its page becomes a ballot. Pick one nominee per category, skip any you like, and change your mind until the show starts.</li>
+          <li>Signed in, picks save as you make them. Signed out, they stay in your browser and move to your account if you make one.</li>
+          <li>Nominees you already track are marked, and the others can be added to your library from the ballot. The same works for last year's winners.</li>
+          <li>After the show, every category you called is a point. Skipped categories don't count against you.</li>
+          <li>You can share a ballot as a link and a card. It shows your picks and nothing from your library, and "Stop sharing" ends the link.</li>
+          <li>No nominee lists are out yet, so today each page shows its dates and a "Tell me when the ballot opens" button. The Game Awards and Grammy nominees are due around November 16.</li>
+          <li>While a ballot is open, a small card on your home screen links to it, and it shows your score for two weeks after the show. "Hide" puts it away.</li>
+        </ul>
+        <p>Nothing changes in your library unless you add a nominee yourself.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="group-poll-nov12-2026-heading">
+        <h2 id="group-poll-nov12-2026-heading">November 12, 2026: Group polls you can send, save and run again</h2>
+        <p>A <a href="/tonight">group poll</a> lets the people you're watching with vote on a shortlist from one link. This update is about what happens around the vote: how the link looks when you send it, what you can do with the winner, and how to do it all again next week.</p>
+        <ul>
+          <li>Poll links have their own preview picture. In a group chat the link shows the question and the titles on a ballot, and once voting closes it shows the winner.</li>
+          <li>The page you land on after making a poll, and the poll itself, have buttons for copying the link or sending it by WhatsApp, text message or email.</li>
+          <li>You can build a shortlist before you have an account. Search or tap popular titles, press "Get the link", and the shortlist is waiting for you after you sign up.</li>
+          <li>"Pick four for me" fills a shortlist from your Next Up queue and library, or from popular titles if you're not signed in. It sticks to one kind, so a film isn't put up against a whole series.</li>
+          <li>The result shows where the winner is streaming, with a button that puts it at the end of your Next Up queue. Voters without an account can save it to a list that moves into their library when they join.</li>
+          <li>After a poll closes, whoever made it can start another round with the titles that lost. The old link points to the new round, so the group can keep using the one already in their chat.</li>
+          <li>On a <a href="/lists">shared list</a>, "Put it to a vote" starts a poll from the titles the list wants most.</li>
+        </ul>
+        <p>Polls made before today work as they did. Adding a winner to Next Up never changes a title you already have: your rating, notes and progress stay as they are.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov12-2026-heading">
+        <h2 id="security-nov12-2026-heading">November 12, 2026: Security and speed check of the new sign-up forms and the binge calculator guides</h2>
+        <p>We went over the two things that shipped on November 10: the new sign-up, log-in and password forms, and the 30 "how long does it take" pages in the binge calculator. We loaded the guides in a browser as a visitor and as a member, at desktop and phone sizes, opened plan links with made-up values, and went through signing up, asking for a reset link and opening one. No page had a script error or a broken link, and all 30 guides are long enough to be listed in search. These are the fixes.</p>
+        <ul>
+          <li>Password reset and email confirmation links open the homepage with a one-time key in the address. The homepage also reports visits to Google Analytics, and Analytics records the address of the page it counts, so the key was sent along with it. A reset key works for an hour, or until it is used. The key is now taken out of the address Analytics is given.</li>
+          <li>Confirming an email was the one step of signing up with no limit on how often it could be called. It now has one, like signing up, logging in and resetting a password.</li>
+          <li>"What you have left" on the binge calculator compared every unfinished title in your library with every title in all 30 guides, twice. For a library with 1,600 unfinished titles that took about 290 milliseconds on the server. The guides are now indexed once and the same library takes about 40.</li>
+          <li>Each guide page worked out its links to title pages from the whole site search list on every view. They are now worked out once each time that list is rebuilt, which is every ten minutes.</li>
+          <li>The name of a plan can come from a shared link, and it goes into the file you get from "Add the finish date to my calendar". A name with one kind of line break in it could have added lines of its own to that file. It is now written out as text like the other kinds.</li>
+          <li>Fifteen of the guides had a page title too long for a search result, so the hours were the part that got cut off. Those now use a shorter question, such as "How long to read A Song of Ice and Fire? About 148 hours". The heading on the page is unchanged.</li>
+        </ul>
+        <p>Your account, your password and your library are untouched.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="binge-guides-nov10-2026-heading">
+        <h2 id="binge-guides-nov10-2026-heading">November 10, 2026: How long 30 series take, and a planner that works back from a date</h2>
+        <p>The <a href="/binge-calculator">binge calculator</a> now has a page for each of 30 series, such as <a href="/binge-calculator/breaking-bad">Breaking Bad</a>, <a href="/binge-calculator/one-piece">One Piece</a>, <a href="/binge-calculator/harry-potter">the Harry Potter books</a> and <a href="/binge-calculator/marvel-infinity-saga">the Marvel films</a>. Each one gives the total, then breaks it down season by season, arc by arc, book by book or film by film, and says what the total leaves out.</p>
+        <ul>
+          <li>You can plan two ways: say how much time you have each day and get a finish date, or pick a date and see how much you need each day to make it.</li>
+          <li>Untick the seasons, books or films you've finished, or type how many episodes you've seen, and the plan counts only what is left.</li>
+          <li>Book pages switch between reading and listening, with your own reading pace or audiobook speed. Naruto can skip its filler, and The Lord of the Rings films can use the extended editions.</li>
+          <li>"Copy a link to this plan" gives you an address that opens the same plan for anyone, and "Add the finish date to my calendar" downloads a calendar entry.</li>
+          <li>The main calculator also takes films, audiobooks and games now, and can look up titles members track.</li>
+          <li>Signed in, each page reads your library: finished parts start unticked and a show starts from the episode you're on. The calculator also lists what you haven't finished and the hours each has left.</li>
+          <li>Without an account you can save a series to a list that moves into your library when you sign up.</li>
+        </ul>
+        <p>Episode counts were checked against TVmaze, audiobook lengths against Audible and film running times against each film's Wikipedia page, all on November 10. Adding a series from one of these pages never changes anything you've already saved.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="sign-in-nov10-2026-heading">
+        <h2 id="sign-in-nov10-2026-heading">November 10, 2026: Signing up takes two boxes</h2>
+        <p>The sign-up, log-in and password forms have a new look and fewer steps. They work the same way whether you use a password, Google, a passkey or a two-factor code.</p>
+        <ul>
+          <li>Signing up asks for an email and a password. Your username is suggested from your email and shown in one line under the password, with a Change link if you want to pick your own. If the suggested name is taken, the form offers the next one for you to keep or replace.</li>
+          <li>If the email address looks like a slip, such as gmial.com, the form asks whether you meant gmail.com and fixes it in one click.</li>
+          <li>After you sign up, the form turns into a "Check your inbox" step. It names the address we wrote to, has a button that opens Gmail, Outlook, Yahoo Mail, iCloud Mail or Proton Mail when you use one of them, and can send the email again. If you open the link in another tab, the first tab notices and offers your library.</li>
+          <li>Asking for a password reset ends on the same step. Choosing a new password is one box with a Show button, and you land on the log-in form as soon as it is saved.</li>
+          <li>A confirmation link that has expired now takes you straight to a box where you can ask for a new one.</li>
+          <li>On a phone the form opens as a full page, so the whole sign-up form fits on one screen without scrolling.</li>
+          <li>Messages above the form are easier to spot: errors and confirmations each have their own color and mark.</li>
+        </ul>
+        <p>Existing accounts, passwords, passkeys and two-factor settings are untouched.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov10b-2026-heading">
+        <h2 id="security-nov10b-2026-heading">November 10, 2026: Security and speed check of the 2027 challenge and the new guide layout</h2>
+        <p>We went over the 2027 challenge before it opens on December 1, and the reading layout the written guides got today. We made, changed, shared and left pledges, opened pledge cards that had been switched off, and loaded each kind of guide in a browser to check that its new script runs under the site's script rules. No pledge card showed a shelf its owner keeps private. These are the fixes.</p>
+        <ul>
+          <li>The site's own visit statistics would have stored the address of every shared pledge card. Pledge cards are now counted under one row, the same as recap and goal links, so the links themselves are never kept.</li>
+          <li>Four challenge actions had no limit on how often they could be called: loading the home screen card, reading your pledge, leaving the challenge and stopping sharing. They now have limits like saving and sharing do.</li>
+          <li>Saving a pledge wrote each goal on its own, so ten goals took 41 database queries. The whole form now saves in one step with 11, and either all of your numbers are saved or none are.</li>
+          <li>If you tried some numbers signed out and then signed in, the form filled in those numbers and emptied every other box. A 2027 goal you had already set from your dashboard would have been removed when you pressed save. Goals you already have now stay in the form.</li>
+          <li>Your home screen asked the server about the challenge card on every visit, all year. It now asks only from November to January, the months the card can show.</li>
+          <li>On phones the table of what each format costs scrolls sideways. It can now be reached and scrolled from the keyboard, and screen readers say what it is.</li>
+        </ul>
+        <p>Your library and the goals you already have are untouched.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="new-year-nov10-2026-heading">
+        <h2 id="new-year-nov10-2026-heading">November 10, 2026: The 2027 challenge opens on December 1</h2>
+        <p>On December 1 a new page at /new-year-challenge/2027 opens for pledges: pick how many books, films, shows, anime, games, albums, manga, podcasts or audiobooks you want to finish in 2027.</p>
+        <ul>
+          <li>Signed in, the form shows what you finished in 2026 and offers three starting points: the same again, a bit more, and a stretch.</li>
+          <li>As you type, it adds up roughly how many hours a week your numbers would take at typical lengths.</li>
+          <li>Each number becomes an ordinary yearly goal, so it shows on the goals card, in the weekly email and in your 2027 Year in Review. Leaving the challenge keeps the goals.</li>
+          <li>You can share a pledge card with your numbers and, from January, how far along you are. It never lists titles and leaves out shelves you keep private.</li>
+          <li>From December 1 to the end of January, a small card on your home screen links to the challenge. "Hide" puts it away.</li>
+        </ul>
+        <p>Nothing changes in your library or your existing goals unless you make a pledge.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="guide-look-nov10-2026-heading">
+        <h2 id="guide-look-nov10-2026-heading">November 10, 2026: Guides are easier to read</h2>
+        <p>The written guides (If you liked, In order, the best of 2026, release guides, the holiday, gift and Black Friday guides, Discover guides and the monthly editions) now share a layout built for reading.</p>
+        <ul>
+          <li>Long text is set in a serif, Source Serif 4, at a size and line length that suits reading on a phone or a big screen. Buttons, labels and headings stay as they were.</li>
+          <li>Under each title you'll see who wrote the guide, when it was last checked and roughly how long it takes to read.</li>
+          <li>On wide screens a column beside the guide lists its sections and marks the one you're reading. It also links to how we write guides and where to send a correction. On phones the same sections sit in one row you can swipe.</li>
+          <li>A thin line at the top of the screen fills in as you read.</li>
+          <li>Monthly editions now have the same header as the other guides, with the date and a list of sections. The manga, podcast and audiobook shelves use the same reading type and say who put them together.</li>
+        </ul>
+        <p>No guide changed its picks, its wording or its address.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov10-2026-heading">
+        <h2 id="security-nov10-2026-heading">November 10, 2026: Security and speed check of Best of 2026, the new home screen and cover lookups</h2>
+        <p>We went over the nine best-of lists, the welcome strip and Shelf layout on your home screen, and the cover lookups that no longer rename your titles. We opened the lists signed in and signed out, sent made-up picks to the save button, and checked that the welcome strip only ever reads your own library. Nothing showed one member's library to anyone else. These are the fixes.</p>
+        <ul>
+          <li>Saving a manga, podcast or audiobook pick from a best-of list had no limit on how often it could be pressed. It now has the same limit as saving the other formats.</li>
+          <li>The welcome strip on your home screen reloaded its numbers every time you came back to the tab. It now waits until they are a minute old. Edits and imports still update it straight away.</li>
+          <li>The welcome strip counted titles you finished this month in libraries you have hidden, while every other number on it left them out. Hidden libraries are now left out of that count too.</li>
+          <li>Signed in, the best-of pages show your own progress, so your browser no longer keeps a copy of them. Signed out, the best-of hub loads from your browser's cache again for ten minutes, as it did before the year-end edition.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="cover-lookups-nov9-2026-heading">
+        <h2 id="cover-lookups-nov9-2026-heading">November 9, 2026: Finding a cover no longer renames what you saved</h2>
+        <p>When something in your library had no cover, OmniTrackr looked one up and took the first search result, even when it was a different record. That result could also replace the title you typed, and for albums and books the artist or author too, so a saved "Blonde" could turn into a single with another name.</p>
+        <ul>
+          <li>Looking up a cover never changes your title, artist or author, in any of the libraries. It only fills in details you left blank, like a year, genre or release date.</li>
+          <li>For albums, books, anime and games, a cover is only added when the result's title (and the artist or author, where there is one) agrees with yours. Small differences such as accents, "The", "(Deluxe Edition)" or a subtitle still count, a full album is chosen over a single of the same name, and anime can match by its English or Japanese name.</li>
+          <li>If nothing matches well enough, the item stays without a cover instead of borrowing one from something else. Picking a title from search when you add it still fills everything in as before.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="workspace-nov9-2026-heading">
+        <h2 id="workspace-nov9-2026-heading">November 9, 2026: A new look for your library and home screen</h2>
+        <p>The signed-in side of OmniTrackr was mostly text and tables. It now shows your covers.</p>
+        <ul>
+          <li>The home screen opens with a greeting, how many titles you have, finished and rated, what you finished this month, and the covers of your five latest additions. Tap a cover to open that title in your library.</li>
+          <li>Each format has its own colour, used on the library tabs, the bar that shows what your library is made of, and the top of each library. The tabs also show how many titles each library holds.</li>
+          <li>Continue shows your cover next to each title, and up to four titles instead of two.</li>
+          <li>Under each library's name there is a line like "8 movies · 6 watched · 6 rated · average 8.8".</li>
+          <li>Shelf, the wall of covers, now works on phones and tablets as two or three covers a row, and it is the layout you start with. If you picked List before, you keep List. The switch is next to the library name.</li>
+          <li>In List, "Watched", "Read", "Played" and "Listened" are written out in a small label instead of a lone tick, and covers keep their tall shape.</li>
+        </ul>
+        <p>Nothing about your data changed. The new numbers are read from your library each time you open the page.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="best-of-nov9-2026-heading">
+        <h2 id="best-of-nov9-2026-heading">November 9, 2026: The best of 2026, now in all nine formats</h2>
+        <p>The <a href="/best-of">best-of lists</a> covered movies, TV, anime, games and books. They now cover albums, manga, podcasts and audiobooks too, and the page that collects them has become a year-end edition.</p>
+        <ul>
+          <li>Four new lists: <a href="/best-of/2026/music">albums</a>, <a href="/best-of/2026/manga">manga</a>, <a href="/best-of/2026/podcasts">podcasts</a> and <a href="/best-of/2026/audiobooks">audiobooks</a>, eight picks each, with a caveat for every pick and the sources we checked. Audiobook picks name the narrator and running time.</li>
+          <li>The movies list gained Wildwood, and the anime, books and games lists say what is still to come before the year ends.</li>
+          <li>Signed in, every list marks the picks already in your library, and the hub counts how many of the year's picks you have finished, format by format. Nothing is saved; it reads your library when you open the page.</li>
+          <li>Manga, podcast and audiobook picks save straight to the right shelf, with the narrator and length filled in for audiobooks.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov9b-2026-heading">
+        <h2 id="security-nov9b-2026-heading">November 9, 2026: Security and speed check of Next Up, title pages and the Black Friday guide</h2>
+        <p>We went over Start, drag reorder and suggestions in Next Up, the new title page design and the Black Friday guide. We tried starting and unstarting another member's queue entries, reading someone else's suggestions, and guide and title pages signed in and signed out. Nobody could see or change a queue that wasn't theirs, and your list on the Black Friday guide is only ever shown to you. These are the fixes.</p>
+        <ul>
+          <li>Starting a title, dragging one into a new place or clearing finished titles read every queued title back from the database one at a time. A 45-title queue took about 60 reads to start one title. It now takes 16.</li>
+          <li>The "+ more" count beside where to watch on a title page counted a service twice when you could both rent and buy there.</li>
+          <li>The wide still at the top of a title page now loads first, so the top of the page appears sooner.</li>
+          <li>Screen readers now read out "Plays from YouTube" on the trailer button, the same words people see on it.</li>
+          <li>The Black Friday guide's heading took the year from today's date, so in January it would have said 2027 over the 2026 dates. It now shows the year the dates are for.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="title-pages-nov9-2026-heading">
+        <h2 id="title-pages-nov9-2026-heading">November 9, 2026: A new look for title pages</h2>
+        <p>Title pages are where most people first meet OmniTrackr, usually from a search for a film or show. They now open with a proper scene from the title and put the things people came for at the top.</p>
+        <ul>
+          <li>Movies, shows and anime show a wide still from the title behind the poster, from TMDB. Other titles get a soft wash of colour taken from the cover.</li>
+          <li>The line under the title gives the format, release date, length and who made it, and the top of the page says where to watch, play, listen or read, with a link to every option.</li>
+          <li>Once you scroll past the top, a save button stays in the bar at the top of the page. After a guest saves a title, the bar offers a free account to keep it.</li>
+          <li>Where to watch, quick answers and the member numbers sit in their own panels, and on phones the "also track" and "more from" rows scroll sideways instead of stacking.</li>
+          <li>When Wikipedia only has a series logo, the page shows a member's cover instead.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov9-2026-heading">
+        <h2 id="security-nov9-2026-heading">November 9, 2026: Security and speed check of share links, the homepage and the holiday guides</h2>
+        <p>We went over list share links, the poster wall on the homepage, the Thanksgiving and December guides and the review sharing fixes from November 6. We tried made-up and turned-off links, titles from someone else's list, lists whose owner closed their account, and names and notes written to break the page. None of it showed a list that wasn't shared, and the December edition stays hidden until December 1. These are the fixes.</p>
+        <ul>
+          <li>Pressing "+ Add to my library" on someone's list while signed out took you to the sign-in form, and after signing in you landed on your dashboard. You now come back to the list.</li>
+          <li>Saving a change to a long list read each of its titles from the database one at a time, more than once. It now reads them once, so a 50-title list saves with about 100 fewer database reads.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="next-up-nov9-2026-heading">
+        <h2 id="next-up-nov9-2026-heading">November 9, 2026: Start titles from Next Up and drag the queue into order</h2>
+        <p>Next Up on your home page could hold your queue, but it couldn't tell what you had already started, and moving something from tenth to second took eight presses of an arrow.</p>
+        <ul>
+          <li>Press <strong>Start watching</strong>, <strong>Start reading</strong>, <strong>Start playing</strong> or <strong>Start listening</strong> on a queued title. It moves to the top, says when you began, and shows first in Continue. Movies, games and albums now appear in Continue too, since they have no saved place to put them there. Nothing in your library changes; Done is still what marks a title finished.</li>
+          <li>Drag a title by the handle on its left to put it anywhere in the queue. It works with a mouse or a finger. With a keyboard, focus the handle and use the arrow keys, or Home to send it to the top.</li>
+          <li>Once your queue mixes formats, chips at the top narrow it to what you feel like: Watch, Read, Play or Listen.</li>
+          <li>When your queue is empty or short, Next Up suggests unfinished titles from your library to add in one tap. Hidden tabs are left out.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="black-friday-nov9-2026-heading">
+        <h2 id="black-friday-nov9-2026-heading">November 9, 2026: A Black Friday guide for people with a backlog</h2>
+        <p>The <a href="/holidays/black-friday">Black Friday guide</a> goes through each format, from discs and games to manga and audiobooks, and says what tends to get cheaper on Black Friday and Cyber Monday and what rarely moves.</p>
+        <ul>
+          <li>The week of November 23 laid out day by day, including Record Store Day's Black Friday event and the date of the next Steam sale, which moved this year.</li>
+          <li>Five checks before you pay: price history, what you already own, the edition, what it runs on and when a subscription renews.</li>
+          <li>Signed in, the page lists the titles in your library you haven't started and the favourites you'd like to own, each with a link to look for it. Nothing is saved; it reads your library when you open the page.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="share-lists-nov6-2026-heading">
+        <h2 id="share-lists-nov6-2026-heading">November 6, 2026: Share a list with a link, rank it, and add titles from it in one tap</h2>
+        <p>Collections could only be shared once they had a 300-character introduction, so most of them never left the dashboard. Now any collection with three titles can be sent by link. The introduction is still needed for the public gallery, title pages and search.</p>
+        <ul>
+          <li>Share by link: open a collection, press "Make a share link" and send it anywhere. The page shows the titles, their order and your notes, never your ratings, reviews or progress. It stays out of search and the gallery, and you can turn the link off at any time.</li>
+          <li>Ranked lists: tick "Ranked list" and the shared page shows #1, #2 and #3 in gold, silver and bronze, in the order you set.</li>
+          <li>Anyone signed in can add a single title from someone's list to their own library with one tap. Titles they already have are marked "In your library".</li>
+          <li>Links to a list now show a picture of its name and first picks when pasted into a chat or a post.</li>
+          <li>The collection editor has a search box for adding titles from your library, and the Collections tab has a few ideas to start from, like "All-time top 10".</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="holiday-guides-nov6-2026-heading">
+        <h2 id="holiday-guides-nov6-2026-heading">November 6, 2026: A Thanksgiving weekend guide, and what to read and listen to in December</h2>
+        <p>Two new guides sit beside the <a href="/holidays">holiday picks</a>, each with twenty picks on four shelves and none repeated from the hub.</p>
+        <ul>
+          <li>The <a href="/holidays/thanksgiving">Thanksgiving weekend guide</a> follows the long weekend from Wednesday to Sunday: audiobooks and podcasts for the drive, an album and two party games for the big day, films and shows for the day after, and quieter picks for the trip home. It covers all nine formats OmniTrackr tracks.</li>
+          <li>The <a href="/holidays/reading-and-listening">December reading and listening guide</a> is for the hours away from a screen: books, audiobooks, podcasts, manga and albums for wrapping and baking, long journeys, the quiet week after Christmas and the last hour of the night.</li>
+          <li>Signed in, you can add a pick or a whole shelf to your library and see how many you have. Manga, podcast and audiobook picks go straight to those trackers, with the narrator filled in where the guide names one. Visitors can save picks to a list before signing up.</li>
+          <li>The December monthly edition, How it ends, is written and goes up on December 1.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov6-2026-heading">
+        <h2 id="security-nov6-2026-heading">November 6, 2026: Security and speed check of review sharing, supporter themes and guide links</h2>
+        <p>We went over the "Share your reviews" card, the new supporter app themes and avatar frames, and the links between guides. We sent shares and undos for other members' reviews, old review versions and made-up ids, picked locked themes and frames without the right membership, and timed the card and Site stats against a library of 18,000 reviews. Nothing let one member change or read another member's reviews, locked perks stayed locked, and an accessibility scanner found nothing on the supporters page, the editorial standards page or the guides, in light or dark mode. These are the fixes.</p>
+        <ul>
+          <li>If you hid the "Share your reviews" card, the dashboard still asked the server to read all your private reviews on every visit. It now waits until the card is due back.</li>
+          <li>Loading that card, and saving supporter settings, now have request limits like the rest of the account.</li>
+          <li>Site stats checks every member's private reviews to count how many could be shared. Those checks went into the same memory the public review pages and the sitemap use, and on a busy site they could push the public reviews out. Site stats now reads that memory without adding to it.</li>
+          <li>Every public profile loaded the avatar frame styles. Only profiles that show a frame load them now.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="homepage-stage-nov6-2026-heading">
+        <h2 id="homepage-stage-nov6-2026-heading">November 6, 2026: A homepage you can see the point of</h2>
+        <p>The homepage used to open on a spinning vortex, which looked nice and said nothing about what the site is for. The space beside the search now shows covers of the movies, games, books and anime members track most, drifting past slowly. On a phone they run in two rows under the search.</p>
+        <ul>
+          <li>A row of links under the opening lists all nine formats and goes to the page about tracking each one.</li>
+          <li>How it works now sits beside the example library instead of in a section of its own, so the page is shorter.</li>
+          <li>With reduced motion turned on in your device settings, the covers stay still.</li>
+        </ul>
+        <p>Nothing changes inside your account.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="guide-depth-nov4-2026-heading">
+        <h2 id="guide-depth-nov4-2026-heading">November 4, 2026: Guides that point to each other, and more to read in them</h2>
+        <p>The guides used to link only to others of their own kind, so the Dune watch order never mentioned the "If you liked Dune" guide a click away. Now each one ends with a few guides from other sections that cover the same titles, the same director or author, or the same format, and says what they have in common.</p>
+        <ul>
+          <li>Every "If you liked" guide has a new Questions section, with three answers about the original and the picks: whether to read Dune before the films, which Severance pick is closest, how long One Piece takes to catch up on.</li>
+          <li>The three monthly editions have a new section on how their six picks fit together, how long they take, and which to start with.</li>
+          <li>The <a href="/content-quality">editorial standards</a> page now explains how each kind of guide is put together, says plainly that drafts are written with AI writing tools before they are checked and edited, and lists every guide with the date it was last checked.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="supporter-styles-nov4-2026-heading">
+        <h2 id="supporter-styles-nov4-2026-heading">November 4, 2026: App themes and avatar frames for supporters</h2>
+        <p>Ko-fi supporters get two new thank-yous. Nothing changes for anyone else, and every tracking feature stays free.</p>
+        <ul>
+          <li>App themes recolor your own signed-in OmniTrackr in light and night mode: Lagoon, Sunset, Sakura, Ocean, Forest and Crimson for every supporter, Gilded once you have gold, and Midnight (true black at night) and Matinee for monthly members. Only you see your theme.</li>
+          <li>Avatar frames go around your profile picture on your public profile, in your accent color: halo, film reel, sparkle and pixel, plus neon and orbit for members. Season Pass members can let their frame move along with their banner.</li>
+          <li>The Supporters page has a "Try it on" panel where you can mix a theme, color, banner and frame before supporting, and a list of what the monthly bills pay for.</li>
+          <li>Anyone can try the app themes from Account → Supporter. The preview lasts until you reload.</li>
+          <li>Light or night mode is now remembered on each device. It used to reset to night mode every time the app opened.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="share-reviews-nov4-2026-heading">
+        <h2 id="share-reviews-nov4-2026-heading">November 4, 2026: Share reviews you already wrote</h2>
+        <p>A review starts private unless you switch on Public, and reviews imported from Letterboxd, Goodreads and the other sites always arrive private. So a lot of good writing sits where nobody can read it. If some of your private reviews are long enough to show on a title page, your home page now has a "Share your reviews" card listing them.</p>
+        <ul>
+          <li>Nothing changes until you press Share on a review. You can tick "It has spoilers" first, and Undo takes it back.</li>
+          <li>The card says when your review would be the first one on that title's page, and when it is long enough to get a review page of its own.</li>
+          <li>Keep private means the card won't ask about that review again unless you rewrite it. A review you once made public and later turned off is never suggested.</li>
+          <li>If the title is in a list you keep private, the card tells you that sharing shows this one review and your rating, and nothing else from the list.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov4-2026-heading">
+        <h2 id="security-nov4-2026-heading">November 4, 2026: Security and accessibility check of gift lists and phone shares</h2>
+        <p>We went over this week's additions: the gift guide and gift lists, sharing a title into OmniTrackr from another app, the winter anime guide, the lighter public pages and the search clean-up. We tried other people's gift items, forged undo keys, odd share links and long shared text, and ran an accessibility scanner over the new pages in light and dark mode. The scanner found nothing, nothing showed one member's data to another, and shares can't send you anywhere off the site. These are the fixes.</p>
+        <ul>
+          <li>Anyone with a gift list link could find out which gifts were already taken, without marking any, by asking to undo a mark with a made-up key. The answer is now the same whether a gift is taken or not, and the list's owner can't use the undo button on their own list at all.</li>
+          <li>Changing, removing and reading your gift list now have the same request limits as adding to it.</li>
+          <li>Site stats counted each opened gift list, shared-list invite, poll and recap under its full link, so those links were stored in the stats. They are now counted as one row per kind of page, such as "/gifts/(private link)", and older rows have been merged the same way with their counts kept.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="search-cleanup-nov4-2026-heading">
+        <h2 id="search-cleanup-nov4-2026-heading">November 4, 2026: Fewer generated pages in search</h2>
+        <p>We read every page in the sitemap and every page they link to, and asked of each one whether a person searching would be glad to land on it. Most of the guides passed easily. Some pages are built mostly from data feeds or one template, and those now stay out of search. They all still load and are still linked.</p>
+        <ul>
+          <li>The weekly "New this week" roundups are put together from the Release Radar feeds, with a write-up assembled from the counts. They are no longer submitted to search engines.</li>
+          <li>Past Daily puzzles are short pages with six clues and a note. Today's puzzle and the archive page stay in search; each old puzzle page does not.</li>
+          <li>The People and Studios directories wait until at least six of the pages they link to are in search themselves.</li>
+          <li>A review listing for one format, such as movies only, waits for eight reviews long enough to have a page of their own, so it no longer repeats the main Reviews page.</li>
+          <li>TV and anime premieres on Release Radar no longer carry an Amazon link. A new episode on a streaming service isn't something you can buy. Films and games keep theirs.</li>
+          <li>The best-of lists and the release guides were meant to be part of the small set of pages that can show ads, but the ad script skipped them. Now it doesn't. Signed-in members still see no ads anywhere.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="public-speed-nov4-2026-heading">
+        <h2 id="public-speed-nov4-2026-heading">November 4, 2026: Lighter pictures and fewer dead ends on public pages</h2>
+        <p>We timed the pages people reach from search on a throttled phone and followed every link on about 700 of them. Most were already quick. These were not.</p>
+        <ul>
+          <li>Podcast and audiobook covers came from Apple as 600-pixel PNG files, some close to half a megabyte each. They now load as small WebP copies, so scrolling the podcast and audiobook shelves downloads about 1 MB of covers instead of 12 to 16 MB.</li>
+          <li>Small posters on the best-of lists, release guides and "If you liked" pages ask Amazon and Open Library for a copy close to the size they are drawn at.</li>
+          <li>Pages with posters near the top start connecting to the poster's site while the page is still loading, so the first covers show up sooner.</li>
+          <li>The Release Radar page and the weekly "New this week" pages could take six seconds to open while the video game list was slow to arrive. Only the first visit in that time waits now; everyone else sees the page straight away with a note that games are still on their way.</li>
+          <li>The People page linked a few names, and the member charts linked a few short reviews, to pages that don't exist. Those links are gone or now point to the title's reviews.</li>
+          <li>The logo in the header and the browser tab icon were much bigger files than they needed to be, and Google Analytics now loads after the page instead of while it is still starting up.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="gift-guide-2026-heading">
+        <h2 id="gift-guide-2026-heading">November 4, 2026: A holiday gift guide, and gift lists you can send the family</h2>
+        <p>The <a href="/holidays/gifts">holiday gift guide</a> has four gift ideas for each kind of fan OmniTrackr tracks for, from movies and TV to manga, podcasts and audiobooks. Each one says who it suits and what to check before you buy, like which console a game needs or whether a projector wants a dark room.</p>
+        <ul>
+          <li>Signed in, you can make a gift list on the same page. Pick from the titles in your library you haven't started, the favourites you rated highly, the ideas in the guide, or type anything you like. Add a note to any of them, such as "the 4K one, please".</li>
+          <li>Send the list's link to family and friends. They don't need an account. They can mark a gift as one they're getting so nobody buys it twice, and you never see which ones were marked.</li>
+          <li>You can switch the link off, or make a new one and retire the old, whenever you like. The list is separate from your library, so nothing in your library changes.</li>
+          <li>The guide puts the formats you track most at the top and shows which of its titles are already in your library.</li>
+          <li>The holiday picks page and its card on your home page link to the guide.</li>
+          <li>Shop links in the guide and on gift lists are Amazon searches. As an Amazon Associate OmniTrackr earns from qualifying purchases, which helps pay for hosting. Nobody paid to be in the guide.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="share-to-app-2026-heading">
+        <h2 id="share-to-app-2026-heading">November 4, 2026: Share a title into OmniTrackr from any app</h2>
+        <p>If you've added OmniTrackr to your Android home screen, it now shows up when you tap Share in another app. Share a movie from IMDb, an album from Spotify, a book from Goodreads or a trailer from YouTube, and OmniTrackr opens Add anything with that title already searched.</p>
+        <ul>
+          <li>Each match has an Add button that saves it straight to the right shelf, and an Edit first button if you want to set a rating or change details before saving. The "Add as" menu still decides whether it goes in as saved for later or completed.</li>
+          <li>We read the link and the text the other app sends. That works for IMDb, Letterboxd, TMDB, Netflix, MyAnimeList, AniList, Steam, Spotify, Apple Music, Apple Podcasts, Goodreads, Audible and about thirty more. A share of plain text, like a title copied from a message, searches every shelf.</li>
+          <li>IMDb links are matched by their IMDb number, so you get the right film or series even when several share a name. A Spotify or YouTube link with no title in it is looked up by name with Spotify or YouTube.</li>
+          <li>Nothing is saved until you tap Add. If you're signed out, you'll see the log-in form first and the title will be waiting after you sign in.</li>
+        </ul>
+        <p>iPhone and iPad don't let home screen web apps appear in the share sheet yet, so this is Android only for now.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="anime-season-2027-heading">
+        <h2 id="anime-season-2027-heading">November 4, 2026: A guide to the winter 2027 anime season</h2>
+        <p>The <a href="/new-releases/winter-2027-anime">winter 2027 anime guide</a> goes through the January season show by show. It has fourteen picks: five new series, including Historie, Hirayasumi and the Sekiro: No Defeat series, five returning shows such as Shangri-La Frontier, Mashle and The Fable, and four lighter romances, comedies and family shows.</p>
+        <ul>
+          <li>Each pick says when it starts in Japan, where it streams if that has been announced, what to watch or read first, and who should skip it.</li>
+          <li>Shows with only a month announced say so, and we will add the day once the broadcaster sets it.</li>
+          <li>You can save any pick to your list without an account. Pick for me only suggests them once they have started airing.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="for-you-2026-heading">
+        <h2 id="for-you-2026-heading">November 3, 2026: Picks for you, from members with your taste</h2>
+        <p>There's a new For you tab in your library, next to Friends feed. It suggests movies, shows, anime, games, books and the rest that you haven't saved yet, based on what you've rated.</p>
+        <ul>
+          <li>We look for members whose libraries overlap with yours and who rated the shared titles the way you did, then show what they liked. A title needs at least two of those members behind it before it shows up, so a pick never points at one person.</li>
+          <li>Books, games, albums and the other formats with genres also get matches from the genres you rate highest.</li>
+          <li>Each pick says why it's there, like "Because you rated Interstellar 9.5/10", and the best ones are grouped into rows under the title that led to them.</li>
+          <li>Save a pick to your library in one tap, or choose Not for me to hide it for good. Saving copies the title's public details, such as its name, year, creator and cover, and never another member's rating, notes or review.</li>
+          <li>Your home page shows four of them once your library has a few titles in it. You can hide that card and keep the tab.</li>
+          <li>Categories other members keep private are never used, and nobody else can see what you were shown or what you hid.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="where-to-listen-2026-heading">
+        <h2 id="where-to-listen-2026-heading">November 3, 2026: Where to listen and where to read</h2>
+        <p>Title pages for movies, shows, anime and games already said where to watch or play them. Albums, podcasts, audiobooks, books and manga now get the same section.</p>
+        <ul>
+          <li>Albums link to the album on Apple Music and Deezer.</li>
+          <li>Podcasts open in Apple Podcasts, Overcast or Pocket Casts, and you can copy the show's RSS feed into any other app.</li>
+          <li>Books that are free to read or borrow on Open Library say so, with a link to the copy.</li>
+          <li>Manga link to the official English publisher when there is one, such as VIZ or MANGA Plus. We never link to fan scan sites.</li>
+          <li>Each page also has quick searches on Spotify, Libby, Bookshop.org, WorldCat and others. These open a search on that site, so they make no promise the title is there.</li>
+          <li>The More menu on your library rows now has "Where to listen" or "Where to read" on every shelf, so you can check a book or album without leaving the app.</li>
+        </ul>
+        <p>Some pages also show an Amazon link. OmniTrackr earns a small commission if you buy through it, which helps pay for hosting. It never changes what we list.</p>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov3-2026-heading">
+        <h2 id="security-nov3-2026-heading">November 3, 2026: Security, speed and accessibility check of the latest imports and phone work</h2>
+        <p>We went over everything added since the last check: the Spotify, podcast app, Rate Your Music and Libib imports, your year so far, new-episode notifications and away reminders, the bigger Year in Review, the release guides and the phone speed work. We tried broken and oversized files, looked for pages that show one member's data to another, timed every page with a large library and ran an accessibility scanner over the new pages in light and dark mode. Nothing leaked; these are the fixes.</p>
+        <ul>
+          <li>Reading a large import file could take the server a couple of seconds, and everyone else's pages waited while it did. Imports and backup restores now run alongside other requests.</li>
+          <li>A file with thousands of nested brackets made the Import Studio and backup restore fail with a server error. It now says the file can't be read.</li>
+          <li>In dark mode, the sign-up button on the switching guides was white text on pale lilac and hard to read. It is now a deeper violet.</li>
+          <li>Screen readers now hear your username on the account button, how many unread notifications the bell holds, and the "You're offline" message when your signal drops.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="profile-redesign-2026-heading">
+        <h2 id="profile-redesign-2026-heading">November 3, 2026: A new look for public profiles</h2>
+        <p>Public profiles at omnitrackr.xyz/u/your-name got a new design. Nothing about what they show or who can see it has changed.</p>
+        <ul>
+          <li>Every profile now has a cover across the top. It shows your supporter banner if you picked one, posters from your shelf if you didn't, or a color wash for brand-new profiles.</li>
+          <li>Your picture sits on the edge of the cover, with your name and buttons beside it. Supporters keep their colored ring around it.</li>
+          <li>Pinned titles sit on their own card in your accent color, numbered in the order you pinned them. Scores now show on the posters themselves.</li>
+          <li>The library is one list with a bar per shelf showing how much of it you've finished. Badges are cards, and each month of your diary is its own card.</li>
+          <li>Profiles follow your device's light or dark setting. The cover and supporter banners look the same in both.</li>
+        </ul>
+      </section>
+
       <section class="privacy-section" aria-labelledby="phone-speed-2026-heading">
         <h2 id="phone-speed-2026-heading">November 1, 2026: A quicker dashboard on phones</h2>
         <p>We timed the signed-in dashboard on a mid-range phone over a slow mobile connection and fixed what was holding it up.</p>

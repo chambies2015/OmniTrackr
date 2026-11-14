@@ -9,9 +9,13 @@ place in your plans and who should wait for reviews. It is not a review.
 Guide fields: name, period (shown in the eyebrow), search_title, summary,
 published, reviewed, starts, ends, lead (paragraphs), sections, also (shorter
 mentions: (title, sentence)), plan_heading, plan (paragraphs), related
-((label, path)), sources ((label, url)).
+((label, path)), sources ((label, url)). Optional: focus (one format, e.g. "anime", for a
+guide that covers a single format, such as an anime season; it is never the "current"
+guide), eyebrow (replaces "RELEASE GUIDE"), hub_label (its card label on /new-releases),
+method (paragraphs replacing the standard "How we chose" note; keep the AI-assistance line).
 
 Section fields: format (new_releases.FORMAT_ORDER), heading, intro (paragraphs), picks.
+A focused guide's sections share one format, so each also has an id and a label.
 
 Pick fields: kind, title, year (the year OmniTrackr files it under: a returning
 series keeps its first season's year), creator (director or author; None for TV,
@@ -405,7 +409,7 @@ GUIDES = {
             ("The Legend of Zelda in order", "/in-order/zelda"),
             ("November's Discover edition: The long way round", "/discover/monthly/november-2026"),
             ("Holiday picks for Thanksgiving and the winter break", "/holidays"),
-            ("The best games of 2026 so far", "/best-of/2026/games"),
+            ("The best games of 2026", "/best-of/2026/games"),
         ],
         "sources": [
             ("Sweety High: the biggest movies coming to theaters in November 2026", "https://www.sweetyhigh.com/read/the-biggest-movies-coming-to-theaters-in-november-2026"),
@@ -761,7 +765,7 @@ GUIDES = {
             ("Harry Potter in order", "/in-order/harry-potter"),
             ("If you liked Dune", "/if-you-liked/dune"),
             ("Holiday picks for Thanksgiving and the winter break", "/holidays"),
-            ("The best movies of 2026 so far", "/best-of/2026/movies"),
+            ("The best movies of 2026", "/best-of/2026/movies"),
         ],
         "sources": [
             ("The A.V. Club: Dune: Part Three and Avengers: Doomsday share December 18", "https://avclub.com/avengers-doomsday-dune-part-three-same-day-release-december-18"),
@@ -781,6 +785,365 @@ GUIDES = {
             ("Anime Corner: One-Punch Man season 3 cour 2 set for January 2027", "https://animecorner.me/one-punch-man-season-3-cour-2-visual-and-trailer-revealed-sets-january-2027-release/"),
             ("The Bookish Bulletin: most anticipated January 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-january-2027-books"),
             ("The Bookish Bulletin: most anticipated February 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-february-2027-books"),
+        ],
+    },
+    "winter-2027-anime": {
+        "name": "Winter 2027 anime: the new shows worth a first episode",
+        "period": "January to March 2027",
+        "eyebrow": "ANIME SEASON GUIDE",
+        "hub_label": "Winter 2027 anime season",
+        "focus": "anime",
+        "search_title": "Winter 2027 anime guide: Historie, Hirayasumi, Sekiro, Shangri-La Frontier and more",
+        "summary": ("Fourteen winter 2027 anime worth trying, from Historie, Hirayasumi and Sekiro to new seasons "
+                    "of Shangri-La Frontier and Mashle, and what to watch first."),
+        "published": "2026-11-04",
+        "reviewed": "2026-11-04",
+        "starts": "2027-01-01",
+        "ends": "2027-03-31",
+        "lead": [
+            "Every January, about fifty new anime series start in Japan within about two "
+            "weeks of each other. Most of them air late at night, most of them are 12 or 13 episodes long, and most "
+            "of them reach the rest of the world within an hour or two on a streaming service. Nobody can watch all "
+            "of them, and the season charts that list every show don't tell you which ones are worth a Thursday "
+            "night.",
+            "This guide is the short version. We went through the winter 2027 line-up as it stood in early November "
+            "and picked fourteen shows: five new adaptations we would start first, five returning series, and four "
+            "romances, comedies and family shows. For each one we say where it comes from, where you can watch it if "
+            "that has been announced, what to watch or read beforehand, and the thing most likely to put you off. None "
+            "of these have aired yet, so these are bets. We say where we're guessing.",
+            "A few housekeeping notes. Japanese studios usually announce a month long before they announce a day, so "
+            "several picks say \"January 2027\" until the broadcaster fixes a slot, usually in December. Dates are for "
+            "the Japanese broadcast; the streaming release outside Japan is normally the same day or the day after. "
+            "And two of the biggest returning shows, Sakamoto Days and the second half of One-Punch Man season 3, are "
+            "already covered in our broader winter releases guide, so we haven't written them up twice. They are in "
+            "the list at the bottom.",
+        ],
+        "sections": [
+            {
+                "format": "anime",
+                "id": "new",
+                "label": "New series",
+                "heading": "Five new series to start first",
+                "intro": [
+                    "Winter is usually a season for sequels, and 2027 is no exception, but the most interesting shows "
+                    "this time are adaptations of manga that took years to reach the screen. Two of them, Historie and "
+                    "Hirayasumi, are the kind of manga that people press on friends who say they don't read manga. "
+                    "We've also included a video game adaptation that will be watched closely, and a rock romance that "
+                    "got Nirvana to license a song.",
+                ],
+                "picks": [
+                    {"kind": "anime", "title": "Historie", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "LIDENFILMS · international streaming not announced yet",
+                     "why": "Hitoshi Iwaaki's historical manga about Eumenes, a Greek boy of uncertain birth who grows up "
+                            "to become the secretary of Alexander the Great and one of the sharpest commanders of his "
+                            "age, with Nobunaga Shimazaki in the lead.",
+                     "note": "Iwaaki wrote Parasyte, and Historie has the same cool, unsentimental eye: people are clever "
+                             "and cruel in about equal measure, and the violence arrives without warning. The manga has "
+                             "been running in Kodansha's Afternoon magazine for over twenty years, at a famously slow "
+                             "pace, and readers had more or less given up on an adaptation. The early chapters, set "
+                             "around the Black Sea and in the city of Cardia long before Alexander appears, are some of "
+                             "the best historical fiction in any medium. If LIDENFILMS gets the pacing right, this is the "
+                             "show of the season for anyone who likes Vinland Saga.",
+                     "first": "Nothing is needed. If you want to read ahead, the manga is on K MANGA, Kodansha's English "
+                              "app; the first volume is enough to know whether this is for you.",
+                     "caveat": "The manga is not finished and may never be, so the anime will stop somewhere mid-story. "
+                               "There is torture and battlefield violence, drawn plainly. We don't know the episode count "
+                               "or the streaming service outside Japan yet."},
+                    {"kind": "anime", "title": "Hirayasumi", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "NHK General TV · Production +h · co-produced with Viz Media; streaming to be announced",
+                     "why": "Hiroto Ikuta is 29, with no girlfriend, no full-time job and no plan, and he has just been "
+                            "left a small old house in a Tokyo suburb by an elderly friend. His cousin Natsumi moves in "
+                            "to go to art school.",
+                     "note": "Keigo Shinzo's manga is about very little and has sold over a million copies anyway: a slow, funny, slightly sad book about people who haven't worked out "
+                             "their lives yet, and a man who seems fine with that. It is on NHK, which suits it, and "
+                             "Viz Media is a co-producer, which usually means a wide release in English. Yuma Uchida, "
+                             "who voices Sunraku in Shangri-La Frontier, plays Hiroto, so you can hear him this winter in "
+                             "two shows that couldn't be further apart. Watch it on a weekend morning.",
+                     "first": "Nothing. If you watched the 2025 live-action drama on NHK, this is the same story, and the "
+                              "manga (from Viz) is worth reading either way.",
+                     "caveat": "Nothing happens fast, and some episodes won't feel like they have a plot. If you need "
+                               "stakes, this isn't the show. Streaming outside Japan hadn't been named when we wrote this."},
+                    {"kind": "anime", "title": "Sekiro: No Defeat", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Crunchyroll, weekly · eight episodes · Qzil.la, produced by ARCH",
+                     "why": "An eight-episode series set in the world of FromSoftware's 2019 game Sekiro: Shadows Die "
+                            "Twice, in which the shinobi Wolf protects the young Divine Heir as Genichiro Ashina turns to "
+                            "forbidden powers to save his clan.",
+                     "note": "Sekiro won Game of the Year at The Game Awards in 2019 and is the most cinematic thing "
+                             "FromSoftware has made: one hero, one castle, sword fights that are about rhythm more than "
+                             "stats. That makes it a better candidate for an anime than Dark Souls or Elden Ring, which "
+                             "tell their stories in item descriptions. Kenichi Kutsuna directs, Daisuke Namikawa voices "
+                             "Wolf and Kenjiro Tsuda plays Genichiro. Crunchyroll has it worldwide outside a handful of "
+                             "countries, and at eight episodes it asks for very little.",
+                     "first": "You don't need to have played the game, and the series doesn't seem to expect it. If you "
+                              "have, it is worth knowing that this is a retelling of the game's story, so you'll know "
+                              "where it is going.",
+                     "caveat": "The series is re-edited from a theatrical film, with added scenes, so it may feel more like "
+                               "a long film cut into parts than a TV show. Qzil.la has used AI tools on past projects; "
+                               "the production committee has said no generative AI is used here. Expect blood."},
+                    {"kind": "anime", "title": "Bless", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Fuji TV's Noitamina block · A-1 Pictures · Crunchyroll",
+                     "why": "Yukino Sonoyama's fashion manga about Aia, a boy everyone said was born to be a model, and "
+                            "Jun, a girl who was bullied for her freckles, and what they do with the world of makeup "
+                            "and fashion shows.",
+                     "note": "The director, Shotaro Kitamura, made Makeine: Too Many Losing Heroines!, one of the best-"
+                             "looking romantic comedies of 2024, and Bless is the kind of story that lives or dies on how "
+                             "it looks. It is airing in Noitamina, Fuji TV's late-night slot for shows aimed at adults "
+                             "rather than teenage boys, which has given us Honey and Clover, Mononoke and Anohana. "
+                             "There are not many anime about craft and work this winter, and this is the best bet.",
+                     "first": "Nothing. The manga is published in English by Kodansha USA if you would rather read it.",
+                     "caveat": "We know the premise, the staff and a long cast list, and not much about the tone. Shows "
+                               "about the fashion industry can get preachy about beauty. We'll know after two episodes."},
+                    {"kind": "anime", "title": "The Guy She Was Interested In Wasn't a Guy at All", "year": 2027,
+                     "creator": None, "date": "2027-01-08",
+                     "released": "NTV's FuraAni block, 11 p.m. · CloverWorks · Crunchyroll",
+                     "why": "Aya, a high schooler who loves rock music, falls for the stylish person who works at her "
+                            "favourite CD shop. It turns out to be Mitsuki, a girl in her class, who is too nervous to "
+                            "tell her.",
+                     "note": "Sumiko Arai's manga started as short comics posted on Twitter and won the web manga "
+                             "category of the Next Manga Awards in 2023. It is a sweet, funny romance between two girls "
+                             "who bond over old records, and it takes the music seriously. The opening theme is Nirvana's "
+                             "\"Breed\", which Dave Grohl himself announced, and that alone tells you how much effort is "
+                             "going into this. CloverWorks made Bocchi the Rock!, so they know how to animate a guitar.",
+                     "first": "Nothing. The manga is published in English by Yen Press.",
+                     "caveat": "It is a light, low-stakes romance. If you want drama, this isn't it. A show about two girls "
+                               "in love will also get some ugly comments online; the manga handles it gently."},
+                ],
+            },
+            {
+                "format": "anime",
+                "id": "returning",
+                "label": "Returning",
+                "heading": "Five returning shows, and how far behind you can be",
+                "intro": [
+                    "A new season of a show you liked is the easiest decision of the winter, and the hardest one if you "
+                    "dropped it halfway through. For each of these we say what the earlier seasons were like and how much "
+                    "you need to have seen. Two of them, Shangri-La Frontier and The Fable, have firm dates; the others "
+                    "are listed for January.",
+                ],
+                "picks": [
+                    {"kind": "anime", "title": "Shangri-La Frontier", "year": 2023, "creator": None,
+                     "date": "2027-01-10",
+                     "released": "MBS and TBS, 5 p.m. Sundays · C2C · season 3, two cours in a row; season 2 is on Crunchyroll",
+                     "why": "Rakuro Hizutome, known online as Sunraku, spends his free time beating the worst, buggiest "
+                            "VR games ever made. Then he tries the best one, Shangri-La Frontier, and finds that "
+                            "everything bad games taught him is useful.",
+                     "note": "This is the most fun pure video-game anime on air: no trapped-in-the-game panic, just "
+                             "someone who loves playing and is very good at it. The first two seasons ran for two cours "
+                             "each, and this one is also two cours back to back, which means six months straight in a "
+                             "Sunday early-evening slot on MBS and TBS. The announcement says the season continues the Galaxia Heroes: Chaos storyline.",
+                     "first": "Seasons 1 and 2, which is around 50 episodes. It takes a few episodes to get going; by the first "
+                              "big boss fight you will know whether it is for you.",
+                     "caveat": "It's long, and the story leans on game mechanics: menus, stats, skill names. If that bores "
+                               "you in other shows, it will here. We don't know the episode count yet."},
+                    {"kind": "anime", "title": "Mashle: Magic and Muscles", "year": 2023, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Crunchyroll, worldwide outside Japan and China · A-1 Pictures · season 3",
+                     "why": "In a world where everyone uses magic, Mash Burnedead can't cast a single spell. He gets into "
+                            "magic school anyway, and gets through every problem by being absurdly strong.",
+                     "note": "Mashle is a parody of magic-school stories that works because it never winks: Mash answers "
+                             "every spell with his fists, and nobody around him can believe it. Season 2's opening, Creepy "
+                             "Nuts' \"Bling-Bang-Bang-Born\", was one of the biggest anime songs in years. Season 3 covers "
+                             "the Divine Visionary final exam, where the story stops being a series of jokes and starts "
+                             "heading for its ending. The manga finished in 2023 after 18 volumes, so there is a complete "
+                             "story to adapt.",
+                     "first": "Seasons 1 and 2, 24 episodes in all. You can't really start here.",
+                     "caveat": "The joke is the same joke, told for three seasons. If season 2 started to wear on you, the "
+                               "final exam arc is more action than comedy. A new character designer is in charge this "
+                               "season, so expect the faces to look a little different."},
+                    {"kind": "anime", "title": "Akane-banashi", "year": 2026, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Japan in January · ZEXCS · Netflix date not set (season 1 is on Netflix)",
+                     "why": "Akane Osaki trains to become a rakugo storyteller, the traditional Japanese art of one person "
+                            "kneeling on a cushion and playing every part, after her father was thrown out of the craft "
+                            "during the exam for his promotion.",
+                     "note": "It sounds like the least promising idea for a Shonen Jump series, and it is one of the best "
+                             "the magazine has run in years, because it treats a performance like a fight: the tension, "
+                             "the audience, the moment it turns. Season 2 starts the apprentice training arc, with a new "
+                             "cast of older performers that includes Tomokazu Seki and Shinichiro Miki. Ayumu Watanabe, "
+                             "who made the film Children of the Sea, directs.",
+                     "first": "Season 1 on Netflix, which has an English dub. If you haven't seen it, a Netflix release of "
+                              "season 2 probably won't arrive until after the Japanese broadcast, so there is time.",
+                     "caveat": "Rakugo is about words, and subtitles can only do so much with wordplay. Outside Japan you "
+                               "may be waiting a few weeks, as nothing has been announced."},
+                    {"kind": "anime", "title": "The Fable", "year": 2024, "creator": None,
+                     "date": "2027-01-09",
+                     "released": "NTV, late night · Tezuka Productions · season 2; season 1 is on Disney+ and, in the US, Hulu",
+                     "why": "Akira Sato, the best hitman in Japan, is told by his boss to spend a year in Osaka living an "
+                            "ordinary life and not killing anyone, and to keep it up when the people around him make it "
+                            "very hard.",
+                     "note": "The first season, in 2024, was a nice surprise: a crime show that is mostly about a "
+                             "frighteningly competent man trying to be bad at things on purpose, with sudden, precise "
+                             "violence when he can't avoid it. Okitsu's flat delivery as Akira is very funny. Season 2 "
+                             "keeps the director, Ryosuke Takahashi, and adds Koichi Yamadera and Takanori Hoshino to the "
+                             "cast, with a new composer, Yo Tsuji.",
+                     "first": "Season 1, two cours and 25 episodes. The 2019 and 2021 live-action films tell the same early story, so "
+                              "you can skip those.",
+                     "caveat": "It's slow, and plenty of episodes are about part-time jobs and parakeets. Some viewers found "
+                               "season 1's quieter middle stretch hard going. If you hated that, more of the same won't help."},
+                    {"kind": "anime", "title": "Marriagetoxin", "year": 2025, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Tuesdays, 11 p.m. in Japan · BONES Film · season 2; season 1 is on Crunchyroll",
+                     "why": "Hikaru Gero, an assassin from a family of poison users, has to get married to keep his sister "
+                            "from being forced to produce the next heir. He hires a professional marriage swindler, "
+                            "Kinosaki, to teach him how to date.",
+                     "note": "Season 1, in spring 2025, was better than its premise: a show that is half dating comedy, "
+                             "half assassin fights, and handles both. The best episodes are the dates, where a man who "
+                             "kills for a living tries to work out small talk. BONES Film is animating again, with the "
+                             "same director, Motonobu Hori, and the staff said at New York Comic Con that a new marriage "
+                             "prospect is coming for Gero.",
+                     "first": "Season 1, 13 episodes. You need it.",
+                     "caveat": "Some of the comedy is about appearances and gender and will not be to everyone's taste. "
+                               "The fights get gruesome, because the poison isn't a metaphor."},
+                ],
+            },
+            {
+                "format": "anime",
+                "id": "lighter",
+                "label": "Romance, comedy and family",
+                "heading": "Four for a lighter evening",
+                "intro": [
+                    "Not everything has to be a two-cour epic. These four are romances, comedies or family shows, the "
+                    "kind you watch with dinner. One of them is a shojo manga that finished in 2013 and is only now "
+                    "getting an anime.",
+                ],
+                "picks": [
+                    {"kind": "anime", "title": "Dengeki Daisy", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "Studio DEEN · two cours · Crunchyroll",
+                     "why": "After her brother dies, 16-year-old Teru Kurebayashi is left a phone that connects her to "
+                            "\"Daisy\", an anonymous hacker who looks after her. She suspects the rude young janitor at "
+                            "her school knows more than he lets on.",
+                     "note": "Kyousuke Motomi's manga ran from 2007 to 2013 and was a Shojo Beat favourite in English, "
+                             "with a mystery that kept readers guessing for sixteen volumes. Its readers are now adults, "
+                             "and two cours is enough to tell the whole story properly, which is not something many shojo "
+                             "adaptations get. Studio DEEN made the first Fruits Basket and Vampire Knight anime, so this is familiar ground.",
+                     "first": "Nothing. Viz published all 16 volumes in English, and they are easy to find secondhand.",
+                     "caveat": "The romance is between a high school girl and an adult man. The manga is careful about it, "
+                               "but it is the reason some people won't watch, and that's fair."},
+                    {"kind": "anime", "title": "Now That We Draw", "year": 2027, "creator": None,
+                     "date": "2027-01-01", "month_only": True,
+                     "released": "ROLL2 · Seven Seas publishes the manga in English",
+                     "why": "Two young manga creators, a writer and an artist, both get told by their editors that their "
+                            "romance scenes are unconvincing. So they start fake-dating for research.",
+                     "note": "A fake relationship is the oldest romantic comedy setup there is, and this one gives it a "
+                             "good reason: they are doing it for the work, and they are each a bit too proud to say it's "
+                             "working. The manga, by Kyu Takahata and Yuwji Kaba, is from Seven Seas in English. It is "
+                             "also a decent look at how manga gets made, with deadlines and editors who mean well.",
+                     "first": "Nothing.",
+                     "caveat": "Romantic comedies live on chemistry, and we've only seen a teaser. Streaming outside Japan "
+                               "hasn't been announced. Wait for two episodes."},
+                    {"kind": "anime", "title": "Welcome to Demon School! Iruma-kun: IruMafia Edition", "year": 2027,
+                     "creator": None, "date": "2027-01-04",
+                     "released": "NHK · Tatsunoko Production · 12 episodes",
+                     "why": "A what-if spin-off of Iruma-kun: here, Iruma is a poor boy in the slums who gives his last "
+                            "piece of bread to an injured old man, who turns out to be Don Sullivan, head of the Babyl "
+                            "mafia, and adopts him as his heir.",
+                     "note": "The main Iruma-kun series is one of the kindest shows on television, a school comedy about a "
+                             "boy who is better at being liked than he knows. The spin-off keeps the same voice cast and "
+                             "swaps the school for a crime family played for laughs. Twelve episodes on NHK on a Monday "
+                             "is the right size for it, and it is the safest pick here for watching with older children.",
+                     "first": "The first season of the main series helps you get the jokes, because the spin-off puts every "
+                              "familiar character in a new role. It isn't required.",
+                     "caveat": "If you don't know the main show, a lot of the humour is in seeing who plays which mobster. "
+                               "Streaming outside Japan hasn't been confirmed for the spin-off."},
+                    {"kind": "anime", "title": "Yaiba: Samurai Legend", "year": 2025, "creator": None,
+                     "date": "2027-01-09",
+                     "released": "YTV and NTV, 5:30 p.m. Saturdays · WIT Studio · season 2; season 1 is on Netflix",
+                     "why": "WIT Studio's remake of Gosho Aoyama's 1988 manga about Yaiba Kurogane, a wild boy who grew up "
+                            "training in the jungle and wants to be the greatest samurai in Japan. Season 2 is the Kaguya arc, with "
+                            "Ami Koshimizu as the new villain.",
+                     "note": "Aoyama is the author of Detective Conan, and Yaiba was the series before it: a goofy, "
+                             "energetic adventure with talking animals and magic swords. The 2025 remake looks great "
+                             "and plays like a Saturday-morning cartoon in the best sense. It is the easiest show on this "
+                             "list to put on with a ten-year-old.",
+                     "first": "Season 1 on Netflix. The 1990s anime is hard to find and you don't need it.",
+                     "caveat": "It's a kids' show at heart, with cartoon violence and very broad jokes. If you came for "
+                               "WIT's Attack on Titan, adjust your expectations."},
+                ],
+            },
+        ],
+        "also": [
+            ("Sakamoto Days, season 2 (January, Netflix).", "The retired hitman turned shopkeeper is back. We wrote it up "
+             "in our winter releases guide, along with what went wrong in season 1."),
+            ("One-Punch Man, season 3 part 2 (January).", "Thirteen episodes, the second half of the war with the Monster "
+             "Association. Also in the winter guide, with an honest note about the animation."),
+            ("Golden Kamuy, the Runaway Train arc.", "The last arc of the final season was announced in March for "
+             "\"this winter\", and season charts list it for winter 2027. The format and date haven't been confirmed, but "
+             "if you watched the final season in January 2026, this is the ending."),
+            ("The World's Finest Assassin Gets Reincarnated in Another World as an Aristocrat, season 2 (January).",
+             "The most-followed show on LiveChart's winter chart when we checked, from SILVER LINK. If you liked season 1's cold, clever hero, it's "
+             "more of that."),
+            ("Medaka Kuroiwa Is Impervious to My Charms, season 2 (January).", "A school comedy about a girl who can "
+             "charm anyone except the one boy she wants. Light and silly, and easy to watch two episodes at a time."),
+            ("Love Live! Hasunosora Jogakuin School Idol Club (January 10).", "Seven episodes for the Hasunosora "
+             "school idols. For Love Live! fans."),
+            ("Bride of the Barrier Master (January).", "A romance from TROYCA about a twin from a lesser branch of a "
+             "family who catches the eye of the clan head. Listed with a Netflix page."),
+            ("Though I Am an Inept Villainess, part 2 (January).", "The second cour of Doga Kobo's body-swap "
+             "palace drama, on Crunchyroll."),
+        ],
+        "plan_heading": "A plan for the season",
+        "plan": [
+            "Use December to catch up. If you only have time for one returning show, watch season 1 of The Fable or "
+            "Marriagetoxin; both are short enough to finish over the holidays. Shangri-La Frontier is closer to fifty "
+            "episodes, so start it now or save it for the spring, when season 3 is halfway through.",
+            "The first full week of January is when most of these start. Iruma-kun's spin-off begins on Monday the "
+            "4th, The Guy She Was Interested In Wasn't a Guy at All on Friday the 8th, Yaiba and The Fable on "
+            "Saturday the 9th, and Shangri-La Frontier on Sunday the 10th. The shows marked January will fill in "
+            "the gaps as their dates are set. Give every new show two episodes; anime first episodes are often "
+            "setup, and the second is a better test.",
+            "By the end of January, cut the list down to three or four. A season is twelve weeks long, and the shows "
+            "you are still watching in March are the ones worth telling people about. Keep an eye on Historie and "
+            "Hirayasumi, which are the ones we think people will still be talking about next winter.",
+        ],
+        "method": [
+            "Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. None of these "
+            "shows had aired when we wrote about them, so this is a guide to what we think is worth trying, not a set "
+            "of reviews. We worked from the season charts on LiveChart and AnimeSchedule and the studio and "
+            "streaming announcements listed below, and we picked shows we would recommend to a friend, with an honest "
+            "note on who should skip them.",
+            "Anime dates are less fixed than film dates. Where a studio has only announced a month, we say January "
+            "2027 and update the page when the day is set. Streaming services outside Japan are named only when they "
+            "have been announced.",
+        ],
+        "related": [
+            ("If you liked Frieren", "/if-you-liked/frieren"),
+            ("If you liked Jujutsu Kaisen", "/if-you-liked/jujutsu-kaisen"),
+            ("The best anime of 2026", "/best-of/2026/anime"),
+            ("Monogatari in order", "/in-order/monogatari"),
+            ("How to track anime and episodes on OmniTrackr", "/anime-tracker"),
+        ],
+        "sources": [
+            ("LiveChart: winter 2027 anime chart", "https://www.livechart.me/winter-2027/tv"),
+            ("AnimeSchedule: winter 2027 anime", "https://animeschedule.net/seasons/winter-2027"),
+            ("Anime Corner: Historie trailer, cast and January 2027 release", "https://animecorner.me/historie-anime-new-trailer-visual-main-cast-january-2027-release/"),
+            ("Anime News Network: Historie TV anime sets January 2027 premiere", "https://animenewsnetwork.com/news/2026-05-24/historie-tv-anime-announces-lead-voice-actor-january-2027-premiere/.237768"),
+            ("Anime News Network: Hirayasumi anime teaser and January 2027 debut", "https://www.animenewsnetwork.com/news/2026-03-16/hirayasumi-anime-teaser-unveils-staff-january-2027-debut/.235378"),
+            ("The Outer Haven: Viz Media reveals Hirayasumi key visual and cast", "https://www.theouterhaven.net/viz-media-reveals-key-visual-first-anime-footage-and-lead-voice-cast-for-hirayasumi/"),
+            ("Anime Corner: Sekiro: No Defeat runs for 8 episodes from January 2027", "https://animecorner.me/sekiro-no-defeat-full-tv-anime-to-run-for-8-episodes-starting-in-january-2027-new-visual-revealed/"),
+            ("The Outer Haven: Sekiro: No Defeat heads to Crunchyroll", "https://www.theouterhaven.net/sekiro-no-defeat-heads-to-crunchyroll-as-a-series-in-january-2027/"),
+            ("Final Weapon: Bless to stream on Crunchyroll", "https://finalweapon.net/2026/10/22/bless-anime-to-stream-on-crunchyroll-new-cast-members-revealed/"),
+            ("Final Weapon: Bless premieres in January 2027 on Noitamina", "https://finalweapon.net/2026/09/12/bless-anime-premieres-in-january-2027/"),
+            ("Final Weapon: The Guy She Was Interested In Wasn't a Guy at All premieres January 8", "https://finalweapon.net/2026/10/08/the-guy-she-was-interested-in-wasnt-a-guy-at-all-anime-premieres-january-8/"),
+            ("Anime Corner: Shangri-La Frontier season 3, two cours from January 10", "https://animecorner.me/shangri-la-frontier-season-3-key-visual-revealed-two-consecutive-cours-starting-on-january-10-2027/"),
+            ("Final Weapon: Shangri-La Frontier season 3 confirms its slot", "https://finalweapon.net/2026/09/16/shangri-la-frontier-season-3-confirms-two-cour-run-and-january-10-premiere/"),
+            ("Anime News Network: Mashle season 3 trailer and January 2027 debut", "https://www.animenewsnetwork.com/news/2026-07-02/mashle-magic-and-muscles-season-3-anime-trailer-unveils-january-2027-debut/.239227"),
+            ("The Outer Haven: Mashle season 3 coming to Crunchyroll", "https://www.theouterhaven.net/mashle-magic-and-muscles-season-3-coming-to-chrunchyroll-in-january-2027/"),
+            ("Anime Corner: Akane-banashi season 2 announced for January 2027", "https://animecorner.me/akane-banashi-season-2-announced-for-january-2027/"),
+            ("What's on Netflix: Akane-banashi season 2", "https://www.whats-on-netflix.com/news/anime/akane-banashi-season-2-netflix-release-date-news/"),
+            ("Final Weapon: The Fable season 2 premieres January 9, 2027", "https://finalweapon.net/2026/10/13/the-fable-season-2-premieres-january-9-2027/"),
+            ("Final Weapon: Marriagetoxin season 2 premieres in January 2027", "https://finalweapon.net/2026/08/03/marriagetoxin-season-2-january-2027-premiere/"),
+            ("The Outer Haven: Marriagetoxin staff at New York Comic Con 2026", "https://www.theouterhaven.net/nycc-2026-marriagetoxin-production-staff-discuss-season-1-and-the-creative-process-for-season-2/"),
+            ("Anime Corner: Dengeki Daisy trailer, key visual and cast", "https://animecorner.me/dengeki-daisy-reveals-main-trailer-key-visual-and-4-new-cast-members-ahead-of-january-2027-release/"),
+            ("Anime News Network: Dengeki Daisy gets a TV anime by Studio DEEN", "https://www.animenewsnetwork.com/news/2026-06-08/kyousuke-motomi-dengeki-daisy-shojo-manga-gets-tv-anime-by-studio-deen/.238269"),
+            ("Anime Corner: Now That We Draw trailer and January 2027 release", "https://animecorner.me/now-that-we-draw-anime-reveals-first-trailer-january-2027-release-date/"),
+            ("Anime Corner: Iruma-kun: IruMafia Edition starts January 4", "https://animecorner.me/welcome-to-demon-school-iruma-kun-irumafia-edition-anime-main-visual-and-january-4-revealed/"),
+            ("Final Weapon: Yaiba: Samurai Legend season 2 premieres January 9, 2027", "https://finalweapon.net/2026/09/19/yaiba-samurai-legend-season-2-premieres-on-january-9-2027/"),
+            ("Final Weapon: Golden Kamuy final season continues in the Runaway Train arc", "https://finalweapon.net/2026/03/30/golden-kamuy-final-season-continues-in-runaway-train-arc/"),
         ],
     },
 }

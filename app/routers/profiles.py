@@ -24,8 +24,9 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261030-compare-1"
+CSS_VERSION = "20261114-profile-3"
 TITLE_CSS_VERSION = "20261009-take-1"
+FRAMES_CSS_VERSION = "20261104-frames-1"
 
 
 def _e(value) -> str:
@@ -52,6 +53,7 @@ class ProfileSettingsUpdate(BaseModel):
     show_collections: Optional[bool] = None
     show_diary: Optional[bool] = None
     show_taste_match: Optional[bool] = None
+    show_now: Optional[bool] = None
 
 
 @router.get("/api/profile/settings")
@@ -83,6 +85,8 @@ def update_profile_settings(
 class ShowcasePick(BaseModel):
     category: str = Field(..., max_length=16)
     id: PositiveDatabaseId
+    # Left out: the pin keeps its note. "" clears it. Checked and trimmed in public_profiles.
+    note: Optional[str] = Field(None, max_length=600)
 
 
 class ShowcaseUpdate(BaseModel):
@@ -102,7 +106,7 @@ def update_showcase(payload: ShowcaseUpdate, response: Response, user: models.Us
                     db: Session = Depends(get_db)):
     response.headers["Cache-Control"] = "private, no-store"
     try:
-        items = public_profiles.save_showcase(db, user, [pick.model_dump() for pick in payload.items])
+        items = public_profiles.save_showcase(db, user, [pick.model_dump(exclude_unset=True) for pick in payload.items])
     except public_profiles.ShowcaseError as error:
         db.rollback()
         raise HTTPException(status_code=422, detail=str(error))
@@ -118,6 +122,16 @@ def _avatar_html(user: models.User) -> str:
         return f'<img class="profile-hero__avatar" src="/profile-pictures/{user.id}" alt="" width="120" height="120">'
     initial = (user.username or "?")[:1].upper()
     return f'<div class="profile-hero__avatar profile-hero__avatar--empty" aria-hidden="true">{_e(initial)}</div>'
+
+
+def _framed_avatar_html(view, user: models.User) -> str:
+    """The avatar, inside a supporter's frame when they picked one. Without a frame the markup is unchanged."""
+    frame = (view.supporter or {}).get("frame")
+    if frame not in supporters.ALL_FRAMES:
+        return _avatar_html(user)
+    motion = " avatar-frame--motion" if (view.supporter or {}).get("frame_motion") else ""
+    return (f'<div class="profile-hero__frame avatar-frame avatar-frame--{frame}{motion}">'
+            f'{_avatar_html(user)}<span class="avatar-frame__art" aria-hidden="true"></span></div>')
 
 
 def _supporter_html(view) -> str:
@@ -158,20 +172,94 @@ def _banner_html(view) -> str:
     return f'<div class="profile-banner profile-banner--{banner}{motion}" aria-hidden="true"></div>'
 
 
+def _poster_html(item, *, rank: Optional[int] = None) -> str:
+    """One poster with its score on the art. Shared by the showcase and favorites."""
+    art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
+           else f'<span class="profile-poster__letter">{_e(item["title"][:1].upper())}</span>')
+    score = (f'<span class="profile-poster__score"><span class="profile-sr">Rated </span>'
+             f'{_e(_rating(item["rating"]))}<small>/10</small></span>' if item.get("rating") is not None else "")
+    pin = f'<span class="profile-poster__rank" aria-hidden="true">{rank}</span>' if rank else ""
+    year = f' · {item["year"]}' if item.get("year") else ""
+    return (f'<a class="profile-poster" href="{_e(item["url"])}" data-format="{_e(item.get("category", ""))}">'
+            f'<span class="profile-poster__art">{art}{score}{pin}</span>'
+            f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)}</small></a>')
+
+
+def _spotlight_html(item) -> str:
+    """The member's first pin, large, with their note beside it."""
+    image = item.get("image")
+    art = (f'<img src="{_e(image)}" alt="" width="240" height="360">' if image
+           else f'<span class="profile-poster__letter">{_e(item["title"][:1].upper())}</span>')
+    backdrop = (f'<img class="profile-spotlight__glow" src="{_e(image)}" alt="" aria-hidden="true">' if image else "")
+    facts = [item["label"]] + ([str(item["year"])] if item.get("year") else [])
+    score = (f'<p class="profile-spotlight__score"><span class="profile-sr">Rated </span>'
+             f'<strong>{_e(_rating(item["rating"]))}</strong><small>/10</small></p>' if item.get("rating") is not None else "")
+    note = (f'<blockquote class="profile-spotlight__note"><p>{_e(item["note"])}</p></blockquote>'
+            if item.get("note") else "")
+    return (f'<article class="profile-spotlight" data-format="{_e(item.get("category", ""))}">{backdrop}'
+            f'<a class="profile-spotlight__art" href="{_e(item["url"])}" tabindex="-1" aria-hidden="true">{art}'
+            f'<span class="profile-poster__rank" aria-hidden="true">1</span></a>'
+            f'<div class="profile-spotlight__copy"><p class="profile-spotlight__eyebrow">Top pick · {_e(" · ".join(facts))}</p>'
+            f'<h3><a href="{_e(item["url"])}">{_e(item["title"])}</a></h3>{score}{note}</div></article>')
+
+
+def _pick_html(item, rank: int) -> str:
+    """A pin after the first: poster, title, score and the member's note side by side."""
+    art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
+           else f'<span class="profile-poster__letter">{_e(item["title"][:1].upper())}</span>')
+    year = f' · {item["year"]}' if item.get("year") else ""
+    score = (f' · <span class="profile-rating"><span class="profile-sr">Rated </span>{_e(_rating(item["rating"]))}/10</span>'
+             if item.get("rating") is not None else "")
+    note = f'<q class="profile-pick__note">{_e(item["note"])}</q>' if item.get("note") else ""
+    return (f'<a class="profile-pick" href="{_e(item["url"])}" data-format="{_e(item.get("category", ""))}">'
+            f'<span class="profile-pick__art">{art}<span class="profile-poster__rank" aria-hidden="true">{rank}</span></span>'
+            f'<span class="profile-pick__copy"><strong>{_e(item["title"])}</strong>'
+            f'<small>{_e(item["label"])}{_e(year)}{score}</small>{note}</span></a>')
+
+
 def _showcase_html(view) -> str:
     if not view.showcase:
         return ""
+    first, rest = view.showcase[0], view.showcase[1:]
+    count = len(rest)
+    grid = ("" if not rest else
+            f'<div class="profile-showcase__grid profile-showcase__grid--{count}">'
+            + "".join(_pick_html(item, index) for index, item in enumerate(rest, start=2)) + '</div>')
+    return (f'<section class="title-section profile-showcase profile-showcase--{len(view.showcase)}" aria-labelledby="profile-showcase">'
+            f'<h2 id="profile-showcase">Showcase</h2>'
+            f'<p class="profile-section__intro">Picked and pinned by {_e(view.user.username)}.</p>'
+            f'<div class="profile-showcase__layout">{_spotlight_html(first)}{grid}</div></section>')
+
+
+def _now_html(view) -> str:
+    """The "Right now" shelf: titles started from the Up next queue, then the next few queued."""
+    if not view.now:
+        return ""
+    name = _e(view.user.username)
+    current, queued = view.now.get("current") or [], view.now.get("queued") or []
+
+    def art(item, size):
+        if item.get("image"):
+            return f'<img src="{_e(item["image"])}" alt="" loading="lazy" width="{size}" height="{size * 3 // 2}">'
+        return f'<span>{_e(item["title"][:1].upper())}</span>'
+
     cards = ""
-    for item in view.showcase:
-        art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
-               else f'<span>{_e(item["title"][:1].upper())}</span>')
-        year = f' · {item["year"]}' if item.get("year") else ""
-        rating = (f' · <span class="profile-rating">{_e(_rating(item["rating"]))}/10</span>'
-                  if item.get("rating") is not None else "")
-        cards += (f'<a class="profile-showcase__item" href="{_e(item["url"])}"><span class="profile-showcase__art">{art}</span>'
-                  f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)}{rating}</small></a>')
-    return (f'<section class="title-section profile-showcase" aria-labelledby="profile-showcase">'
-            f'<h2 id="profile-showcase">Showcase</h2><div class="profile-showcase__grid">{cards}</div></section>')
+    for item in current:
+        since = f' · since {item["since"]:%b} {item["since"].day}' if item.get("since") else ""
+        cards += (f'<li><a class="profile-now__card" href="{_e(item["url"])}" data-format="{_e(item["category"])}">'
+                  f'<span class="profile-now__art">{art(item, 64)}</span><span class="profile-now__copy">'
+                  f'<span class="profile-now__verb"><i aria-hidden="true"></i>{_e(item["verb"])}</span>'
+                  f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(since)}</small></span></a></li>')
+    queue = ""
+    if queued:
+        rows = "".join(f'<li><a href="{_e(item["url"])}"><span class="profile-now__mini">{art(item, 28)}</span>'
+                       f'<span>{_e(item["title"])}</span></a></li>' for item in queued)
+        queue = (f'<div class="profile-now__queue"><h3>Next in the queue</h3><ol>{rows}</ol></div>')
+    intro = (f"What {name} is in the middle of." if current
+             else f"{name} hasn't started anything new. Here's what's next.")
+    shelf = f'<ul class="profile-now__list">{cards}</ul>' if cards else ""
+    return (f'<section class="title-section profile-now" aria-labelledby="profile-now"><h2 id="profile-now">Right now</h2>'
+            f'<p class="profile-section__intro">{intro}</p><div class="profile-now__layout">{shelf}{queue}</div></section>')
 
 
 def _owner_note_html(view, is_owner: bool) -> str:
@@ -180,8 +268,13 @@ def _owner_note_html(view, is_owner: bool) -> str:
     note = ('This is your public profile. Change what it shows and pin titles to your showcase from '
             '<a href="/#public-profile">Account → Public profile</a>. '
             f'<a href="{_e(view.path)}/widgets">Get widgets</a> to show it on your blog, forum or GitHub.')
-    if not view.profile.show_diary:
-        note += ' You can also show your diary of recent finishes and rewatches there.'
+    if view.showcase and not any(item.get("note") for item in view.showcase):
+        note += ' Add a line to each pin there to say why it made the cut.'
+    extras = [part for part, shown in (("your diary of recent finishes", view.profile.show_diary),
+                                       ("what you're playing, watching or reading right now",
+                                        getattr(view.profile, "show_now", False))) if not shown]
+    if extras:
+        note += f' You can also show {" and ".join(extras)}.'
     if not view.supporting:
         note += (' Supporters can also add a banner, pick an accent color and pin six titles. '
                  '<a href="/supporters">See what supporting gets you</a>.')
@@ -191,17 +284,18 @@ def _owner_note_html(view, is_owner: bool) -> str:
 def _stats_html(view) -> str:
     if not view.stats:
         return ""
-    tiles = ""
-    for row in view.stats:
+    rows = ""
+    for row in sorted(view.stats, key=lambda r: -r["total"]):
         done = round(100 * row["finished"] / row["total"]) if row["total"] else 0
-        tiles += (f'<div class="profile-stat profile-stat--{_e(row["category"])}"><strong>{_e(row["total"])}</strong>'
-                  f'<span>{_e(row["label"])}</span>'
-                  f'<span class="profile-stat__meter" title="{done}% {_e(row["verb"])}"><span style="--w:{done}%"></span></span>'
-                  f'<small>{_e(row["finished"])} {_e(row["verb"])}</small>'
-                  + (f'<small>avg <b class="profile-rating">{_e(row["average"])}/10</b></small>' if row["average"] is not None else "")
-                  + "</div>")
+        average = (f'<small class="profile-stat__avg">avg <b class="profile-rating">{_e(row["average"])}</b>/10</small>'
+                   if row["average"] is not None else "")
+        rows += (f'<div class="profile-stat profile-stat--{_e(row["category"])}">'
+                 f'<span class="profile-stat__label"><i aria-hidden="true"></i>{_e(row["label"])}</span>'
+                 f'<strong>{row["total"]:,}</strong>'
+                 f'<span class="profile-stat__meter" title="{done}% {_e(row["verb"])}"><span style="--w:{done}%"></span></span>'
+                 f'<small class="profile-stat__done">{_e(row["finished"])} {_e(row["verb"])}</small>{average}</div>')
     return (f'<section class="title-section" aria-labelledby="profile-stats"><h2 id="profile-stats">Library</h2>'
-            f'<div class="profile-stats">{tiles}</div></section>')
+            f'<div class="profile-stats">{rows}</div></section>')
 
 
 def _badges_html(view) -> str:
@@ -222,16 +316,20 @@ def _badges_html(view) -> str:
 def _favorites_html(view) -> str:
     if not view.favorites:
         return ""
-    cards = ""
+    cards = "".join(_poster_html(item) for item in view.favorites)
+    kinds: dict = {}
     for item in view.favorites:
-        art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
-               else f'<span>{_e(item["title"][:1].upper())}</span>')
-        year = f' · {item["year"]}' if item.get("year") else ""
-        cards += (f'<a class="title-related" href="{_e(item["url"])}"><span class="title-related__art">{art}</span>'
-                  f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)} · '
-                  f'<span class="profile-rating">{_e(_rating(item["rating"]))}/10</span></small></a>')
+        kinds.setdefault(item["category"], public_profiles.CATEGORIES[item["category"]][2])
+    filters = ""
+    if len(kinds) >= 2 and len(view.favorites) >= 6:
+        # Buttons only work with profile-page.js, so the row stays hidden until it runs.
+        buttons = '<button type="button" data-filter="" aria-pressed="true">All</button>' + "".join(
+            f'<button type="button" data-filter="{_e(category)}" aria-pressed="false">{_e(label)}</button>'
+            for category, label in kinds.items())
+        filters = f'<div class="profile-filter" role="group" aria-label="Show favorites from" data-profile-filter hidden>{buttons}</div>'
     return (f'<section class="title-section" aria-labelledby="profile-favorites"><h2 id="profile-favorites">Favorites</h2>'
-            f'<div class="title-related-grid">{cards}</div></section>')
+            f'<p class="profile-section__intro">Top-rated titles from every shelf {_e(view.user.username)} shares.</p>'
+            f'{filters}<div class="profile-poster-grid">{cards}</div></section>')
 
 
 def _diary_html(view) -> str:
@@ -289,7 +387,7 @@ def _collections_html(view) -> str:
 
 # Library categories in the taste-mix bar, in profile-page.css colors.
 MIX_COLORS = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks")
-SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
+SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-now", "Right now"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
                 ("profile-favorites", "Favorites"), ("profile-diary", "Diary"), ("profile-reviews", "Reviews"),
                 ("profile-collections", "Collections"))
 
@@ -362,6 +460,24 @@ def _mix_html(view) -> str:
             f'<div class="profile-mix__bar" aria-hidden="true">{segments}</div><ul class="profile-mix__legend">{legend}</ul></div>')
 
 
+def _spread_html(view) -> str:
+    """A small bar chart of how the member rates: one bar per score from 1 to 10."""
+    counts = view.spread or []
+    total = sum(counts)
+    if total < 3:
+        return ""
+    peak = max(counts)
+    bars = "".join(f'<span class="profile-spread__bar" style="--h:{max(4, round(count * 100 / peak)) if count else 0}%"'
+                   f' title="{_plural(count, "title")} rated {score}"></span>'
+                   for score, count in enumerate(counts, start=1))
+    common = counts.index(peak) + 1
+    summary = f"{_plural(total, 'rated title')}, most often {'an' if common == 8 else 'a'} {common}"
+    return (f'<div class="profile-spread"><p class="profile-glance__label">How {_e(view.user.username)} rates</p>'
+            f'<div class="profile-spread__bars" role="img" aria-label="{_e(summary)}">{bars}</div>'
+            f'<div class="profile-spread__axis" aria-hidden="true"><span>1</span><span>5</span><span>10</span></div>'
+            f'<p class="profile-spread__note">{_e(summary)}</p></div>')
+
+
 def _glance_html(view, *, signed_in: bool, since: str, follow_counts: Optional[dict] = None) -> str:
     name = view.user.username
     # (label, html): plain values are escaped here.
@@ -391,7 +507,7 @@ def _glance_html(view, *, signed_in: bool, since: str, follow_counts: Optional[d
             '<a class="site-btn site-btn--primary site-btn--sm title-glance__cta" href="/#signup" data-profile-join>Start tracking free</a>'
             '<a class="profile-glance__quiz" href="/taste-quiz">Or take the one-minute taste quiz <span aria-hidden="true">→</span></a></div>')
     return (f'<aside class="title-glance profile-glance" aria-labelledby="profile-glance"><h2 id="profile-glance">About {_e(name)}</h2>'
-            f'{_mix_html(view)}<dl>{rows}</dl>{join}</aside>')
+            f'{_mix_html(view)}{_spread_html(view)}<dl>{rows}</dl>{join}</aside>')
 
 
 def _follow_html(view, *, signed_in: bool, is_owner: bool, followable: bool, following: bool) -> str:
@@ -468,11 +584,14 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         + (f". {lead}" if lead else "."), 158)
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
-    body = "".join([_showcase_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
+    body = "".join([_showcase_html(view), _now_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
     tabs = _tabs_html(body)
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
     owner_note = _owner_note_html(view, is_owner)
+    # Only a profile that shows a frame needs the frame styles (most profiles have none).
+    frames_css = (f'  <link rel="stylesheet" href="/static/avatar-frames.css?v={FRAMES_CSS_VERSION}">\n'
+                  if (view.supporter or {}).get("frame") in supporters.ALL_FRAMES else "")
     cta = ("" if signed_in else
            '<section class="profile-cta site-card"><div><p class="site-eyebrow">Free on OmniTrackr</p>'
            '<h2>Track everything you watch, play, read and hear</h2>'
@@ -486,6 +605,9 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
     chips = "".join(f'<span class="site-chip">{_e(bit)}</span>' for bit in summary_bits
                     if not bit.endswith(("tracked", "review", "reviews")))
     wall = _wall_html(view)
+    accent = (view.supporter or {}).get("accent")
+    body_class = "site title-page profile-page" + ("" if signed_in else " profile-page--guest") + (
+        f" profile-page--accent-{accent}" if accent else "")
     hero_class = _hero_class(view) + (" profile-hero--wall" if wall else "")
     page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -515,31 +637,32 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
-  <link rel="stylesheet" href="/static/profile-page.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-banners.css?v={CSS_VERSION}">
-  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
+  <link rel="stylesheet" href="/static/member-profile.css?v={CSS_VERSION}">
+{frames_css}  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <script type="application/ld+json">{_json_ld(view, canonical, meta_description)}</script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/profile-page.js?v={CSS_VERSION}" defer></script>
 </head>
-<body class="site title-page profile-page{'' if signed_in else ' profile-page--guest'}">
+<body class="{_e(body_class)}">
   <!--SITE_NAV:-->
   <main>
     <section class="{_e(hero_class)}">
-      {_banner_html(view)}
-      {wall}
+      <div class="site-wrap profile-cover-wrap">
+        <div class="profile-cover" aria-hidden="true">{_banner_html(view)}{wall}</div>
+      </div>
       <div class="site-wrap profile-hero__inner">
-        {_avatar_html(user)}
+        {_framed_avatar_html(view, user)}
         <div class="profile-hero__copy">
-          <p class="site-eyebrow">Public profile</p>
           <h1>{_e(name)}</h1>
-          {_supporter_html(view)}
           <p class="profile-hero__meta">{_e(since)}</p>
+        </div>
+        {_actions_html(view, signed_in=signed_in, is_owner=is_owner, recap_url=recap_url, recap_year=recap_year,
+                       followable=followable, following=following)}
+        <div class="profile-hero__body">
+          <div class="profile-hero__tags">{_supporter_html(view)}{chips}</div>
           {_bio_html(profile.bio)}
           {_numbers_html(view)}
-          <div class="title-hero__chips">{chips}</div>
-          {_actions_html(view, signed_in=signed_in, is_owner=is_owner, recap_url=recap_url, recap_year=recap_year,
-                         followable=followable, following=following)}
           {owner_note}
         </div>
       </div>

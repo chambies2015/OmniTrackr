@@ -13,13 +13,13 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
+  <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20261030-hero-search-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261110-signin-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261110-signin-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr: every movie, show, game and book in one library">
@@ -65,6 +65,9 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-manga" viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-1.5v14c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5v-14c-3-.5-6 0-8 1.5z"/><path d="M12 6v14"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
   </svg>
   <main id="landingPage">
     <!--SITE_NAV:-->
@@ -94,6 +97,7 @@
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Export whenever you like</li>
           </ul>
         </div>
+        <!--HERO_STAGE-->
         <div class="lp-hero__visual" aria-hidden="true">
           <div class="lp-orb">
             <picture>
@@ -111,8 +115,25 @@
             <span class="lp-orbit__tile lp-orbit__tile--book"><svg class="lp-icon"><use href="#i-book"/></svg>Books</span>
           </div>
         </div>
+        <!--/HERO_STAGE-->
       </div>
     </section>
+
+    <nav class="lp-formats" aria-label="What you can track">
+      <div class="lp-wrap">
+        <ul class="lp-formats__list">
+          <li><a href="/movie-tracker" class="is-film"><svg class="lp-icon" aria-hidden="true"><use href="#i-film"/></svg>Movies</a></li>
+          <li><a href="/tv-show-tracker" class="is-tv"><svg class="lp-icon" aria-hidden="true"><use href="#i-tv"/></svg>TV shows</a></li>
+          <li><a href="/anime-tracker" class="is-anime"><svg class="lp-icon" aria-hidden="true"><use href="#i-sparkle"/></svg>Anime</a></li>
+          <li><a href="/game-tracker" class="is-game"><svg class="lp-icon" aria-hidden="true"><use href="#i-game"/></svg>Games</a></li>
+          <li><a href="/book-tracker" class="is-book"><svg class="lp-icon" aria-hidden="true"><use href="#i-book"/></svg>Books</a></li>
+          <li><a href="/music-tracker" class="is-music"><svg class="lp-icon" aria-hidden="true"><use href="#i-music"/></svg>Music</a></li>
+          <li><a href="/manga-tracker" class="is-manga"><svg class="lp-icon" aria-hidden="true"><use href="#i-manga"/></svg>Manga</a></li>
+          <li><a href="/podcast-tracker" class="is-podcast"><svg class="lp-icon" aria-hidden="true"><use href="#i-mic"/></svg>Podcasts</a></li>
+          <li><a href="/audiobook-tracker" class="is-audio"><svg class="lp-icon" aria-hidden="true"><use href="#i-headphones"/></svg>Audiobooks</a></li>
+        </ul>
+      </div>
+    </nav>
 
 <!--GUEST_PICKS-->
 
@@ -120,17 +141,18 @@
 
 <!--RELEASE_RADAR_STRIP-->
 
-    <section class="lp-section lp-preview" aria-labelledby="preview-title">
+    <section id="how-it-works" class="lp-section lp-preview" aria-labelledby="workflow-title">
       <div class="lp-wrap lp-preview__grid">
         <div class="lp-preview__copy">
-          <p class="lp-eyebrow">Everything you love, one library</p>
-          <h2 id="preview-title">Your whole media life, side by side.</h2>
-          <p>Stop splitting your history across a movie app, a reading app, and a notes file. OmniTrackr keeps every format in one library, so a favorite book can sit next to a favorite game.</p>
-          <ul class="lp-points">
-            <li><strong>Checkpoints.</strong> Save the episode or page you stopped at and pick up exactly there.</li>
-            <li><strong>A private journal.</strong> Starts, finishes, and revisits are logged privately as they happen.</li>
-            <li><strong>Your taste in numbers.</strong> Tasteprint and weekly recaps show which genres, eras, and creators you rate highest.</li>
-          </ul>
+          <p class="lp-eyebrow">How it works</p>
+          <h2 id="workflow-title">From recommendation to a memory you can revisit</h2>
+          <p>Stop splitting your history across a movie app, a reading app and a notes file. Start with a few things you already love, and the rest fills in as you watch, play and read.</p>
+          <ol class="lp-flow">
+            <li><span class="lp-flow__num">1</span><div><h3>Save it</h3><p>Add a movie, show, anime, game, album, book or your own custom category before the recommendation gets lost.</p></div></li>
+            <li><span class="lp-flow__num">2</span><div><h3>Make it yours</h3><p>Save the episode or page you stopped at, rate it on a scale that makes sense to you, and leave a note about why it worked (or didn’t).</p></div></li>
+            <li><span class="lp-flow__num">3</span><div><h3>Log the moment</h3><p>Starts, finishes and revisits go into a private journal. Journal entries don’t change the library record.</p></div></li>
+            <li><span class="lp-flow__num">4</span><div><h3>Find the pattern</h3><p>Weekly playback and Tasteprint show which genres, eras and creators you rate highest. Share only the parts you choose.</p></div></li>
+          </ol>
         </div>
         <div class="landing-library-showcase" role="img" aria-label="Example OmniTrackr library with personal ratings, an anime checkpoint at episode 18, played and unread statuses, and seven weekly journal moments">
           <div class="showcase-window">
@@ -177,22 +199,6 @@
           <div class="showcase-float showcase-float--rating"><span aria-hidden="true">★</span><div><strong>9.2</strong><small>Your top rating</small></div></div>
           <div class="showcase-float showcase-float--saved"><span aria-hidden="true">✓</span><div><strong>Saved</strong><small>Ready to revisit</small></div></div>
         </div>
-      </div>
-    </section>
-
-    <section id="how-it-works" class="lp-section lp-steps" aria-labelledby="workflow-title">
-      <div class="lp-wrap">
-        <div class="lp-section-head">
-          <p class="lp-eyebrow">How it works</p>
-          <h2 id="workflow-title">From recommendation to a memory you can revisit</h2>
-          <p>Start with a few things you already love. Add more as you watch, play, and read, and the history fills in on its own.</p>
-        </div>
-        <ol class="lp-steps__list">
-          <li><span class="lp-steps__num">01</span><h3>Save it</h3><p>Add a movie, show, anime, game, album, book, or your own custom category before the recommendation gets lost.</p></li>
-          <li><span class="lp-steps__num">02</span><h3>Make it yours</h3><p>Track progress, rate it on a scale that makes sense to you, and leave a quick note about why it worked (or didn’t).</p></li>
-          <li><span class="lp-steps__num">03</span><h3>Log the moment</h3><p>Use the private journal when you start, make progress, finish, or revisit something. Journal entries don’t change the library record.</p></li>
-          <li><span class="lp-steps__num">04</span><h3>Find the pattern</h3><p>Weekly playback and Tasteprint help you rediscover favorites and notice how your taste changes. Share only the insights you choose.</p></li>
-        </ol>
       </div>
     </section>
 
@@ -285,7 +291,7 @@
             <div class="lp-vignette lp-vg-import" aria-hidden="true">
               <span class="lp-vg-chips"><b>Letterboxd</b><b>IMDb</b><b>Goodreads</b><b>StoryGraph</b><b>MyAnimeList</b><b>AniList</b><b>Kitsu</b><b>Trakt</b></span>
               <svg class="lp-icon lp-vg-import__arrow"><use href="#i-arrow"/></svg>
-              <span class="lp-vg-import__home"><img src="/vortex-still.webp" alt="" width="28" height="28" loading="lazy" decoding="async">OmniTrackr</span>
+              <span class="lp-vg-import__home"><img src="/vortex-mark.webp" alt="" width="28" height="28" loading="lazy" decoding="async">OmniTrackr</span>
             </div>
             <div class="lp-feature__copy">
               <h3>Bring your history with you</h3>
@@ -349,11 +355,21 @@
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Free, with a full JSON export any time</li>
           </ul>
         </div>
-        <div class="auth-container lp-auth__card">
-          <h2 id="authTitle">Log in to OmniTrackr</h2>
-          <p class="auth-context">Create a free account, or sign in to continue where you left off.</p>
+        <div class="auth-container auth-card lp-auth__card">
+          <div class="auth-head">
+            <h2 id="authTitle" tabindex="-1">Log in to OmniTrackr</h2>
+            <p class="auth-context">Create a free account, or sign in to continue where you left off.</p>
+          </div>
           <div id="authError" role="alert"></div>
           <div id="authSuccess" role="status"></div>
+          <div id="resendVerificationContainer" class="auth-resend auth-form">
+            <p>Didn't get the confirmation email? We can send a new link.</p>
+            <div class="auth-field" id="resendVerificationEmailField" hidden>
+              <label class="auth-field__label" for="resendVerificationEmail">Email you signed up with</label>
+              <input type="email" id="resendVerificationEmail" autocomplete="email" autocapitalize="none" spellcheck="false">
+            </div>
+            <button type="button" id="resendVerificationBtn" class="auth-ghost">Send a new link</button>
+          </div>
         <div id="loginForm" class="auth-form"><!--GOOGLE_SIGNIN:login-->
           <form id="loginFormElement" novalidate>
             <div class="auth-field">
@@ -369,46 +385,53 @@
             <button type="submit" class="auth-submit">Log in</button>
             <button type="button" class="auth-passkey" id="passkeyLoginButton" hidden><svg class="auth-passkey__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 9-5.2"/><circle cx="18" cy="16" r="2.5"/><path d="M18 18.5V22l1.5-1 1.5 1v-3.5"/></svg><span>Log in with a passkey</span></button>
           </form>
-          <div id="resendVerificationContainer" class="auth-resend">
-            <p>Didn't get the verification email? We can send a new link.</p>
-            <div class="auth-field" id="resendVerificationEmailField" hidden>
-              <label class="auth-field__label" for="resendVerificationEmail">Email you signed up with</label>
-              <input type="email" id="resendVerificationEmail" autocomplete="email" autocapitalize="none" spellcheck="false">
-            </div>
-            <button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">Resend verification email</button>
-          </div>
           <p class="auth-toggle">New here? <a id="showRegister" href="#signup">Create a free account</a></p>
         </div>
         <div id="registerForm" class="auth-form"><!--GOOGLE_SIGNIN:register-->
           <form id="registerFormElement" novalidate>
             <div class="auth-field">
               <label class="auth-field__label" for="registerEmail">Email</label>
-              <input type="email" id="registerEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="registerEmailHint registerEmailError">
-              <p class="auth-hint" id="registerEmailHint">We send one link to confirm it. No newsletters unless you turn them on.</p>
+              <input type="email" id="registerEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="registerEmailError registerEmailSuggest">
               <p class="auth-field__error" id="registerEmailError" hidden></p>
-            </div>
-            <div class="auth-field">
-              <label class="auth-field__label" for="registerUsername">Username</label>
-              <input type="text" id="registerUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="30" aria-describedby="registerUsernameHint registerUsernameError" required>
-              <p class="auth-hint" id="registerUsernameHint">Shown on anything you share. We suggest one from your email, and you can change it later.</p>
-              <p class="auth-field__error" id="registerUsernameError" hidden></p>
+              <p class="auth-suggest" id="registerEmailSuggest" hidden>Did you mean <button type="button" class="auth-linkbtn" id="registerEmailFix"></button>?</p>
             </div>
             <div class="auth-field">
               <label class="auth-field__label" for="registerPassword">Password</label>
               <div class="auth-password"><input type="password" id="registerPassword" autocomplete="new-password" minlength="8" aria-describedby="registerPasswordHint registerPasswordStrength registerPasswordError" data-password-strength="registerPasswordStrength" required><button type="button" class="auth-password__toggle" data-password-toggle="registerPassword" aria-controls="registerPassword" aria-pressed="false">Show</button></div>
-              <p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase is easy to remember and hard to guess.</p>
+              <p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase works well.</p>
               <p class="auth-strength" id="registerPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="registerPasswordError" hidden></p>
             </div>
-            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release. Quiet weeks are skipped, and one click turns it off.</span></label>
+            <p class="auth-handle" id="registerHandle" hidden><span id="registerHandleEmpty">Your username comes from your email.</span><span id="registerHandleFilled" hidden>Your username will be <strong id="registerHandleName"></strong>.</span> <button type="button" class="auth-linkbtn" id="registerHandleChange" aria-controls="registerUsernameField">Change</button></p>
+            <div class="auth-field" id="registerUsernameField">
+              <label class="auth-field__label" for="registerUsername">Username</label>
+              <input type="text" id="registerUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="30" aria-describedby="registerUsernameHint registerUsernameError" required>
+              <p class="auth-hint" id="registerUsernameHint">Shown on anything you share. You can change it later.</p>
+              <p class="auth-field__error" id="registerUsernameError" hidden></p>
+            </div>
+            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release.</span></label>
             <button type="submit" class="auth-submit">Create free account</button>
-            <p class="auth-fineprint">Free for good, and your library stays private until you share it. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
+            <p class="auth-fineprint">We email one link to confirm your address. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
           </form>
           <p class="auth-toggle">Already have an account? <a id="showLogin" href="#login">Log in</a></p>
         </div>
+        <div id="verifySentPanel" class="auth-form auth-panel">
+          <div class="auth-panel__icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7.5 8 6 8-6"/></svg></div>
+          <p class="auth-panel__lead" id="verifySentLead"><span id="verifySentBefore"></span><strong id="verifySentEmail"></strong><span id="verifySentAfter"></span></p>
+          <a class="auth-submit auth-inbox" id="verifySentInbox" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
+          <p class="auth-panel__note" id="verifySentNote"></p>
+          <p class="auth-panel__note auth-quiz-tip" id="verifySentQuiz" hidden>While you wait, <a href="/taste-quiz">take the 1-minute taste quiz</a>. Your answers are added to your library when you log in.</p>
+          <button type="button" class="auth-ghost" id="verifySentResend">Send the email again</button>
+          <p class="auth-panel__status" id="verifySentStatus" role="status"></p>
+          <p class="auth-toggle"><a id="verifySentLogin" href="#login">Already confirmed? Log in</a></p>
+          <p class="auth-toggle"><a id="verifySentRestart" href="#signup">Wrong address? Start again</a></p>
+        </div>
+        <div id="authStatusPanel" class="auth-form auth-panel">
+          <div class="auth-panel__spinner" aria-hidden="true"></div>
+          <p class="auth-panel__lead" id="authStatusText" role="status"></p>
+        </div>
         <div id="forgotPasswordForm" class="auth-form">
           <form id="forgotPasswordFormElement" novalidate>
-            <p class="auth-helper-text">Enter the email on your account and we'll send a link to choose a new password.</p>
             <div class="auth-field">
               <label class="auth-field__label" for="forgotPasswordEmail">Email</label>
               <input type="email" id="forgotPasswordEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="forgotPasswordEmailError">
@@ -426,7 +449,7 @@
               <input type="text" id="twoFactorCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" required aria-describedby="twoFactorCodeError">
               <p class="auth-field__error" id="twoFactorCodeError" hidden></p>
             </div>
-            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> Don't ask again on this browser for 30 days</label>
+            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> <span>Don't ask again on this browser for 30 days</span></label>
             <button type="submit" class="auth-submit">Continue</button>
           </form>
           <p class="auth-toggle"><a id="twoFactorUseRecovery" href="#recovery-code">Lost your phone? Use a recovery code</a></p>
@@ -434,17 +457,12 @@
         </div>
         <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement" novalidate>
-            <p class="auth-helper-text">Choose a new password for your account.</p>
             <div class="auth-field">
               <label class="auth-field__label" for="newPassword">New password</label>
-              <div class="auth-password"><input type="password" id="newPassword" autocomplete="new-password" required minlength="8" aria-describedby="newPasswordStrength newPasswordError" data-password-strength="newPasswordStrength"><button type="button" class="auth-password__toggle" data-password-toggle="newPassword" aria-controls="newPassword" aria-pressed="false">Show</button></div>
+              <div class="auth-password"><input type="password" id="newPassword" autocomplete="new-password" required minlength="8" aria-describedby="newPasswordHint newPasswordStrength newPasswordError" data-password-strength="newPasswordStrength"><button type="button" class="auth-password__toggle" data-password-toggle="newPassword" aria-controls="newPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-hint" id="newPasswordHint">At least 8 characters. A short phrase works well.</p>
               <p class="auth-strength" id="newPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="newPasswordError" hidden></p>
-            </div>
-            <div class="auth-field">
-              <label class="auth-field__label" for="confirmNewPassword">Type it again</label>
-              <div class="auth-password"><input type="password" id="confirmNewPassword" autocomplete="new-password" required minlength="8" aria-describedby="confirmNewPasswordError"><button type="button" class="auth-password__toggle" data-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-pressed="false">Show</button></div>
-              <p class="auth-field__error" id="confirmNewPasswordError" hidden></p>
             </div>
             <button type="submit" class="auth-submit">Save new password</button>
           </form>
@@ -461,11 +479,10 @@
       </div>
     </div>
   </main>
-  <dialog id="authDialog" class="lp-auth-dialog" aria-labelledby="authTitle"><button type="button" class="lp-auth-dialog__close" data-action="close-auth-dialog" aria-label="Close">×</button><div class="lp-auth-dialog__slot" data-auth-dialog-slot></div></dialog>
+  <dialog id="authDialog" class="lp-auth-dialog" aria-labelledby="authTitle"><p class="lp-auth-dialog__brand" aria-hidden="true"><img src="/vortex-mark.webp" alt="" width="28" height="28">OmniTrackr</p><div class="lp-auth-dialog__slot" data-auth-dialog-slot></div><button type="button" class="lp-auth-dialog__close" data-action="close-auth-dialog" aria-label="Close">×</button></dialog>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
-  <script src="/credentials.js"></script>
-  <script src="/auth.js?v=20261101-so-far-1"></script>
-  <script src="/static/public-landing.js?v=20261030-hero-search-1" defer></script>
+  <script src="/auth.js?v=20261114-advent-1"></script>
+  <script src="/static/public-landing.js?v=20261110-signin-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1" defer></script>
   <script src="/static/title-search.js?v=20261030-hero-search-2" defer></script>

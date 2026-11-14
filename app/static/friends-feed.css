@@ -1,179 +1,358 @@
-/* Friends feed tab on the dashboard. Uses the dashboard theme tokens (app-theme.css). */
-.ffeed {
-  --ffeed-bg: var(--card-bg, #191f2c);
-  --ffeed-fg: var(--fg, #edf0f7);
-  --ffeed-soft: var(--fg-secondary, #a4aec2);
-  --ffeed-line: var(--border, #30394c);
-  --ffeed-muted: var(--surface-muted, #151b27);
-  --ffeed-hover: var(--surface-hover, #242c3d);
-  --ffeed-accent: var(--primary, #baa9fb);
-  --ffeed-solid: var(--accent-solid, #b6a2fa);
-  --ffeed-on: var(--on-accent, #211440);
-  --ffeed-soft-accent: var(--accent-soft, #2c2542);
-  --ffeed-ok: var(--teal, #8ad8c3);
-  --ffeed-ok-soft: var(--teal-soft, #1b3535);
-  --ffeed-bad: var(--danger, #ff9caa);
-  color: var(--ffeed-fg);
-  margin: 0 auto;
-  max-width: 820px;
+/* Friends feed tab (Nov 2026 refresh): a page heading in the same style as Statistics,
+   a Friends / Following switch, day-grouped update cards and a side rail for settings
+   and people. Every colour comes from the tokens in app-theme.css, so night mode and
+   supporter themes carry through. Format colours (--fmt-hue) come from workspace-2026.css. */
+
+body.app-shell .social { color: var(--fg); margin: 0 auto; max-width: 1180px; }
+
+/* Library widgets stay with the libraries, as they already do on Statistics and Collections. */
+body.app-shell[data-active-tab="friends-feed"] :is(#libraryLaunchpad, #starterPicks, #comingUp, #returnDeck, .daily-dashboard) {
+  display: none !important;
 }
 
-.ffeed__head {
-  align-items: flex-start;
-  background: linear-gradient(125deg, var(--ffeed-soft-accent), var(--ffeed-bg) 70%);
-  border: 1px solid var(--ffeed-line);
-  border-radius: var(--radius, 14px);
+/* ---------- Page heading ---------- */
+body.app-shell .social-head {
+  align-items: flex-end;
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
   justify-content: space-between;
-  margin-bottom: 14px;
-  padding: 20px 22px;
+  margin: var(--space-2) 0 var(--space-5);
 }
-.ffeed__intro { min-width: 0; }
-.ffeed__eyebrow { color: var(--ffeed-accent); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 4px; text-transform: uppercase; }
-.ffeed__head h2 { font-size: 1.35rem; line-height: 1.2; margin: 0; }
-.ffeed__lede { color: var(--ffeed-soft); font-size: .9rem; line-height: 1.55; margin: 6px 0 0; max-width: 52ch; }
-.ffeed__side { display: grid; flex-shrink: 0; gap: 8px; justify-items: end; }
-.ffeed__share { align-items: center; cursor: pointer; display: inline-flex; font-size: .85rem; font-weight: 600; gap: 8px; min-height: 40px; }
-.ffeed__share input { accent-color: var(--ffeed-solid); height: 18px; width: 18px; }
-.ffeed__share-hint { color: var(--ffeed-soft); font-size: .75rem; margin: -6px 0 0; text-align: right; }
+body.app-shell .social-head__copy { max-width: 62ch; min-width: 0; }
+body.app-shell .social-head__eyebrow {
+  color: var(--teal);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+body.app-shell .social-head h2 {
+  color: var(--fg);
+  font: 700 clamp(1.6rem, 2.6vw, 2.15rem)/1.15 var(--font-display);
+  letter-spacing: -.025em;
+  margin: 0;
+}
+body.app-shell .social-head h2:focus { outline: none; }
+body.app-shell .social-head__lede { color: var(--fg-secondary); font-size: .95rem; line-height: 1.55; margin: 6px 0 0; }
+body.app-shell button.social-head__add { border-radius: var(--radius-pill); flex: none; min-height: var(--control-md); padding: 0 18px; }
 
-.ffeed__filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
-.ffeed-filter {
+/* ---------- Two columns: feed and rail ---------- */
+body.app-shell .social-layout { align-items: start; display: grid; gap: var(--space-6) 28px; grid-template-columns: minmax(0, 1fr) 300px; }
+body.app-shell .social-main { min-width: 0; }
+body.app-shell .social-rail { display: grid; gap: var(--space-4); position: sticky; top: 84px; }
+
+body.app-shell .social-card,
+body.app-shell .social-rail .best-recs {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+  padding: 18px 20px;
+}
+body.app-shell .social-card[hidden], body.app-shell .social-rail .best-recs[hidden] { display: none; }
+body.app-shell .social-card__title,
+body.app-shell .social-rail .best-recs h3 { color: var(--fg); font: 700 var(--text-lg)/1.3 var(--font-display); margin: 0 0 var(--space-3); }
+body.app-shell .social-rail .best-recs h3 { margin-bottom: 0; }
+body.app-shell .social-rail .best-recs__eyebrow { color: var(--teal); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; }
+body.app-shell .social-rail .best-recs__summary { font-size: var(--text-md); line-height: 1.5; }
+body.app-shell .social-rail .best-recs__person { grid-template-columns: 28px minmax(0, 1fr) auto; }
+body.app-shell .social-rail .best-recs__person > :nth-child(n + 4) { grid-column: 2 / -1; justify-self: start; }
+
+/* Share switch */
+body.app-shell .ffeed__share { align-items: center; cursor: pointer; display: flex; font-size: var(--text-md); font-weight: 600; gap: var(--space-3); min-height: 40px; }
+body.app-shell .ffeed__share input[role="switch"] {
+  appearance: none;
+  background: var(--border-strong);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  flex: none;
+  height: 24px;
+  margin: 0;
+  position: relative;
+  transition: background-color var(--dur) var(--ease);
+  width: 42px;
+}
+body.app-shell .ffeed__share input[role="switch"]::before {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  content: "";
+  height: 18px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform var(--dur) var(--ease);
+  width: 18px;
+}
+body.app-shell .ffeed__share input[role="switch"]:checked { background: var(--accent-solid); }
+body.app-shell .ffeed__share input[role="switch"]:checked::before { transform: translateX(18px); }
+body.app-shell .ffeed__share input[role="switch"]:disabled { cursor: progress; opacity: .6; }
+body.app-shell .ffeed__share input[role="switch"]:focus-visible { box-shadow: var(--ring); outline: none; }
+body.app-shell .ffeed__share-hint { color: var(--fg-secondary); font-size: var(--text-sm); line-height: 1.5; margin: var(--space-2) 0 0; }
+
+/* ---------- Friends / Following switch and filters ---------- */
+body.app-shell .social-bar { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); justify-content: space-between; margin: 0 0 var(--space-4); }
+body.app-shell .social-switch {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+body.app-shell .social-switch__btn {
+  align-items: center;
   background: transparent;
-  border: 1px solid var(--ffeed-line);
-  border-radius: 999px;
-  color: var(--ffeed-soft);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  gap: 6px;
+  min-height: var(--control-sm);
+  padding: 0 16px;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+body.app-shell .social-switch__btn:hover { color: var(--fg); }
+body.app-shell .social-switch__btn[aria-selected="true"] { background: var(--card-bg); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); color: var(--fg); }
+body.app-shell .social-switch__btn:focus-visible { box-shadow: var(--ring); outline: none; }
+body.app-shell .social-switch__count {
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 7px;
+}
+body.app-shell .social-switch__count[hidden] { display: none; }
+
+body.app-shell .ffeed__filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+body.app-shell .ffeed__filters[hidden] { display: none; }
+body.app-shell .ffeed-filter {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: .82rem;
-  font-weight: 700;
-  min-height: 36px;
-  padding: 6px 14px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: var(--control-sm);
+  padding: 0 14px;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-.ffeed-filter:hover { background: var(--ffeed-hover); color: var(--ffeed-fg); }
-.ffeed-filter[aria-pressed="true"] { background: var(--ffeed-solid); border-color: var(--ffeed-solid); color: var(--ffeed-on); }
+body.app-shell .ffeed-filter:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .ffeed-filter[aria-pressed="true"] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: var(--primary); }
 
-.ffeed__status { color: var(--ffeed-soft); font-size: .88rem; margin: 0 0 10px; }
-.ffeed__status:empty { display: none; }
-.ffeed__list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+/* ---------- The feed ---------- */
+body.app-shell .ffeed { color: var(--fg); }
+body.app-shell .ffeed[hidden], body.app-shell .ffollow[hidden] { display: none; }
+body.app-shell .ffeed__status { color: var(--fg-secondary); font-size: var(--text-md); margin: 0 0 var(--space-3); }
+body.app-shell .ffeed__status:empty { display: none; }
+body.app-shell .ffeed__list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
 
-.ffeed-card {
-  background: var(--ffeed-bg);
-  border: 1px solid var(--ffeed-line);
-  border-radius: var(--radius, 14px);
+body.app-shell .ffeed-day { align-items: center; display: flex; gap: var(--space-3); margin: var(--space-3) 0 -2px; }
+body.app-shell .ffeed-day:first-child { margin-top: 0; }
+body.app-shell .ffeed-day::after { background: var(--border); content: ""; flex: 1; height: 1px; }
+body.app-shell .ffeed-day__label { color: var(--fg-secondary); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; margin: 0; text-transform: uppercase; }
+
+body.app-shell .ffeed-card {
+  --fmt-hue: 262;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
-  gap: 12px;
-  grid-template-columns: 40px minmax(0, 1fr);
-  padding: 14px 16px;
+  gap: var(--space-3);
+  padding: 16px 20px 18px;
 }
-.ffeed-card[data-kind="finished"] { border-left: 3px solid var(--ffeed-ok); }
-.ffeed-card[data-kind="reviewed"], .ffeed-card[data-kind="rated"] { border-left: 3px solid var(--ffeed-solid); }
-.ffeed-avatar { border-radius: 50%; height: 40px; object-fit: cover; width: 40px; }
-.ffeed-card__body { display: grid; gap: 10px; min-width: 0; }
-.ffeed-card__who { color: var(--ffeed-soft); font-size: .88rem; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
-.ffeed-card__name {
+body.app-shell .ffeed-card[data-format="tv-shows"] { --fmt-hue: 172; }
+body.app-shell .ffeed-card[data-format="anime"] { --fmt-hue: 330; }
+body.app-shell .ffeed-card[data-format="video-games"] { --fmt-hue: 217; }
+body.app-shell .ffeed-card[data-format="music"] { --fmt-hue: 38; }
+body.app-shell .ffeed-card[data-format="books"] { --fmt-hue: 152; }
+body.app-shell .ffeed-card[data-format="manga"] { --fmt-hue: 350; }
+body.app-shell .ffeed-card[data-format="podcasts"] { --fmt-hue: 199; }
+body.app-shell .ffeed-card[data-format="audiobooks"] { --fmt-hue: 84; }
+
+body.app-shell .ffeed-card__head { align-items: center; display: grid; gap: var(--space-3); grid-template-columns: 36px minmax(0, 1fr) auto; }
+body.app-shell .ffeed-avatar { border-radius: 50%; box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3px var(--border); height: 36px; object-fit: cover; width: 36px; }
+body.app-shell .ffeed-card__who { color: var(--fg-secondary); font-size: var(--text-md); line-height: 1.4; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+body.app-shell .ffeed-card__name {
   background: none;
   border: 0;
-  color: var(--ffeed-fg);
+  color: var(--fg);
   cursor: pointer;
   font: inherit;
-  font-weight: 800;
+  font-weight: 700;
   padding: 0;
 }
-.ffeed-card__name:hover { color: var(--ffeed-accent); text-decoration: underline; }
-.ffeed-card__time { color: var(--ffeed-soft); font-size: .78rem; margin-left: 8px; white-space: nowrap; }
-.ffeed-card__time::before { content: "· "; }
+body.app-shell .ffeed-card__name:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+body.app-shell .ffeed-card__time { color: var(--fg-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.ffeed-card__main { display: grid; gap: 14px; grid-template-columns: 64px minmax(0, 1fr); }
-.ffeed-card__cover { aspect-ratio: 2 / 3; border-radius: 8px; display: block; object-fit: cover; width: 64px; }
-.ffeed-card__cover--empty, .ffeed-burst__cover--empty {
+body.app-shell .ffeed-card__body { display: grid; gap: var(--space-3); min-width: 0; padding-left: 48px; }
+body.app-shell .ffeed-card__main { display: grid; gap: var(--space-4); grid-template-columns: 76px minmax(0, 1fr); }
+body.app-shell .ffeed-card__cover {
+  aspect-ratio: 2 / 3;
+  background: hsl(var(--fmt-hue) 60% 50% / .14);
+  border-radius: var(--poster-radius);
+  box-shadow: 0 0 0 1px var(--poster-edge), var(--poster-shadow);
+  display: block;
+  object-fit: cover;
+  width: 76px;
+}
+body.app-shell .ffeed-card__cover--empty,
+body.app-shell .ffeed-burst__cover--empty {
   align-items: center;
-  background: var(--ffeed-muted);
-  border: 1px solid var(--ffeed-line);
-  box-sizing: border-box;
-  color: var(--ffeed-soft);
+  color: hsl(var(--fmt-hue, 262) 70% var(--fmt-ink-l, 40%));
   display: flex;
-  font-size: 1.3rem;
-  font-weight: 800;
+  font: 700 1.4rem/1 var(--font-display);
   justify-content: center;
 }
-.ffeed-card__copy { display: grid; align-content: start; gap: 4px; min-width: 0; }
-.ffeed-card__title { color: inherit; font-size: 1.02rem; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; text-decoration: none; }
-a.ffeed-card__title:hover { color: var(--ffeed-accent); text-decoration: underline; }
-.ffeed-card__meta { color: var(--ffeed-soft); font-size: .8rem; margin: 0; overflow-wrap: anywhere; }
-.ffeed-card__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; }
-.ffeed-chip { border-radius: 999px; font-size: .75rem; font-weight: 800; padding: 3px 9px; }
-.ffeed-chip--rating { background: var(--ffeed-soft-accent); color: var(--ffeed-accent); }
-.ffeed-chip--done { background: var(--ffeed-ok-soft); color: var(--ffeed-ok); }
-.ffeed-card__review {
-  border-left: 3px solid var(--ffeed-solid);
-  font-size: .9rem;
-  line-height: 1.55;
+body.app-shell .ffeed-burst__cover--empty { background: var(--surface-muted); box-shadow: 0 0 0 1px var(--border); }
+body.app-shell .ffeed-card__copy { align-content: start; display: grid; gap: 6px; min-width: 0; }
+body.app-shell .ffeed-card__title { color: var(--fg); font: 700 1.08rem/1.3 var(--font-display); letter-spacing: -.01em; overflow-wrap: anywhere; text-decoration: none; }
+body.app-shell a.ffeed-card__title:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+body.app-shell .ffeed-card__meta { align-items: center; color: var(--fg-secondary); display: flex; flex-wrap: wrap; font-size: var(--text-sm); gap: 4px 10px; margin: 0; overflow-wrap: anywhere; }
+body.app-shell .ffeed-card__format { align-items: center; color: var(--fg); display: inline-flex; font-weight: 600; gap: 6px; }
+body.app-shell .ffeed-card__format::before { background: hsl(var(--fmt-hue) 75% var(--fmt-dot-l, 55%)); border-radius: 50%; content: ""; height: 7px; width: 7px; }
+body.app-shell .ffeed-card__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; }
+body.app-shell .ffeed-chip { border-radius: var(--radius-pill); font-size: var(--text-xs); font-variant-numeric: tabular-nums; font-weight: 700; padding: 4px 10px; }
+body.app-shell .ffeed-chip--rating { background: var(--warning-soft); color: var(--warning); }
+body.app-shell .ffeed-chip--done { background: var(--success-soft); color: var(--success); }
+body.app-shell .ffeed-card__review {
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--fg);
+  font-size: .92rem;
+  line-height: 1.6;
   margin: 6px 0 0;
   overflow-wrap: anywhere;
-  padding: 2px 0 2px 10px;
+  padding: 12px 14px 12px 38px;
+  position: relative;
 }
-.ffeed-card__spoiler { margin-top: 6px; }
-.ffeed-card__spoiler summary { color: var(--ffeed-accent); cursor: pointer; font-size: .82rem; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
-
-.ffeed-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-.ffeed-btn {
-  background: var(--ffeed-muted);
-  border: 1px solid var(--ffeed-line);
-  border-radius: 10px;
-  color: var(--ffeed-fg);
+body.app-shell .ffeed-card__review::before {
+  color: var(--primary);
+  content: "\201C";
+  font: 700 2.1rem/1 var(--font-display);
+  left: 12px;
+  opacity: .55;
+  position: absolute;
+  top: 8px;
+}
+body.app-shell .ffeed-spoiler {
+  background: color-mix(in srgb, var(--fg) 82%, transparent);
+  border: 0;
+  border-radius: 4px;
+  color: transparent;
   cursor: pointer;
   font: inherit;
-  font-size: .84rem;
-  font-weight: 700;
-  min-height: 40px;
-  padding: 8px 14px;
+  padding: 0 4px;
+  user-select: none;
 }
-.ffeed-btn:hover:not(:disabled) { background: var(--ffeed-hover); }
-.ffeed-btn:disabled { cursor: default; opacity: .7; }
-.ffeed-btn--cheer::before { content: "👏 "; }
-.ffeed-btn--cheer[aria-pressed="true"] { background: var(--ffeed-soft-accent); border-color: var(--ffeed-solid); color: var(--ffeed-accent); opacity: 1; }
-.ffeed-btn--quiet { background: transparent; border-color: transparent; color: var(--ffeed-soft); text-decoration: underline; }
-.ffeed-card__owned { color: var(--ffeed-ok); font-size: .82rem; font-weight: 700; }
-.ffeed-card__note { font-size: .85rem; margin: 0; }
-.ffeed-card__note[data-tone="error"] { color: var(--ffeed-bad); }
-
-.ffeed-burst { display: flex; gap: 10px; list-style: none; margin: 0; overflow-x: auto; padding: 0 0 4px; scrollbar-width: thin; }
-.ffeed-burst__item { flex: 0 0 76px; }
-.ffeed-burst__link { color: inherit; display: grid; gap: 4px; text-decoration: none; }
-.ffeed-burst__cover { aspect-ratio: 2 / 3; border-radius: 8px; display: block; object-fit: cover; width: 76px; }
-.ffeed-burst__cover.ffeed-burst__cover--empty { display: flex; }
-.ffeed-burst__title { -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box; font-size: .75rem; font-weight: 600; line-height: 1.3; overflow: hidden; }
-a.ffeed-burst__link:hover .ffeed-burst__title { color: var(--ffeed-accent); text-decoration: underline; }
-
-.ffeed-empty {
-  background: var(--ffeed-bg);
-  border: 1px dashed var(--ffeed-line);
-  border-radius: var(--radius, 14px);
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding: 26px 22px;
+body.app-shell .ffeed-spoiler:hover { background: color-mix(in srgb, var(--fg) 70%, transparent); }
+body.app-shell .ffeed-spoiler.is-shown { background: var(--warning-soft); color: var(--fg); cursor: text; user-select: text; }
+body.app-shell .ffeed-card__spoiler { margin-top: 4px; }
+body.app-shell .ffeed-card__spoiler summary {
+  align-items: center;
+  color: var(--primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-height: 32px;
 }
-.ffeed-empty h3 { font-size: 1.05rem; margin: 0; }
-.ffeed-empty p { color: var(--ffeed-soft); font-size: .9rem; line-height: 1.55; margin: 0; max-width: 60ch; }
 
-.ffeed__more {
+/* Actions */
+body.app-shell .ffeed-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+body.app-shell .ffeed-btn {
+  align-items: center;
   background: transparent;
-  border: 1px solid var(--ffeed-line);
-  border-radius: 10px;
-  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 6px;
+  min-height: var(--control-sm);
+  padding: 0 14px;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+body.app-shell .ffeed-btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
+body.app-shell .ffeed-btn:disabled { cursor: default; opacity: .7; }
+body.app-shell .ffeed-btn--cheer[aria-pressed="true"] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--primary) 40%, transparent); color: var(--primary); opacity: 1; }
+body.app-shell .ffeed-btn--queue { background: var(--accent-soft); border-color: transparent; color: var(--primary); }
+body.app-shell .ffeed-btn--queue:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-soft) 70%, var(--primary) 12%); border-color: transparent; }
+body.app-shell .ffeed-btn--quiet { border-color: transparent; color: var(--fg-secondary); }
+body.app-shell .ffeed-btn--quiet:hover:not(:disabled) { color: var(--fg); }
+body.app-shell .ffeed-icon { fill: none; flex: none; height: 16px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; width: 16px; }
+body.app-shell .ffeed-btn--cheer .ffeed-icon { fill: currentColor; stroke-width: 1; }
+body.app-shell .ffeed-card__owned { align-items: center; color: var(--success); display: inline-flex; font-size: var(--text-sm); font-weight: 600; gap: 6px; padding: 0 6px; }
+body.app-shell .ffeed-card__note { color: var(--fg-secondary); font-size: var(--text-sm); margin: 0; }
+body.app-shell .ffeed-card__note[data-tone="error"] { color: var(--danger); }
+
+/* Several adds at once */
+body.app-shell .ffeed-burst { display: flex; gap: var(--space-3); list-style: none; margin: 0; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+body.app-shell .ffeed-burst__item { flex: 0 0 84px; }
+body.app-shell .ffeed-burst__link { color: inherit; display: grid; gap: 6px; text-decoration: none; }
+body.app-shell .ffeed-burst__cover {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--poster-radius);
+  box-shadow: 0 0 0 1px var(--poster-edge), var(--poster-shadow);
+  display: block;
+  object-fit: cover;
+  transition: transform var(--dur) var(--ease);
+  width: 84px;
+}
+body.app-shell .ffeed-burst__cover.ffeed-burst__cover--empty { display: flex; }
+body.app-shell a.ffeed-burst__link:hover .ffeed-burst__cover { transform: translateY(-2px); }
+body.app-shell .ffeed-burst__title { -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--fg); display: -webkit-box; font-size: var(--text-sm); font-weight: 600; line-height: 1.3; overflow: hidden; }
+body.app-shell a.ffeed-burst__link:hover .ffeed-burst__title { color: var(--primary); }
+
+/* Empty and quiet states */
+body.app-shell .ffeed-empty {
+  background: var(--card-bg);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+}
+body.app-shell .ffeed-empty h3 { color: var(--fg); font: 700 var(--text-xl)/1.3 var(--font-display); margin: 0; }
+body.app-shell .ffeed-empty p { color: var(--fg-secondary); font-size: var(--text-md); line-height: 1.6; margin: 0; max-width: 52ch; }
+body.app-shell .ffeed-empty .action-btn { border-radius: var(--radius-pill); margin-top: var(--space-2); }
+
+body.app-shell .ffeed__more {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
   cursor: pointer;
   display: block;
   font: inherit;
-  font-weight: 700;
-  margin: 14px auto 0;
-  min-height: 44px;
-  padding: 8px 18px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: var(--space-4) auto 0;
+  min-height: var(--control-md);
+  padding: 0 22px;
 }
-.ffeed__more:hover { background: var(--ffeed-hover); }
-.ffeed :is(button, a, summary, input):focus-visible { outline: 3px solid var(--ffeed-accent); outline-offset: 2px; }
+body.app-shell .ffeed__more:hover { background: var(--surface-hover); }
+body.app-shell :is(.ffeed, .ffollow, .social-rail, .social-bar) :is(button, a, summary):focus-visible { box-shadow: var(--ring); outline: none; }
 
 /* New-updates dot on the tab, and the shortcut in the Friends panel. */
 .tab .ffeed-dot { background: var(--teal, #2dd4bf); border-radius: 50%; display: inline-block; height: 8px; margin-left: 6px; vertical-align: middle; width: 8px; }
@@ -181,29 +360,49 @@ a.ffeed-burst__link:hover .ffeed-burst__title { color: var(--ffeed-accent); text
 .friends-feed-link {
   background: transparent;
   border: 1px solid var(--border, rgba(255, 255, 255, .16));
-  border-radius: 10px;
+  border-radius: var(--radius-pill, 999px);
   color: inherit;
   cursor: pointer;
   font: inherit;
   font-size: .85rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 8px;
   min-height: 40px;
   width: 100%;
 }
 .friends-feed-link:hover { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
 
+@media (max-width: 1040px) {
+  body.app-shell .social-layout { grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .social-rail { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); position: static; }
+}
 @media (max-width: 640px) {
-  .ffeed__head { flex-direction: column; gap: 14px; padding: 16px; }
-  .ffeed__side { justify-items: start; width: 100%; }
-  .ffeed__share-hint { text-align: left; }
-  .ffeed-card { gap: 10px; grid-template-columns: 32px minmax(0, 1fr); padding: 12px; }
-  .ffeed-avatar { height: 32px; width: 32px; }
-  .ffeed-card__main { gap: 12px; grid-template-columns: 56px minmax(0, 1fr); }
-  .ffeed-card__cover { width: 56px; }
-  .ffeed-card__actions .ffeed-btn { flex: 1 1 auto; }
+  body.app-shell .social-head { align-items: stretch; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-4); }
+  body.app-shell button.social-head__add { align-self: flex-start; }
+  body.app-shell .social-bar { align-items: stretch; flex-direction: column; }
+  body.app-shell .social-switch { display: flex; }
+  body.app-shell .social-switch__btn { flex: 1; justify-content: center; }
+  body.app-shell .ffeed__filters { flex-wrap: nowrap; margin: 0 -16px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; }
+  body.app-shell .ffeed-filter { flex: none; }
+  body.app-shell .ffeed-card { padding: 14px; }
+  body.app-shell .ffeed-card__head { gap: 10px; grid-template-columns: 32px minmax(0, 1fr) auto; }
+  body.app-shell .ffeed-avatar { height: 32px; width: 32px; }
+  body.app-shell .ffeed-card__body { padding-left: 0; }
+  body.app-shell .ffeed-card__main { gap: var(--space-3); grid-template-columns: 64px minmax(0, 1fr); }
+  body.app-shell .ffeed-card__cover { width: 64px; }
+  body.app-shell .ffeed-card__actions .ffeed-btn { flex: 1 1 auto; justify-content: center; min-height: var(--control-md); }
+  body.app-shell .ffeed-card__actions .ffeed-btn--quiet { flex: 0 0 auto; padding: 0 8px; }
+  /* The review gets the card's full width, below the cover. */
+  body.app-shell .ffeed-card__main { align-items: start; gap: 6px var(--space-3); }
+  body.app-shell .ffeed-card__main > .ffeed-card__cover { grid-row: 1 / span 3; }
+  body.app-shell .ffeed-card__copy { display: contents; }
+  body.app-shell .ffeed-card__copy > * { grid-column: 2; }
+  body.app-shell .ffeed-card__copy > :is(.ffeed-card__review, .ffeed-card__spoiler) { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .ffeed-card { animation: ffeed-in .25s ease both; }
+  body.app-shell .ffeed-card { animation: ffeed-in .25s var(--ease) both; }
   @keyframes ffeed-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell :is(.ffeed-burst__cover, .ffeed__share input[role="switch"], .ffeed__share input[role="switch"]::before) { transition: none; }
 }

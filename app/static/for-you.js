@@ -455,6 +455,7 @@
   async function refreshForYou() {
     const request = ++state.request;
     if (!$('starterPicks') || !$('comingUp')) return;
+    if (window.OmniPicks) window.OmniPicks.refreshTeaser();
     try {
       // Both requests start together; on a phone, asking one after the other added
       // a full round trip before the card could appear.
@@ -488,6 +489,7 @@
 
   function resetForYou() {
     state.request += 1;
+    if (window.OmniPicks) window.OmniPicks.reset();
     ['starterPicks', 'comingUp'].forEach(id => { const node = $(id); if (node) node.hidden = true; });
   }
 

@@ -356,6 +356,10 @@ def run_migrations():
                 "report_count": "INTEGER DEFAULT 0",
                 "report_content_hash": "VARCHAR",
                 "suspended_at": "TIMESTAMP",
+                # Nov 2026 share links and ranked lists. Existing collections start
+                # with no link and unranked, so nothing new is shared.
+                "link_token": "VARCHAR(32)",
+                "ranked": "BOOLEAN NOT NULL DEFAULT FALSE",
             }
             for column_name, column_type in collection_additions.items():
                 if column_name not in collection_columns:
@@ -373,6 +377,7 @@ def run_migrations():
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_suspended_at ON collections(suspended_at)"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_collections_link_token ON collections(link_token)"))
                 conn.commit()
 
         if inspector.has_table("collection_items"):
@@ -822,12 +827,18 @@ def run_migrations():
     add_supporter_wall_column()
     add_supporter_banner_column()
     add_membership_columns()
+    add_supporter_style_columns()
     add_public_diary_column()
     add_taste_match_link_column()
+    add_profile_now_column()
+    add_showcase_note_column()
     add_calendar_episodes_column()
+    add_next_up_started_column()
+    add_poll_round_column()
     add_lookup_indexes()
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
+    fold_private_link_pages()
 
 
 def add_notification_link_column():
@@ -878,6 +889,40 @@ def add_supporter_banner_column():
         print(f"Migration warning (supporter banner): {e}")
 
 
+def add_poll_round_column():
+    """Add the link from a group poll to the round before it. Existing polls keep NULL (no earlier round)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("tonight_polls"):
+            return
+        if "previous_id" not in {col["name"] for col in inspector.get_columns("tonight_polls")}:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE tonight_polls ADD COLUMN previous_id INTEGER"))
+                conn.commit()
+                print("Added previous_id column to tonight_polls table")
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tonight_polls_previous_id ON tonight_polls(previous_id)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (poll rounds): {e}")
+
+
+def add_next_up_started_column():
+    """Add when a queued title was started. Existing queue rows keep NULL (not started), so queues look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("next_up_items"):
+            return
+        if "started_at" in {col["name"] for col in inspector.get_columns("next_up_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE next_up_items ADD COLUMN started_at TIMESTAMP"))
+            conn.commit()
+            print("Added started_at column to next_up_items table")
+    except Exception as e:
+        print(f"Migration warning (next up started): {e}")
+
+
 def add_membership_columns():
     """Add Ko-fi membership tiers. Every new column is nullable or defaults off, so nothing changes for anyone.
 
@@ -904,6 +949,25 @@ def add_membership_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (memberships): {e}")
+
+
+def add_supporter_style_columns():
+    """Add the app theme and avatar frame picks (Nov 2026). Both nullable, so every supporter looks the same until they pick."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("supporters")}
+        with engine.connect() as conn:
+            if "app_theme" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN app_theme VARCHAR(24)"))
+                print("Added app_theme column to supporters table")
+            if "avatar_frame" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN avatar_frame VARCHAR(24)"))
+                print("Added avatar_frame column to supporters table")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (supporter styles): {e}")
 
 
 def add_public_diary_column():
@@ -936,6 +1000,38 @@ def add_taste_match_link_column():
             print("Added show_taste_match column to public_profiles table")
     except Exception as e:
         print(f"Migration warning (taste match link): {e}")
+
+
+def add_profile_now_column():
+    """Add the opt-in "Right now" shelf flag. Existing profiles start with it off (FALSE), so nothing new is shared."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_now" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_now BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_now column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (profile right now): {e}")
+
+
+def add_showcase_note_column():
+    """Add the optional note on a pinned showcase title. Existing pins keep NULL (no note), so they look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("profile_showcase_items"):
+            return
+        if "note" in {col["name"] for col in inspector.get_columns("profile_showcase_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE profile_showcase_items ADD COLUMN note VARCHAR(140)"))
+            conn.commit()
+            print("Added note column to profile_showcase_items table")
+    except Exception as e:
+        print(f"Migration warning (showcase notes): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks")
@@ -1102,3 +1198,44 @@ def fold_unreadable_traffic_sources():
             print(f"Folded {folded} unreadable traffic source label(s) into {BAD_TAG!r}")
     except Exception as e:
         print(f"Migration warning (traffic sources): {e}")
+
+
+def fold_private_link_pages():
+    """Take share-link tokens out of the Site stats page counts (Nov 4 2026 security check).
+
+    Gift lists, shared-list invites, polls and recaps are opened by a link whose token is the
+    key. Until site_traffic.mask_private_link, each opened link was counted under its own full
+    address, so the tokens were stored in site_traffic_daily and listed on the Site stats page.
+    This moves each such row's count onto the "/gifts/(private link)" style row for the same day
+    and kind. Visit totals stay the same; only the token is dropped.
+    """
+    try:
+        from .site_traffic import mask_private_link
+        inspector = inspect(engine)
+        if not inspector.has_table("site_traffic_daily"):
+            return
+        folded = 0
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, day, kind, key, count FROM site_traffic_daily WHERE kind IN ('page', 'human_page')"
+            )).fetchall()
+            for row in rows:
+                masked = mask_private_link(row.key or "")
+                if masked == (row.key or ""):
+                    continue
+                existing = conn.execute(text(
+                    "SELECT id FROM site_traffic_daily WHERE day = :day AND kind = :kind AND key = :key AND id != :id"
+                ), {"day": row.day, "kind": row.kind, "key": masked, "id": row.id}).first()
+                if existing is None:
+                    conn.execute(text("UPDATE site_traffic_daily SET key = :key WHERE id = :id"),
+                                 {"key": masked, "id": row.id})
+                else:
+                    conn.execute(text("UPDATE site_traffic_daily SET count = count + :count WHERE id = :target"),
+                                 {"count": int(row.count or 0), "target": existing.id})
+                    conn.execute(text("DELETE FROM site_traffic_daily WHERE id = :id"), {"id": row.id})
+                folded += 1
+            conn.commit()
+        if folded:
+            print(f"Folded {folded} share-link page row(s) in Site stats")
+    except Exception as e:
+        print(f"Migration warning (share-link pages): {e}")

@@ -54,7 +54,7 @@ const libraryPages = new Map();
 const libraryFilters = new Map();
 let libraryBrowseEpoch = 0;
 const LIBRARY_PAGE_SIZE = 50;
-const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false };
+const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false, filter: '', suggestions: [], suggestionsKey: null, suggestionsRequest: 0 };
 
 function libraryPageConfig(category) {
   return {
@@ -583,7 +583,32 @@ let quickCaptureResults = [];
 let quickCaptureController = null;
 let quickCaptureReturnFocus = null;
 let quickCaptureSearch = null;
+const QUICK_CAPTURE_ADD_FORMS = {
+  movies: 'addMovieForm',
+  'tv-shows': 'addTVShowForm',
+  anime: 'addAnimeForm',
+  'video-games': 'addVideoGameForm',
+  music: 'addMusicForm',
+  books: 'addBookForm',
+  manga: 'addMangaForm',
+  podcasts: 'addPodcastForm',
+  audiobooks: 'addAudiobookForm',
+};
+// Set while Add anything is showing something shared from another app (see openSharedTitle).
+let quickCaptureShare = null;
 const QUICK_CAPTURE_TIMEOUT_MS = 15000;
+// "Shared from …" names for the apps /share recognises.
+const QUICK_CAPTURE_SHARE_SOURCES = {
+  imdb: 'IMDb', tmdb: 'TMDB', letterboxd: 'Letterboxd', trakt: 'Trakt', rottentomatoes: 'Rotten Tomatoes',
+  justwatch: 'JustWatch', netflix: 'Netflix', primevideo: 'Prime Video', disneyplus: 'Disney+', hulu: 'Hulu',
+  max: 'Max', appletv: 'Apple TV', myanimelist: 'MyAnimeList', anilist: 'AniList', crunchyroll: 'Crunchyroll',
+  kitsu: 'Kitsu', mangadex: 'MangaDex', steam: 'Steam', rawg: 'RAWG', backloggd: 'Backloggd', igdb: 'IGDB',
+  gog: 'GOG', epic: 'Epic Games Store', playstation: 'PlayStation Store', nintendo: 'Nintendo', xbox: 'Xbox',
+  spotify: 'Spotify', applemusic: 'Apple Music', applepodcasts: 'Apple Podcasts', applebooks: 'Apple Books',
+  youtubemusic: 'YouTube Music', youtube: 'YouTube', bandcamp: 'Bandcamp', deezer: 'Deezer', tidal: 'TIDAL',
+  soundcloud: 'SoundCloud', pocketcasts: 'Pocket Casts', overcast: 'Overcast', goodreads: 'Goodreads',
+  openlibrary: 'Open Library', storygraph: 'The StoryGraph', audible: 'Audible', amazon: 'Amazon', libby: 'Libby',
+};
 
 function resetQuickCaptureSearch() {
   quickCaptureController?.abort();
@@ -740,7 +765,7 @@ function handleDelegatedClick(event) {
     event.stopPropagation();
   }
 
-  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-category-accordion], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
+  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
   if (!target) return;
 
   if (target.dataset.closeOnBackdrop && event.target === target) {
@@ -772,11 +797,6 @@ function handleDelegatedClick(event) {
     return;
   }
 
-  if (target.dataset.toggleCategoryAccordion) {
-    toggleCategoryAccordion(target.dataset.toggleCategoryAccordion);
-    return;
-  }
-
   if (target.dataset.toggleAccordion) {
     toggleAccordion(target.dataset.toggleAccordion);
     return;
@@ -794,6 +814,7 @@ function handleDelegatedClick(event) {
     'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
     'retry-quick-capture-source': () => retryQuickCaptureCategory(target.dataset.quickCategory),
     'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
+    'add-quick-capture-result': () => addQuickCaptureResult(Number(target.dataset.quickResultIndex)),
     'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
     'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
@@ -849,6 +870,10 @@ function handleDelegatedClick(event) {
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
     'finish-next-up': () => finishNextUp(Number(target.dataset.nextUpId)),
     'clear-finished-next-up': clearFinishedNextUp,
+    'start-next-up': () => startNextUp(Number(target.dataset.nextUpId)),
+    'unstart-next-up': () => unstartNextUp(Number(target.dataset.nextUpId)),
+    'filter-next-up': () => filterNextUp(target.dataset.nextUpFilter || ''),
+    'add-next-up-suggestion': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,
@@ -879,6 +904,7 @@ function handleDelegatedClick(event) {
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
+    'collection-starter': () => applyCollectionStarter(target),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };

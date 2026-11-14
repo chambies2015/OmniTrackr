@@ -66,12 +66,11 @@ def test_library_insights_frontend_is_wired():
     source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
-    assert 'data-toggle-category-accordion="library-insights"' in template
+    assert 'id="statsOverview"' in template
     assert 'id="libraryInsightsStatsData"' in template
     assert "\u00e2\u2013\u00b6" not in template
-    assert "&#9654;" in template
-    assert "'library-insights': 'insights'" in source
-    assert "displayLibraryInsights(stats)" in source
+    assert "${API_BASE}/statistics/insights/" in source
+    assert "displayLibraryInsights(stats, overall)" in source
 
 
 def test_adsense_loader_respects_authenticated_app_shell():

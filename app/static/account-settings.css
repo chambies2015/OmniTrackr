@@ -748,3 +748,140 @@ body.app-shell .account-settings button.action-btn.two-factor__quiet:hover {
 .passkeys__empty {
   margin: 0 0 14px;
 }
+
+/* ---------- Nov 2026: one section at a time, and a tidier fit ---------- */
+/* account-settings.js adds --paged once it runs; without it every section still shows. */
+.account-settings__panels--paged > .account-group:not(.is-current) {
+  display: none;
+}
+
+.account-settings__panels--paged > .account-group + .account-group {
+  border-top: 0;
+  margin-top: 0;
+}
+
+.account-settings__panels--paged {
+  padding-bottom: 72px;
+}
+
+/* The current section in the menu gets a bar as well as a tint, so it does not rest on colour alone. */
+.account-nav__link {
+  position: relative;
+}
+
+.account-nav__link[aria-current="true"]::before {
+  background: currentColor;
+  border-radius: 2px;
+  bottom: 9px;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 9px;
+  width: 3px;
+}
+
+/* Links styled as buttons get a button's box: one height, one line, text centred. */
+body.app-shell .account-settings a.action-btn {
+  align-items: center;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  display: inline-flex;
+  font-size: var(--text-md);
+  justify-content: center;
+  line-height: 1.2;
+  margin: 0;
+  min-height: var(--control-md);
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+/* Beside a real button, a link that only opens a help page is outlined so the action stands out. */
+body.app-shell .account-settings :is(.account-actions, .import-studio__actions) a.action-btn {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+
+body.app-shell .account-settings :is(.account-actions, .import-studio__actions) a.action-btn:hover {
+  background: var(--surface-hover);
+  box-shadow: none;
+}
+
+body.app-shell .account-settings .account-actions {
+  align-items: center;
+}
+
+body.app-shell .account-settings .account-info + .account-actions {
+  margin-top: 14px;
+}
+
+.supporter-tier {
+  align-content: start;
+}
+
+body.app-shell .account-settings .account-actions .action-btn {
+  margin: 0;
+}
+
+/* Four facts sit two by two, never three and a stray. */
+@media (min-width: 520px) {
+  body.app-shell .account-settings .account-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .supporter-tiers {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* A long library should not push Followers a screen further down. */
+body.app-shell .account-settings .showcase-results {
+  max-height: 318px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* The browser's own "Choose File" button, in the app's colours. */
+body.app-shell .account-settings input[type="file"] {
+  color: var(--fg-secondary);
+}
+
+body.app-shell .account-settings input[type="file"]::file-selector-button {
+  background: var(--surface-hover);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--fg);
+  cursor: pointer;
+  font: 600 var(--text-sm)/1 var(--font-body);
+  margin-right: 12px;
+  padding: 8px 14px;
+}
+
+@media (max-width: 860px) {
+  .account-nav__link[aria-current="true"]::before {
+    display: none;
+  }
+}
+
+/* Export choices: two by two on wide screens, and labels that stay on one line. */
+@media (min-width: 620px) {
+  body.app-shell .account-settings .export-studio__options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+body.app-shell .account-settings .export-studio__option .action-btn {
+  white-space: nowrap;
+}
+
+/* A switch that is off still needs an edge you can see (3:1 against the row behind it). */
+body.app-shell .account-settings .toggle-switch:not(:checked) {
+  background: color-mix(in srgb, var(--fg-secondary) 80%, var(--card-bg));
+}
+
+body.app-shell.dark-mode .account-settings .toggle-switch:not(:checked) {
+  background: color-mix(in srgb, var(--fg-secondary) 55%, var(--card-bg));
+}

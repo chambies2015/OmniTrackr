@@ -20,8 +20,8 @@ from ..if_you_liked_guides import GUIDES
 from .discover import page
 
 router = APIRouter(tags=["if-you-liked"])
-CSS_VERSION = "20261016-liked-1"
-JS_VERSION = "20261016-liked-1"
+CSS_VERSION = "20261104-liked-2"
+JS_VERSION = "20261109-liked-2"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-16"
@@ -123,6 +123,14 @@ def _head(signed_in: bool, ads: bool) -> str:
     return head
 
 
+def _faq_html(faq) -> str:
+    if not faq:
+        return ""
+    answers = "".join(f'<h3>{_e(question)}</h3><p>{_e(answer)}</p>' for question, answer in faq)
+    return (f'<section id="questions" class="editorial yl-faq" aria-labelledby="questions-heading">'
+            f'<h2 id="questions-heading">Questions</h2>{answers}</section>')
+
+
 def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: bool) -> str:
     anchor = entry["anchor"]
     kind_label = title_pages.KINDS[anchor["kind"]][3]
@@ -138,7 +146,9 @@ def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: 
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time>{anchor_link}</p>',
         '<nav class="guide-jump" aria-label="On this page"><a href="#what-it-did">What made it work</a>',
-        '<a href="#picks">The picks</a><a href="#where-to-start">Where to start</a><a href="#method">How we chose</a></nav></header>',
+        '<a href="#picks">The picks</a><a href="#where-to-start">Where to start</a>',
+        '<a href="#questions">Questions</a>' if entry.get("faq") else '',
+        '<a href="#method">How we chose</a></nav></header>',
         f'<div class="guide-intro">{_paragraphs(entry["lead"])}</div>',
         '<section id="what-it-did" class="yl-threads" aria-labelledby="threads-heading">',
         f'<p class="eyebrow">WHAT WE MATCHED ON</p><h2 id="threads-heading">Three things {_e(anchor["title"])} does well</h2><ol>',
@@ -161,6 +171,7 @@ def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: 
         '<section id="where-to-start" class="editorial yl-start"><h2>Where to start</h2>', _paragraphs(entry["start"]),
         '<p>Whatever you pick, give it a fair start: the first half hour of a film, two episodes of a show, the opening '
         'chapters of a book or the first hour of a game. Then decide.</p></section>',
+        _faq_html(entry.get("faq") or ()),
         '<section class="guide-related" aria-labelledby="related-heading"><p class="eyebrow">MORE GUIDES</p>',
         '<h2 id="related-heading">If you liked something else</h2><div class="guide-related-grid">',
     ])

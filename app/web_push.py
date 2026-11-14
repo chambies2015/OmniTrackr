@@ -92,6 +92,9 @@ TITLES = {
     "memory": "On this day",
     "year_so_far": "Your year so far",
     "new_follower": "New follower",
+    "awards_ballot_open": "The nominees are in",
+    "awards_results": "The winners are in",
+    "advent_door": "A new door is open",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -114,8 +117,9 @@ TOPICS = (
     ("club_talk", "Club talk and list updates", "New posts about a club pick, people joining and titles added.", False,
      ("club_post", "shared_list_joined", "shared_list_item")),
     ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges, "
-     "plus one look at your year so far each November.", False,
-     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete", "year_so_far")),
+     "your awards ballot score, plus one look at your year so far each November.", False,
+     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete", "year_so_far",
+      "awards_results")),
     ("memories", "On this day", "Once a day, something you finished or started on this date in an earlier year.", False,
      ("memory",)),
     ("followers", "New followers", "When someone starts following your public profile.", False,
@@ -127,7 +131,9 @@ TOPICS = (
 TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
 # Pushed whatever the switches say: the confirmation that push works, and notices about the member's own content.
-ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted"}
+# "awards_ballot_open" goes only to members who pressed "Tell me when the ballot opens".
+# "advent_door" goes only to members who pressed "Remind me each morning" on the advent calendar.
+ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted", "awards_ballot_open", "advent_door"}
 # Anything new that isn't listed above follows the quietest switch until it's given a home.
 FALLBACK_TOPIC = "milestones"
 TIME_ZONE = re.compile(r"^[A-Za-z][A-Za-z0-9_+\-]*(/[A-Za-z0-9_+\-]+){0,2}$")
@@ -658,7 +664,7 @@ FIRST_CHECK_DELAY_SECONDS = 240
 def _hourly_jobs(session_factory) -> dict:
     """Catch-ups after quiet hours, club finish-by nudges, On this day (which reach the bell too), away reminders
     and the November year-so-far push."""
-    from . import clubs, memories, push_nudges, year_so_far
+    from . import awards, clubs, memories, push_nudges, year_so_far
     db = session_factory()
     try:
         nudged = clubs.send_due_reminders(db)
@@ -681,8 +687,21 @@ def _hourly_jobs(session_factory) -> dict:
             db.rollback()
             logger.exception("Year so far pushes failed")
             so_far = 0
+        try:
+            ballots = sum(awards.send_notices(db).values())
+        except Exception:
+            db.rollback()
+            logger.exception("Awards ballot notes failed")
+            ballots = 0
+        try:
+            from . import advent_calendar
+            doors = advent_calendar.send_reminders(db)["members"]
+        except Exception:
+            db.rollback()
+            logger.exception("Advent calendar reminders failed")
+            doors = 0
         return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away,
-                "year_so_far": so_far}
+                "year_so_far": so_far, "awards": ballots, "advent": doors}
     finally:
         db.close()
 

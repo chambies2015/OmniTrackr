@@ -119,10 +119,21 @@ def classify_device(user_agent: str) -> str:
     return "desktop"
 
 
+# Pages whose address is the key to something: a gift list anyone can mark, a shared list
+# anyone can join, a poll, a recap, a pledge card, a shared awards ballot. Site stats counts them under one row per kind of page,
+# so the links themselves never sit in the database or on the stats page.
+PRIVATE_LINK = re.compile(r"^/(gifts|lists/join|collections/link|tonight|recap|goal|challenge|pledge|ballot|join|r)/[^/]+")
+PRIVATE_LINK_LABEL = "(private link)"
+
+
+def mask_private_link(path: str) -> str:
+    return PRIVATE_LINK.sub(lambda match: f"/{match.group(1)}/{PRIVATE_LINK_LABEL}", path, count=1)
+
+
 def clean_path(path: str) -> str:
     if len(path) > 1:
         path = path.rstrip("/") or "/"
-    return _clean(path)
+    return _clean(mask_private_link(path))
 
 
 def source_for(utm: str | None, referer: str | None) -> str | None:
@@ -237,7 +248,7 @@ class TrafficRecorder:
                 return False
             pending = self._pending
             pending[(day, "total", "views")] += 1
-            pending[(day, "page", _clean(path))] += 1
+            pending[(day, "page", clean_path(path))] += 1
             pending[(day, "device", classify_device(user_agent))] += 1
             pending[(day, "audience", "member" if member else "guest")] += 1
             if source:

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import digest, for_you, models
+from .. import digest, for_you, models, picked_for_you
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..site_chrome import message_page
@@ -73,6 +73,86 @@ def get_coming_up(request: Request, response: Response, user=Depends(get_current
 def get_first_week(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     return for_you.first_week(db, user)
+
+
+# ---------------------------------------------------------------- picks from members' libraries
+
+class PickChoice(BaseModel):
+    id: str = Field(min_length=3, max_length=160)
+
+
+def _pick_key(choice: PickChoice):
+    key = picked_for_you.parse_pick_id(choice.id)
+    if key is None:
+        raise HTTPException(400, "That pick isn't valid. Reload your picks and try again.")
+    return key
+
+
+@router.get("/api/for-you/picks")
+def get_picks(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    _private(response)
+    return picked_for_you.picks_for(db, user.id)
+
+
+@router.post("/api/for-you/picks/add")
+def add_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Save a pick to the member's library, copying only public details (never anyone's rating or notes)."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    category = picked_for_you.KIND_TO_LIBRARY[kind]
+    model = for_you.LIBRARY[category][0]
+    for existing in db.query(model).filter(model.user_id == user.id, model.title.isnot(None)):
+        if title_slug_of(existing) == slug:
+            return {"state": "existing", "category": category, "item_id": existing.id, "title": existing.title}
+    payload = picked_for_you.entry_payload(db, kind, slug, year)
+    if payload is None or not payload.get("title"):
+        raise HTTPException(404, "That pick is no longer available. Reload your picks and try again.")
+    record = model(user_id=user.id, **payload)
+    for flag in ("watched", "played", "listened", "read"):
+        if hasattr(model, flag):
+            setattr(record, flag, False)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    picked_for_you.forget_member(user.id)
+    return {"state": "created", "category": category, "item_id": record.id, "title": record.title}
+
+
+def title_slug_of(item) -> str:
+    from ..title_pages import slugify
+    return slugify((item.title or "").strip())
+
+
+@router.post("/api/for-you/picks/dismiss")
+def dismiss_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """"Not for me": hide a pick for good. Nothing in the library changes."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    key = picked_for_you.pick_id(kind, slug, year)
+    exists = db.query(models.ForYouDismissal.id).filter_by(user_id=user.id, title_key=key).first()
+    if exists is None:
+        count = db.query(func.count(models.ForYouDismissal.id)).filter_by(user_id=user.id).scalar() or 0
+        if count >= picked_for_you.DISMISS_LIMIT:
+            oldest = (db.query(models.ForYouDismissal).filter_by(user_id=user.id)
+                      .order_by(models.ForYouDismissal.created_at, models.ForYouDismissal.id).first())
+            if oldest is not None:
+                db.delete(oldest)
+        db.add(models.ForYouDismissal(user_id=user.id, title_key=key))
+        db.commit()
+    picked_for_you.forget_member(user.id)
+    return {"state": "dismissed", "id": key}
+
+
+@router.post("/api/for-you/picks/restore")
+def restore_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Undo "Not for me"."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    key = picked_for_you.pick_id(kind, slug, year)
+    db.query(models.ForYouDismissal).filter_by(user_id=user.id, title_key=key).delete(synchronize_session=False)
+    db.commit()
+    picked_for_you.forget_member(user.id)
+    return {"state": "restored", "id": key}
 
 
 def _email_state(db: Session, user_id: int) -> dict:

@@ -260,6 +260,8 @@ Phone and browser notifications (Web Push; nothing to set up, members turn them 
 | `VAPID_SUBJECT` | Optional. A `mailto:` or `https://` address push services can contact about the sender. Defaults to `mailto:` + `MAIL_FROM`. |
 | `WEB_PUSH` | Optional. `off` stops all pushes (the bell keeps working). |
 
+The December advent calendar (`/holidays/advent-calendar`) opens door 1 on December 1. `ADVENT_CALENDAR_OPENS=YYYY-MM-DD` moves door 1 to another day in the same year (the other doors follow a day apart), for trying it on the live site before December; leave it unset otherwise.
+
 External metadata:
 
 | Variable | Purpose |

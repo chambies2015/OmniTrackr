@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="OmniTrackr is free. Supporters on Ko-fi help keep it running and get a badge on their profile and reviews, profile colors and banners, a bigger profile showcase and a place on the supporter wall. Monthly members get member banners and more.">
+  <meta name="description" content="OmniTrackr is free. Supporters on Ko-fi help pay for hosting and get color themes for their app, a badge on their profile and reviews, profile colors, banners and avatar frames, a bigger showcase and a place on the supporter wall.">
   <meta name="robots" content="noindex, follow">
   <title>Support OmniTrackr on Ko-fi</title>
   <link rel="canonical" href="https://omnitrackr.xyz/supporters">
@@ -13,9 +13,10 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
-  <link rel="stylesheet" href="/static/supporters-page.css?v=20261028-members-1">
+  <link rel="stylesheet" href="/static/supporters-page.css?v=20261104-styles-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
-  <script src="/static/supporters-page.js?v=20261017-supporters-1" defer></script>
+  <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
+  <script src="/static/supporters-page.js?v=20261104-styles-1" defer></script>
 </head>
 
 <body class="public-reader site supporters-page">
@@ -33,15 +34,39 @@
         <!--SUPPORTERS_COUNT-->
         <p class="support-hero__actions">
           <a class="site-btn site-btn--primary" data-kofi href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>
-          <a class="site-btn site-btn--ghost" href="#wall-heading">See the supporter wall</a>
+          <a class="site-btn site-btn--ghost" href="#try-heading">Try the perks on</a>
         </p>
       </header>
 
       <!--SUPPORTERS_GOAL-->
 
+      <section class="privacy-section support-money" aria-labelledby="money-heading">
+        <h2 id="money-heading">Where the money goes</h2>
+        <p>There are no investors. The bills below are paid every month by the one person who runs OmniTrackr, and Ko-fi support is
+          what covers them. Anything past the bills buys time for new features.</p>
+        <!--SUPPORTERS_COSTS-->
+      </section>
+
       <section class="privacy-section" aria-labelledby="perks-heading">
         <h2 id="perks-heading">What supporters get</h2>
         <div class="support-perks">
+          <article class="support-perk support-perk--new">
+            <p class="support-perk__preview support-themes" aria-hidden="true">
+              <span class="support-theme support-theme--lagoon"></span><span class="support-theme support-theme--sakura"></span><span
+                class="support-theme support-theme--sunset"></span><span class="support-theme support-theme--ocean"></span>
+            </p>
+            <h3>Color themes for your app</h3>
+            <p>Recolor your own OmniTrackr: Lagoon, Sunset, Sakura, Ocean, Forest or Crimson, in light and night mode. Gold supporters get Gilded.</p>
+          </article>
+          <article class="support-perk support-perk--new">
+            <p class="support-perk__preview support-frames" aria-hidden="true">
+              <span class="avatar-frame avatar-frame--halo"><span class="avatar-frame__face">A</span><span class="avatar-frame__art"></span></span>
+              <span class="avatar-frame avatar-frame--sparkle"><span class="avatar-frame__face">B</span><span class="avatar-frame__art"></span></span>
+              <span class="avatar-frame avatar-frame--pixel"><span class="avatar-frame__face">C</span><span class="avatar-frame__art"></span></span>
+            </p>
+            <h3>An avatar frame</h3>
+            <p>A halo, film reel, sparkle or pixel frame around your profile picture, drawn in your accent color.</p>
+          </article>
           <article class="support-perk">
             <p class="support-perk__preview"><span class="support-sample">♥ Supporter</span></p>
             <h3>A Supporter badge</h3>
@@ -99,9 +124,42 @@
         <p>Perks are cosmetic. Nothing about your library, privacy settings or data changes, and you can hide the badge any time.</p>
       </section>
 
+      <section class="privacy-section support-try" aria-labelledby="try-heading">
+        <h2 id="try-heading">Try it on</h2>
+        <p>Mix a theme, a color, a banner and a frame to see how they look. It's only a preview here. Supporters pick theirs in
+          <a href="/#supporter">Account → Supporter</a>.</p>
+        <div class="support-try__stage">
+          <div class="support-try__profile" data-try-profile>
+            <div class="support-try__cover"><div class="profile-banner profile-banner--aurora" data-try-banner></div></div>
+            <div class="support-try__who">
+              <span class="avatar-frame avatar-frame--halo" data-try-frame><span class="avatar-frame__face">Y</span><span
+                  class="avatar-frame__art"></span></span>
+              <div>
+                <p class="support-try__name">your name</p>
+                <span class="support-sample support-try__badge">♥ Supporter</span>
+              </div>
+            </div>
+          </div>
+          <div class="support-try__app" data-try-app aria-hidden="true">
+            <div class="support-try__bar"><span class="support-try__logo"></span><span class="support-try__search"></span><span class="support-try__button"></span></div>
+            <div class="support-try__body">
+              <div class="support-try__side"><span class="is-on"></span><span></span><span></span><span></span></div>
+              <div class="support-try__shelf"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
+        <p class="support-try__mode"><label><input type="checkbox" data-try-night checked> Night mode</label></p>
+        <div class="support-try__controls"><!--SUPPORTERS_TRY--></div>
+      </section>
+
       <section class="privacy-section support-members" aria-labelledby="tiers-heading">
         <h2 id="tiers-heading">Monthly memberships</h2>
         <p>Every membership includes all the supporter perks above for as long as it runs. Each tier adds a few extras of its own.</p>
+        <p class="support-perk__preview support-frames support-frames--members" aria-hidden="true">
+          <span class="support-theme support-theme--midnight"></span><span class="support-theme support-theme--matinee"></span>
+          <span class="avatar-frame avatar-frame--neon"><span class="avatar-frame__face">N</span><span class="avatar-frame__art"></span></span>
+          <span class="avatar-frame avatar-frame--orbit"><span class="avatar-frame__face">O</span><span class="avatar-frame__art"></span></span>
+        </p>
         <p class="support-perk__preview support-banners support-banners--members" aria-hidden="true">
           <span class="support-banner profile-banner profile-banner--neon"></span><span
             class="support-banner profile-banner profile-banner--marquee profile-banner--motion"></span><span

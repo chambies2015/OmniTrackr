@@ -191,6 +191,21 @@ def _structured(name: str, description: str, path: str, published: str) -> dict:
     }
 
 
+def _new_year_feature() -> str:
+    """The yearly challenge, from its opening day until the year it covers ends."""
+    from .. import new_year_challenge
+    from ..new_year_challenge_guide import GUIDES
+    year = new_year_challenge.current_year()
+    if year is None or year not in GUIDES or not new_year_challenge.is_open(year):
+        return ""
+    guide = GUIDES[year]
+    when = ("UNDERWAY" if new_year_challenge.has_started(year)
+            else f"STARTS JANUARY 1 · {new_year_challenge.days_until_start(year)} DAYS TO GO")
+    return (f'<section class="monthly-feature"><div><p class="eyebrow">THE YEAR AHEAD · {_e(when)}</p>'
+            f'<h2>{_e(guide["title"])}</h2><p>{_e(guide["lead"])}</p></div>'
+            f'<a class="button" href="{_e(new_year_challenge.path(year))}">Make your pledge →</a></section>')
+
+
 @router.get("/challenges", include_in_schema=False)
 def challenges_index(db: Session = Depends(get_db)):
     from .discover import page
@@ -209,6 +224,7 @@ def challenges_index(db: Session = Depends(get_db)):
         '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, music and books. They are written to '
         'nudge you toward something new. None of them asks you to watch more than usual. Join from your dashboard, and your progress fills in from '
         'what you already track.</p></header>'
+        + _new_year_feature()
         + feature
         + _archive(current if feature else "")
         + '<section class="editorial"><h2>Why challenges, and why monthly</h2>'

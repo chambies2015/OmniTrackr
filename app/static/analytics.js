@@ -15,20 +15,58 @@
     return;
   }
 
+  // Links in our emails carry a one-time key in the address (/?reset_token=...,
+  // /?token=..., /?email_change_token=...). Google Analytics records the address
+  // of every page it counts, and a reset key works for an hour, so the keys are
+  // taken out of the address Analytics is given. If the address can't be read,
+  // Analytics gets the path alone.
+  const PRIVATE_PARAMS = ['token', 'reset_token', 'email_change_token'];
+  function pageLocation() {
+    try {
+      const url = new URL(window.location.href);
+      PRIVATE_PARAMS.forEach(name => url.searchParams.delete(name));
+      return url.toString();
+    } catch (error) {
+      return `${window.location.origin}${window.location.pathname}`;
+    }
+  }
+
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() {
     window.dataLayer.push(arguments);
   };
   window.gtag('js', new Date());
   window.gtag('config', MEASUREMENT_ID, {
+    page_location: pageLocation(),
     anonymize_ip: true,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
   });
 
-  const script = document.createElement('script');
-  script.id = 'omnitrackr-google-analytics';
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${MEASUREMENT_ID}`;
-  document.head.appendChild(script);
+  // gtag.js is about 200 KB of script that ran while the page was still
+  // starting up and held the main thread for a third of a second on phones.
+  // The calls above wait in dataLayer, so loading it once the page has
+  // finished (and the browser is idle) still records the visit.
+  function load() {
+    if (document.getElementById('omnitrackr-google-analytics')) return;
+    const script = document.createElement('script');
+    script.id = 'omnitrackr-google-analytics';
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${MEASUREMENT_ID}`;
+    document.head.appendChild(script);
+  }
+
+  function whenIdle() {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(load, { timeout: 2000 });
+    } else {
+      window.setTimeout(load, 200);
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    whenIdle();
+  } else {
+    window.addEventListener('load', whenIdle, { once: true });
+  }
 })();

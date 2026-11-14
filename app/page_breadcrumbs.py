@@ -38,13 +38,20 @@ HUBS = {
     "/people": "People",
     "/studios": "Studios",
     "/guides": "Guides",
+    "/awards": "Awards season",
     "/holidays": "Holiday picks",
+    "/holidays/gifts": "Gift guide",
+    "/holidays/black-friday": "Black Friday",
+    "/holidays/thanksgiving": "Thanksgiving weekend",
+    "/holidays/reading-and-listening": "Reading and listening",
+    "/holidays/advent-calendar": "Advent calendar",
     "/halloween": "Halloween picks",
 }
 PARENTS = {
     "/new-this-week/": "/new-this-week/archive",
     "/collections/public/": "/collections/explore",
     "/daily/archive": "/daily",
+    "/new-year-challenge/": "/challenges",
 }
 
 _CANONICAL = re.compile(r'<link rel="canonical" href="(https://[^"]+)"', re.I)

@@ -266,7 +266,8 @@ def daily_past(number: int, request: Request, db: Session = Depends(get_db)):
     path = f"/daily/{canonical}"
     response = page(f"OmniTrackr Daily #{number}: guess {view['kind_label']} from six clues",
                     f"Daily puzzle #{number} from {_day(number)}: guess {view['kind_label']} from six clues, then read "
-                    "the answer and the editors' note.", path, content, indexable=canonical == number,
+                    "the answer and the editors' note.", path, content,
+                    indexable=daily.INDEX_PAST_PUZZLES and canonical == number,
                     head=_head(signed_in))
     return _respond(response)
 

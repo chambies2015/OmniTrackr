@@ -1,0 +1,87 @@
+/* Avatar frames for Ko-fi supporters (Nov 2026): drawn around the profile picture on the public
+   profile, and shown small in Account -> Supporter and on /supporters. Every frame takes the
+   member's accent through --profile-accent (an "r, g, b" triplet) and scales with the avatar,
+   so the same classes work at 64px and at 144px. Motion only for Season Pass and up, and never
+   with reduced motion. */
+.avatar-frame { --frame-accent: var(--profile-accent, 139, 92, 246); display: inline-grid; isolation: isolate; position: relative; }
+.avatar-frame > :first-child { grid-area: 1 / 1; }
+.avatar-frame__art { border-radius: 50%; inset: -9%; pointer-events: none; position: absolute; z-index: 4; }
+.avatar-frame__art::before, .avatar-frame__art::after { border-radius: 50%; content: ""; inset: 0; position: absolute; }
+
+/* Halo: a soft ring that runs from the accent through pink and gold. */
+.avatar-frame--halo .avatar-frame__art {
+  background: conic-gradient(from 210deg, rgb(var(--frame-accent)), #f472b6, #fde68a, rgb(var(--frame-accent)));
+  filter: drop-shadow(0 0 10px rgba(var(--frame-accent), .55));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7%), #000 calc(100% - 6.5%));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 7%), #000 calc(100% - 6.5%));
+}
+
+/* Film: a reel band with sprocket holes. */
+.avatar-frame--film .avatar-frame__art {
+  background: radial-gradient(farthest-side, transparent calc(100% - 11%), #0b0a18 calc(100% - 10.5%));
+  box-shadow: 0 0 0 2px rgba(var(--frame-accent), .9), 0 0 22px rgba(var(--frame-accent), .35);
+}
+.avatar-frame--film .avatar-frame__art::before {
+  background: repeating-conic-gradient(rgba(255, 255, 255, .9) 0 5deg, transparent 5deg 15deg);
+  inset: 2.4%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5%), #000 calc(100% - 4.6%), #000 calc(100% - 1.4%), transparent calc(100% - 1%));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5%), #000 calc(100% - 4.6%), #000 calc(100% - 1.4%), transparent calc(100% - 1%));
+}
+
+/* Sparkle: a thin ring with four-point stars at the corners. */
+.avatar-frame--sparkle .avatar-frame__art { box-shadow: inset 0 0 0 2px rgba(var(--frame-accent), .85), 0 0 18px rgba(var(--frame-accent), .35); }
+.avatar-frame--sparkle .avatar-frame__art::before,
+.avatar-frame--sparkle .avatar-frame__art::after {
+  background: #fff7d6;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  filter: drop-shadow(0 0 6px rgba(253, 230, 138, .9));
+  height: 22%; inset: auto; width: 22%;
+}
+.avatar-frame--sparkle .avatar-frame__art::before { right: 2%; top: 4%; }
+.avatar-frame--sparkle .avatar-frame__art::after { background: rgb(var(--frame-accent)); bottom: 6%; height: 15%; left: 3%; width: 15%; }
+
+/* Pixel: an 8-bit ring of blocks in two shades of the accent. */
+.avatar-frame--pixel .avatar-frame__art {
+  background: repeating-conic-gradient(rgb(var(--frame-accent)) 0 11.25deg, rgba(var(--frame-accent), .35) 11.25deg 22.5deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9%), #000 calc(100% - 9%));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 9%), #000 calc(100% - 9%));
+}
+.avatar-frame--pixel .avatar-frame__art::before { box-shadow: 0 0 0 2px #0b0a18; }
+
+/* Member frames. Neon: two glowing tubes, pink inside and the accent outside. */
+.avatar-frame--neon .avatar-frame__art { box-shadow: inset 0 0 0 3px #f9a8d4, inset 0 0 14px 3px rgba(244, 114, 182, .75), 0 0 0 3px rgba(11, 10, 24, .7); }
+.avatar-frame--neon .avatar-frame__art::before { box-shadow: 0 0 0 3px rgb(var(--frame-accent)), 0 0 18px 4px rgba(var(--frame-accent), .75); inset: -6%; }
+
+/* Orbit: a dashed track with a small moon riding on it. */
+.avatar-frame--orbit .avatar-frame__art { border: 2px dashed rgba(var(--frame-accent), .8); inset: -12%; }
+.avatar-frame--orbit .avatar-frame__art::before {
+  background: radial-gradient(circle at 35% 35%, #fff, rgb(var(--frame-accent)) 60%);
+  box-shadow: 0 0 12px rgba(var(--frame-accent), .9);
+  height: 14%; inset: auto; left: 8%; top: 8%; width: 14%;
+}
+.avatar-frame--orbit .avatar-frame__art::after { background: #fde68a; box-shadow: 0 0 8px #fde68a; height: 6%; inset: auto; right: 4%; bottom: 22%; width: 6%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .avatar-frame--motion.avatar-frame--halo .avatar-frame__art,
+  .avatar-frame--motion.avatar-frame--orbit .avatar-frame__art,
+  .avatar-frame--motion.avatar-frame--film .avatar-frame__art::before { animation: avatar-frame-spin 14s linear infinite; }
+  .avatar-frame--motion.avatar-frame--neon .avatar-frame__art::before { animation: avatar-frame-flicker 6s steps(1) infinite; }
+  .avatar-frame--motion.avatar-frame--sparkle .avatar-frame__art::before,
+  .avatar-frame--motion.avatar-frame--sparkle .avatar-frame__art::after { animation: avatar-frame-twinkle 2.8s ease-in-out infinite alternate; }
+  .avatar-frame--motion.avatar-frame--sparkle .avatar-frame__art::after { animation-delay: -1.4s; }
+  .avatar-frame--motion.avatar-frame--pixel .avatar-frame__art { animation: avatar-frame-spin 24s steps(16) infinite; }
+  @keyframes avatar-frame-spin { to { transform: rotate(1turn); } }
+  @keyframes avatar-frame-flicker { 0%, 100% { opacity: 1; } 71% { opacity: .35; } 72% { opacity: 1; } 74% { opacity: .5; } 75% { opacity: 1; } }
+  @keyframes avatar-frame-twinkle { from { opacity: .55; transform: scale(.8); } to { opacity: 1; transform: scale(1.1); } }
+}
+
+/* On the public profile the frame takes the avatar's place in the header grid. */
+.profile-hero__frame { align-self: end; grid-area: avatar; margin-top: -72px; z-index: 3; }
+.profile-hero__frame .profile-hero__avatar { margin-top: 0; }
+.profile-hero--supporter .profile-hero__frame .profile-hero__avatar { box-shadow: var(--profile-shadow); }
+@media (max-width: 640px) { .profile-hero__frame { margin-top: -48px; justify-self: start; } }
+
+/* Small previews: a plain face inside the frame. */
+.avatar-frame__face { align-items: center; aspect-ratio: 1; background: linear-gradient(160deg, #3b2a7a, #141630); border-radius: 50%; color: #e9e3ff; display: flex; font: 800 1.2rem/1 Poppins, Inter, system-ui, sans-serif; justify-content: center; width: 56px; }
+img.avatar-frame__face { object-fit: cover; }

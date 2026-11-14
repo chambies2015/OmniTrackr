@@ -15,9 +15,14 @@
       /^\/titles\/(movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}$/.test(window.location.pathname) ||
       /^\/if-you-liked\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
       /^\/in-order\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
+      /^\/best-of\/\d{4}\/[a-z-]{2,20}$/.test(window.location.pathname) ||
+      /^\/new-releases\/[a-z0-9-]{1,60}$/.test(window.location.pathname) ||
       /^\/halloween$/.test(window.location.pathname) ||
       /^\/holidays$/.test(window.location.pathname) ||
-      /^\/binge-calculator$/.test(window.location.pathname) ||
+      /^\/holidays\/(gifts|black-friday|thanksgiving|reading-and-listening|advent-calendar)$/.test(window.location.pathname) ||
+      /^\/binge-calculator(\/[a-z0-9-]{1,80})?$/.test(window.location.pathname) ||
+      /^\/new-year-challenge\/\d{4}$/.test(window.location.pathname) ||
+      /^\/awards(\/[a-z0-9-]{1,60})?$/.test(window.location.pathname) ||
       /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?)?$/.test(window.location.pathname);
   }
 

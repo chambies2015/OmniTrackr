@@ -108,6 +108,12 @@
     const status = $('followingStatus');
     if (!list || !status) return;
     list.replaceChildren(...(data.items || []).map(entry));
+    const count = $('followingCount');
+    if (count) {
+      const total = (data.items || []).length;
+      count.textContent = total ? String(total) : '';
+      count.hidden = !total;
+    }
     if (data.items && data.items.length) status.textContent = '';
     else if (data.following) status.textContent = 'Nothing new from the people you follow in the last two months.';
     else status.textContent = 'Follow members from their public profile to see their new reviews, collections and diary here.';
@@ -303,6 +309,7 @@
     }
     await window.openAccountModal();
     const section = $('followSettings');
+    window.OmniSettings?.reveal(section);
     if (section && section.scrollIntoView) section.scrollIntoView({ block: 'start' });
     if (section && typeof section.focus === 'function') section.focus({ preventScroll: true });
     try {

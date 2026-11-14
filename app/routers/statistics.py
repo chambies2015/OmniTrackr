@@ -12,6 +12,9 @@ from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
 from ..time_spent import estimate as estimate_time_spent
 from ..progress import get_checkpoint_map, serialize_checkpoint
+from .next_up import NOW_LABELS
+from .. import home_summary
+from ..title_pages import IMAGE_FIELD, LIBRARY_TO_KIND, _safe_image
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -76,6 +79,8 @@ def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
         "category_label": category["label"],
         "status_label": category["status_label"],
         "prompts": prompts,
+        # The member's own cover, so Continue can show it. Empty when they never set one.
+        "image": _safe_image(getattr(item, IMAGE_FIELD[LIBRARY_TO_KIND[category["key"]]], None)),
     }
 
 
@@ -352,6 +357,18 @@ def get_library_insights(
     }
 
 
+@router.get("/home/", response_model=dict)
+def get_home_summary(
+    request: Request,
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The dashboard welcome strip: format counts, finishes and the latest covers. Read only."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return home_summary.build(db, current_user)
+
+
 @router.get("/pulse/", response_model=dict)
 def get_library_pulse(
     current_user: models.User = Depends(get_current_user),
@@ -410,12 +427,29 @@ def get_library_pulse(
                 prompts.append("Leave a note")
             reflection_items.append(_pulse_item(item, category, prompts))
 
-    queued_items = db.query(models.NextUpItem).filter(
+    # One read of the queue serves both the top three and the started titles below.
+    whole_queue = db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
-    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
-    next_up_items = _resolve_queue_pulse_items(queued_items, categories, db, current_user.id, checkpoints=checkpoints)
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).all()
+    next_up_items = _resolve_queue_pulse_items(whole_queue[:3], categories, db, current_user.id, checkpoints=checkpoints)
     progressed_items.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
     continue_items = [entry[2] for entry in progressed_items] + continue_items
+    # Titles started from Next Up lead Continue, most recently started first. This is
+    # how a movie, game or album (which have no saved place) shows up as "on the go".
+    started_queue = sorted(
+        (entry for entry in whole_queue if entry.started_at is not None),
+        key=lambda entry: (entry.started_at, entry.id), reverse=True,
+    )[:6]
+    if started_queue:
+        started_items = _resolve_queue_pulse_items(
+            started_queue, categories, db, current_user.id, unfinished_only=True, checkpoints=checkpoints,
+        )
+        for item in started_items:
+            item["status_label"] = f"{NOW_LABELS[item['category']]} now"
+        started_keys = {(item["category"], item["id"]) for item in started_items}
+        continue_items = started_items + [
+            item for item in continue_items if (item["category"], item["id"]) not in started_keys
+        ]
     _attach_progress(continue_items, checkpoints)
     _attach_progress(reflection_items, checkpoints)
     continue_items = continue_items[:6]

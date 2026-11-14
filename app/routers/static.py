@@ -101,6 +101,8 @@ async def get_vortex_gif():
 WEBP_ASSETS = {
     "/vortex.webp": "vortex.webp",
     "/vortex-still.webp": "vortex-still.webp",
+    # 84 px: the 28 px header logo on a 3x screen, instead of the 560 px still.
+    "/vortex-mark.webp": "vortex-mark.webp",
     "/omnitrackr_vortex.webp": "omnitrackr_vortex.webp",
 }
 

@@ -605,6 +605,28 @@ body.dark-mode .collection-readiness-checklist .is-ready { color: #5eead4; }
 .collection-studio-modal__publish { align-items: center; display: flex; gap: 9px; margin-top: 3px; }
 .collection-studio-modal__error { color: #dc2626; font-size: .86rem; line-height: 1.45; margin: 0; }
 .collection-studio-modal__actions { align-items: center; display: flex; gap: 12px; margin-top: 4px; }
+.collection-starters { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; }
+.collection-starters span { color: var(--fg); font-size: .8rem; opacity: .7; }
+.collection-starters button { background: transparent; border: 1px solid var(--border); border-radius: 999px; color: var(--fg); cursor: pointer; font: inherit; font-size: .78rem; padding: 5px 11px; }
+.collection-starters button:hover { border-color: var(--primary); color: var(--primary); }
+.collection-studio-modal input[type="search"], .collection-studio-modal input[type="url"] { border: 1px solid var(--border); box-sizing: border-box; font-size: 1rem; padding: 10px; width: 100%; }
+.collection-studio-add { border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 8px; margin: 4px 0 0; padding: 10px 12px 12px; }
+.collection-studio-add legend { color: var(--fg); font-size: .86rem; font-weight: 700; padding: 0 4px; }
+.collection-studio-add__results { display: grid; gap: 6px; max-height: 236px; overflow-y: auto; }
+.collection-studio-add__results:empty { display: none; }
+.collection-studio-add__row { align-items: center; background: var(--bg); border-radius: 8px; display: flex; gap: 10px; justify-content: space-between; padding: 7px 9px; }
+.collection-studio-add__row span { min-width: 0; }
+.collection-studio-add__row strong, .collection-studio-add__row small { color: var(--fg); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-studio-add__row small { font-size: .74rem; opacity: .64; }
+.collection-studio-add__row button { background: transparent; border: 1px solid var(--border); border-radius: 999px; color: var(--primary); cursor: pointer; flex: none; font: inherit; font-size: .78rem; font-weight: 700; padding: 4px 12px; }
+.collection-studio-add__row button:disabled { color: var(--fg); cursor: default; opacity: .55; }
+.collection-studio-link { border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 8px; padding: 12px; }
+.collection-studio-link h3 { color: var(--fg); font-size: .95rem; margin: 0; }
+.collection-studio-link__body { display: grid; gap: 8px; }
+.collection-studio-link__body > .action-btn { justify-self: start; }
+.collection-studio-modal input.collection-studio-link__url { font-size: .82rem; }
+.collection-studio-link__row { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }
+.collection-studio-link__row a { color: var(--primary); font-size: .84rem; font-weight: 700; text-decoration: none; }
 @media (max-width: 540px) { .collection-card { padding: 15px; } .collection-card__header { flex-direction: column; } .collection-card__actions { justify-content: flex-start; } .collection-card__item { align-items: flex-start; flex-direction: column; } .collection-card__item-controls { align-self: flex-end; } }
 
 .public-site-nav {
@@ -3006,23 +3028,6 @@ body.dark-mode .card>div:nth-of-type(2) {
   box-sizing: border-box;
 }
 
-/* Fix statsContent width and styling - make it match .card styling */
-#statsContent {
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 100% !important;
-  box-sizing: border-box !important;
-  background-color: var(--card-bg) !important;
-  padding: 24px !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
-  margin-bottom: 24px !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  clear: both !important;
-  float: none !important;
-}
 
 #statsLoading p {
   margin-top: 16px;
@@ -5713,100 +5718,6 @@ body.dark-mode .friend-request-modal-content form input {
   margin-right: 0 !important;
 }
 
-/* Statistics tab specific - ensure all nested elements use full width */
-/* Only show statistics tab when it's active */
-#statistics-tab:not(.active) {
-  display: none !important;
-}
-
-#statistics-tab.active {
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-#statistics-tab .card {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-
-#statistics-tab > .card {
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-
-/* statsContent should respect its inline display style */
-#statistics-tab #statsContent[style*="display: none"] {
-  display: none !important;
-}
-
-#statistics-tab.active #statsContent[style*="display: block"] {
-  display: block !important;
-}
-
-/* Only apply these styles when statsContent is visible */
-#statistics-tab.active #statsContent {
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  padding-left: 24px !important;
-  padding-right: 24px !important;
-  padding-top: 24px !important;
-  padding-bottom: 24px !important;
-  background-color: var(--card-bg) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
-  margin-bottom: 24px !important;
-  clear: both !important;
-  float: none !important;
-  position: relative !important;
-  left: 0 !important;
-  right: 0 !important;
-}
-
-/* Hide statsContent when statistics tab is not active */
-#statistics-tab:not(.active) #statsContent {
-  display: none !important;
-}
-
-#statistics-tab #statsLoading {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-
-#statistics-tab .stats-grid,
-#statistics-tab .rating-distribution,
-#statistics-tab .decade-stats,
-#statistics-tab .director-stats,
-#statistics-tab .director-column,
-#statistics-tab .top-rated {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
 .stats-subsection {
   margin-bottom: 32px;
   padding-bottom: 24px;
@@ -5832,39 +5743,6 @@ body.dark-mode .friend-request-modal-content form input {
   color: var(--fg);
   margin: 16px 0 12px 0;
   opacity: 0.9;
-}
-
-#statistics-tab .accordion-section {
-  margin-bottom: 16px;
-  background-color: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-
-#statistics-tab .accordion-header {
-  padding: 20px 24px;
-  margin: 0;
-  border-radius: 0;
-}
-
-#statistics-tab .accordion-header h3 {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-#statistics-tab .accordion-content {
-  padding: 24px;
-  max-height: none;
-  transition: none;
-}
-
-#statistics-tab .accordion-content[style*="display: none"] {
-  display: none !important;
-}
-
-#statistics-tab .accordion-content[style*="display: block"] {
-  display: block !important;
 }
 
 .genre-stats {

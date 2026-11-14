@@ -18,7 +18,7 @@ def _read(path: Path) -> str:
 
 def test_dashboard_keeps_home_cards_library_and_footer_still_until_settled():
     index = _read(TEMPLATES / "index.html")
-    assert "html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}" in index
+    assert "html.dashboard-settling :is(.home-board,#homeHero,#movies-tab,#mainFooter){visibility:hidden}" in index
     auth_js = _read(STATIC / "auth.js")
     assert "window.dashboardHomeCards = homeCards;" in auth_js
     for card in ("refreshForYou", "refreshYearGoals", "refreshMonthlyChallenge", "refreshSeasonCard", "refreshBadges",
@@ -27,8 +27,9 @@ def test_dashboard_keeps_home_cards_library_and_footer_still_until_settled():
     home_js = _read(STATIC / "dashboard" / "home.js")
     assert "...cardRequests]).then(batch.resolve)" in home_js
     # auth.js changed, so pages must ask browsers for the new copy.
-    assert "auth.js?v=20261101-so-far-1" in index
-    assert "auth.js?v=20261101-so-far-1" in _read(TEMPLATES / "public_landing.html")
+    # Later changes bump the tag again, so check both pages ask for the same copy from Nov 1 2026 or newer.
+    versions = [re.search(r"(?<![A-Za-z])auth\.js\?v=(\d{8})[\w-]*", text) for text in (index, _read(TEMPLATES / "public_landing.html"))]
+    assert all(versions) and versions[0].group(0) == versions[1].group(0) and versions[0].group(1) >= "20261101"
 
 
 def test_shared_list_page_draws_its_heading_like_the_script_does(authenticated_client, db_session):

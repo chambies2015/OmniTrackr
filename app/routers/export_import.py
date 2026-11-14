@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import crud, schemas, models, game_playtime, library_export, title_origins
+from .. import crud, schemas, models, episode_notes, game_playtime, library_export, title_origins
 from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
@@ -115,6 +115,7 @@ def _export_collections(db: Session, user_id: int) -> list[dict]:
             "name": collection.name,
             "description": collection.description,
             "cover_url": collection.cover_url,
+            "ranked": bool(collection.ranked),
             "items": items,
         })
     return exported
@@ -219,7 +220,8 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
     for raw in payloads[:200]:
         try:
             clean = schemas.CollectionCreate(
-                name=raw.get("name"), description=raw.get("description"), cover_url=raw.get("cover_url")
+                name=raw.get("name"), description=raw.get("description"), cover_url=raw.get("cover_url"),
+                ranked=raw.get("ranked") is True,
             )
         except (ValidationError, AttributeError, TypeError):
             skipped += 1
@@ -236,6 +238,7 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
             name=clean.name,
             description=clean.description,
             cover_url=clean.cover_url,
+            ranked=clean.ranked,
             is_public=False,
             moderation_status="pending",
         )
@@ -341,6 +344,53 @@ def _import_playtimes(db: Session, user_id: int, payloads: list[dict]) -> tuple[
                                        minutes=min(minutes, game_playtime.MAX_MINUTES)))
             have.add(matches[0].id)
             created += 1
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _import_episode_notes(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Add backed-up episode ratings and notes to the one matching show, keeping what it has."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        have = episode_notes.existing_keys(db, user_id)
+        budget = [episode_notes.MAX_PER_MEMBER - len(have)]
+        # Counted once up front: scanning every saved entry for each show made a backup
+        # naming one show thousands of times take over a minute.
+        per_show = episode_notes.count_per_show(have)
+        matched: dict[tuple, int | None] = {}
+        for raw in payloads:
+            category = raw.get("category") if isinstance(raw, dict) else None
+            title = raw.get("title") if isinstance(raw, dict) else None
+            entries = raw.get("episodes") if isinstance(raw, dict) else None
+            count = len(entries) if isinstance(entries, list) else 1
+            if (category not in episode_notes.CATEGORIES or not isinstance(title, str) or not title.strip()
+                    or not isinstance(entries, list) or len(entries) > episode_notes.MAX_PER_SHOW):
+                skipped += count
+                continue
+            if not entries:
+                continue
+            # A show named twice in one backup is looked up once.
+            lookup = (category, title.strip().lower(),
+                      repr([(field, field in raw, raw.get(field)) for field in COLLECTION_MATCH_FIELDS[category]]))
+            if lookup not in matched:
+                model = episode_notes.CATEGORIES[category]
+                query = db.query(model).filter(model.user_id == user_id, func.lower(func.trim(model.title)) == title.strip().lower())
+                query = _apply_import_identity(query, model, category, raw)
+                matches = query.limit(2).all() if query is not None else []
+                matched[lookup] = matches[0].id if len(matches) == 1 else None
+            if matched[lookup] is None:
+                skipped += count
+                continue
+            added, missed = episode_notes.stage_import(db, user_id, matched[lookup], category, entries, have, budget,
+                                                         per_show)
+            created += added
+            skipped += missed
         db.commit()
         return created, skipped
     except Exception:
@@ -464,6 +514,7 @@ def export_data(
     library_tags = _export_tags(db, current_user.id)
     saved_views = _export_views(db, current_user.id)
     playtimes = game_playtime.export_rows(db, current_user.id, _exported_identity)
+    notes = episode_notes.export_rows(db, current_user.id, _exported_identity)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -488,6 +539,7 @@ def export_data(
         "total_tagged_titles": len(library_tags),
         "total_saved_views": len(saved_views),
         "total_game_playtimes": len(playtimes),
+        "total_episode_notes": sum(len(row["episodes"]) for row in notes),
     }
 
     return schemas.ExportData(
@@ -508,6 +560,7 @@ def export_data(
         library_tags=library_tags,
         saved_views=saved_views,
         game_playtimes=playtimes,
+        episode_notes=notes,
         export_metadata=export_metadata
     )
 
@@ -584,6 +637,7 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     tags_created, tags_skipped = _import_tags(db, current_user.id, import_data.library_tags)
     views_created, views_skipped = _import_views(db, current_user.id, import_data.saved_views)
     playtimes_created, playtimes_skipped = _import_playtimes(db, current_user.id, import_data.game_playtimes)
+    episode_notes_created, episode_notes_skipped = _import_episode_notes(db, current_user.id, import_data.episode_notes)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + audiobook_errors + custom_tab_errors
 
@@ -622,8 +676,23 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         views_skipped=views_skipped,
         playtimes_created=playtimes_created,
         playtimes_skipped=playtimes_skipped,
+        episode_notes_created=episode_notes_created,
+        episode_notes_skipped=episode_notes_skipped,
         errors=all_errors
     )
+
+
+def _import_backup_bytes(content: bytes, current_user: models.User, db: Session):
+    data = json.loads(content.decode('utf-8'))
+
+    # Validate the imported data structure
+    # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
+    if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
+        raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', 'manga', 'podcasts', and 'audiobooks' are optional for backward compatibility.")
+
+    # Reuse the body endpoint's schema and import behavior for native backups.
+    import_payload = schemas.ImportData.model_validate(data)
+    return _run_import(import_payload, current_user, db)
 
 
 @router.post("/import/file/", response_model=schemas.ImportResult)
@@ -641,21 +710,14 @@ async def import_from_file(
         content = await file.read(MAX_JSON_IMPORT_BYTES + 1)
         if len(content) > MAX_JSON_IMPORT_BYTES:
             raise HTTPException(status_code=413, detail="JSON import exceeds the 25MB limit")
-        data = json.loads(content.decode('utf-8'))
-
-        # Validate the imported data structure
-        # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
-        if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
-            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', 'manga', 'podcasts', and 'audiobooks' are optional for backward compatibility.")
-
-        # Reuse the body endpoint's schema and import behavior for native backups.
-        import_payload = schemas.ImportData.model_validate(data)
-        return await run_in_threadpool(_run_import, import_payload, current_user, db)
+        # Decoding and checking up to 25 MB of JSON takes a while, so it runs on a worker
+        # thread with the import itself and other requests aren't held up.
+        return await run_in_threadpool(_import_backup_bytes, content, current_user, db)
 
     except HTTPException:
         # Preserve intentional client errors instead of masking them as a 500.
         raise
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except (json.JSONDecodeError, UnicodeDecodeError, RecursionError):
         raise HTTPException(status_code=400, detail="Invalid JSON file")
     except (ValidationError, TypeError, AttributeError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid import data: {str(e)}")

@@ -207,7 +207,7 @@ def _count(query) -> int:
 
 
 def _growth(db: Session, days: int, now: datetime) -> dict:
-    """This month's growth features: invite links, Ko-fi supporters, weekly email, release calendars and "ask a friend"."""
+    """Growth features: invite links, Ko-fi supporters, weekly email, release calendars, "ask a friend", notifications and shared reviews."""
     start = now - timedelta(days=days)
     signup = models.FriendInviteSignup
     supporter = models.Supporter
@@ -241,7 +241,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "answered": _counts_between(db, models.TakeResponse.created_at, start),
         },
         "push": _push(db, days, now, start),
+        "reviews": _review_inbox(db, days, now),
     }
+
+
+def _review_inbox(db: Session, days: int, now: datetime) -> dict:
+    """The "Share your reviews" card: answers in the range and private reviews still waiting."""
+    try:
+        from .. import review_inbox
+        return review_inbox.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:

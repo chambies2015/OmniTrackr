@@ -42,7 +42,7 @@ function renderCollections(collections) {
     name.textContent = collection.name;
     const count = document.createElement('span');
     count.className = 'collection-card__count';
-    count.textContent = `${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
+    count.textContent = `${collection.ranked ? 'Ranked · ' : ''}${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
     copy.append(name, count);
     const actions = document.createElement('div');
     actions.className = 'collection-card__actions';
@@ -54,7 +54,7 @@ function renderCollections(collections) {
           rejected: 'Public · Blocked',
           suspended: 'Public · Temporarily unlisted',
         }[collection.moderation_status] || 'Public · Direct link only')
-      : 'Private';
+      : (collection.link_url ? 'Private · Shared by link' : 'Private');
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.className = 'collection-card__edit';
@@ -70,6 +70,14 @@ function renderCollections(collections) {
       publicLink.rel = 'noopener noreferrer';
       publicLink.textContent = 'View public page ↗';
       actions.appendChild(publicLink);
+    } else if (collection.link_url) {
+      const linkPage = document.createElement('a');
+      linkPage.className = 'collection-card__public-link';
+      linkPage.href = collection.link_url;
+      linkPage.target = '_blank';
+      linkPage.rel = 'noopener';
+      linkPage.textContent = 'Open share link ↗';
+      actions.appendChild(linkPage);
     }
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -91,7 +99,7 @@ function renderCollections(collections) {
     if (!collection.items.length) {
       const empty = document.createElement('p');
       empty.className = 'collection-card__empty';
-      empty.textContent = 'Open any media tab and choose Collect to add the first item.';
+      empty.textContent = 'Press Edit & share to add titles by search, or choose Collect on any library card.';
       itemList.appendChild(empty);
     } else {
       collection.items.forEach((item, index) => {
