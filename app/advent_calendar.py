@@ -257,40 +257,57 @@ def send_reminders(db: Session, http=None, now: Optional[datetime] = None) -> di
     for year in EDITIONS:
         if not is_public(year, now) or earliest_today(now) > date(year, *CARD_LAST_DAY) + timedelta(days=1):
             continue
-        rows = (db.query(models.AdventReminder)
-                .filter(models.AdventReminder.year == year, models.AdventReminder.last_day < DOORS)
-                .order_by(models.AdventReminder.id).limit(PER_RUN_LIMIT).all())
-        if not rows:
-            continue
-        prefs = {pref.user_id: pref for pref in db.query(models.PushPreference).filter(
-            models.PushPreference.user_id.in_([row.user_id for row in rows])).all()}
-        for row in rows:
-            pref = prefs.get(row.user_id)
-            local = _local(pref, now)
-            due = [day for day in range(row.last_day + 1, DOORS + 1) if door_date(year, day) <= local.date()]
-            if not due:
-                continue
-            day = due[-1]
-            if door_date(year, day) != local.date():
-                # A door from an earlier day that was never announced (the member was away): skip it quietly.
-                row.last_day = day
+        # Nobody can be owed a door that hasn't opened anywhere yet, so members already told
+        # about the newest door are left out of the query instead of being read every hour.
+        newest = len(unlocked(year, now))
+        after = 0
+        while True:
+            # In pages by id: a fixed first page would keep the same members (say, ones still
+            # waiting for 8am) at the front, and nobody after them would ever be reminded.
+            rows = (db.query(models.AdventReminder.id, models.AdventReminder.user_id, models.AdventReminder.last_day)
+                    .filter(models.AdventReminder.year == year, models.AdventReminder.last_day < newest,
+                            models.AdventReminder.id > after)
+                    .order_by(models.AdventReminder.id).limit(PER_RUN_LIMIT).all())
+            if not rows:
+                break
+            after = rows[-1].id
+            prefs = {pref.user_id: pref for pref in db.query(models.PushPreference).filter(
+                models.PushPreference.user_id.in_([row.user_id for row in rows])).all()}
+            for pref in prefs.values():
+                # Only read from here on. Detached, a commit below doesn't expire them and
+                # cost one reload per member for the time zone and quiet hours.
+                db.expunge(pref)
+            for row in rows:
+                pref = prefs.get(row.user_id)
+                local = _local(pref, now)
+                due = [day for day in range(row.last_day + 1, DOORS + 1) if door_date(year, day) <= local.date()]
+                if not due:
+                    continue
+                day = due[-1]
+                if door_date(year, day) != local.date():
+                    # A door from an earlier day that was never announced (the member was away): skip it quietly.
+                    db.query(models.AdventReminder).filter(
+                        models.AdventReminder.id == row.id, models.AdventReminder.last_day < day,
+                    ).update({"last_day": day}, synchronize_session=False)
+                    db.commit()
+                    continue
+                if local.hour < REMINDER_HOUR or web_push.in_quiet_hours(pref, now):
+                    stats["waiting"] += 1
+                    continue
+                # Recorded before sending, so a second worker running at the same moment doesn't send a twin.
+                claimed = (db.query(models.AdventReminder)
+                           .filter(models.AdventReminder.id == row.id, models.AdventReminder.last_day < day)
+                           .update({"last_day": day}, synchronize_session=False))
                 db.commit()
-                continue
-            if local.hour < REMINDER_HOUR or web_push.in_quiet_hours(pref, now):
-                stats["waiting"] += 1
-                continue
-            # Recorded before sending, so a second worker running at the same moment doesn't send a twin.
-            claimed = (db.query(models.AdventReminder)
-                       .filter(models.AdventReminder.id == row.id, models.AdventReminder.last_day < day)
-                       .update({"last_day": day}, synchronize_session=False))
-            db.commit()
-            if not claimed:
-                continue
-            link = f"{BASE_PATH}?utm_source=push&utm_campaign=advent#{door_anchor(day)}"
-            delivered = web_push.deliver(db, [(row.user_id, REMINDER_KIND, reminder_message(year, day), link)],
-                                         http=http, now=now)
-            stats["sent"] += delivered["sent"]
-            stats["members"] += 1
+                if not claimed:
+                    continue
+                link = f"{BASE_PATH}?utm_source=push&utm_campaign=advent#{door_anchor(day)}"
+                delivered = web_push.deliver(db, [(row.user_id, REMINDER_KIND, reminder_message(year, day), link)],
+                                             http=http, now=now)
+                stats["sent"] += delivered["sent"]
+                stats["members"] += 1
+            if len(rows) < PER_RUN_LIMIT:
+                break
     return stats
 
 
