@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import crud, schemas, models, game_playtime, library_export, title_origins
+from .. import crud, schemas, models, episode_notes, game_playtime, library_export, title_origins
 from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
@@ -351,6 +351,41 @@ def _import_playtimes(db: Session, user_id: int, payloads: list[dict]) -> tuple[
         raise
 
 
+def _import_episode_notes(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Add backed-up episode ratings and notes to the one matching show, keeping what it has."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        have = episode_notes.existing_keys(db, user_id)
+        budget = [episode_notes.MAX_PER_MEMBER - len(have)]
+        for raw in payloads:
+            category = raw.get("category") if isinstance(raw, dict) else None
+            title = raw.get("title") if isinstance(raw, dict) else None
+            entries = raw.get("episodes") if isinstance(raw, dict) else None
+            count = len(entries) if isinstance(entries, list) else 1
+            if (category not in episode_notes.CATEGORIES or not isinstance(title, str) or not title.strip()
+                    or not isinstance(entries, list) or len(entries) > episode_notes.MAX_PER_SHOW):
+                skipped += count
+                continue
+            model = episode_notes.CATEGORIES[category]
+            query = db.query(model).filter(model.user_id == user_id, func.lower(func.trim(model.title)) == title.strip().lower())
+            query = _apply_import_identity(query, model, category, raw)
+            matches = query.limit(2).all() if query is not None else []
+            if len(matches) != 1:
+                skipped += count
+                continue
+            added, missed = episode_notes.stage_import(db, user_id, matches[0].id, category, entries, have, budget)
+            created += added
+            skipped += missed
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
 def _import_tags(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
     """Add backed-up tags to the one matching title, keeping the tags it already has."""
     if not payloads:
@@ -467,6 +502,7 @@ def export_data(
     library_tags = _export_tags(db, current_user.id)
     saved_views = _export_views(db, current_user.id)
     playtimes = game_playtime.export_rows(db, current_user.id, _exported_identity)
+    notes = episode_notes.export_rows(db, current_user.id, _exported_identity)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -491,6 +527,7 @@ def export_data(
         "total_tagged_titles": len(library_tags),
         "total_saved_views": len(saved_views),
         "total_game_playtimes": len(playtimes),
+        "total_episode_notes": sum(len(row["episodes"]) for row in notes),
     }
 
     return schemas.ExportData(
@@ -511,6 +548,7 @@ def export_data(
         library_tags=library_tags,
         saved_views=saved_views,
         game_playtimes=playtimes,
+        episode_notes=notes,
         export_metadata=export_metadata
     )
 
@@ -587,6 +625,7 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     tags_created, tags_skipped = _import_tags(db, current_user.id, import_data.library_tags)
     views_created, views_skipped = _import_views(db, current_user.id, import_data.saved_views)
     playtimes_created, playtimes_skipped = _import_playtimes(db, current_user.id, import_data.game_playtimes)
+    episode_notes_created, episode_notes_skipped = _import_episode_notes(db, current_user.id, import_data.episode_notes)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + audiobook_errors + custom_tab_errors
 
@@ -625,6 +664,8 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         views_skipped=views_skipped,
         playtimes_created=playtimes_created,
         playtimes_skipped=playtimes_skipped,
+        episode_notes_created=episode_notes_created,
+        episode_notes_skipped=episode_notes_skipped,
         errors=all_errors
     )
 

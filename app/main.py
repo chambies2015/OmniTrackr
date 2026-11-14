@@ -670,6 +670,9 @@ app.include_router(activity.router)
 for route in progress.router.routes:
     if getattr(route, "path", None) == "/progress/{category}/{item_id}/episodes":
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/progress/{category}/{item_id}/episode-notes":
+        # Rating a run of episodes is many quick taps; this only stops scripts.
+        bind_rate_limited_endpoint(route, limiter.limit("120/minute")(route.endpoint))
 app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
