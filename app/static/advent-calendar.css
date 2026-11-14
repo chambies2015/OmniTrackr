@@ -1,0 +1,193 @@
+/* The December advent calendar (/holidays/advent-calendar). Builds on discover.css,
+   if-you-liked.css and seasonal.css (the holiday theme's colors come from .sn-hub). */
+
+.ad-preview {
+  background: rgba(251, 191, 36, .12);
+  border: 1px dashed var(--sn-accent);
+  border-radius: 12px;
+  color: var(--sn-accent-soft);
+  font-size: .92rem;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+}
+
+/* The board: a dark frame with the doors set into it. */
+.ad-board {
+  background:
+    radial-gradient(600px 260px at 12% 0%, rgba(248, 113, 113, .16), transparent 70%),
+    radial-gradient(520px 260px at 100% 100%, rgba(34, 197, 94, .14), transparent 70%),
+    linear-gradient(180deg, #101531, #0b0f24);
+  border: 1px solid rgba(251, 191, 36, .32);
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, .02), 0 24px 60px -30px rgba(0, 0, 0, .8);
+  margin: 36px 0 0;
+  padding: 26px clamp(14px, 3vw, 30px) 30px;
+  scroll-margin-top: 80px;
+}
+.ad-board__title { font-size: clamp(1.6rem, 3.4vw, 2.2rem); margin: 0; }
+.ad-board__lede { color: #c3c8dd; margin: 4px 0 20px; }
+.ad-grid {
+  display: grid;
+  gap: 12px;
+  grid-auto-flow: dense;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ad-cell { min-width: 0; perspective: 900px; }
+.ad-cell.ad-door--big { grid-column: span 2; }
+
+.ad-door {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  color: inherit;
+  display: block;
+  height: 100%;
+  position: relative;
+  text-decoration: none;
+  width: 100%;
+}
+.ad-door--big .ad-door, .ad-cell.ad-door--big .ad-door { aspect-ratio: 2 / 1; }
+.ad-door__front, .ad-door__back {
+  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 10px 12px;
+  position: absolute;
+}
+.ad-door__front {
+  backface-visibility: hidden;
+  background: linear-gradient(155deg, #b91c1c, #7f1d1d);
+  border: 1px solid rgba(253, 230, 138, .55);
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, .12), inset 0 0 0 4px rgba(253, 230, 138, .18);
+  transform-origin: left center;
+  transition: transform .7s cubic-bezier(.3, .8, .3, 1), box-shadow .2s ease;
+  z-index: 2;
+}
+.ad-cell:nth-child(3n + 2) .ad-door__front { background: linear-gradient(155deg, #15803d, #14532d); }
+.ad-cell:nth-child(4n + 3) .ad-door__front { background: linear-gradient(155deg, #1e3a8a, #172554); }
+/* A small brass knob on each door. */
+.ad-door__front::after {
+  background: radial-gradient(circle at 35% 35%, #fef3c7, #f59e0b 60%, #92400e);
+  border-radius: 50%;
+  content: "";
+  height: 9px;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 9px;
+}
+.ad-door__num {
+  color: #fef3c7;
+  font-family: var(--site-display);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+}
+.ad-door--big .ad-door__num, .ad-cell.ad-door--big .ad-door__num { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+.ad-door__hint {
+  color: rgba(255, 247, 237, .86);
+  display: -webkit-box;
+  font-size: .78rem;
+  line-height: 1.3;
+  overflow: hidden;
+  padding-right: 14px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.ad-door__when { color: var(--sn-accent-soft); font-size: .72rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.ad-door__back {
+  background: linear-gradient(160deg, #fde68a, #fbbf24);
+  color: #1f1300;
+  justify-content: flex-end;
+  z-index: 1;
+}
+.ad-door__kind { font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.ad-door__title {
+  display: -webkit-box;
+  font-family: var(--site-display);
+  font-size: .98rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.ad-door--ready { cursor: pointer; }
+.ad-door--ready:hover .ad-door__front { box-shadow: inset 0 0 0 3px rgba(0, 0, 0, .12), 0 0 0 2px var(--sn-accent), 0 0 22px rgba(251, 191, 36, .35); }
+.ad-door--ready:focus-visible { outline: 3px solid var(--sn-accent); outline-offset: 3px; }
+.ad-door--open .ad-door__front { transform: rotateY(-104deg); box-shadow: 8px 0 18px rgba(0, 0, 0, .45); }
+.ad-door--open:hover .ad-door__front { transform: rotateY(-110deg); }
+
+.ad-door--locked { cursor: default; }
+.ad-door--locked .ad-door__front {
+  background: repeating-linear-gradient(135deg, #1a1f3d 0 10px, #171b37 10px 20px) !important;
+  border-color: rgba(255, 255, 255, .1);
+}
+.ad-door--locked .ad-door__num { color: rgba(254, 243, 199, .55); text-shadow: none; }
+.ad-door--locked .ad-door__hint { color: #a9afc8; display: none; }
+.ad-cell.ad-door--big .ad-door--locked .ad-door__hint { display: -webkit-box; }
+.ad-door--locked .ad-door__front::after { background: #3b3f5c; }
+
+/* The member's progress box and the reminder. */
+.ad-remind { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; }
+.ad-remind .button { min-height: 44px; }
+.ad-remind .button[aria-pressed="true"] { background: var(--sn-glow) !important; }
+.ad-remind__note { font-size: .9rem; margin: 0; }
+.ad-progress__guest { margin: 12px 0 0; }
+
+/* Behind the doors: the write-ups, newest first. */
+.ad-doors { margin-top: 56px; }
+.ad-doors h2 { font-size: clamp(1.8rem, 3.6vw, 2.5rem); margin: 0 0 22px; }
+.ad-doors__list { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ad-doors__list .ad-pick:first-child { grid-column: 1 / -1; }
+.ad-pick { scroll-margin-top: 90px; transition: box-shadow .4s ease; }
+.ad-pick[hidden] { display: none; }
+.ad-pick--flash { box-shadow: 0 0 0 2px var(--sn-accent), 0 0 34px rgba(251, 191, 36, .3); }
+.ad-pick__day { align-items: center; color: #c3c8dd; display: flex; flex-wrap: wrap; font-size: .88rem; gap: 8px; margin: 0 0 12px; }
+.ad-pick__num {
+  background: var(--sn-berry);
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 800;
+  padding: 3px 10px;
+}
+.ad-pick__opened { color: var(--sn-pine); font-weight: 700; }
+.ad-pick__opened::before { content: "✓ "; }
+.ad-pick__opened[hidden] { display: none; }
+.ad-art { font-size: 1.5rem !important; }
+.ad-share { min-height: 44px; }
+.ad-calendar--door .ad-pick { margin-top: 10px; }
+.ad-door-cta {
+  align-items: center;
+  background: linear-gradient(120deg, var(--sn-glow), var(--site-surface));
+  border: 1px solid var(--site-border-strong);
+  border-radius: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding: 20px 22px;
+}
+.ad-door-cta h2 { font-size: 1.3rem; margin: 0 0 6px; }
+.ad-door-cta p { margin: 0; max-width: 620px; }
+
+@media (max-width: 760px) {
+  .ad-grid { gap: 9px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ad-door__hint { font-size: .72rem; -webkit-line-clamp: 2; }
+  .ad-door__front, .ad-door__back { padding: 8px 9px; }
+  .ad-door__when { font-size: .62rem; }
+  .ad-door__title { font-size: .8rem; }
+  .ad-doors__list { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-door__front { transition: none; }
+}

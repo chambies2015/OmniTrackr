@@ -75,6 +75,13 @@ GUEST = (
     ("gift_claimed", "Gift guide: someone marked a gift on a list as theirs to buy"),
     ("gift_buy_clicked", "Gift guide: an Amazon link opened from the guide or a gift list"),
     ("gift_list_signup_clicked", "Gift guide: sign-up button pressed"),
+    ("advent_door_opened", "Advent calendar: a member opened a door"),
+    ("advent_guest_opened", "Advent calendar: a visitor without an account opened a door"),
+    ("advent_saved", "Advent calendar: a door's pick added to a library"),
+    ("advent_reminder_on", "Advent calendar: a member asked for the morning reminder"),
+    ("advent_shared", "Advent calendar: a door shared"),
+    ("advent_door_link_opened", "Advent calendar: a shared door opened by a visitor without an account"),
+    ("advent_signup_clicked", "Advent calendar: sign-up button pressed"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
@@ -175,7 +182,8 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared",
                  "tonight_poll_draft_started", "tonight_poll_draft_signup", "tonight_poll_draft_sent", "tonight_poll_shared",
                  "tonight_poll_winner_saved", "tonight_poll_where_clicked",
-                 "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked"}
+                 "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked",
+                 "advent_guest_opened", "advent_shared", "advent_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

@@ -115,6 +115,16 @@ def _new_year() -> list[dict]:
             if year in GUIDES and new_year_challenge.is_public(year)]
 
 
+def _advent() -> list[dict]:
+    from . import advent_calendar
+    year = advent_calendar.current_year()
+    if year is None:
+        return []
+    edition = advent_calendar.edition(year)
+    return [{"section": "seasonal", "href": advent_calendar.BASE_PATH, "name": edition["headline"],
+             "summary": edition["summary"], "updated": edition["published"]}]
+
+
 def _awards() -> list[dict]:
     from . import awards, awards_data
     season = awards_data.SEASON
@@ -128,7 +138,7 @@ def _awards() -> list[dict]:
 
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _awards() + _best_of() + _new_releases()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _new_releases()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 

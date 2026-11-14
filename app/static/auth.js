@@ -49,7 +49,7 @@ function validateDiscoverAuthReturn(value) {
     const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
     if (poll && poll[0] === value) return value;
     // Daily, Pick for me, the start page, tier lists, the gift guide, "If you liked" and "In order" guides and the dashboard cards they link to.
-    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/(?:gifts|black-friday)|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/holidays\/(?:gifts|black-friday)|\/holidays\/advent-calendar|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;
     // The New Year challenge guide, back at the pledge form.
     const pledge = value.match(/^\/new-year-challenge\/20\d{2}#pledge$/);
@@ -308,6 +308,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
     window.resetAwardsBallot?.();
+    window.resetAdventCard?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -1075,6 +1076,7 @@ function showAuthModal() {
     window.resetYearSoFar?.();
     window.resetNewYearPledge?.();
     window.resetAwardsBallot?.();
+    window.resetAdventCard?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -1134,6 +1136,7 @@ function showMainUI() {
     window.refreshYearSoFar?.();
     window.refreshNewYearPledge?.();
     window.refreshAwardsBallot?.();
+    window.refreshAdventCard?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();

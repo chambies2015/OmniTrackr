@@ -1503,6 +1503,14 @@ def import_guest_list(
             from .. import binge_calculator
             curated = binge_calculator.find(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
+            # A pick saved from an opened door of the December advent calendar.
+            from .. import advent_calendar
+            door = advent_calendar.find(item.kind, item.slug)
+            if door is not None and "browse_kind" in door:
+                browsed = (door["browse_kind"], door)
+            else:
+                curated = door
+        if group is None and curated is None and browsed is None:
             missing += 1
             continue
         if group is not None:
