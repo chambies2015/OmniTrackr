@@ -171,14 +171,20 @@ async function renderStatsPage() {
   if (!container) return;
   if (loading && !container.children.length) loading.hidden = false;
   try {
-    const [insightsResponse, overallResponse] = await Promise.all([
+    // Only the ratings and release years are needed next to the counts. /statistics/ would also
+    // recount every shelf and rank directors, a third more database work for nothing shown.
+    const [insightsResponse, ratingsResponse, yearsResponse] = await Promise.all([
       authenticatedFetch(`${API_BASE}/statistics/insights/`),
-      authenticatedFetch(`${API_BASE}/statistics/`),
+      authenticatedFetch(`${API_BASE}/statistics/ratings/`),
+      authenticatedFetch(`${API_BASE}/statistics/years/`),
     ]);
     if (!insightsResponse.ok) throw new Error('Failed to load library insights');
     const stats = await insightsResponse.json();
     // The ratings and decades are a bonus on the overview; the counts stand without them.
-    const overall = overallResponse.ok ? await overallResponse.json() : null;
+    const overall = {
+      rating_stats: ratingsResponse.ok ? await ratingsResponse.json().catch(() => null) : null,
+      year_stats: yearsResponse.ok ? await yearsResponse.json().catch(() => null) : null,
+    };
     if (request !== statsPageRequest) return;
     displayLibraryInsights(stats, overall);
     renderStatsFormatTabs(stats);

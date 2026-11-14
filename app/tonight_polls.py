@@ -27,6 +27,8 @@ import os
 import random
 import re
 import secrets
+import threading
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -49,6 +51,9 @@ SUGGESTIONS_MAX = 24
 MY_POLLS_SHOWN = 12
 NAMES_SHOWN = 12
 STARTERS_MAX = 18
+STARTERS_CACHE_SECONDS = 600
+_starters_cache = {"at": 0.0, "titles": []}
+_starters_lock = threading.Lock()
 STARTER_KINDS = ("movie", "tv", "anime")
 LOOKUP_MAX = OPTIONS_MAX
 VERB = {"movie": "watch", "tv": "watch", "anime": "watch", "game": "play", "book": "read", "album": "play",
@@ -146,7 +151,29 @@ def suggestions(db: Session, user) -> list[dict]:
 
 
 def starters(db: Session) -> list[dict]:
-    """Titles a visitor can start a shortlist from: what members track most, then the editors' picks."""
+    """Titles a visitor can start a shortlist from, the same for everyone.
+
+    Every signed-out visit to /tonight asks for these, and working them out groups three
+    whole library tables, so one answer is kept for STARTERS_CACHE_SECONDS like the
+    homepage's "Start your list" picks are.
+    """
+    now = time.monotonic()
+    with _starters_lock:
+        if _starters_cache["at"] and now - _starters_cache["at"] < STARTERS_CACHE_SECONDS:
+            return [dict(entry) for entry in _starters_cache["titles"]]
+    found = _find_starters(db)
+    with _starters_lock:
+        _starters_cache["at"], _starters_cache["titles"] = now, found
+    return [dict(entry) for entry in found]
+
+
+def clear_starters_cache() -> None:
+    with _starters_lock:
+        _starters_cache["at"], _starters_cache["titles"] = 0.0, []
+
+
+def _find_starters(db: Session) -> list[dict]:
+    """What members track most, then the editors' picks."""
     indexed = _index_map(db)
     found: list[dict] = []
     seen: set[tuple[str, str]] = set()

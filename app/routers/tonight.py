@@ -10,6 +10,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from .. import affiliate, funnel, models, title_metadata, title_pages, tonight_card, tonight_polls, where_to_watch
 from ..dependencies import get_current_user, get_db, get_optional_current_user
@@ -339,13 +340,13 @@ def poll_card(token: str, request: Request, db: Session = Depends(get_db)):
 # ------------------------------------------------------------------ API
 
 @router.get("/api/tonight")
-def my_polls(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def my_polls(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     return {"polls": tonight_polls.mine(db, user)}
 
 
 @router.get("/api/tonight/suggestions")
-def poll_suggestions(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def poll_suggestions(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Titles to start a poll from: Next Up first, then unfinished titles in the library."""
     _private(response)
     from ..crud.friends import get_friends
@@ -480,32 +481,39 @@ def keep_title(token: str, payload: PollKeep, request: Request, response: Respon
 async def where_winner(token: str, request: Request, response: Response, db: Session = Depends(get_db)):
     """Where the winning title streams, sells or lends. Only for a closed poll, and only for its winner."""
     _private(response)
+    # Finding the poll (and closing it if its time is up) talks to the database, so it runs off
+    # the event loop like the lookups below do; otherwise every request waits behind it.
+    kind, display, year = await run_in_threadpool(_winner_to_look_up, db, token)
+    normalized = title_pages.normalize(display)
+    if not normalized:
+        raise HTTPException(404, "Nothing to look up")
+    client = getattr(request.app.state, "external_api_client", None)
+    metadata = await title_metadata.get_or_fetch(db, client, kind, normalized, display, year)
+    where = await where_to_watch.get_or_fetch(db, client, kind, normalized, display, year, metadata, wait=6) or {}
+    video = kind in where_to_watch.VIDEO_KINDS
+    return {
+        "kind": kind, "title": display, "heading": where_to_watch.heading(kind),
+        "groups": where.get("groups") or [], "region": where.get("region"), "fetched": where.get("fetched"),
+        "credits": where.get("credits") or [], "tmdb_notice": bool(where.get("justwatch")),
+        "more": (where.get("link") or where_to_watch.justwatch_search(display)) if video else None,
+        "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
+        "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
+        "searches": where_to_watch.searches(kind, display),
+    }
+
+
+def _winner_to_look_up(db: Session, token: str) -> tuple[str, str, Optional[int]]:
+    """(kind, title, year) of a closed poll's winner, or a 404."""
     poll, _ = _poll(db, token)
     tonight_polls.refresh(db, poll)
     winner = next((option for option in poll.options if option.id == poll.winner_id), None)
     if poll.closed_at is None or winner is None or winner.kind not in where_to_watch.KINDS:
         raise HTTPException(404, "Nothing has won yet")
-    display = " ".join(winner.title.split())
-    normalized = title_pages.normalize(display)
-    if not normalized:
-        raise HTTPException(404, "Nothing to look up")
-    client = getattr(request.app.state, "external_api_client", None)
-    metadata = await title_metadata.get_or_fetch(db, client, winner.kind, normalized, display, winner.year)
-    where = await where_to_watch.get_or_fetch(db, client, winner.kind, normalized, display, winner.year, metadata, wait=6) or {}
-    video = winner.kind in where_to_watch.VIDEO_KINDS
-    return {
-        "kind": winner.kind, "title": display, "heading": where_to_watch.heading(winner.kind),
-        "groups": where.get("groups") or [], "region": where.get("region"), "fetched": where.get("fetched"),
-        "credits": where.get("credits") or [], "tmdb_notice": bool(where.get("justwatch")),
-        "more": (where.get("link") or where_to_watch.justwatch_search(display)) if video else None,
-        "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(winner.kind, display)],
-        "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
-        "searches": where_to_watch.searches(winner.kind, display),
-    }
+    return winner.kind, " ".join(winner.title.split()), winner.year
 
 
 @router.delete("/api/tonight/{token}", status_code=204)
-def delete_poll(token: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_poll(token: str, request: Request, user=Depends(get_current_user), db: Session = Depends(get_db)):
     poll, _ = _poll(db, token)
     try:
         tonight_polls.delete(db, poll, user)
