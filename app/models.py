@@ -91,6 +91,7 @@ class User(Base):
     title_origins = relationship("TitleOrigin", back_populates="owner", cascade="all, delete-orphan",
                                  foreign_keys="TitleOrigin.user_id")
     game_playtimes = relationship("GamePlaytime", back_populates="owner", cascade="all, delete-orphan")
+    episode_notes = relationship("EpisodeNote", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -1790,6 +1791,38 @@ class GamePlaytime(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "item_id", "source", name="uq_game_playtime_item_source"),
+    )
+
+
+class EpisodeNote(Base):
+    """A member's private rating and note for one episode of a show or anime (Nov 2026).
+
+    A new table only: the show's own rating, review and progress checkpoint are
+    never read or changed by it. It points at the library record the way
+    ProgressCheckpoint does. ``episode_key`` names the episode as the episode
+    guide numbers it: ``s2e4`` inside a season, ``e12`` for a show numbered
+    straight through, ``s0e3`` for a special.
+    """
+    __tablename__ = "episode_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    episode_key = Column(String(24), nullable=False)
+    season = Column(Integer, nullable=True)
+    episode = Column(Integer, nullable=False)
+    rating = Column(Integer, nullable=True)
+    note = Column(String(1000), nullable=True)
+    spoiler = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="episode_notes")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", "episode_key", name="uq_episode_note"),
+        Index("ix_episode_notes_item", "user_id", "category", "item_id"),
     )
 
 

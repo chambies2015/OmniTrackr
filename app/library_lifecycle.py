@@ -32,7 +32,7 @@ def delete_owned_media(db: Session, user_id: int, category: str, item_id: int):
             db.rollback()
             return None
         for reference in (models.NextUpItem, models.ProgressCheckpoint, models.LibraryTag,
-                          models.TitleOrigin):
+                          models.TitleOrigin, models.EpisodeNote):
             db.query(reference).filter_by(user_id=user_id, category=category, item_id=item_id).delete(synchronize_session=False)
         if category == "video-games":
             db.query(models.GamePlaytime).filter_by(user_id=user_id, item_id=item_id).delete(synchronize_session=False)

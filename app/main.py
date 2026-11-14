@@ -670,6 +670,9 @@ app.include_router(activity.router)
 for route in progress.router.routes:
     if getattr(route, "path", None) == "/progress/{category}/{item_id}/episodes":
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/progress/{category}/{item_id}/episode-notes":
+        # Rating a run of episodes is many quick taps; this only stops scripts.
+        bind_rate_limited_endpoint(route, limiter.limit("120/minute")(route.endpoint))
 app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
@@ -1054,6 +1057,13 @@ app.include_router(new_releases_router.router)
 from .routers import tonight as tonight_router
 rate_limited_tonight_create = limiter.limit("10/minute")(tonight_router.create_poll)
 rate_limited_tonight_vote = limiter.limit("30/minute")(tonight_router.vote_poll)
+TONIGHT_OTHER_LIMITS = {
+    "/api/tonight": {"GET": "60/minute"},
+    "/api/tonight/suggestions": {"GET": "30/minute"},
+    "/api/tonight/{token}": {"GET": "120/minute", "DELETE": "20/minute"},
+    "/api/tonight/{token}/vote": {"DELETE": "30/minute"},
+    "/api/tonight/{token}/close": {"POST": "20/minute"},
+}
 for route in tonight_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set()) or set()
     if path == "/api/tonight" and "POST" in methods:
@@ -1068,6 +1078,12 @@ for route in tonight_router.router.routes:
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
     elif path == "/api/tonight/starters":
         bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    else:
+        # The October routes. An open poll page reloads its results every 20 seconds, so the
+        # read limit leaves room for a few tabs on one connection.
+        for method, rate in TONIGHT_OTHER_LIMITS.get(path, {}).items():
+            if method in methods:
+                bind_rate_limited_endpoint(route, limiter.limit(rate)(route.endpoint))
 app.include_router(tonight_router.router)
 
 from .routers import weekly_roundup as weekly_roundup_router

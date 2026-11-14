@@ -850,6 +850,7 @@ class ExportData(BaseModel):
     library_tags: List[dict] = Field(default_factory=list, description="Private tags, one entry per tagged title")
     saved_views: List[dict] = Field(default_factory=list, description="Saved shelf views: name and filters")
     game_playtimes: List[dict] = Field(default_factory=list, description="Minutes played per game, from Steam imports")
+    episode_notes: List[dict] = Field(default_factory=list, description="Private episode ratings and notes, one entry per show")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 # Far above any real library, but keeps one request from queueing millions of row writes.
@@ -877,6 +878,7 @@ class ImportData(BaseModel):
     library_tags: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Tags added to matching titles alongside the ones they have")
     saved_views: List[dict] = Field(default_factory=list, max_length=200, description="Saved shelf views, restored when the name is free")
     game_playtimes: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Minutes played per game, restored on games that have none")
+    episode_notes: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Episode ratings and notes, added beside the ones a show already has")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -916,6 +918,8 @@ class ImportResult(BaseModel):
     views_skipped: int = Field(default=0, description="Saved views with a name already in use, over the limit or invalid")
     playtimes_created: int = Field(default=0, description="Games given their backed-up playtime")
     playtimes_skipped: int = Field(default=0, description="Playtime rows with no single matching game, or a game that already has playtime")
+    episode_notes_created: int = Field(default=0, description="Episode ratings and notes restored")
+    episode_notes_skipped: int = Field(default=0, description="Episode entries already saved, unmatched, over the limit or invalid")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas

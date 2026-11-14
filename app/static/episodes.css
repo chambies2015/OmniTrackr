@@ -51,3 +51,61 @@
   .episode-dialog__actions > button { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .episode-bar__fill, .episode-season__head::before { transition: none; } }
+
+/* Episode scores and notes (Nov 2026). */
+.episode-dialog__ratings { margin: 0; color: var(--fg-secondary, #b6c7c6); font-size: .86rem; }
+.episode-mode { display: inline-flex; gap: 4px; margin: 14px 0 10px; padding: 4px; border: 1px solid var(--border, #41655f); border-radius: 999px; background: var(--surface-muted, #142a2f); }
+#episodeDialog .episode-mode__option { min-height: 36px; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--fg-secondary, #b6c7c6); font-size: .86rem; font-weight: 650; }
+#episodeDialog .episode-mode__option[aria-pressed="true"] { background: var(--card-bg, #102129); color: var(--fg, #f1f8f6); box-shadow: 0 1px 4px #0003, inset 0 0 0 1px var(--border, #41655f); }
+#episodeDialog .episode-mode__option:hover:not([aria-pressed="true"]) { background: transparent; color: var(--fg, #f1f8f6); }
+.episode-season__avg { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--primary, #8b7cf0) 18%, transparent); color: var(--fg, #f1f8f6); font-size: .78rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#episodeDialog .episode-cell { position: relative; }
+#episodeDialog .episode-cell__score { position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: var(--accent-solid, #6d4ee8); color: var(--on-accent, #fff); font-size: .68rem; font-weight: 750; line-height: 19px; text-align: center; box-shadow: 0 0 0 2px var(--card-bg, #102129); pointer-events: none; }
+#episodeDialog .episode-cell--noted::after { content: ''; position: absolute; left: 50%; bottom: 4px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: currentColor; opacity: .75; pointer-events: none; }
+#episodeDialog .episode-grid--rate .episode-cell--seen { border-color: color-mix(in srgb, var(--teal, #63d1ad) 55%, var(--border, #54716d)); }
+#episodeDialog .episode-grid--rate .episode-cell--latest { background: var(--card-bg, #102129) !important; color: var(--fg, #f1f8f6) !important; border-color: var(--teal, #63d1ad); border-width: 2px; }
+#episodeDialog .episode-grid--rate .episode-cell--rated { background: color-mix(in srgb, var(--primary, #8b7cf0) 16%, var(--card-bg, #102129)); }
+.episode-grid { padding-top: 8px; }
+
+.episode-notes { padding: 0 14px 14px; }
+.episode-dialog__body > .episode-notes { margin-top: 14px; padding: 12px 14px; border: 1px dashed var(--border, #41655f); border-radius: 12px; }
+.episode-notes__heading { margin: 0 0 8px; color: var(--fg-secondary, #a4aec2); font-size: .74rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.episode-notes__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.episode-notes__item { display: grid; gap: 6px; padding: 10px 12px; border-radius: 10px; background: var(--card-bg, #102129); border: 1px solid var(--border, #41655f); }
+.episode-notes__head { display: flex; align-items: center; gap: 8px; }
+#episodeDialog .episode-notes__open { min-height: 30px; padding: 3px 10px; border-radius: 999px; font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.episode-notes__score { color: var(--fg-secondary, #a4aec2); font-size: .82rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.episode-notes__text { margin: 0; color: var(--fg, #f1f8f6); font-size: .9rem; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.episode-notes__text:focus { outline: none; }
+#episodeDialog .episode-notes__reveal { justify-self: start; min-height: 32px; padding: 5px 12px; border-style: dashed; border-radius: 8px; color: var(--fg-secondary, #a4aec2); font-size: .82rem; font-style: italic; }
+
+.episode-favourites { margin: 4px 0 2px; }
+.episode-favourites__row { display: flex; flex-wrap: wrap; gap: 6px; }
+#episodeDialog .episode-favourites__row .episode-notes__open { background: color-mix(in srgb, var(--primary, #8b7cf0) 16%, var(--card-bg, #102129)); border-color: color-mix(in srgb, var(--primary, #8b7cf0) 45%, transparent); }
+#episodeDialog .episode-dialog__rate-prompt { border-color: var(--primary, #8b7cf0); }
+
+.episode-pick { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 10px; }
+.episode-pick__field { flex: 1 1 110px; }
+
+.episode-editor__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 6px; }
+.episode-editor__nav { display: flex; gap: 6px; }
+#episodeDialog .episode-editor__back, #episodeDialog .episode-editor__step { min-height: 36px; padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.episode-editor__title { margin: 10px 0 2px; font-size: 1.25rem; letter-spacing: -.01em; }
+.episode-editor__seen { margin: 0 0 14px !important; }
+.episode-editor__label { margin: 0 0 8px; font-weight: 650; }
+.episode-rate { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+#episodeDialog .episode-rate__chip { min-height: 44px; min-width: 0; padding: 0; border-radius: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#episodeDialog .episode-rate__chip[aria-pressed="true"] { background: var(--accent-solid, #6d4ee8); border-color: var(--accent-solid, #6d4ee8); color: var(--on-accent, #fff); }
+.episode-rate__hint { margin: 8px 0 16px !important; }
+.episode-editor__note { position: relative; }
+.episode-editor__counter { justify-self: end; color: var(--fg-secondary, #a4aec2); font-size: .74rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+#episodeDialog .episode-editor__spoiler { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0 16px; font-weight: 500; font-size: .9rem; cursor: pointer; }
+#episodeDialog .episode-editor__spoiler input { width: 20px; height: 20px; min-height: 0; margin: 1px 0 0; padding: 0; flex-shrink: 0; accent-color: var(--primary, #8b7cf0); }
+#episodeDialog .episode-editor__remove { color: var(--danger, #ff9a9a); }
+
+@media (max-width: 600px) {
+  .episode-rate { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .episode-mode { display: flex; }
+  #episodeDialog .episode-mode__option { flex: 1 1 0; }
+  .episode-notes { padding: 0 10px 12px; }
+}

@@ -107,6 +107,9 @@ async function importData(fileInput) {
     if (result.views_created || result.views_skipped) {
       message += `\nSaved views: ${result.views_created || 0} restored, ${result.views_skipped || 0} skipped because the name was taken, the shelf was full or the view didn't check out.`;
     }
+    if (result.episode_notes_created || result.episode_notes_skipped) {
+      message += `\nEpisode ratings and notes: ${result.episode_notes_created || 0} restored, ${result.episode_notes_skipped || 0} skipped. Episodes you had already rated keep what you wrote.`;
+    }
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
