@@ -11,10 +11,13 @@ from datetime import date
 from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from .. import binge_calculator as binge
 from .. import funnel, in_order, title_pages, title_search
+from ..binge_guides import GUIDES as BINGE_GUIDES
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..in_order_guides import GUIDES
@@ -22,15 +25,16 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["in-order"])
-CSS_VERSION = "20261017-order-2"
+CSS_VERSION = "20261114-order-3"
 JS_VERSION = "20261017-order-2"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-17"
 HUB_TITLE = "Franchises in order: what to watch, read and play first"
-HUB_DESCRIPTION = ("Guides to the best order for Star Wars, The Witcher, The Lord of the Rings, Harry Potter, "
-                   "Dune, Alien, Monogatari, Fate, Zelda and more, across films, series, books and games.")
-FORMAT_PLURALS = {"movie": "films", "tv": "series", "anime": "anime", "game": "games", "book": "books", "album": "albums"}
+HUB_DESCRIPTION = ("Watch, read and play order guides for the MCU, Star Wars, Star Trek, Dragon Ball, Evangelion, "
+                   "Kingdom Hearts, Narnia, Discworld and more, with what you can skip.")
+FORMAT_PLURALS = {"movie": "films", "tv": "series", "anime": "anime", "manga": "manga", "game": "games", "book": "books",
+                  "album": "albums"}
 MAX_ADD = 40
 
 
@@ -140,6 +144,11 @@ def _entry_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
     )
 
 
+def binge_links(slug: str) -> list[str]:
+    """Binge calculator guides that point at this franchise, for a "how long" card beside the related orders."""
+    return [other for other, target in BINGE_GUIDES.items() if target.get("in_order") == slug and binge.is_indexable(target)]
+
+
 def _head(signed_in: bool, ads: bool) -> str:
     head = f'<link rel="stylesheet" href="/static/in-order.css?v={CSS_VERSION}">'
     if not signed_in:
@@ -210,6 +219,10 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         target = GUIDES[other]
         parts.append(f'<article><h3><a href="{in_order.path(other)}">{_e(target["name"])} in order</a></h3>'
                      f'<p>{_e(target["summary"])}</p></article>')
+    for other in binge_links(slug):
+        target = BINGE_GUIDES[other]
+        parts.append(f'<article><h3><a href="{binge.path(other)}">{_e(binge.heading(target))}</a></h3>'
+                     f'<p>{_e(target["summary"])}</p></article>')
     parts.extend([
         '</div></section>',
         '<section id="method" class="guide-sources io-method" aria-labelledby="method-heading">',
@@ -249,29 +262,57 @@ def _structured(slug: str, entry: dict) -> dict:
     }
 
 
-@router.get(in_order.BASE_PATH, include_in_schema=False)
-def in_order_index(request: Request):
-    cards = []
-    for slug, entry in GUIDES.items():
-        names = " · ".join(order["name"] for order in entry["orders"])
-        cards.append(
-            f'<li><a class="io-card" href="{in_order.path(slug)}"><span class="io-card__initial" aria-hidden="true">{_e(entry["name"].removeprefix("The ")[:1])}</span>'
+def _card_art(entry: dict, details: dict) -> str:
+    """Cover art from the first entry in the recommended order that has a title page image, else the initial."""
+    for item in in_order.recommended(entry):
+        image = title_pages._safe_image(details.get(in_order.saveable(item)["id"], {}).get("image"))
+        if image:
+            return (f'<img class="io-card__art" src="{_e(image)}" alt="" width="64" height="96" loading="lazy" '
+                    'decoding="async" referrerpolicy="no-referrer">')
+    return f'<span class="io-card__initial" aria-hidden="true">{_e(entry["name"].removeprefix("The ")[:1])}</span>'
+
+
+def _card(slug: str, entry: dict, details: dict) -> str:
+    names = " · ".join(order["name"] for order in entry["orders"])
+    skippable = sum(1 for item in entry["entries"] if item.get("optional"))
+    count = f'{len(entry["entries"])} entries across {_formats_text(entry)}'
+    if skippable:
+        count += f", {skippable} optional"
+    return (f'<li><a class="io-card" href="{in_order.path(slug)}">{_card_art(entry, details)}'
             f'<span class="io-card__text"><strong>{_e(entry["name"])} in order</strong>'
-            f'<span>{len(entry["entries"])} entries across {_e(_formats_text(entry))}</span>'
-            f'<span class="io-card__orders">{_e(names)}</span></span></a></li>'
-        )
-    content = (
-        '<header class="hero"><p class="eyebrow">IN ORDER</p><h1>Every franchise, in the right order.</h1>'
-        '<p>Release order, story order, or the order that keeps every twist intact? Guides to the best way through '
-        'the biggest franchises, across films, series, anime, books and games, with what you can safely skip.</p></header>'
-        f'<ul class="io-cards">{"".join(cards)}</ul>'
+            f'<span>{_e(count)}</span><span class="io-card__orders">{_e(names)}</span></span></a></li>')
+
+
+def hub_content(details: dict) -> str:
+    shelves = in_order.by_shelf()
+    jump = "".join(f'<a href="#shelf-{key}">{_e(heading)} <span>{len(slugs)}</span></a>' for key, heading, _, slugs in shelves)
+    parts = [
+        '<header class="hero io-hub-hero"><p class="eyebrow">IN ORDER</p><h1>Every franchise, in the right order.</h1>',
+        f'<p>Release order, story order, or the order that keeps every twist intact? {len(GUIDES)} guides to the best way '
+        'through the biggest franchises, across films, series, anime, manga, books and games, with what you can safely skip.</p>',
+        f'<nav class="io-shelf-jump" aria-label="Guides by format">{jump}</nav></header>',
+    ]
+    for key, heading, blurb, slugs in shelves:
+        cards = "".join(_card(slug, GUIDES[slug], details) for slug in slugs)
+        parts.append(f'<section class="io-shelf" id="shelf-{key}" aria-labelledby="shelf-{key}-heading">'
+                     f'<h2 id="shelf-{key}-heading">{_e(heading)}</h2><p class="io-shelf__blurb">{_e(blurb)}</p>'
+                     f'<ul class="io-cards">{cards}</ul></section>')
+    parts.append(
         '<section class="editorial io-why"><h2>Why the order matters</h2><p>Stories that grow over decades are rarely told in order. '
         'Prequels arrive after the endings they lead to, books and their adaptations disagree, and a twist that floored the first '
         'audience can be spoiled by watching the "right" way on paper. Each guide gives more than one order, says who each one suits, '
         'and recommends one.</p><p>Members of OmniTrackr see their own progress on every guide: which entries they have finished, '
-        'which are on their list, and what to start next. <a href="/if-you-liked">If you liked</a> guides cover what to try after '
-        'something you loved.</p></section>'
+        'which are on their list, and what to start next. The <a href="/binge-calculator">binge calculator</a> works out how long '
+        'a series takes, and <a href="/if-you-liked">If you liked</a> guides cover what to try after something you loved.</p>'
+        '<p>Missing a franchise? <a href="/contact">Tell us which one</a>. We add guides when we can give a real answer, '
+        'not just a list of release dates.</p></section>'
     )
+    return "".join(parts)
+
+
+@router.get(in_order.BASE_PATH, include_in_schema=False)
+def in_order_index(request: Request, db: Session = Depends(get_db)):
+    content = hub_content(_details(db))
     structured = {
         "@context": "https://schema.org", "@type": "CollectionPage", "name": HUB_TITLE, "description": HUB_DESCRIPTION,
         "url": SITE + in_order.BASE_PATH, "inLanguage": "en-US",
@@ -285,6 +326,23 @@ def in_order_index(request: Request):
                     head=f'<link rel="stylesheet" href="/static/in-order.css?v={CSS_VERSION}">')
     response.headers["Cache-Control"] = "public, max-age=600"
     return response
+
+
+# People search for "watch order" and "reading order" as often as "in order"; send those paths to the guides.
+@router.get("/watch-order", include_in_schema=False)
+@router.get("/reading-order", include_in_schema=False)
+@router.get("/play-order", include_in_schema=False)
+def in_order_alias():
+    return RedirectResponse(in_order.BASE_PATH, status_code=301)
+
+
+@router.get("/watch-order/{slug}", include_in_schema=False)
+@router.get("/reading-order/{slug}", include_in_schema=False)
+@router.get("/play-order/{slug}", include_in_schema=False)
+def in_order_guide_alias(slug: str):
+    if in_order.guide(slug) is None:
+        raise HTTPException(404, "Guide not found")
+    return RedirectResponse(in_order.path(slug), status_code=301)
 
 
 @router.get(in_order.BASE_PATH + "/{slug}", include_in_schema=False)

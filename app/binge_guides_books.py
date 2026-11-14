@@ -116,7 +116,7 @@ GUIDES = {
         ],
     },
     "a-song-of-ice-and-fire": {
-        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": REVIEWED,
+        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": REVIEWED, "in_order": "game-of-thrones",
         "heading": "How long does it take to read A Song of Ice and Fire?",
         "summary": "The five published A Song of Ice and Fire novels are about 1.77 million words: roughly 148 hours to read, or 201 hours on audio.",
         "audio": {"narrator": "Roy Dotrice", "note": "Audiobook lengths are for the Roy Dotrice recordings."},
@@ -268,7 +268,7 @@ GUIDES = {
         ],
     },
     "the-stormlight-archive": {
-        "name": "The Stormlight Archive", "kind": "book", "reviewed": REVIEWED,
+        "name": "The Stormlight Archive", "kind": "book", "reviewed": REVIEWED, "in_order": "cosmere",
         "heading": "How long does it take to read The Stormlight Archive?",
         "summary": "The five Stormlight Archive books so far are about 2.18 million words: roughly 182 hours to read, or 269 hours on audio. Book-by-book times.",
         "audio": {"narrator": "Michael Kramer and Kate Reading", "note": "Audiobook lengths are for the Michael Kramer and Kate Reading recordings."},
