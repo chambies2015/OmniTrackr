@@ -15,9 +15,9 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261031-join-1"
+SITE_CSS_VERSION = "20261114-search-1"
 SITE_JS_VERSION = "20261028-nav-1"
-SITE_NAV_JS_VERSION = "20261031-join-1"
+SITE_NAV_JS_VERSION = "20261114-search-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
@@ -251,8 +251,8 @@ def site_nav(active: str = "", *, login_action: bool = False, member: bool = Fal
         f'{_brand()}'
         f'<div class="site-nav__menus">{"".join(menus)}</div>'
         '<div class="site-nav__links">'
-        f'<a class="site-search" href="/titles" data-site-search aria-label="Search titles">{_SEARCH_ICON}'
-        '<span class="site-search__label">Search titles</span><kbd>/</kbd></a>'
+        f'<a class="site-search" href="/search" data-site-search aria-label="Search">{_SEARCH_ICON}'
+        '<span class="site-search__label">Search</span><kbd>/</kbd></a>'
         f'{signup_buttons}'
         f'<a class="site-nav__library site-btn site-btn--primary site-btn--sm" href="/"{library_hidden}>My library</a>'
         '<details class="site-menu"><summary aria-label="Open menu"><span></span><span></span><span></span></summary>'
@@ -335,6 +335,7 @@ def site_footer() -> str:
 def site_assets(*, sandbox: bool = False) -> str:
     extras = "" if sandbox else f'<script src="/static/site-nav.js?v={SITE_NAV_JS_VERSION}" defer></script>'
     return (f'<link rel="stylesheet" href="/static/site.css?v={SITE_CSS_VERSION}">'
+            '<link rel="search" type="application/opensearchdescription+xml" title="OmniTrackr" href="/opensearch.xml">'
             f'<script src="/static/site.js?v={SITE_JS_VERSION}" defer></script>{extras}'
             f'<script src="/static/visit.js?v={VISIT_JS_VERSION}" defer></script>')
 

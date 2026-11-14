@@ -825,6 +825,16 @@ from .routers import trending as trending_router
 app.include_router(trending_router.router)
 from .routers import people as people_router
 app.include_router(people_router.router)
+from .routers import site_search as site_search_router
+# The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
+rate_limited_site_search = {
+    "/api/search": limiter.limit("60/minute")(site_search_router.search_api),
+    "/search": limiter.limit("60/minute")(site_search_router.search_page),
+}
+for route in site_search_router.router.routes:
+    if getattr(route, "path", None) in rate_limited_site_search:
+        bind_rate_limited_endpoint(route, rate_limited_site_search[route.path])
+app.include_router(site_search_router.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
 rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)

@@ -114,7 +114,8 @@ def _rank(entry: dict, query: str, tokens: list[str]) -> int | None:
     return 3
 
 
-def search(entries: list[dict], text: str, limit: int = RESULT_LIMIT) -> list[dict]:
+def ranked(entries: list[dict], text: str, kind: str | None = None) -> list[dict]:
+    """Every index entry matching the search, best first; `kind` keeps one format."""
     query = title_pages.slugify((text or "")[:QUERY_MAX])
     if query == "title" and "title" not in (text or "").lower():
         return []  # slugify() returns "title" for input with no letters or digits.
@@ -123,12 +124,18 @@ def search(entries: list[dict], text: str, limit: int = RESULT_LIMIT) -> list[di
     tokens = [token for token in query.split("-") if token]
     scored = []
     for entry in entries:
+        if kind is not None and entry["kind"] != kind:
+            continue
         rank = _rank(entry, query, tokens)
         if rank is not None:
             scored.append((rank, -entry["members"], len(entry["title"]), entry["title"].casefold(), entry))
     scored.sort(key=lambda row: row[:4])
+    return [row[-1] for row in scored]
+
+
+def search(entries: list[dict], text: str, limit: int = RESULT_LIMIT) -> list[dict]:
     return [
         {"kind": e["kind"], "label": e["label"], "title": e["title"], "year": e["year"], "slug": e["slug"],
          "url": f"/titles/{e['kind']}/{e['slug']}", "image": image_sizes.sized(e["image"], 200)}
-        for *_, e in scored[:limit]
+        for e in ranked(entries, text)[:limit]
     ]

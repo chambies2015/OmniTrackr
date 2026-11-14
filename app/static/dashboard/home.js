@@ -121,10 +121,31 @@ function openSharedTitleFromLocation() {
   return true;
 }
 
+// The site search sends members here as /?find=<title> when it doesn't know a title:
+// open Add anything with that search already running, and take it out of the address bar.
+function consumeFindQuery() {
+  const url = new URL(window.location.href);
+  const values = url.searchParams.getAll('find');
+  if (!values.length) return null;
+  url.searchParams.delete('find');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  return values.length === 1 ? values[0].replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+}
+
+function openFindFromLocation() {
+  const query = consumeFindQuery();
+  if (query === null) return false;
+  Promise.resolve(openQuickCaptureSearch(query)).catch(() => {
+    showNotice('Could not open Add anything. Tap ＋ to search for that title.');
+  });
+  return true;
+}
+
 function openDashboardTargetFromLocation() {
   if (!hasStoredAuth()) return false;
   const params = new URL(window.location.href).searchParams;
   if (params.get('share') === '1') return openSharedTitleFromLocation();
+  if (params.has('find')) return openFindFromLocation();
   if (params.has('library_category') || params.has('library_item')) {
     // Ambiguous mixed handoffs must never race each other or choose a different title.
     if (params.has('collection')) {
