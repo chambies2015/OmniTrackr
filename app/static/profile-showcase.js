@@ -9,6 +9,7 @@
   let picks = [];
   let limit = 3;
   let supporterLimit = 6;
+  let noteMax = 140;
   let saving = false;
   let searchTimer = null;
   let searchToken = 0;
@@ -85,14 +86,45 @@
     node.textContent = text;
   }
 
+  function noteText(item) {
+    return typeof item.note === 'string' ? item.note : '';
+  }
+
+  // A one-line note under each pin, shown on the profile next to the title. Saves when the field loses focus.
+  function noteField(item, index) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'showcase-row__note';
+    input.maxLength = noteMax;
+    input.value = noteText(item);
+    input.placeholder = index === 0 ? 'Why is this your top pick? (optional)' : 'Why it made the cut (optional)';
+    input.setAttribute('aria-label', `Note for ${item.title}`);
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        input.blur();
+      }
+    });
+    input.addEventListener('change', () => {
+      const value = input.value.trim();
+      if (value === noteText(item)) return;
+      save(picks.map((pick, i) => (i === index ? { ...pick, note: value } : pick)));
+    });
+    return input;
+  }
+
   function renderPicks() {
     const list = $('profileShowcaseList');
     if (!list) return;
-    list.replaceChildren(...picks.map((item, index) => row(item, [
-      ['↑', `Move ${item.title} up`, () => move(index, -1), index === 0],
-      ['↓', `Move ${item.title} down`, () => move(index, 1), index === picks.length - 1],
-      ['Remove', `Remove ${item.title} from your showcase`, () => remove(index)],
-    ])));
+    list.replaceChildren(...picks.map((item, index) => {
+      const li = row(item, [
+        ['↑', `Move ${item.title} up`, () => move(index, -1), index === 0],
+        ['↓', `Move ${item.title} down`, () => move(index, 1), index === picks.length - 1],
+        ['Remove', `Remove ${item.title} from your showcase`, () => remove(index)],
+      ]);
+      li.appendChild(noteField(item, index));
+      return li;
+    }));
     hint();
   }
 
@@ -123,7 +155,7 @@
       const response = await fetch(`${apiBase()}/api/profile/showcase`, fetchOptions({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: next.map(item => ({ category: item.category, id: item.id })) }),
+        body: JSON.stringify({ items: next.map(item => ({ category: item.category, id: item.id, note: noteText(item) })) }),
       }));
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -183,6 +215,7 @@
       picks = cleanItems(data.showcase);
       if (Number.isInteger(data.showcase_limit)) limit = data.showcase_limit;
       if (Number.isInteger(data.showcase_supporter_limit)) supporterLimit = data.showcase_supporter_limit;
+      if (Number.isInteger(data.showcase_note_max_chars)) noteMax = data.showcase_note_max_chars;
       renderPicks();
       search();
     } catch (error) {
@@ -213,7 +246,7 @@
   }
 
   window.ProfileShowcase = { load };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { load, cleanItems, subtitle };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { load, cleanItems, subtitle, noteText };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

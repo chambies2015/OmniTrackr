@@ -10,9 +10,10 @@
     show_collections: 'profileShowCollections',
     show_diary: 'profileShowDiary',
     show_taste_match: 'profileShowTasteMatch',
+    show_now: 'profileShowNow',
   };
   // Off unless the member ticks them.
-  const OPT_IN = new Set(['show_diary', 'show_taste_match']);
+  const OPT_IN = new Set(['show_diary', 'show_taste_match', 'show_now']);
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
   let loaded = null;

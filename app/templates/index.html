@@ -65,7 +65,7 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261103-where-2">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261104-styles-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261114-profile-1">
   <link rel="stylesheet" href="/static/app-themes.css?v=20261104-themes-1">
   <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
@@ -2346,12 +2346,12 @@
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
-  <script src="/static/public-profile.js?v=20261112-settings-1"></script>
+  <script src="/static/public-profile.js?v=20261114-profile-1"></script>
   <script src="/static/supporter.js?v=20261112-settings-1"></script>
   <script src="/static/account-settings.js?v=20261112-settings-1" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
-  <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
+  <script src="/static/profile-showcase.js?v=20261114-profile-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/new-year-challenge.js?v=20261110-pledge-2" defer></script>
@@ -2471,6 +2471,7 @@
               <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowDiary"> Diary: dates of your recent finishes and rewatches (your journal notes stay private)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowNow"> Right now: what you've started from your Up next queue and what's next in it (never how far along you are)</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowTasteMatch"> Let people compare tastes with me: a link where anyone can rate a few of your titles and see your ratings for them</label>
             </fieldset>
             <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
@@ -2481,6 +2482,7 @@
           <div class="profile-showcase-settings" id="profileShowcase">
             <h5>Showcase</h5>
             <p class="info-text" id="profileShowcaseHint">Pin up to 3 titles from your library to the top of your profile.</p>
+            <p class="info-text">Your first pin gets the big spot. Add a short note to any pin and it shows beside the title.</p>
             <ol class="showcase-picks" id="profileShowcaseList"></ol>
             <div class="form-group">
               <label for="profileShowcaseSearch">Add a title</label>
