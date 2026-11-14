@@ -328,6 +328,9 @@ def in_order_index(request: Request, db: Session = Depends(get_db)):
     return response
 
 
+GUIDE_PATHS = {slug: in_order.path(slug) for slug in GUIDES}
+
+
 # People search for "watch order" and "reading order" as often as "in order"; send those paths to the guides.
 @router.get("/watch-order", include_in_schema=False)
 @router.get("/reading-order", include_in_schema=False)
@@ -340,9 +343,11 @@ def in_order_alias():
 @router.get("/reading-order/{slug}", include_in_schema=False)
 @router.get("/play-order/{slug}", include_in_schema=False)
 def in_order_guide_alias(slug: str):
-    if in_order.guide(slug) is None:
+    # The target comes from the catalog, never from the request path.
+    location = GUIDE_PATHS.get(slug)
+    if location is None:
         raise HTTPException(404, "Guide not found")
-    return RedirectResponse(in_order.path(slug), status_code=301)
+    return RedirectResponse(location, status_code=301)
 
 
 @router.get(in_order.BASE_PATH + "/{slug}", include_in_schema=False)
