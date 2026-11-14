@@ -1185,7 +1185,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
-  <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
+  <link rel="stylesheet" href="/static/discussions.css?v=20261113-discussions-2">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261031-browse-1" defer></script>'}

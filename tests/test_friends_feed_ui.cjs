@@ -54,3 +54,22 @@ test('only title page paths become links, and ratings read out of ten', () => {
   assert.equal(rating(8.5), '8.5/10');
   assert.equal(rating(null), '');
 });
+
+test('updates are grouped under Today, Yesterday, This week and Earlier', () => {
+  const { dayLabel } = load();
+  const now = new Date(2026, 10, 13, 15, 0, 0);
+  const at = date => date.toISOString().replace('Z', '');
+  assert.equal(dayLabel(at(new Date(2026, 10, 13, 9, 0, 0)), now), 'Today');
+  assert.equal(dayLabel(at(new Date(2026, 10, 12, 23, 0, 0)), now), 'Yesterday');
+  assert.equal(dayLabel(at(new Date(2026, 10, 9, 12, 0, 0)), now), 'This week');
+  assert.equal(dayLabel(at(new Date(2026, 9, 30, 12, 0, 0)), now), 'Earlier');
+  assert.equal(dayLabel('not a date', now), 'Earlier');
+});
+
+test('||double bars|| in a review are kept back as spoilers', () => {
+  const { spoilerParts } = load();
+  assert.deepEqual(JSON.parse(JSON.stringify(spoilerParts('Rocky rules. ||The ending|| made me cry.'))),
+    [{ text: 'Rocky rules. ' }, { text: 'The ending', hidden: true }, { text: ' made me cry.' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(spoilerParts('No secrets here'))), [{ text: 'No secrets here' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(spoilerParts('a || b'))), [{ text: 'a || b' }]);
+});
