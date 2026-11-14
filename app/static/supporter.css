@@ -58,6 +58,8 @@
 .showcase-row__copy strong { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .showcase-row__copy small { font-size: .78rem; opacity: .72; }
 .showcase-row__actions { display: flex; gap: 4px; }
+.showcase-row__note { background: rgba(127, 127, 127, .06); border: 1px solid rgba(127, 127, 127, .28); border-radius: var(--radius-md, 12px); color: inherit; font: inherit; font-size: .85rem; grid-column: 2 / -1; min-height: 34px; padding: 6px 10px; width: 100%; }
+.showcase-row__note:focus { border-color: var(--accent-primary, #8b5cf6); box-shadow: var(--ring, 0 0 0 3px rgba(139, 92, 246, .3)); outline: none; }
 .showcase-row__actions button { background: rgba(127, 127, 127, .1); border: 1px solid rgba(127, 127, 127, .32); border-radius: 8px; color: inherit; cursor: pointer; font: inherit; font-size: .82rem; min-height: 32px; min-width: 32px; padding: 4px 10px; }
 .showcase-row__actions button:hover:not(:disabled) { background: rgba(139, 92, 246, .22); border-color: rgba(139, 92, 246, .6); }
 .showcase-row__actions button:disabled { cursor: default; opacity: .4; }

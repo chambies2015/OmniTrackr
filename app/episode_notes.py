@@ -201,15 +201,21 @@ def export_rows(db: Session, user_id: int, identity: Callable[[Any, str], dict] 
 
 
 def stage_import(db: Session, user_id: int, item_id: int, category: str, entries: Any,
-                 have: set[tuple[str, int, str]], budget: list[int]) -> tuple[int, int]:
+                 have: set[tuple[str, int, str]], budget: list[int],
+                 per_show_counts: Optional[dict[tuple[str, int], int]] = None) -> tuple[int, int]:
     """Add backed-up entries to one owned show, keeping every entry it already has.
 
     ``have`` holds the member's existing (category, item_id, key) triples and
-    ``budget`` the remaining room under MAX_PER_MEMBER; both are updated. The
-    caller has locked the owner and commits.
+    ``budget`` the remaining room under MAX_PER_MEMBER; both are updated. Pass
+    ``per_show_counts`` (from ``count_per_show``) when importing many shows, so
+    each show doesn't scan the whole of ``have``; it is updated too. The caller
+    has locked the owner and commits.
     """
     created = skipped = 0
-    per_show = sum(1 for (cat, item, _) in have if cat == category and item == item_id)
+    if per_show_counts is None:
+        per_show = sum(1 for (cat, item, _) in have if cat == category and item == item_id)
+    else:
+        per_show = per_show_counts.get((category, item_id), 0)
     for raw in entries if isinstance(entries, list) else []:
         try:
             if not isinstance(raw, dict):
@@ -234,7 +240,17 @@ def stage_import(db: Session, user_id: int, item_id: int, category: str, entries
         per_show += 1
         budget[0] -= 1
         created += 1
+    if per_show_counts is not None:
+        per_show_counts[(category, item_id)] = per_show
     return created, skipped
+
+
+def count_per_show(have: set[tuple[str, int, str]]) -> dict[tuple[str, int], int]:
+    """How many entries each show already has, from ``existing_keys``."""
+    counts: dict[tuple[str, int], int] = {}
+    for category, item_id, _ in have:
+        counts[(category, item_id)] = counts.get((category, item_id), 0) + 1
+    return counts
 
 
 def existing_keys(db: Session, user_id: int) -> set[tuple[str, int, str]]:

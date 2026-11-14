@@ -47,9 +47,11 @@ def test_showcase_numbers_pins_in_order(client, db_session):
     picks = [{"category": "movies", "id": movies["Arrival"]}, {"category": "movies", "id": movies["Interstellar"]}]
     assert client.put("/api/profile/showcase", headers=headers_for(user), json={"items": picks}).status_code == 200
     html = client.get("/u/ranked").text
-    assert "profile-showcase__grid--2" in html
-    assert html.index('profile-poster__rank" aria-hidden="true">1<') < html.index(">Arrival</strong>")
-    assert html.index(">Arrival</strong>") < html.index('profile-poster__rank" aria-hidden="true">2<') < html.index(">Interstellar</strong>")
+    # Nov 14: the first pin is a spotlight, the rest sit under it as numbered cards.
+    assert "profile-showcase--2" in html and "profile-showcase__grid--1" in html
+    spotlight = html[html.index('class="profile-spotlight"'):html.index("</article>")]
+    assert 'profile-poster__rank" aria-hidden="true">1<' in spotlight and ">Arrival</a></h3>" in spotlight
+    assert html.index("</article>") < html.index('profile-poster__rank" aria-hidden="true">2<') < html.index(">Interstellar</strong>")
 
 
 def test_library_rows_put_the_biggest_shelf_first(client, db_session):

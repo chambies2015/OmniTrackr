@@ -830,6 +830,8 @@ def run_migrations():
     add_supporter_style_columns()
     add_public_diary_column()
     add_taste_match_link_column()
+    add_profile_now_column()
+    add_showcase_note_column()
     add_calendar_episodes_column()
     add_next_up_started_column()
     add_poll_round_column()
@@ -998,6 +1000,38 @@ def add_taste_match_link_column():
             print("Added show_taste_match column to public_profiles table")
     except Exception as e:
         print(f"Migration warning (taste match link): {e}")
+
+
+def add_profile_now_column():
+    """Add the opt-in "Right now" shelf flag. Existing profiles start with it off (FALSE), so nothing new is shared."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_now" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_now BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_now column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (profile right now): {e}")
+
+
+def add_showcase_note_column():
+    """Add the optional note on a pinned showcase title. Existing pins keep NULL (no note), so they look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("profile_showcase_items"):
+            return
+        if "note" in {col["name"] for col in inspector.get_columns("profile_showcase_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE profile_showcase_items ADD COLUMN note VARCHAR(140)"))
+            conn.commit()
+            print("Added note column to profile_showcase_items table")
+    except Exception as e:
+        print(f"Migration warning (showcase notes): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks")

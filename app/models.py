@@ -1003,6 +1003,8 @@ class PublicProfile(Base):
     show_diary = Column(Boolean, nullable=False, default=False)
     # Opt-in "compare tastes with me" link at /u/<name>/match (added Oct 2026, default off).
     show_taste_match = Column(Boolean, nullable=False, default=False)
+    # Opt-in "Right now" shelf: what the member started from their Up next queue and what's next (Nov 2026, default off).
+    show_now = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1054,6 +1056,8 @@ class ProfileShowcaseItem(Base):
     item_id = Column(Integer, nullable=False)
     position = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # A line from the member on why this title is pinned (Nov 2026). NULL for every older pin.
+    note = Column(String(140), nullable=True)
 
 
 class Supporter(Base):

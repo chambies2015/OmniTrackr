@@ -360,6 +360,10 @@ def _import_episode_notes(db: Session, user_id: int, payloads: list[dict]) -> tu
         lock_progress_owner(db, user_id)
         have = episode_notes.existing_keys(db, user_id)
         budget = [episode_notes.MAX_PER_MEMBER - len(have)]
+        # Counted once up front: scanning every saved entry for each show made a backup
+        # naming one show thousands of times take over a minute.
+        per_show = episode_notes.count_per_show(have)
+        matched: dict[tuple, int | None] = {}
         for raw in payloads:
             category = raw.get("category") if isinstance(raw, dict) else None
             title = raw.get("title") if isinstance(raw, dict) else None
@@ -369,14 +373,22 @@ def _import_episode_notes(db: Session, user_id: int, payloads: list[dict]) -> tu
                     or not isinstance(entries, list) or len(entries) > episode_notes.MAX_PER_SHOW):
                 skipped += count
                 continue
-            model = episode_notes.CATEGORIES[category]
-            query = db.query(model).filter(model.user_id == user_id, func.lower(func.trim(model.title)) == title.strip().lower())
-            query = _apply_import_identity(query, model, category, raw)
-            matches = query.limit(2).all() if query is not None else []
-            if len(matches) != 1:
+            if not entries:
+                continue
+            # A show named twice in one backup is looked up once.
+            lookup = (category, title.strip().lower(),
+                      repr([(field, field in raw, raw.get(field)) for field in COLLECTION_MATCH_FIELDS[category]]))
+            if lookup not in matched:
+                model = episode_notes.CATEGORIES[category]
+                query = db.query(model).filter(model.user_id == user_id, func.lower(func.trim(model.title)) == title.strip().lower())
+                query = _apply_import_identity(query, model, category, raw)
+                matches = query.limit(2).all() if query is not None else []
+                matched[lookup] = matches[0].id if len(matches) == 1 else None
+            if matched[lookup] is None:
                 skipped += count
                 continue
-            added, missed = episode_notes.stage_import(db, user_id, matches[0].id, category, entries, have, budget)
+            added, missed = episode_notes.stage_import(db, user_id, matched[lookup], category, entries, have, budget,
+                                                         per_show)
             created += added
             skipped += missed
         db.commit()
