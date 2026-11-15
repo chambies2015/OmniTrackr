@@ -11,7 +11,7 @@ ONE_PIECE_EPISODES = 1180  # aired by 2026-11-10; the anime was between batches 
 
 GUIDES = {
     "fullmetal-alchemist-brotherhood": {
-        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": REVIEWED, "in_order": "fullmetal-alchemist",
         "summary": "Fullmetal Alchemist: Brotherhood is 64 episodes, about 26 hours. How long each part takes and how it differs from the 2003 series.",
         "titles": [{"kind": "anime", "title": "Fullmetal Alchemist: Brotherhood", "year": 2009,
                     "aka": ["Fullmetal Alchemist Brotherhood"]}],
@@ -184,7 +184,7 @@ GUIDES = {
         ],
     },
     "dragon-ball-z": {
-        "name": "Dragon Ball Z", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Dragon Ball Z", "kind": "anime", "reviewed": REVIEWED, "in_order": "dragon-ball",
         "summary": "Dragon Ball Z is 291 episodes, about 116 hours. Saga-by-saga lengths, how much shorter Dragon Ball Z Kai is, and a pace planner.",
         "titles": [{"kind": "anime", "title": "Dragon Ball Z", "year": 1989}],
         "see_also": ["naruto-and-shippuden", "one-piece", "hunter-x-hunter-2011"],

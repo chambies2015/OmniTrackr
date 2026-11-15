@@ -12,6 +12,9 @@ guide does not count toward finishing the franchise).
 
 Orders: the first is the one the guide recommends. "ids" lists entry ids in that order;
 "pitch" says who the order suits.
+
+Optional "shelf" (screen, anime, games or books) places a guide on the hub when the format
+most of its entries are in is not where readers would look for it.
 """
 
 GUIDES = {
@@ -156,6 +159,7 @@ GUIDES = {
     },
     "lord-of-the-rings": {
         "name": "The Lord of the Rings",
+        "shelf": "books",
         "search_title": "The Lord of the Rings in order: the films, the books and Middle-earth",
         "summary": "The Lord of the Rings and The Hobbit in release order and story order, plus Tolkien's books and the newer series, with what each one adds.",
         "reviewed": "2026-10-17",
@@ -221,6 +225,7 @@ GUIDES = {
     },
     "harry-potter": {
         "name": "Harry Potter",
+        "shelf": "books",
         "search_title": "Harry Potter in order: the books, the films and the Wizarding World",
         "summary": "The seven Harry Potter books and eight films, read-then-watch, in release order and in story order with Fantastic Beasts and Hogwarts Legacy.",
         "reviewed": "2026-10-17",
@@ -659,3 +664,18 @@ GUIDES = {
         ],
     },
 }
+
+
+# Guides added in November 2026 live in one file per main format. They follow the
+# same shape as the guides above and are listed after them on the hub.
+from .in_order_guides_films import GUIDES as _FILM_GUIDES  # noqa: E402
+from .in_order_guides_series import GUIDES as _SERIES_GUIDES  # noqa: E402
+from .in_order_guides_anime import GUIDES as _ANIME_GUIDES  # noqa: E402
+from .in_order_guides_games import GUIDES as _GAME_GUIDES  # noqa: E402
+from .in_order_guides_books import GUIDES as _BOOK_GUIDES  # noqa: E402
+
+for _more in (_FILM_GUIDES, _SERIES_GUIDES, _ANIME_GUIDES, _GAME_GUIDES, _BOOK_GUIDES):
+    _clash = set(_more) & set(GUIDES)
+    if _clash:
+        raise ValueError(f"In order guide slugs used twice: {sorted(_clash)}")
+    GUIDES.update(_more)
