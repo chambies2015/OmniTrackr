@@ -118,6 +118,7 @@
       if (actionName === 'show-register-form' || actionName === 'show-login-form') {
         event.preventDefault();
         if (action.hasAttribute && action.hasAttribute('data-hero-signup')) report('hero_signup_clicked');
+        if (action.hasAttribute && action.hasAttribute('data-home-cta')) report('home_cta_clicked');
         showForm(actionName);
         return;
       }
@@ -134,6 +135,25 @@
     }
 
     if (event.target.closest('a[data-hero-signup]')) report('hero_signup_clicked');
+    if (event.target.closest('a[data-home-cta]')) report('home_cta_clicked');
+    if (event.target.closest('[data-home-tool]')) report('home_tool_opened');
+
+    // "Sign up and import": remember the import intent the way /?start=import does,
+    // then open the sign-up pop-up here instead of reloading the page.
+    var importLink = event.target.closest('a[data-home-import]');
+    if (importLink) {
+      report('home_import_clicked');
+      try {
+        sessionStorage.setItem('omnitrackr_demo_start', JSON.stringify({source: 'import', created_at: Date.now()}));
+      } catch (error) {
+        return; // No storage: follow the link, which sets the intent on load.
+      }
+      if (typeof window.showRegisterForm === 'function') {
+        event.preventDefault();
+        window.showRegisterForm();
+      }
+      return;
+    }
 
     // Show/Hide password buttons are handled by auth.js, which every sign-in form loads.
     if (event.target.closest('[data-password-toggle]')) return;
@@ -158,4 +178,98 @@
   document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') closePreview();
   });
+  // Look inside: tabs over real screens. Arrow keys move between tabs (WAI-ARIA tabs pattern).
+  var canQuery = typeof document.querySelector === 'function';
+  var tour = canQuery ? document.querySelector('[data-tour]') : null;
+  if (tour) {
+    var tabs = Array.prototype.slice.call(tour.querySelectorAll('[data-tour-tab]'));
+    var tourReported = false;
+    function selectTab(tab, focus) {
+      tabs.forEach(function (other) {
+        var selected = other === tab;
+        other.setAttribute('aria-selected', String(selected));
+        other.tabIndex = selected ? 0 : -1;
+        var panel = document.getElementById(other.getAttribute('aria-controls'));
+        if (!panel) return;
+        panel.hidden = !selected;
+        if (selected) {
+          panel.classList.remove('is-entering');
+          void panel.offsetWidth; // restart the fade
+          panel.classList.add('is-entering');
+        }
+      });
+      if (focus) tab.focus();
+      if (typeof tab.scrollIntoView === 'function' && tab.parentNode.scrollWidth > tab.parentNode.clientWidth) {
+        tab.scrollIntoView({block: 'nearest', inline: 'center'});
+      }
+      if (!tourReported) {
+        tourReported = true;
+        report('home_tour_opened');
+      }
+    }
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () { selectTab(tab, false); });
+      tab.addEventListener('keydown', function (event) {
+        var next = null;
+        if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+        if (event.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length];
+        if (event.key === 'Home') next = tabs[0];
+        if (event.key === 'End') next = tabs[tabs.length - 1];
+        if (next) {
+          event.preventDefault();
+          selectTab(next, true);
+        }
+      });
+    });
+  }
+
+  // Binge calculator demo: series + hours a day -> days and a finish date, worked out here.
+  var binge = canQuery ? document.querySelector('[data-binge-demo]') : null;
+  if (binge) {
+    var select = binge.querySelector('select');
+    var paces = Array.prototype.slice.call(binge.querySelectorAll('[data-hours]'));
+    var bingeReported = false;
+    function hoursText(minutes) {
+      var whole = Math.round(minutes);
+      var hours = Math.floor(whole / 60);
+      var mins = whole % 60;
+      return hours.toLocaleString('en-US') + ' hours' + (mins && hours < 100 ? ' ' + mins + ' min' : '');
+    }
+    function updateBinge(fromVisitor) {
+      var option = select && select.options[select.selectedIndex];
+      if (!option) return;
+      var pace = paces.filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })[0];
+      var hoursPerDay = pace ? Number(pace.getAttribute('data-hours')) : 2;
+      var minutes = Number(option.getAttribute('data-minutes'));
+      var episodes = Number(option.getAttribute('data-episodes'));
+      var days = Math.ceil(minutes / (hoursPerDay * 60));
+      var finish = new Date();
+      finish.setDate(finish.getDate() + days - 1);
+      binge.querySelector('[data-binge-days]').textContent = days.toLocaleString('en-US');
+      binge.querySelector('[data-binge-days-word]').textContent = days === 1 ? 'day' : 'days';
+      binge.querySelector('[data-binge-detail]').textContent = episodes.toLocaleString('en-US') + ' episodes, about ' + hoursText(minutes) + ' in all.';
+      var finishLine = binge.querySelector('[data-binge-finish]');
+      finishLine.textContent = '';
+      finishLine.appendChild(document.createTextNode('Start today and you finish on '));
+      var when = document.createElement('strong');
+      when.textContent = finish.toLocaleDateString('en-US', days > 300 ? {month: 'long', day: 'numeric', year: 'numeric'} : {weekday: 'long', month: 'long', day: 'numeric'});
+      finishLine.appendChild(when);
+      finishLine.appendChild(document.createTextNode('.'));
+      finishLine.hidden = false;
+      var link = binge.querySelector('[data-binge-link]');
+      if (link) link.setAttribute('href', '/binge-calculator/' + option.value);
+      if (fromVisitor && !bingeReported) {
+        bingeReported = true;
+        report('home_binge_demo_used');
+      }
+    }
+    if (select) select.addEventListener('change', function () { updateBinge(true); });
+    paces.forEach(function (button) {
+      button.addEventListener('click', function () {
+        paces.forEach(function (other) { other.setAttribute('aria-pressed', String(other === button)); });
+        updateBinge(true);
+      });
+    });
+    updateBinge(false);
+  }
 })();

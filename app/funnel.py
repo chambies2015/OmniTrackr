@@ -61,6 +61,11 @@ REJECTIONS = (
 )
 GUEST = (
     ("hero_signup_clicked", "Sign-up button at the top of the homepage pressed"),
+    ("home_cta_clicked", "Homepage: a sign-up button between sections pressed"),
+    ("home_tour_opened", "Homepage: a visitor switched screens in the Look inside tour"),
+    ("home_import_clicked", "Homepage: Sign up and import pressed"),
+    ("home_binge_demo_used", "Homepage: binge calculator demo changed"),
+    ("home_tool_opened", "Homepage: a free tool or switching guide opened"),
     ("title_search_used", "Guest searched for a title on the homepage"),
     ("guest_pick_added", "Guest saved a title"),
     ("pick_used", "Pick for me suggestion asked for"),
@@ -183,7 +188,8 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "tonight_poll_draft_started", "tonight_poll_draft_signup", "tonight_poll_draft_sent", "tonight_poll_shared",
                  "tonight_poll_winner_saved", "tonight_poll_where_clicked",
                  "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked",
-                 "advent_guest_opened", "advent_shared", "advent_signup_clicked"}
+                 "advent_guest_opened", "advent_shared", "advent_signup_clicked",
+                 "home_cta_clicked", "home_tour_opened", "home_import_clicked", "home_binge_demo_used", "home_tool_opened"}
 
 
 def record(event: str, request=None) -> bool:
