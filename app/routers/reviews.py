@@ -26,7 +26,7 @@ from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
-from ..visitor_identity import set_visitor_cookie, visitor_identity
+from ..visitor_identity import first_report_from_address, set_visitor_cookie, visitor_identity
 
 router = APIRouter(tags=["reviews"])
 
@@ -1304,6 +1304,9 @@ def report_public_review(
             models.PublicReviewReport.visitor_hash == visitor_hash,
         ).first()
         duplicate = bool(existing)
+        if not duplicate and not first_report_from_address(request, f"review:{category}:{review_id}:{current_hash}"):
+            # Another browser on the same network already reported this version; it counts once.
+            duplicate = True
         if not duplicate:
             db.add(models.PublicReviewReport(
                 state_id=state_row.id,

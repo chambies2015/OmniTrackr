@@ -3,7 +3,7 @@ Account management endpoints for the OmniTrackr API.
 """
 import io
 from fastapi.concurrency import run_in_threadpool
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -136,6 +136,7 @@ async def change_email(
 @router.put("/password", response_model=dict)
 def change_password(
     password_change: schemas.PasswordChange,
+    background_tasks: BackgroundTasks,
     request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -162,6 +163,9 @@ def change_password(
         updated_user.password_set = True
         db.commit()
 
+    # A heads-up to the account's email, in case someone else holds this session.
+    background_tasks.add_task(email_utils.send_security_notice_quietly, updated_user.email,
+                              updated_user.username, *email_utils.PASSWORD_CHANGED_NOTICE)
     # Other devices are signed out by the new password; keep this one signed in.
     response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})
     auth.set_auth_cookie(response, auth.create_user_access_token(updated_user))
