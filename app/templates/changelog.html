@@ -74,6 +74,17 @@
         </ul>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov15b-2026-heading">
+        <h2 id="security-nov15b-2026-heading">November 15, 2026: A security check of the whole site</h2>
+        <p>Earlier checks looked at each new feature as it shipped. This one went over the whole site: signing in, two-step codes and passkeys, every address that reads or changes a library, list, club, poll or gift list, the import files, uploads and the emails we send. We tried every member address as a second account and as a signed-out visitor, and none of them showed or changed anything that wasn't theirs. Three things are fixed.</p>
+        <ul>
+          <li>A public review or list is hidden after three different visitors report it. "Different" was checked with a browser cookie only, so one person could clear their cookies and report the same review three times. Reports from one network now count once per review or list. We never save the address: the server keeps a scrambled code for a week, in memory only.</li>
+          <li>Changing your password, resetting it, or moving your account to a new email address now sends a short notice to the email the account had before. If someone else ever gets into your account and does one of these, you hear about it.</li>
+          <li>The older review page could let a quote mark in a title end a picture's description early. It is escaped properly now.</li>
+        </ul>
+        <p>Your library, reviews, lists and settings are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="guides-nov15-2026-heading">
         <h2 id="guides-nov15-2026-heading">November 15, 2026: The "how long" guides join the guide list, and a privacy policy update</h2>
         <ul>

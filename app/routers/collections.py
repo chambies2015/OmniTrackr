@@ -29,6 +29,7 @@ from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..visitor_identity import (
     VISITOR_COOKIE,
+    first_report_from_address as _first_report_from_address,
     set_visitor_cookie as _set_visitor_cookie,
     sign_visitor_token as _sign_visitor_token,
     visitor_identity as _visitor_identity,
@@ -1578,6 +1579,10 @@ def _record_report(collection: models.Collection, payload, request: Request, db:
             models.CollectionReport.visitor_hash == visitor_hash,
         ).first()
         duplicate = bool(existing)
+        if not duplicate and not _first_report_from_address(request, f"collection:{collection.id}:{current_hash}"):
+            # Another browser on the same network already reported this version (on its public
+            # page or its share link); it counts once.
+            duplicate = True
         if not duplicate:
             db.add(models.CollectionReport(
                 collection_id=collection.id,

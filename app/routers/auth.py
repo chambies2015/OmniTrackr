@@ -4,7 +4,7 @@ Authentication endpoints for the OmniTrackr API.
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -386,7 +386,7 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
 
 
 @router.get("/verify-email")
-def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
+def verify_email(token: str, background_tasks: BackgroundTasks, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
@@ -458,6 +458,9 @@ def verify_email(token: str, request: Request = None, db: Session = Depends(get_
             user.verification_token = None
             db.commit()
             db.refresh(user)
+            # The old address hears about it, so a hijacked session can't move the account quietly.
+            background_tasks.add_task(email_utils.send_security_notice_quietly, old_email, user.username,
+                                      *email_utils.email_changed_notice(new_email))
             
             return {"message": "Email changed successfully! Your new email is now verified."}
         except HTTPException:
@@ -558,7 +561,8 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-def reset_password(payload: schemas.PasswordReset, request: Request, db: Session = Depends(get_db)):
+def reset_password(payload: schemas.PasswordReset, request: Request, background_tasks: BackgroundTasks,
+                   db: Session = Depends(get_db)):
     """Reset password with valid token."""
     token = payload.token
     new_password = payload.new_password
@@ -596,6 +600,8 @@ def reset_password(payload: schemas.PasswordReset, request: Request, db: Session
     user.reset_token_expires = None
     db.commit()
     db.refresh(user)
+    background_tasks.add_task(email_utils.send_security_notice_quietly, user.email, user.username,
+                              *email_utils.PASSWORD_RESET_NOTICE)
     
     return {"message": "Password reset successfully! You can now login with your new password."}
 

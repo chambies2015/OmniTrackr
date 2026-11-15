@@ -161,21 +161,14 @@ app = FastAPI(
 )
 
 def client_address(request: Request) -> str:
-    """The visitor's address for rate limits.
+    """The visitor's address for rate limits (see visitor_identity.client_address).
 
     On Render every request reaches the app from an internal load balancer, so
-    limits keyed on the socket address were shared by all visitors (for example
-    five sign-ups a minute for the whole site). Render sits behind Cloudflare,
-    which sets True-Client-IP / CF-Connecting-IP to the real visitor and
-    overwrites any value a client sends. Those headers are trusted only when
-    running on Render (RENDER=true, set by Render itself).
+    limits keyed on the socket address were shared by all visitors. The header
+    rules live in visitor_identity so report counting uses the same address.
     """
-    if os.getenv("RENDER", "").lower() == "true":
-        for header in ("true-client-ip", "cf-connecting-ip"):
-            value = (request.headers.get(header) or "").strip()
-            if value:
-                return value[:64]
-    return get_remote_address(request)
+    from .visitor_identity import client_address as visitor_address
+    return visitor_address(request)
 
 
 if os.getenv("TESTING", "").lower() == "true":

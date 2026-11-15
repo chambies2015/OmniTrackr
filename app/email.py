@@ -576,6 +576,80 @@ async def send_two_factor_change_email(email: str, username: str, turned_on: boo
         print(f"INFO: Two-factor {'enabled' if turned_on else 'disabled'} notice for {email} (email not configured)")
 
 
+async def send_security_notice_email(email: str, username: str, subject: str, headline: str, body: str):
+    """Tell a member their password or sign-in email just changed, in case it wasn't them.
+
+    Sent to the address the account had before the change, so someone who took
+    over a session can't hide it by moving the email first.
+    """
+    reset_url = f"{APP_URL}/#landing-auth"
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">{_escape_html(headline)}</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hi {_escape_html(username)},</h2>
+                <p>{_escape_html(body)}</p>
+                <p>If this was you, there's nothing else to do.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}"
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Open OmniTrackr
+                    </a>
+                </div>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    If you didn't make this change, use "Forgot password" on the log-in form right away and email omnitrackr@gmail.com so we can help.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    message = html_message(subject, [email], html)
+    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
+        import asyncio
+        fm = FastMail(conf)
+        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+    else:
+        print(f"INFO: Security notice ({headline}) for {email} (email not configured)")
+
+
+async def send_security_notice_quietly(email: str, username: str, subject: str, headline: str, body: str) -> None:
+    """Background-task wrapper: the change already happened, so a failed email never undoes it."""
+    if not email:
+        return
+    try:
+        await send_security_notice_email(email, username, subject, headline, body)
+    except Exception as e:
+        print(f"Failed to send security notice: {e}")
+
+
+PASSWORD_CHANGED_NOTICE = (
+    "Your OmniTrackr password was changed",
+    "Your password was changed",
+    "The password for your OmniTrackr account was just changed. Every other browser and phone that was "
+    "signed in has been signed out.",
+)
+PASSWORD_RESET_NOTICE = (
+    "Your OmniTrackr password was reset",
+    "Your password was reset",
+    "The password for your OmniTrackr account was just reset with a link sent to this address. Every "
+    "browser and phone that was signed in has been signed out.",
+)
+
+
+def email_changed_notice(new_email: str) -> tuple[str, str, str]:
+    return (
+        "Your OmniTrackr sign-in email was changed",
+        "Your sign-in email was changed",
+        f"Your OmniTrackr account now signs in with {new_email}. Emails from OmniTrackr will go there from now on, "
+        "and this address will no longer get them.",
+    )
+
+
 async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
     """Ask the owner of a Ko-fi email to confirm that a payment from it belongs to this OmniTrackr account."""
     html = f"""

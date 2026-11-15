@@ -227,10 +227,15 @@ function displayReview(review) {
   }
 }
 
+// Also escapes quotes: the result goes into src="" and alt="" attributes too, where a
+// title with a double quote could otherwise end the attribute and add its own.
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 document.addEventListener('error', (event) => {
