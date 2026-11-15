@@ -266,6 +266,10 @@ def clear_cache() -> None:
         _guides_cache["day"], _guides_cache["entries"] = None, []
     with _people_lock:
         _people_cache.update(at=0.0, entries=None, building=False)
+    with _suggest_lock:
+        _suggest_cache.update(entries=None, size=0, names={})
+    with _popular_lock:
+        _popular_cache.update(entries=None, size=0, lists={})
 
 
 # ---------------------------------------------------------------- titles
@@ -278,8 +282,30 @@ def title_result(entry: dict, image_width: int = 200) -> dict:
             "members": entry["members"] if entry["members"] >= 2 else 0}
 
 
+_popular_cache: dict = {"entries": None, "size": 0, "lists": {}}
+_popular_lock = threading.Lock()
+
+
 def popular(entries: list[dict], kind: Optional[str] = None, limit: int = POPULAR_LIMIT) -> list[dict]:
-    """The most-tracked titles, taking turns between formats so one doesn't fill the list."""
+    """The most-tracked titles, taking turns between formats so one doesn't fill the list.
+
+    Sorting the whole index takes a while on a big one and the answer only changes when the
+    index is rebuilt, so each (format, length) is worked out once per index.
+    """
+    with _popular_lock:
+        cache = _popular_cache
+        if cache["entries"] is not entries or cache["size"] != len(entries):
+            cache.update(entries=entries, size=len(entries), lists={})
+        found = cache["lists"].get((kind, limit))
+    if found is None:
+        found = _popular(entries, kind, limit)
+        with _popular_lock:
+            if _popular_cache["entries"] is entries:
+                _popular_cache["lists"][(kind, limit)] = found
+    return [dict(item) for item in found]
+
+
+def _popular(entries: list[dict], kind: Optional[str], limit: int) -> list[dict]:
     pool = [e for e in entries if e["members"] >= 2 and (kind is None or e["kind"] == kind)]
     pool.sort(key=lambda e: (-e["members"], e["image"] is None, e["title"].casefold()))
     if kind:
@@ -295,30 +321,85 @@ def popular(entries: list[dict], kind: Optional[str] = None, limit: int = POPULA
     return [title_result(e) for e in picked[:limit]]
 
 
-def suggest(text: str, entries: list[dict], guides: list[dict]) -> Optional[str]:
+_NO_GUIDES: list = []  # one list, so format-filtered suggestions stay cached
+_suggest_cache: dict = {"entries": None, "size": 0, "names": {}}
+_suggest_lock = threading.Lock()
+
+
+def _suggest_names(entries: list[dict], guides: list[dict], kind: Optional[str]) -> dict:
+    """Spellings a suggestion can come from, worked out once per title index, format and guide list.
+
+    {"names": {base: title}, "by_length": {len(base): [base, ...]}}
+    """
+    with _suggest_lock:
+        cache = _suggest_cache
+        if cache["entries"] is not entries or cache["size"] != len(entries):
+            cache.update(entries=entries, size=len(entries), names={})
+        kept = cache["names"].get(kind)
+        if kept is not None and kept[0] is guides:
+            return kept[1]
+    names: dict[str, str] = {}
+    for entry in entries:
+        if kind is None or entry["kind"] == kind:
+            names.setdefault(entry["base"], entry["title"])
+    for entry in guides:
+        if entry["section"] != "Page":
+            names.setdefault(entry["base"], entry["title"])
+    by_length: dict[int, list[str]] = {}
+    for base in names:
+        by_length.setdefault(len(base), []).append(base)
+    found = {"names": names, "by_length": by_length}
+    with _suggest_lock:
+        if _suggest_cache["entries"] is entries:
+            _suggest_cache["names"][kind] = (guides, found)
+    return found
+
+
+def _close_match(query: str, candidates, cutoff: float) -> Optional[str]:
+    """difflib.get_close_matches(query, candidates, n=1, cutoff), skipping first the candidates that
+    can't reach the cutoff: too long or short, or missing too many of the query's letters. Both
+    checks are upper bounds on difflib's own ratio, so the answer is the same, only cheaper."""
+    length = len(query)
+    letters = {letter: query.count(letter) for letter in set(query)}
+    keep = []
+    for candidate in candidates:
+        total = length + len(candidate)
+        if 2.0 * min(length, len(candidate)) / total < cutoff:
+            continue
+        shared = length - sum(count for letter, count in letters.items() if letter not in candidate)
+        if 2.0 * shared / total >= cutoff:
+            keep.append(candidate)
+    close = difflib.get_close_matches(query, keep, n=1, cutoff=cutoff)
+    return close[0] if close else None
+
+
+def suggest(text: str, entries: list[dict], guides: list[dict], kind: Optional[str] = None) -> Optional[str]:
     """A close spelling for a search that found nothing ("interstelar" -> "Interstellar")."""
     query, tokens = _query(text)
     if len(query) < 4:
         return None
-    names: dict[str, str] = {}
-    for entry in entries:
-        names.setdefault(entry["base"], entry["title"])
-    for entry in guides:
-        if entry["section"] != "Page":
-            names.setdefault(entry["base"], entry["title"])
-    close = difflib.get_close_matches(query, list(names), n=1, cutoff=SUGGEST_CUTOFF)
+    found = _suggest_names(entries, guides, kind)
+    names, by_length = found["names"], found["by_length"]
+    # difflib's ratio is at most 2*shorter/(both lengths), so only these lengths can reach the cutoff.
+    lengths = [n for n in by_length if 2.0 * min(n, len(query)) / (n + len(query)) >= SUGGEST_CUTOFF]
+    close = _close_match(query, (base for n in lengths for base in by_length[n]), SUGGEST_CUTOFF)
     if close:
-        return names[close[0]]
+        return names[close]
     # A long title typed in part: "witchr 3" against "the-witcher-3-wild-hunt".
-    prefixes = {}
+    prefixes: dict[str, str] = {}
     for base, title in names.items():
         prefixes.setdefault(base[:len(query)], title)
-    close = difflib.get_close_matches(query, list(prefixes), n=1, cutoff=SUGGEST_CUTOFF + 0.06)
-    return prefixes[close[0]] if close else None
+    close = _close_match(query, prefixes, SUGGEST_CUTOFF + 0.06)
+    return prefixes[close] if close else None
 
 
-def search(db: Session, text: str, kind: Optional[str] = None, limit: int = title_search.RESULT_LIMIT) -> dict:
-    """Everything for one search box value. An empty value returns popular titles instead."""
+def search(db: Session, text: str, kind: Optional[str] = None, limit: int = title_search.RESULT_LIMIT,
+           counts: bool = False) -> dict:
+    """Everything for one search box value. An empty value returns popular titles instead.
+
+    ``counts`` adds {None: every match, kind: matches in that format} for the format chips
+    on the /search page, from the same ranking pass.
+    """
     kind = kind if kind in title_pages.KINDS else None
     entries = title_search.index(db)
     query, tokens = _query(text)
@@ -327,7 +408,15 @@ def search(db: Session, text: str, kind: Optional[str] = None, limit: int = titl
     if not tokens:
         result["popular"] = popular(entries, kind)
         return result
-    matches = title_search.ranked(entries, text, kind=kind)
+    if counts:
+        everything = title_search.ranked(entries, text)
+        tally = {None: len(everything)}
+        for entry in everything:
+            tally[entry["kind"]] = tally.get(entry["kind"], 0) + 1
+        result["counts"] = tally
+        matches = everything if kind is None else [entry for entry in everything if entry["kind"] == kind]
+    else:
+        matches = title_search.ranked(entries, text, kind=kind)
     result["titles"] = [title_result(e) for e in matches[:limit]]
     result["more"] = len(matches) > limit
     result["total"] = len(matches)
@@ -335,8 +424,7 @@ def search(db: Session, text: str, kind: Optional[str] = None, limit: int = titl
         result["guides"] = search_guides(text)
         result["people"] = search_people(db, text)
     if not (result["titles"] or result["guides"] or result["people"]):
-        suggestion = suggest(text, entries if kind is None else [e for e in entries if e["kind"] == kind],
-                             guide_entries() if kind is None else [])
+        suggestion = suggest(text, entries, guide_entries() if kind is None else _NO_GUIDES, kind=kind)
         if suggestion and title_pages.slugify(suggestion) != query:
             result["suggestion"] = suggestion
     return result

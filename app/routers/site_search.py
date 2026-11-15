@@ -167,14 +167,11 @@ def _guest_bar(signed_in: bool) -> str:
 
 def render(db: Session, q: str, kind: Optional[str], signed_in: bool) -> str:
     q = " ".join((q or "").split())[:site_search.QUERY_MAX]
-    result = site_search.search(db, q, kind, limit=PAGE_RESULTS)
+    result = site_search.search(db, q, kind, limit=PAGE_RESULTS, counts=True)
     searching = bool(q) and "popular" not in result
     if searching:
         heading = f"Results for “{q}”"
-        everything = title_search.ranked(title_search.index(db), q)
-        counts = {None: len(everything)}
-        for entry in everything:
-            counts[entry["kind"]] = counts.get(entry["kind"], 0) + 1
+        counts = result.get("counts", {})
     else:
         heading = "Find something to watch, play, read or hear"
         counts = {}

@@ -22,6 +22,8 @@ FAILURE_RETRY_SECONDS = 60
 ROWS_PER_KIND = 50000
 RESULT_LIMIT = 8
 QUERY_MAX = 80
+# Indexes this big get a two-letter lookup so a search only ranks titles that can match.
+PREFIX_MIN_ENTRIES = 2000
 _cache: dict = {"at": 0.0, "entries": None}
 _lock = threading.Lock()
 _build_lock = threading.Lock()  # one rebuild at a time; other requests keep using the old index
@@ -88,6 +90,8 @@ def index(db: Session) -> list[dict]:
             with _lock:
                 _cache["at"], _cache["entries"] = time.monotonic() - CACHE_SECONDS + FAILURE_RETRY_SECONDS, entries
             return entries
+        if len(entries) >= PREFIX_MIN_ENTRIES:
+            _prefix_positions(entries)  # ready before any search sees the new index
         with _lock:
             _cache["at"], _cache["entries"] = time.monotonic(), entries
         return entries
@@ -98,6 +102,37 @@ def index(db: Session) -> list[dict]:
 def clear_cache() -> None:
     with _lock:
         _cache["at"], _cache["entries"] = 0.0, None
+    with _prefix_lock:
+        _prefix_cache.update(entries=None, size=0, positions=None)
+
+
+_prefix_cache: dict = {"entries": None, "size": 0, "positions": None}
+_prefix_lock = threading.Lock()
+
+
+def _prefix_positions(entries: list[dict]) -> dict[str, list[int]]:
+    """{first two letters of a title word: positions in `entries`}, worked out once per index."""
+    with _prefix_lock:
+        if _prefix_cache["entries"] is entries and _prefix_cache["size"] == len(entries):
+            return _prefix_cache["positions"]
+    positions: dict[str, list[int]] = {}
+    for position, entry in enumerate(entries):
+        for prefix in {word[:2] for word in entry["words"] if len(word) >= 2}:
+            positions.setdefault(prefix, []).append(position)
+    with _prefix_lock:
+        _prefix_cache.update(entries=entries, size=len(entries), positions=positions)
+    return positions
+
+
+def _candidates(entries: list[dict], tokens: list[str]) -> list[dict]:
+    """The entries that can match: every query word must start a title word, so a title without a
+    word starting with the rarest query word's first two letters is skipped. Index order is kept."""
+    keys = [token[:2] for token in tokens if len(token) >= 2]
+    if len(entries) < PREFIX_MIN_ENTRIES or not keys:
+        return entries
+    positions = _prefix_positions(entries)
+    narrowest = min((positions.get(key, ()) for key in keys), key=len)
+    return [entries[position] for position in narrowest]
 
 
 def _rank(entry: dict, query: str, tokens: list[str]) -> int | None:
@@ -123,7 +158,7 @@ def ranked(entries: list[dict], text: str, kind: str | None = None) -> list[dict
         return []
     tokens = [token for token in query.split("-") if token]
     scored = []
-    for entry in entries:
+    for entry in _candidates(entries, tokens):
         if kind is not None and entry["kind"] != kind:
             continue
         rank = _rank(entry, query, tokens)

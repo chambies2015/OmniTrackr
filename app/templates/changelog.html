@@ -74,6 +74,27 @@
         </ul>
       </section>
 
+      <section class="privacy-section" aria-labelledby="guides-nov15-2026-heading">
+        <h2 id="guides-nov15-2026-heading">November 15, 2026: The "how long" guides join the guide list, and a privacy policy update</h2>
+        <ul>
+          <li>The 30 "how long does it take" guides are now listed with every other guide on the <a href="/content-quality">editorial standards</a> page, with the date each was last checked. That page also explains how their totals are worked out and how the awards pages handle nominees.</li>
+          <li>Guides about the same series now point to each other. The Game of Thrones watch order links to how long the show takes, and the other way round.</li>
+          <li>The <a href="/privacy">privacy policy</a> now covers what shipped in the last two weeks: two-step sign-in, passkeys, episode notes, award ballots, the advent calendar, gift lists, shared lists and clubs, and what stays in your browser before you sign up. It also says what Ko-fi tells us when you support the site and how the Amazon links work.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="security-nov15-2026-heading">
+        <h2 id="security-nov15-2026-heading">November 15, 2026: Security and speed check of the new search and order guides</h2>
+        <p>We went over what shipped on November 14: the new search box and /search page, 24 more franchise order guides, and the advent calendar and profile fixes from the last check. We looked at whether search could show anything from a private library, whether its addresses are rate limited, and how much work one search does. Search only reads titles from libraries you share, never names who tracks a title, and has a limit on every address. The fixes are all about speed, and every search still gives the same results in the same order.</p>
+        <ul>
+          <li>Every search compared what you typed against every title on the site. It now looks only at titles with a word starting the same way as one of yours. On a test list of 30,000 titles, a typical search went from about 26 ms to between 1 and 6 ms.</li>
+          <li>"Did you mean" compared a misspelling against every title name, two times over. It now skips names that are too long, too short or missing too many of your letters to count as a close match, and keeps the list of names until the titles change. A search that finds nothing went from about 50 ms to about 10 ms.</li>
+          <li>The popular titles shown in an empty search box and on the empty /search page were worked out from scratch on every view, twice on the page. They are now kept until the title list changes, which takes the empty page from about 90 ms to 1 ms.</li>
+          <li>The /search page ranked every title twice: once for the results and once for the counts on the format buttons. It now does both in one pass.</li>
+        </ul>
+        <p>Your library, your saved lists and your recent searches are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="search-nov14-2026-heading">
         <h2 id="search-nov14-2026-heading">November 14, 2026: A better search box</h2>
         <p>The search at the top of every page now finds more than titles, and you can save what it finds without leaving it.</p>

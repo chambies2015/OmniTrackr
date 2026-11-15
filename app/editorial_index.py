@@ -1,8 +1,9 @@
 """Every written guide on the public site, in one list.
 
 The Discover guides, monthly editions, "In order" and "If you liked" guides, the
-seasonal hubs, the best-of-the-year lists and the release guides are the pages a
-visitor can read in full without an account. They live in seven catalogs; this module gathers them so the
+seasonal hubs, the best-of-the-year lists, the release guides and the "how long does
+it take" guides are the pages a visitor can read in full without an account. They live
+in eight catalogs; this module gathers them so the
 homepage (and anything else that wants "the latest reading") links to them without
 knowing each catalog's shape.
 """
@@ -30,6 +31,7 @@ SECTION_LABELS = {
     "seasonal": "Seasonal",
     "best-of": "Best of the year",
     "new-releases": "Release guide",
+    "binge": "How long it takes",
 }
 
 
@@ -106,6 +108,16 @@ def _new_releases() -> list[dict]:
             for slug, guide in new_releases.published().items()]
 
 
+def _binge() -> list[dict]:
+    # Only the guides long enough to be indexed, so the ledger and the cross-links
+    # never point readers (or Google) at a page that is kept out of search.
+    from . import binge_calculator
+    from .binge_guides import GUIDES
+    return [{"section": "binge", "href": binge_calculator.path(slug), "name": binge_calculator.heading(guide),
+             "summary": guide["summary"], "updated": guide["reviewed"]}
+            for slug, guide in GUIDES.items() if binge_calculator.is_indexable(guide)]
+
+
 def _new_year() -> list[dict]:
     from . import new_year_challenge
     from .new_year_challenge_guide import GUIDES
@@ -138,7 +150,7 @@ def _awards() -> list[dict]:
 
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _new_releases()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _new_releases() + _binge()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 
@@ -202,6 +214,7 @@ SECTION_ORDER = (
     ("seasonal", "Seasonal picks", "/halloween"),
     ("best-of", "Best of the year", "/best-of"),
     ("new-releases", "Release guides", "/new-releases"),
+    ("binge", "How long it takes", "/binge-calculator"),
 )
 
 

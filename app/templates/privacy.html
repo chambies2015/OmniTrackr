@@ -59,7 +59,7 @@
 
     <div class="privacy-header">
       <h1>Privacy Policy</h1>
-      <p>Last Updated: October 30, 2026</p>
+      <p>Last Updated: November 15, 2026</p>
     </div>
 
     <div class="privacy-section">
@@ -87,6 +87,8 @@
         <li><strong>Profile Picture:</strong> Optional image you may upload, stored securely on our servers</li>
         <li><strong>Account Creation Date:</strong> Timestamp of when your account was created</li>
         <li><strong>Sign in with Google (optional):</strong> If you choose to sign up or log in with Google, Google tells us your email address, your first name and a Google account ID. We use the first name once to suggest a username, keep the account ID only to recognise you the next time you sign in with Google, and do not receive your Google password or access to anything else in your Google account</li>
+        <li><strong>Two-step sign-in (optional):</strong> If you turn on codes from an authenticator app, we keep the app's secret encrypted, the time step of the last code you used so the same code can't be used twice, and your recovery codes as one-way keyed hashes. If you tick "remember this browser", a signed cookie lets that browser skip the code for 30 days. Turning two-step sign-in off or choosing "forget remembered browsers" stops every remembered browser from skipping it</li>
+        <li><strong>Passkeys (optional):</strong> If you add a passkey, we store the credential ID and public key your device creates, the name you give it, the transport and authenticator model your browser reports, whether it is backed up, a signature counter, and when it was added and last used. Your fingerprint, face or device PIN never leaves your device and never reaches us</li>
         <li><strong>Successful Login Activity:</strong> The most recent successful login time and a running successful-login count, used for account security, support, and aggregate activation measurement</li>
         <li><strong>Visit Days:</strong> The most recent day (not the time) you opened OmniTrackr while signed in and a count of the different days you have, used for aggregate return measurement, the Welcome Back Deck, and deciding whether you have been away long enough for a come-back email. No page, search, or session-by-session history is kept</li>
       </ul>
@@ -109,6 +111,12 @@
         <li><strong>Activity Journal:</strong> Private timestamps, activity types, title snapshots, rating snapshots, and notes that you create, plus first-completion entries created through the finish reflection flow</li>
         <li><strong>Title discussions:</strong> The subject and text of threads and replies you post on public title pages, when you posted or edited them, and any reports members make about a post</li>
         <li><strong>Group polls:</strong> The question and titles you put on a poll, when it closes, and each vote. A member's vote is stored with their account; a visitor's vote is stored with a keyed hash of a browser cookie and the name they typed</li>
+        <li><strong>Episode notes:</strong> The 1 to 10 score, note and spoiler flag you add to an episode in the episode guide, and when you saved them. They are private and are not shown on your profile or to friends</li>
+        <li><strong>Goals, challenges and badges:</strong> Your yearly goals and pledge, which monthly challenges you joined and finished, and the badges you have earned, with their dates</li>
+        <li><strong>Award ballots:</strong> Your picks for each awards show and when you changed them. The "how everyone voted" percentages are shown only after a ballot locks and only once at least five members have filled one in, and they never name anyone. If you make a share link, anyone with it can see that ballot. A ballot you fill in without an account stays in your browser until you sign up</li>
+        <li><strong>Advent calendar:</strong> Which doors you opened and on which day, and whether you asked for a daily reminder</li>
+        <li><strong>Gift lists:</strong> The titles and notes on your gift list, and whether its link is shared. When someone with the link marks a gift as one they are getting, we store the time and a one-way hash of a key that only their browser holds, so only they can undo it. We do not record who they are, and you are never shown which gifts were marked</li>
+        <li><strong>Shared lists and clubs:</strong> The lists you start or join, the titles added to them, who is in for each title, and in a club how far each member has got and the posts they write. Only members of that list or club can see these. Anyone with an invite link can see the list's name and who started it</li>
         <li><strong>Recommendation Postcards:</strong> The question, allowed media types, expiration and response limit you choose, plus submitted titles, reasons, guest display names, and owner decisions</li>
       </ul>
       <p>Your Activity Journal and weekly playback are private account features. They are not shown to friends, placed on public pages, offered to search engines, or used to show ads.</p>
@@ -146,6 +154,7 @@
         <li><strong>Google Analytics:</strong> To understand visits to the public landing experience; the private signed-in dashboard does not load Google Analytics, and the public loader honors supported Global Privacy Control and Do Not Track signals</li>
         <li><strong>Google AdSense:</strong> To display relevant advertisements (if applicable)</li>
         <li><strong>Browser Storage:</strong> Local storage keeps interface preferences and supports legacy authentication sessions; session storage temporarily holds Welcome Back eligibility for the current browser session</li>
+        <li><strong>Things saved before you sign up:</strong> Titles you save from a guide or shelf without an account, awards ballot drafts and the advent doors you open are kept in your browser's local storage, and none of it is sent to us until you sign up. After you sign up, saved titles move into your new library and a ballot draft fills in your ballot. Your list of recent site searches stays in the browser and is never sent to us. Clearing your browser data removes all of it</li>
         <li><strong>Public Visitor Cookie:</strong> A signed, HttpOnly, same-site token used to deduplicate collection reactions, collection views, collection reports, public review reports, and group poll votes without browser fingerprinting</li>
       </ul>
 
@@ -196,6 +205,7 @@
         <li><strong>Google Analytics:</strong> We use Google Analytics to understand website usage. Google's use of data is governed by their Privacy Policy</li>
         <li><strong>Google AdSense and advertising partners:</strong> Public pages may display ads through Google AdSense. Google and its partners may use cookies, web beacons, IP addresses, device identifiers, and similar technologies for ad delivery, personalization, measurement, reporting, security, and fraud prevention</li>
         <li><strong>Email Service:</strong> We use email services to send verification and password reset emails</li>
+        <li><strong>Ko-fi:</strong> If you support OmniTrackr on Ko-fi, Ko-fi tells us the amount, whether it is monthly and its tier, the name you gave Ko-fi, and your Ko-fi email address. We keep keyed hashes of that email address and of Ko-fi's transaction ID to link the payment to your account, never the address itself. Ko-fi handles the payment, and we never see your card or bank details</li>
         <li><strong>Hosting Provider:</strong> Our data is stored on Render.com servers, which provides hosting and database services</li>
       </ul>
 
@@ -305,6 +315,8 @@
       <ul>
         <li><strong>Google Analytics:</strong> For website analytics. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a></li>
         <li><strong>Google AdSense:</strong> For advertising on public pages. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a>, <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">Google's advertising technology page</a>, and <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">Google's partner sites page</a></li>
+        <li><strong>Ko-fi:</strong> For donations and supporter memberships. See <a href="https://more.ko-fi.com/privacy" target="_blank" rel="noopener noreferrer">Ko-fi's Privacy Policy</a></li>
+        <li><strong>Amazon Associates:</strong> Some guides link to Amazon searches. As an Amazon Associate, OmniTrackr earns from qualifying purchases. We send Amazon nothing about you. If you follow one of those links, Amazon's own cookies and <a href="https://www.amazon.com/gp/help/customer/display.html?nodeId=GX7NJQ4ZB8MHFRNJ" target="_blank" rel="noopener noreferrer">Amazon's Privacy Notice</a> apply on Amazon's site. See the <a href="/advertising">Advertising Policy</a> for where these links appear</li>
         <li><strong>Render.com:</strong> For hosting and database services. See <a href="https://render.com/privacy" target="_blank" rel="noopener noreferrer">Render's Privacy Policy</a></li>
       </ul>
       <p>
@@ -336,7 +348,7 @@
     </div>
 
     <div class="last-updated">
-      <p>This Privacy Policy was last updated on October 30, 2026</p>
+      <p>This Privacy Policy was last updated on November 15, 2026</p>
     </div>
     </main>
   </div>
