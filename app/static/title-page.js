@@ -1,4 +1,4 @@
-// Title pages: click-to-play trailers (nothing loads from YouTube until asked)
+// Title pages: click-to-play trailers (nothing loads from YouTube until asked), poster rails,
 // "Add to my library", "Write a review" and "Ask a friend" for signed-in members.
 (function () {
   'use strict';
@@ -228,10 +228,51 @@
     }
   }
 
+  // Funnel counts for the title page's own buttons (once per visit, like guest-list.js).
+  function report(event) {
+    // Guest counts only: members' pages have no guest save button.
+    if (!document.querySelector('[data-guest-save]')) return;
+    if (typeof window.reportFunnelEvent === 'function') { window.reportFunnelEvent(event); return; }
+    try {
+      const sent = JSON.parse(sessionStorage.getItem('omnitrackr_funnel_sent') || '[]');
+      if (Array.isArray(sent) && sent.includes(event)) return;
+      sessionStorage.setItem('omnitrackr_funnel_sent', JSON.stringify([...(Array.isArray(sent) ? sent : []), event].slice(-20)));
+    } catch (error) { /* storage blocked: count it anyway */ }
+    try {
+      if (navigator.sendBeacon && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event })], { type: 'application/json' }));
+      }
+    } catch (error) { /* analytics only */ }
+  }
+
   document.addEventListener('click', event => {
     const trailer = event.target.closest && event.target.closest('.title-trailer');
     if (trailer) {
+      report('title_trailer_played');
       playTrailer(trailer);
+      return;
+    }
+    // The hero's "Trailer" button: go to the trailer and start it, in one tap.
+    const jump = event.target.closest && event.target.closest('[data-trailer-jump]');
+    if (jump) {
+      const target = document.querySelector('.title-trailer');
+      if (target) {
+        event.preventDefault();
+        report('title_trailer_played');
+        const section = target.closest('section') || target;
+        const smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        section.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+        playTrailer(target);
+      }
+      return;
+    }
+    if (event.target.closest && event.target.closest('[data-title-signup]')) report('title_signup_clicked');
+    // "Save it first" in the join band presses the hero's save button, which owns saving.
+    const joinSave = event.target.closest && event.target.closest('[data-join-save]');
+    if (joinSave) {
+      const source = document.querySelector('.title-hero [data-guest-save]');
+      if (source && source.getAttribute('aria-pressed') !== 'true') source.click();
+      syncJoinSave();
       return;
     }
     const add = event.target.closest && event.target.closest('[data-title-add]');
@@ -310,8 +351,64 @@
     }).observe(source);
   }
 
+  // ---------- The join band's save button mirrors the hero's ----------
+  function syncJoinSave() {
+    const button = document.querySelector('[data-join-save]');
+    const source = document.querySelector('.title-hero [data-guest-save]');
+    if (!button || !source) return;
+    const saved = source.getAttribute('aria-pressed') === 'true';
+    if (!button.dataset.label) button.dataset.label = button.textContent;
+    button.textContent = saved ? 'Saved to your list ✓' : button.dataset.label;
+    button.disabled = saved;
+  }
+
+  function setupJoinSave() {
+    const source = document.querySelector('.title-hero [data-guest-save]');
+    const button = document.querySelector('[data-join-save]');
+    if (!button) return;
+    if (!source) { button.hidden = true; return; }
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(syncJoinSave).observe(source, { attributes: true, attributeFilter: ['aria-pressed'] });
+    }
+    syncJoinSave();
+  }
+
+  // ---------- Poster rails: arrow buttons on wide screens, swipe everywhere ----------
+  function setupRails() {
+    document.querySelectorAll('[data-title-rail]').forEach(rail => {
+      const strip = rail.querySelector('.title-related-grid');
+      if (!strip) return;
+      const make = (direction, label) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `title-rail__arrow title-rail__arrow--${direction}`;
+        button.setAttribute('aria-label', label);
+        button.tabIndex = -1; // keyboard users scroll the strip itself; its links are all reachable
+        button.addEventListener('click', () => {
+          const step = Math.max(strip.clientWidth * 0.85, 200);
+          strip.scrollBy({ left: direction === 'next' ? step : -step, behavior: 'smooth' });
+        });
+        rail.appendChild(button);
+        return button;
+      };
+      const prev = make('prev', 'Scroll back');
+      const next = make('next', 'Scroll on');
+      const update = () => {
+        const max = strip.scrollWidth - strip.clientWidth;
+        rail.classList.toggle('title-rail--overflow', max > 4);
+        prev.disabled = strip.scrollLeft <= 4;
+        next.disabled = strip.scrollLeft >= max - 4;
+      };
+      strip.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update);
+      update();
+    });
+  }
+
   if (typeof document.getElementById === 'function') {
     setupTabs();
     setupDock();
+    setupJoinSave();
+    setupRails();
   }
 })();

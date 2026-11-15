@@ -128,8 +128,13 @@
 
 /* ---------- Body ---------- */
 .title-detail .title-body.site-wrap { padding-top: 44px; }
-.title-detail .title-body--glance { column-gap: 40px; grid-template-columns: minmax(0, 1fr) 320px; }
 .title-detail .title-main { gap: 56px; grid-template-columns: minmax(0, 1fr); }
+/* The sidebar sits beside the member reviews (and stays in view while you read them);
+   every chapter after them gets the full width. */
+.title-detail .title-body--glance { grid-template-columns: minmax(0, 1fr); row-gap: 56px; }
+.title-detail .title-body--glance .title-main--rest { grid-column: 1; grid-row: auto; }
+.title-detail .title-top { align-items: start; display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr); }
+.title-detail .title-body--glance .title-top { grid-template-columns: minmax(0, 1fr) 320px; }
 .title-detail .title-section h2 { font-size: 1.6rem; letter-spacing: -.025em; }
 .title-detail .title-section > h2::before, .title-detail .title-section__head h2::before {
   background: linear-gradient(180deg, var(--site-violet-soft), var(--site-violet)); border-radius: 3px; content: "";
@@ -167,6 +172,8 @@
 
 /* Quick answers: question and answer cards. */
 .title-detail .title-faq__list { counter-reset: faq; gap: 12px; max-width: none; }
+/* Two columns of answers on wide screens, so no line runs the full width of the page. */
+@media (min-width: 1041px) { .title-detail .title-faq__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .title-detail .title-faq__item, .title-detail .title-faq__item:last-child { background: var(--td-panel); border: 1px solid var(--site-border); border-radius: var(--radius-lg); padding: 18px 20px 18px 58px; position: relative; }
 .title-detail .title-faq__item::before {
   align-items: center; background: rgba(139, 92, 246, .18); border-radius: 50%; color: var(--site-violet-soft); content: "?";
@@ -177,11 +184,107 @@
 .title-detail .title-liked, .title-detail .title-in-order { background: var(--td-panel); border: 1px solid var(--site-border); border-radius: var(--radius-xl); padding: 24px 26px; }
 .title-detail .title-liked p, .title-detail .title-in-order p { color: var(--site-soft); line-height: 1.65; margin: 0 0 14px; }
 
-/* Poster rails: covers lift on hover; on phones they scroll sideways instead of stacking. */
-.title-detail .title-related-grid { gap: 18px; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+/* Poster rails: one row that scrolls sideways at every width, with arrows on wide screens (title-page.js). */
+.title-detail .title-rail { position: relative; }
+.title-detail .title-related-grid {
+  gap: 18px; grid-auto-columns: 148px; grid-auto-flow: column; grid-template-columns: none; margin: 0 -8px; overflow-x: auto;
+  overscroll-behavior-x: contain; padding: 6px 8px 12px; scroll-padding: 0 8px; scroll-snap-type: x mandatory; scrollbar-width: none;
+}
+.title-detail .title-related-grid::-webkit-scrollbar { display: none; }
+.title-detail .title-related { scroll-snap-align: start; }
+.title-rail__arrow {
+  align-items: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(11, 10, 24, .82);
+  border: 1px solid var(--site-border-strong); border-radius: 50%; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); color: var(--site-text);
+  cursor: pointer; display: none; height: 44px; justify-content: center; position: absolute; top: calc(6px + 111px - 22px); width: 44px; z-index: 2;
+  transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.title-rail__arrow::before { border: solid currentColor; border-width: 0 2.5px 2.5px 0; content: ""; height: 10px; width: 10px; }
+.title-rail__arrow--prev { left: -14px; }
+.title-rail__arrow--prev::before { margin-left: 4px; transform: rotate(135deg); }
+.title-rail__arrow--next { right: -14px; }
+.title-rail__arrow--next::before { margin-right: 4px; transform: rotate(-45deg); }
+.title-rail__arrow:hover { background: var(--site-violet); }
+.title-rail__arrow:disabled { opacity: 0; pointer-events: none; }
+@media (hover: hover) and (min-width: 681px) {
+  .title-rail--overflow .title-rail__arrow { display: flex; }
+  /* The strip fades out at the edge it can still scroll towards. */
+  .title-rail--overflow .title-related-grid { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
+}
 .title-detail .title-related__art { border-radius: var(--poster-radius); box-shadow: 0 10px 24px rgba(0, 0, 0, .3); transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
 .title-detail .title-related:hover .title-related__art, .title-detail .title-related:focus-visible .title-related__art { box-shadow: 0 16px 34px rgba(0, 0, 0, .45); transform: translateY(-3px); }
 .title-detail .title-collection { background: var(--td-panel); border-radius: var(--radius-lg); }
+
+/* Where to watch beside the trailer: two halves of "how do I see it". */
+.title-detail .title-pair { align-items: start; display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.title-detail .title-pair .title-where { padding: 22px 22px 18px; }
+.title-detail .title-pair .title-where__group { gap: 8px; grid-template-columns: 1fr; }
+.title-detail .title-pair .title-where__group h3 { padding-top: 0; }
+.title-detail .title-pair .title-where__provider { font-size: .88rem; min-height: 40px; padding: 5px 14px 5px 5px; }
+.title-detail .title-pair .title-where__provider img { height: 28px; width: 28px; }
+
+/* Hero trailer button */
+.title-detail .title-hero__trailer span { color: var(--site-violet-soft); font-size: .8em; }
+
+/* Cast and crew: people as cards with a steady colour monogram each. */
+.title-detail .title-about__main { display: grid; gap: 30px; align-content: start; min-width: 0; }
+.title-cast--nested h3 { font-size: 1.15rem; letter-spacing: -.01em; margin: 0 0 6px; }
+.title-cast--nested .title-section__lead { margin-bottom: 14px; }
+.title-cast__list { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.title-person {
+  align-items: center; background: var(--td-panel); border: 1px solid var(--site-border); border-radius: var(--radius-lg); color: var(--site-text);
+  display: flex; gap: 12px; height: 100%; padding: 10px 14px 10px 10px; text-decoration: none;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+a.title-person:hover, a.title-person:focus-visible { background: rgba(255, 255, 255, .07); border-color: var(--site-violet-soft); }
+.title-person__face {
+  align-items: center; background: linear-gradient(145deg, hsl(var(--hue, 260) 62% 52%), hsl(calc(var(--hue, 260) + 40) 58% 30%));
+  border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18); color: #fff; display: flex; flex: none;
+  font: 800 .95rem var(--site-display); height: 46px; justify-content: center; letter-spacing: .02em; width: 46px;
+}
+.title-person__text { display: grid; gap: 2px; min-width: 0; }
+.title-person__text strong { display: -webkit-box; font-size: .93rem; line-height: 1.3; overflow: hidden; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.title-person__text small { color: var(--site-muted); font-size: var(--text-xs); }
+a.title-person .title-person__text strong::after { color: var(--site-violet-soft); content: " →"; font-weight: 700; opacity: 0; transition: opacity var(--dur) var(--ease); }
+a.title-person:hover .title-person__text strong::after { opacity: 1; }
+
+/* Review prompt with the empty discussions box folded in as a second way to join in. */
+.title-detail .title-write--talk { column-gap: 32px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.title-write__talk { border-left: 1px solid var(--td-line); padding-left: 32px; }
+.title-write__talk h3 { font-size: 1.1rem; margin: 6px 0 8px; }
+.title-write__talk p { color: var(--site-soft); line-height: 1.6; margin: 0 0 16px; }
+.title-write__talk .site-btn { white-space: nowrap; }
+
+/* The "Free account" band for visitors. */
+.title-join {
+  align-items: center; background:
+    radial-gradient(80% 120% at 0% 100%, rgba(45, 212, 191, .16), transparent 60%),
+    radial-gradient(90% 120% at 100% 0%, rgba(139, 92, 246, .38), transparent 60%),
+    linear-gradient(160deg, #1d1640, #120f26);
+  border: 1px solid rgba(167, 139, 250, .35); border-radius: var(--radius-xl); box-shadow: var(--td-shadow); display: grid; gap: 36px;
+  overflow: hidden; padding: 34px 36px; position: relative;
+}
+.title-join--stack { grid-template-columns: 240px minmax(0, 1fr); }
+.title-join__stack { height: 230px; position: relative; }
+.title-join__stack img {
+  aspect-ratio: 2 / 3; border: 1px solid rgba(255, 255, 255, .18); border-radius: var(--poster-radius); box-shadow: 0 18px 40px rgba(0, 0, 0, .55);
+  height: auto; left: 50%; object-fit: cover; position: absolute; top: 50%; width: 118px;
+}
+.title-join__stack img:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg); z-index: 4; }
+.title-join__stack img:nth-child(2) { transform: translate(-108%, -46%) rotate(-9deg); z-index: 3; }
+.title-join__stack img:nth-child(3) { transform: translate(8%, -46%) rotate(9deg); z-index: 2; }
+.title-join__stack img:nth-child(4) { transform: translate(-50%, -62%) rotate(2deg) scale(.86); z-index: 1; opacity: .6; }
+.title-join__kicker { color: var(--site-teal-soft); font-size: var(--text-xs); font-weight: 800; letter-spacing: .12em; margin: 0 0 8px; text-transform: uppercase; }
+.title-join h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); letter-spacing: -.03em; line-height: 1.15; margin: 0 0 16px; max-width: 560px; }
+.title-join__points { display: grid; gap: 8px; list-style: none; margin: 0 0 22px; padding: 0; }
+.title-join__points li { color: var(--site-soft); line-height: 1.5; padding-left: 28px; position: relative; }
+.title-join__points li::before {
+  background: rgba(45, 212, 191, .18); border-radius: 50%; color: var(--site-teal-soft); content: "✓"; font-size: .72rem; font-weight: 800;
+  height: 19px; left: 0; line-height: 19px; position: absolute; text-align: center; top: 2px; width: 19px;
+}
+.title-join__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.title-join__actions .site-btn--ghost { background: rgba(255, 255, 255, .07); }
+.title-join__actions [data-join-save]:disabled { border-color: rgba(45, 212, 191, .5); color: var(--site-teal-soft); opacity: 1; }
+.title-join__note { color: var(--site-muted); font-size: var(--text-sm); margin: 12px 0 0; }
 
 /* At a glance */
 .title-detail .title-glance { background: radial-gradient(120% 60% at 50% 0%, rgba(139, 92, 246, .14), transparent 70%), var(--td-panel); border-radius: var(--radius-xl); box-shadow: var(--td-shadow); padding: 22px; }
@@ -190,13 +293,20 @@
 
 /* ---------- Narrower screens ---------- */
 @media (max-width: 1040px) {
-  .title-detail .title-body--glance { grid-template-columns: minmax(0, 1fr); }
+  .title-detail .title-body--glance .title-top { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 820px) {
+  .title-detail .title-pair { grid-template-columns: minmax(0, 1fr); }
+  .title-detail .title-write--talk { grid-template-columns: minmax(0, 1fr); }
+  .title-write__talk { border-left: 0; border-top: 1px solid var(--td-line); margin-top: 24px; padding-left: 0; padding-top: 20px; }
 }
 @media (max-width: 900px) {
   .title-detail .title-hero__inner, .title-detail .title-hero__inner.site-wrap { column-gap: 28px; grid-template-columns: 200px minmax(0, 1fr); }
   .title-tabs__name { display: none; }
 }
 @media (max-width: 680px) {
+  /* On phones the verdict above already says all of this, and the join band below has the sign-up. */
+  .title-detail .title-top .title-glance { display: none; }
   .title-detail .title-hero--wide { min-height: 0; }
   .title-detail .title-hero__inner, .title-detail .title-hero__inner.site-wrap {
     column-gap: 16px; grid-template-areas: "art head" "copy copy"; grid-template-columns: 104px minmax(0, 1fr);
@@ -237,14 +347,23 @@
   .title-detail .title-faq__item, .title-detail .title-faq__item:last-child { padding: 16px 16px 16px 52px; }
   .title-detail .title-faq__item::before { left: 14px; top: 15px; }
   .title-detail .title-liked, .title-detail .title-in-order, .title-detail .title-write { padding: 20px 18px; }
-  .title-detail .title-related-grid {
-    grid-auto-columns: 128px; grid-auto-flow: column; grid-template-columns: none; margin: 0 -16px; overflow-x: auto;
-    overscroll-behavior-x: contain; padding: 4px 16px 10px; scroll-padding: 0 16px; scroll-snap-type: x mandatory; scrollbar-width: none;
-  }
-  .title-detail .title-related-grid::-webkit-scrollbar { display: none; }
-  .title-detail .title-related { scroll-snap-align: start; }
+  .title-detail .title-related-grid { gap: 14px; grid-auto-columns: 124px; margin: 0 -16px; padding: 4px 16px 10px; scroll-padding: 0 16px; }
+  .title-detail .title-hero--wide .title-hero__inner { padding-top: 72px; }
+  /* Facts as a two-column card instead of one long list. */
+  .title-detail .title-facts { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; padding: 4px 16px; }
+  .title-detail .title-facts div:nth-child(2) { border-top: 0; }
+  .title-detail .title-where__provider { font-size: .88rem; min-height: 40px; padding: 5px 13px 5px 5px; }
+  .title-detail .title-where__provider img, .title-detail .title-where__mono { height: 28px; width: 28px; }
+  .title-cast__list { gap: 8px; grid-template-columns: 1fr 1fr; }
+  .title-person { gap: 9px; padding: 8px 10px 8px 8px; }
+  .title-person__face { font-size: .82rem; height: 38px; width: 38px; }
+  .title-person__text strong { font-size: .86rem; }
+  .title-join, .title-join--stack { gap: 18px; grid-template-columns: minmax(0, 1fr); padding: 24px 20px; }
+  .title-join__stack { height: 168px; }
+  .title-join__stack img { width: 92px; }
+  .title-join__actions .site-btn { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .title-detail .title-related__art, .title-tabs__cta, .title-hero__where { transition: none; }
+  .title-detail .title-related__art, .title-tabs__cta, .title-hero__where, .title-person, .title-rail__arrow { transition: none; }
   .title-detail .title-related:hover .title-related__art { transform: none; }
 }
