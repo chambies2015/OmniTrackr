@@ -717,7 +717,9 @@ def _binge_link(group, guide_only: bool = False) -> str:
     if guide_only:
         return ""
     query = urlencode({"lookup": group.kind, "title": group.title, **({"year": group.year} if group.year else {})})
-    return (f' <a href="{binge_calculator.BASE_PATH}?{_e(query)}">Work out when you would finish</a> '
+    # nofollow: every title page links here with its own query, and each one is just the
+    # calculator hub (canonical /binge-calculator) with a different title filled in.
+    return (f' <a href="{binge_calculator.BASE_PATH}?{_e(query)}" rel="nofollow">Work out when you would finish</a> '
             'in the binge calculator.')
 
 
