@@ -61,6 +61,14 @@ async def get_app(v: str | None = None):
     return Response(content=script, media_type="application/javascript", headers=cache)
 
 
+@router.get(dashboard_assets.STYLESHEET_BUNDLE_PATH)
+async def get_dashboard_styles(v: str | None = None):
+    """The signed-in dashboard's stylesheets as one file (see app/dashboard_assets.py)."""
+    css, version, _ = dashboard_assets.stylesheet_bundle()
+    cache = CACHE_VERSIONED if v == version else CACHE_JS_CSS
+    return Response(content=css, media_type="text/css", headers=cache)
+
+
 @router.get("/styles.css")
 async def get_styles():
     styles_file = os.path.join(os.path.dirname(__file__), "..", "static", "styles.css")

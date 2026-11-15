@@ -148,7 +148,7 @@ async function loadMovies() {
         // Display cached poster or fetch new one
         if (movie.poster_url) {
           displayMoviePoster(movie.id, movie.poster_url, movie.title);
-        } else {
+        } else if (shouldLookUpCover('movies', movie.id, movie.title)) {
           // API keys are now proxied through backend
           fetchMoviePoster(movie.id, movie.title, movie.year);
         }
@@ -451,7 +451,7 @@ async function loadTVShows() {
         // Display cached poster or fetch new one
         if (tvShow.poster_url) {
           displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
-        } else {
+        } else if (shouldLookUpCover('tv-shows', tvShow.id, tvShow.title)) {
           // API keys are now proxied through backend
           fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
         }
@@ -522,7 +522,7 @@ async function loadAnime() {
         // Display cached poster or fetch new one
         if (animeItem.poster_url) {
           displayAnimePoster(animeItem.id, animeItem.poster_url, animeItem.title);
-        } else {
+        } else if (shouldLookUpCover('anime', animeItem.id, animeItem.title)) {
           // API keys are now proxied through backend
           fetchAnimePoster(animeItem.id, animeItem.title, animeItem.year);
         }
@@ -874,7 +874,7 @@ async function loadVideoGames() {
 
         if (game.cover_art_url) {
           displayVideoGamePoster(game.id, game.cover_art_url, game.title);
-        } else {
+        } else if (shouldLookUpCover('video-games', game.id, game.title)) {
           // API keys are now proxied through backend
           fetchVideoGameMetadata(game.id, game.title, { genres: game.genres, release_date: game.release_date, rawg_link: game.rawg_link });
         }
@@ -1243,7 +1243,7 @@ async function loadMusic() {
 
         if (item.cover_art_url) {
           displayMusicPoster(item.id, item.cover_art_url, item.title);
-        } else {
+        } else if (shouldLookUpCover('music', item.id, item.title)) {
           fetchMusicMetadata(item.id, item.title, item.artist, { year: item.year, genre: item.genre });
         }
       });
@@ -1643,7 +1643,7 @@ async function loadBooks() {
 
         if (book.cover_art_url) {
           displayBookPoster(book.id, book.cover_art_url, book.title);
-        } else {
+        } else if (shouldLookUpCover('books', book.id, book.title)) {
           fetchBookMetadata(book.id, book.title, book.author, { year: book.year, genre: book.genre });
         }
       });

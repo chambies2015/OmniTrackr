@@ -360,6 +360,62 @@ async function cachedProxyFetch(url, options) {
 }
 const posterFetchQueue = new Map();
 
+// Rows without artwork ask OMDb, RAWG, Jikan, iTunes or Open Library for a cover each
+// time they are drawn. A found cover is saved to the row, but a title the services
+// don't know stayed coverless and was looked up again on every visit: up to 50
+// requests per library page, each spending the shared daily OMDb/RAWG quota.
+// A row tried on an earlier visit now waits a day before it is tried again. Within
+// one visit nothing changes (cachedProxyFetch already answers repeats from memory).
+const COVER_TRY_KEY = 'omnitrackr_cover_tries';
+const COVER_TRY_MS = 24 * 60 * 60 * 1000;
+const COVER_TRY_LIMIT = 3000;
+let coverTriesEarlier = null;
+const coverTriesNow = {};
+let coverTrySaveQueued = false;
+
+function coverTryKey(kind, id, title) {
+  return `${kind}:${id}:${String(title || '').slice(0, 80)}`;
+}
+
+function earlierCoverTries() {
+  if (coverTriesEarlier) return coverTriesEarlier;
+  coverTriesEarlier = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(COVER_TRY_KEY) || '{}');
+    const now = Date.now();
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      Object.entries(saved).forEach(([key, at]) => {
+        if (typeof at === 'number' && now - at < COVER_TRY_MS) coverTriesEarlier[key] = at;
+      });
+    }
+  } catch (_) { /* storage blocked: every row is simply looked up, as before */ }
+  return coverTriesEarlier;
+}
+
+function saveCoverTries() {
+  coverTrySaveQueued = false;
+  const all = { ...earlierCoverTries(), ...coverTriesNow };
+  const keys = Object.keys(all);
+  if (keys.length > COVER_TRY_LIMIT) {
+    keys.sort((a, b) => all[a] - all[b]).slice(0, keys.length - COVER_TRY_LIMIT).forEach(key => { delete all[key]; });
+  }
+  try { localStorage.setItem(COVER_TRY_KEY, JSON.stringify(all)); } catch (_) { /* this visit still works */ }
+}
+
+// True when the row should look for a cover now; false when an earlier visit already tried today.
+function shouldLookUpCover(kind, id, title) {
+  const key = coverTryKey(kind, id, title);
+  if (earlierCoverTries()[key]) return false;
+  if (!coverTriesNow[key]) {
+    coverTriesNow[key] = Date.now();
+    if (!coverTrySaveQueued) {
+      coverTrySaveQueued = true;
+      setTimeout(saveCoverTries, 0);
+    }
+  }
+  return true;
+}
+
 function getPosterConcurrencyLimit() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   if (!conn) return 4;

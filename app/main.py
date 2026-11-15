@@ -1381,6 +1381,7 @@ async def read_root(request: Request):
             else:
                 _, dashboard_version = dashboard_assets.bundle()
                 html = html.replace('src="./app.js"', f'src="./app.js?v={dashboard_version}"', 1)
+                html = dashboard_assets.bundle_stylesheets(html)
                 # Signed-in pages show the Friends button; drawing it from the start keeps
                 # the toolbar from re-wrapping (and the page from shifting) once scripts run.
                 html = html.replace('aria-controls="friendsSidebar" hidden>', 'aria-controls="friendsSidebar">', 1)

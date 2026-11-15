@@ -2,7 +2,7 @@
  *
  * Deliberately small:
  *  - Versioned files (anything under /static/ loaded with ?v=, plus the root
- *    /app.js and /auth.js) and the self-hosted fonts are cached
+ *    /app.js, /auth.js and /dashboard.css) and the self-hosted fonts are cached
  *    after first use, so repeat visits and the installed app open faster. When a
  *    new version of a file is cached, older versions of that same file are
  *    dropped, so the cache holds what the pages use today.
@@ -22,7 +22,7 @@ const OFFLINE_URL = '/offline';
 // The dashboard alone uses about 80 files, so leave room for the public pages too.
 const MAX_STATIC_ENTRIES = 220;
 // Root scripts the server already marks immutable when they carry ?v=.
-const VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js']);
+const VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js', '/dashboard.css']);
 
 self.addEventListener('install', event => {
   event.waitUntil(

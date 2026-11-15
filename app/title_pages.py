@@ -12,7 +12,7 @@ import re
 import threading
 import time
 import unicodedata
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from functools import lru_cache
 from datetime import datetime, timedelta
@@ -386,11 +386,46 @@ def moved_path(db: Session, kind: str, slug: str) -> Optional[str]:
     return None if path == f"/titles/{kind}/{slug}" else path
 
 
-def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) -> list[dict]:
+def _in_chunks(values, size: int = 500):
+    values = sorted(values)
+    for start in range(0, len(values), size):
+        yield values[start:start + size]
+
+
+def review_context(db: Session, groups) -> dict:
+    """Review states and reviewers for every public review in `groups`, in a few queries.
+
+    The sitemap and the people directory summarize hundreds of titles; asking for each
+    title's states and reviewers separately was two queries per title (over 2,000 for
+    one sitemap build). Pass the result to summarize(review_context=...).
+    """
+    state_ids: dict[str, set] = defaultdict(set)
+    reviewer_ids: set = set()
+    for group in groups:
+        category = KINDS[group.kind][1]
+        for item in group.items:
+            if item.review_public and (item.review or "").strip():
+                state_ids[category].add(item.id)
+                reviewer_ids.add(item.user_id)
+    states: dict = {}
+    for category, ids in state_ids.items():
+        for chunk in _in_chunks(ids):
+            for state in db.query(models.PublicReviewState).filter(
+                    models.PublicReviewState.category == category, models.PublicReviewState.item_id.in_(chunk)).all():
+                states[(category, state.item_id)] = state
+    users: dict = {}
+    for chunk in _in_chunks(reviewer_ids):
+        users.update({user.id: user for user in db.query(models.User).filter(models.User.id.in_(chunk)).all()})
+    return {"states": states, "state_ids": state_ids, "users": users}
+
+
+def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True,
+                    context: Optional[dict] = None) -> list[dict]:
     """Public reviews among `items`, best first.
 
     decorate=False leaves out helpful counts, profile links, supporter badges and spoiler
     flags (four more queries) for callers that only count the reviews, like the sitemap.
+    `context` (review_context) answers the state and reviewer lookups without a query.
     """
     from .routers.reviews import _current_state_hides_review
     _, review_category, _, _, _ = KINDS[kind]
@@ -398,11 +433,17 @@ def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) 
     items = sorted(items, key=lambda item: -len((item.review or "").strip()))
     if not ids:
         return []
-    states = {s.item_id: s for s in db.query(models.PublicReviewState).filter(
-        models.PublicReviewState.category == review_category, models.PublicReviewState.item_id.in_(ids)).all()}
     # Only the reviewers: a popular title has thousands of rows but a handful of public reviews.
     reviewer_ids = {item.user_id for item in items if item.review_public and (item.review or "").strip()}
-    users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(reviewer_ids)).all()}
+    known = context["state_ids"].get(review_category, set()) if context is not None else set()
+    if context is not None and set(ids) <= known and reviewer_ids <= context["users"].keys():
+        states = {item_id: context["states"][(review_category, item_id)] for item_id in ids
+                  if (review_category, item_id) in context["states"]}
+        users = {user_id: context["users"][user_id] for user_id in reviewer_ids}
+    else:
+        states = {s.item_id: s for s in db.query(models.PublicReviewState).filter(
+            models.PublicReviewState.category == review_category, models.PublicReviewState.item_id.in_(ids)).all()}
+        users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(reviewer_ids)).all()}
     reviews = []
     for item in items:
         if item.id not in ids or len((item.review or "").strip()) < REVIEW_MIN_CHARS:
@@ -661,15 +702,22 @@ def _safe_image(url) -> Optional[str]:
     return None
 
 
-def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> dict:
+def editor_id_set(db: Session) -> set:
+    return {uid for uid, in _editor_ids(db).all()}
+
+
+def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True, editors: Optional[set] = None,
+              review_context: Optional[dict] = None) -> dict:
     """Member data for a title page (aggregates only, never who tracks it).
 
     page_sections=False skips the collections and "also tracked" lists and the review
     decorations (helpful counts, profile links, badges, spoiler flags), which only the
     page itself shows. The sitemap checks hundreds of titles and needs none of them.
+    Callers that summarize many titles pass `editors` (editor_id_set) and `review_context`
+    (review_context()) so those are read once for all of them.
     """
     kind = group.kind
-    editors = {uid for uid, in _editor_ids(db).all()}
+    editors = editor_id_set(db) if editors is None else editors
     member_items = [item for item in group.items if item.user_id not in editors]
     members = len({item.user_id for item in member_items})
     finished = len({item.user_id for item in member_items if getattr(item, COMPLETE_FIELD[kind], False)})
@@ -687,7 +735,7 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         creator = names.most_common(1)[0][0] if names else None
     images = Counter(_safe_image(getattr(item, IMAGE_FIELD[kind], None)) for item in group.items)
     images.pop(None, None)
-    reviews = _public_reviews(db, kind, group.items, decorate=page_sections)
+    reviews = _public_reviews(db, kind, group.items, decorate=page_sections, context=review_context)
     since = datetime.utcnow() - timedelta(days=RECENT_DAYS)
     recent = len({item.user_id for item in member_items if getattr(item, "added_at", None) and item.added_at >= since})
     return {

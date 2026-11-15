@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
+from ..user_columns import VISIBLE, ensure_loaded
 from .. import episodes, models, schemas, title_pages
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
@@ -156,6 +157,7 @@ def next_up_suggestions(
         models.NextUpItem.category, models.NextUpItem.item_id,
     ).filter(models.NextUpItem.user_id == current_user.id).all()}
     lanes = []
+    ensure_loaded(current_user, VISIBLE)
     for category, (model, label) in CATEGORIES.items():
         if getattr(current_user, f"{category.replace('-', '_')}_visible", True) is False:
             continue

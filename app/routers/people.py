@@ -319,7 +319,8 @@ _directory_lock = threading.Lock()
 
 
 def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
-    groups = people_pages.directory_with_pages(db, entity)
+    memo: dict = {}  # The directory and its index check build the same pages; share the lookups.
+    groups = people_pages.directory_with_pages(db, entity, memo=memo)
     eyebrow, heading, intro = DIRECTORY_COPY[entity]
     sections, listed = [], []
     for role, entries in groups.items():
@@ -337,7 +338,7 @@ def _directory_page(db: Session, entity: str) -> tuple[str, bool]:
     sections.append(f'<p class="people-note">Looking for {_e(ENTITY_LABEL[other].lower())}? '
                     f'<a href="{PEOPLE_PATHS[other]}">Browse {_e(DIRECTORY_COPY[other][1][0].lower() + DIRECTORY_COPY[other][1][1:])}</a>.</p>')
     # Mostly links, so it waits until enough of the pages it lists are indexed in their own right.
-    index_directory = (people_pages.indexable_entry_count(db, entity, listed)
+    index_directory = (people_pages.indexable_entry_count(db, entity, listed, memo=memo)
                        >= people_pages.DIRECTORY_INDEX_MIN_PAGES)
     canonical = SITE_URL + PEOPLE_PATHS[entity]
     # A director who also wrote is listed under both roles; the list names each page once.

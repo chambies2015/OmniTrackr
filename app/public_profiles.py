@@ -29,6 +29,7 @@ from sqlalchemy import case, func, select, union_all
 from sqlalchemy.orm import Session
 
 from . import badges, diary, friend_invites, models, supporters, time_spent, title_pages
+from .user_columns import PRIVATE, ensure_loaded
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -298,6 +299,7 @@ def visible_profile(db: Session, user: Optional[models.User]) -> Optional[models
 
 
 def _visible_categories(user: models.User) -> list[str]:
+    ensure_loaded(user, PRIVATE)
     return [category for category, (_, flag, _, _) in CATEGORIES.items() if not getattr(user, flag, False)]
 
 

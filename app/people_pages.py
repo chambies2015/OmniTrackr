@@ -301,7 +301,13 @@ def build(db: Session, entity: str, slug: str, memo: Optional[dict] = None) -> O
             if key[0] == kind and found.get(key) is not None:
                 groups[key] = found[key]
     summaries = memo.setdefault("summaries", {}) if memo is not None else {}
-    editors = {uid for uid, in title_pages._editor_ids(db).all()}
+    editors = memo.get("editors") if memo is not None else None
+    if editors is None:
+        editors = title_pages.editor_id_set(db)
+        if memo is not None:
+            memo["editors"] = editors
+    unsummarized = {group.path: group for group in groups.values() if group.path not in summaries}
+    context = title_pages.review_context(db, unsummarized.values()) if unsummarized else None
     works, seen = [], set()
     for key, group in groups.items():
         if group.path in seen:
@@ -309,7 +315,8 @@ def build(db: Session, entity: str, slug: str, memo: Optional[dict] = None) -> O
         seen.add(group.path)
         summary = summaries.get(group.path)
         if summary is None:
-            summary = summaries[group.path] = title_pages.summarize(db, group, page_sections=False)
+            summary = summaries[group.path] = title_pages.summarize(db, group, page_sections=False, editors=editors,
+                                                                       review_context=context)
         per_member = {}
         for item in sorted(group.items, key=lambda entry: entry.id):
             if item.user_id not in editors and item.rating is not None:
@@ -447,7 +454,7 @@ def directory(db: Session, entity: str, per_role: int = 18) -> dict[str, list[di
     return result
 
 
-def directory_with_pages(db: Session, entity: str, per_role: int = 18) -> dict[str, list[dict]]:
+def directory_with_pages(db: Session, entity: str, per_role: int = 18, memo: Optional[dict] = None) -> dict[str, list[dict]]:
     """directory() without the names whose own page would be a 404.
 
     The directory counts titles by name alone, while a page needs at least one of
@@ -455,7 +462,7 @@ def directory_with_pages(db: Session, entity: str, per_role: int = 18) -> dict[s
     counted twice here and still have nothing to show. Linking them sent visitors
     and Googlebot to "not found" pages.
     """
-    memo: dict = {}  # Pages share most of their titles; look each one up once.
+    memo = {} if memo is None else memo  # Pages share most of their titles; look each one up once.
     has_page: dict[str, bool] = {}
     result = {}
     for role, entries in directory(db, entity, per_role).items():
@@ -479,10 +486,11 @@ def directory_with_pages(db: Session, entity: str, per_role: int = 18) -> dict[s
 DIRECTORY_INDEX_MIN_PAGES = 6
 
 
-def indexable_entry_count(db: Session, entity: str, entries: list[dict], enough: Optional[int] = None) -> int:
+def indexable_entry_count(db: Session, entity: str, entries: list[dict], enough: Optional[int] = None,
+                          memo: Optional[dict] = None) -> int:
     """How many of these directory entries have an indexable page, counting up to `enough`."""
     enough = DIRECTORY_INDEX_MIN_PAGES if enough is None else enough
-    memo: dict = {}
+    memo = {} if memo is None else memo
     seen, count = set(), 0
     for entry in entries:
         if count >= enough:

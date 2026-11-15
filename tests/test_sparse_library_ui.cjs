@@ -34,7 +34,7 @@ function setup(category, item) {
     getReviewCellContent: value => value || '',
     reviewQualityHintHtml: () => '', disableOtherRowButtons() {},
     displayMoviePoster() {}, displayTVPoster() {}, displayAnimePoster() {}, displayMusicPoster() {}, displayBookPoster() {},
-    fetchMoviePoster() {}, fetchTVPoster() {}, fetchAnimePoster() {}, fetchMusicMetadata() {}, fetchBookMetadata() {},
+    shouldLookUpCover: () => true, fetchMoviePoster() {}, fetchTVPoster() {}, fetchAnimePoster() {}, fetchMusicMetadata() {}, fetchBookMetadata() {},
   });
   context[`isLoading${category.loader}`] = false;
   vm.runInContext(source.slice(source.indexOf('function escapeHtml('), source.indexOf('function normalizeLibrarySearchText(')), context);
