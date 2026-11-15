@@ -1836,6 +1836,8 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
     groups = {kind: title_pages.find_many(db, kind, [c["url"].rsplit("/", 1)[1] for c in candidates if c["kind"] == kind],
                                           reviewed_only=True)
               for kind in title_pages.KINDS}
+    editors = title_pages.editor_id_set(db)
+    context = title_pages.review_context(db, [group for found in groups.values() for group in found.values()])
     for candidate in candidates:
         if candidate["url"] in seen or len(paths) >= limit:
             continue
@@ -1843,7 +1845,7 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
         group = groups[candidate["kind"]].get(candidate["url"].rsplit("/", 1)[1])
         if group is None:
             continue
-        summary = title_pages.summarize(db, group, page_sections=False)
+        summary = title_pages.summarize(db, group, page_sections=False, editors=editors, review_context=context)
         metadata, _ = title_metadata.cached(db, title_metadata.cache_key(group.kind, group.normalized, group.year))
         if title_pages.is_indexable(summary, metadata):
             paths.append(group.path)

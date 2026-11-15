@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from . import models
+from .user_columns import PRIVATE, VISIBLE, ensure_loaded
 
 
 CATEGORIES = (
@@ -31,6 +32,7 @@ def parse_categories(value: str | None, user: models.User) -> tuple[list[str], l
     """Resolve an explicit selection or privacy-safe defaults."""
     availability = []
     defaults = []
+    ensure_loaded(user, VISIBLE + PRIVATE)
     for category in CATEGORIES:
         is_private = bool(getattr(user, category["private"], False))
         is_visible = bool(getattr(user, category["visible"], True))

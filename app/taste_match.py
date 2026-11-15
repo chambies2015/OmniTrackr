@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
-from sqlalchemy.orm import Session, load_only
+from sqlalchemy.orm import Session
 
 from . import models
 from .for_you import CREATOR_FIELD, IMAGE_FIELD, LIBRARY, PRIVATE_FLAG, _safe_image, normalize_title
@@ -78,7 +78,10 @@ def libraries(db: Session, categories_by_user: dict[int, Iterable[str]]) -> dict
         model = LIBRARY[category][0]
         for start in range(0, len(user_ids), 500):
             chunk = user_ids[start:start + 500]
-            for entry in (db.query(model).options(load_only(*_columns(category)))
+            # Plain rows, not ORM objects: the friends list scores up to 100 libraries on
+            # every dashboard visit, and building tracked objects for each row was most
+            # of that request's time. _row() reads the same names from either.
+            for entry in (db.query(*_columns(category))
                           .filter(model.user_id.in_(chunk)).order_by(model.user_id, model.id)):
                 key = normalize_title(entry.title)
                 if not key:

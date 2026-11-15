@@ -63,6 +63,19 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="speed-nov15-2026-heading">
+        <h2 id="speed-nov15-2026-heading">November 15, 2026: A faster library and lighter pages for search engines</h2>
+        <p>We timed every page and address on the site against a test library of about 2,000 titles with 15 friends, and opened the library on a slow phone connection. These are the changes that made the biggest difference.</p>
+        <ul>
+          <li>Your library loaded 37 separate style files before it could draw anything. It now loads one. On a slow phone connection the first paint comes about a third of a second sooner, the page finishes loading about 0.8 seconds sooner, and the styles are 70 KB smaller.</li>
+          <li>Titles without a cover asked the cover services again on every visit, up to 50 requests a page. A title that came back empty now waits a day before it is tried again, so a repeat visit makes about half as many requests.</li>
+          <li>The sitemap search engines read and the People directory checked each title one at a time. The sitemap went from about 10,000 database reads to under 200, and the People directory from about 6,600 to 40.</li>
+          <li>Year in Review, Next Up suggestions, the stats cards and profile settings each read your nine shelf settings one at a time, and Year in Review checked each friend separately. Those are now single reads.</li>
+          <li>Lists of what members added this week (the homepage numbers, trending, the weekly email and roundup, the friends feed) now use an index instead of reading whole libraries.</li>
+        </ul>
+        <p>Your library, settings and covers are untouched. The page looks exactly the same: we compared every element's styling before and after.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="home-nov15-2026-heading">
         <h2 id="home-nov15-2026-heading">November 15, 2026: A new look below the homepage search</h2>
         <p>The homepage now shows the app itself instead of a drawn example.</p>

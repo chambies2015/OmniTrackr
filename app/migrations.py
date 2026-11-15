@@ -1093,6 +1093,8 @@ def add_lookup_indexes():
       review_public set, a few percent of each table. A partial index covers just those.
     * "More by this director/author" matches lower(trim(creator)); an index on that
       expression turns a full table read into a lookup.
+    * "Added this week" (Nov 15 speed pass): the homepage numbers, trending, the weekly
+      digest and roundup and the friends feed filter every library by added_at.
 
     Indexes only: no table or row changes. IF NOT EXISTS makes each one run once.
     """
@@ -1107,6 +1109,9 @@ def add_lookup_indexes():
             if inspector.has_table(table):
                 statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_{column}_lookup "
                                   f"ON {table} (lower(trim({column})))")
+        for table in LIBRARY_TABLES:
+            if inspector.has_table(table) and "added_at" in {col["name"] for col in inspector.get_columns(table)}:
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_added_at ON {table} (added_at)")
         for statement in statements:
             with engine.connect() as conn:
                 conn.execute(text(statement))

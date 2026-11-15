@@ -82,7 +82,7 @@ def snapshot(engine, table):
             "columns": [(column["name"], str(column["type"]), column["nullable"], column["default"], column["primary_key"]) for column in inspector.get_columns(table)],
             # The lookup indexes from migrations.add_lookup_indexes are the one expected addition.
             "indexes": sorted((index["name"], tuple(index["column_names"]), index["unique"]) for index in inspector.get_indexes(table)
-                              if not index["name"].endswith(("_public_reviews", "_lookup"))),
+                              if not index["name"].endswith(("_public_reviews", "_lookup", "_added_at"))),
             "foreign_keys": [(tuple(key["constrained_columns"]), key["referred_table"], tuple(key["referred_columns"]), key["options"]) for key in inspector.get_foreign_keys(table)],
             "rows": [tuple(row) for row in connection.execute(text(f'SELECT * FROM "{table}" ORDER BY id'))],
         }
@@ -116,6 +116,8 @@ def test_lookup_indexes_are_added_once_without_touching_rows(migration_engine, c
     for table, column in migrations.CREATOR_COLUMNS:
         if table in before:
             assert f"ix_{table}_{column}_lookup" in names
+    for model in MEDIA:
+        assert f"ix_{model.__tablename__}_added_at" in names
     assert {model.__tablename__: snapshot(engine, model.__tablename__)["rows"] for model in MEDIA} == before
     assert "Migration warning" not in capsys.readouterr().out
 

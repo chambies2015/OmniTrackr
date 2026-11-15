@@ -1,7 +1,7 @@
 """The "Share your reviews" home card: private reviews a member can put on title pages (Nov 2026)."""
 from datetime import datetime, timedelta
 
-from app import models, review_inbox
+from app import dashboard_assets, models, review_inbox
 from app.routers import site_stats
 from tests.test_title_pages import ESSAY, LONG_REVIEW, add_movie, member
 
@@ -222,4 +222,5 @@ def test_site_stats_counts_answers_and_waiting_reviews(db_session):
 def test_dashboard_has_the_card_and_script(authenticated_client):
     html = authenticated_client.get("/").text
     assert 'id="reviewInbox"' in html and 'id="reviewInboxList"' in html
-    assert "/static/review-inbox.js?v=" in html and "/static/review-inbox.css?v=" in html
+    assert "/static/review-inbox.js?v=" in html
+    assert any(href.startswith("/static/review-inbox.css?v=") for href in dashboard_assets.page_stylesheets(html))

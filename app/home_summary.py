@@ -12,6 +12,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from . import models
+from .user_columns import VISIBLE, ensure_loaded
 from .title_pages import COMPLETE_FIELD, IMAGE_FIELD, LIBRARY_TO_KIND, _safe_image
 
 # library key -> (model, one, many, done verb). Same order as the library tabs.
@@ -36,6 +37,7 @@ def _visible(user: models.User, key: str) -> bool:
 
 def build(db: Session, user: models.User, *, now: datetime | None = None) -> dict:
     now = now or datetime.utcnow()
+    ensure_loaded(user, VISIBLE)
     libraries = []
     recent = []
     for key, model, one, many, verb in LIBRARIES:
