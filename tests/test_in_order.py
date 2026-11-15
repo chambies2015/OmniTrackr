@@ -221,3 +221,63 @@ def test_guides_are_in_the_sitemap_navigation_and_ad_allowlist(client):
     assert "/in-order" in client.get("/llms.txt").text
     assert 'href="/in-order"' in client.get("/site-map").text
     assert "order_saved" in funnel.CLIENT_EVENTS and "order_saved" in funnel.SERVER_EVENTS
+
+
+def test_the_catalog_covers_every_shelf_and_the_hub_groups_by_it(client):
+    assert len(GUIDES) >= 30
+    shelves = in_order.by_shelf()
+    assert [key for key, _, _, _ in shelves] == ["screen", "anime", "games", "books"]
+    assert sorted(slug for _, _, _, slugs in shelves for slug in slugs) == sorted(GUIDES)
+    for key, _, _, slugs in shelves:
+        assert len(slugs) >= 4, key
+    html = client.get("/in-order").text
+    for key, heading, _, slugs in shelves:
+        assert f'id="shelf-{key}"' in html and f'href="#shelf-{key}"' in html
+    assert html.index('id="shelf-screen"') < html.index('href="/in-order/marvel-cinematic-universe"') < html.index('id="shelf-anime"')
+    assert html.index('id="shelf-books"') < html.index('href="/in-order/discworld"')
+    assert f"{len(GUIDES)} guides" in html
+
+
+def test_related_guides_stay_on_the_shelf_and_vary(client):
+    seen = set()
+    for slug in GUIDES:
+        related = in_order.related(slug)
+        assert len(related) == 3 and slug not in related and len(set(related)) == 3
+        assert in_order.shelf(GUIDES[related[0]]) == in_order.shelf(GUIDES[slug]), slug
+        seen.update(related)
+    # Every guide is suggested from at least one other guide.
+    assert seen == set(GUIDES)
+
+
+def test_watch_order_and_reading_order_paths_redirect(client):
+    for alias in ("/watch-order", "/reading-order", "/play-order"):
+        response = client.get(alias, follow_redirects=False)
+        assert response.status_code == 301 and response.headers["location"] == "/in-order"
+    response = client.get("/watch-order/evangelion", follow_redirects=False)
+    assert response.status_code == 301 and response.headers["location"] == "/in-order/evangelion"
+    assert client.get("/reading-order/not-a-guide", follow_redirects=False).status_code == 404
+
+
+def test_guides_link_the_binge_calculator_both_ways(client):
+    from app.binge_guides import GUIDES as BINGE
+    assert BINGE["marvel-infinity-saga"]["in_order"] == "marvel-cinematic-universe"
+    html = client.get("/in-order/marvel-cinematic-universe").text
+    assert 'href="/binge-calculator/marvel-infinity-saga"' in html
+    assert 'href="/in-order/marvel-cinematic-universe"' in client.get("/binge-calculator/marvel-infinity-saga").text
+    html = client.get("/in-order/game-of-thrones").text
+    assert 'href="/binge-calculator/game-of-thrones"' in html and 'href="/binge-calculator/a-song-of-ice-and-fire"' in html
+
+
+def test_manga_entries_are_matched_and_added(authenticated_client, db_session):
+    slug, entry, item = next((slug, entry, item) for slug, entry in GUIDES.items()
+                             for item in entry["entries"] if item["kind"] == "manga")
+    assert "manga" in in_order.formats(entry)
+    user = member(db_session)
+    response = authenticated_client.post(f"/api/in-order/{slug}/add", json={"ids": [item["id"]]})
+    assert response.status_code == 200 and [row["id"] for row in response.json()["added"]] == [item["id"]]
+    row = db_session.query(models.Manga).filter_by(user_id=user.id, title=item["title"]).one()
+    assert row.year == item["year"] and not row.read
+    row.read = True
+    db_session.commit()
+    progress = authenticated_client.get(f"/api/in-order/{slug}/progress").json()
+    assert progress["entries"][item["id"]]["state"] == "done"

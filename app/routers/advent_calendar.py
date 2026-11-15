@@ -72,12 +72,28 @@ def _unlocked(year: int, user) -> list[int]:
     return advent.unlocked(year, preview=_preview(user) and not advent.is_public(year))
 
 
+# (id of the title index it was worked out from, year) -> details. The index is rebuilt every
+# few minutes; between rebuilds every calendar and door view would otherwise walk all of it.
+_DETAILS: dict = {}
+
+
 def _details(db: Session, year: int) -> dict[int, dict]:
     """{day: {"url", "image"}} for picks that already have a public title page (never raises)."""
     try:
         index = title_search.index(db)
     except Exception:
         return {}
+    key = (id(index), year)
+    cached = _DETAILS.get(key)
+    if cached is not None and cached[0] is index:
+        return cached[1]
+    found = _match_details(index, year)
+    _DETAILS.clear()
+    _DETAILS[key] = (index, found)
+    return found
+
+
+def _match_details(index: list[dict], year: int) -> dict[int, dict]:
     by_slug = {(entry["kind"], entry["slug"]): entry for entry in index}
     by_base: dict[tuple[str, str], dict] = {}
     for entry in index:
@@ -421,8 +437,11 @@ def door_card(year: int, day: int, request: Request, user=Depends(get_optional_c
         except Exception:
             raise HTTPException(status_code=404, detail="Card unavailable")
         _CARDS.put(key, png)
+    # Before opening day only site admins get this far; a shared cache must not keep
+    # their preview card and hand the pick to everyone else early.
+    cache = "public, max-age=3600" if advent.is_public(year) else "private, no-store"
     return Response(content=png, media_type="image/png", headers={
-        "Cache-Control": "public, max-age=3600", "X-Content-Type-Options": "nosniff",
+        "Cache-Control": cache, "X-Content-Type-Options": "nosniff",
     })
 
 

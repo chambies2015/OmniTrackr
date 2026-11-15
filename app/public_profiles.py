@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from urllib.parse import quote
 
-from sqlalchemy import case, func
+from sqlalchemy import case, func, select, union_all
 from sqlalchemy.orm import Session
 
 from . import badges, diary, friend_invites, models, supporters, time_spent, title_pages
@@ -397,15 +397,20 @@ def _now(db: Session, user: models.User) -> dict:
 def _rating_spread(db: Session, user: models.User) -> list[int]:
     """How many titles the member rated 1, 2, ... 10 (rounded half up), across the shelves they share."""
     counts = [0] * 10
+    # One round trip for every shared shelf instead of one per shelf.
+    parts = []
     for category in _visible_categories(user):
         model = _model(category)
-        for rating, count in db.query(model.rating, func.count(model.id)).filter(
-                model.user_id == user.id, model.rating.isnot(None)).group_by(model.rating):
-            try:
-                bucket = min(10, max(1, math.floor(float(rating) + 0.5)))
-            except (TypeError, ValueError):
-                continue
-            counts[bucket - 1] += int(count)
+        parts.append(select(model.rating.label("rating"), func.count(model.id).label("count"))
+                     .where(model.user_id == user.id, model.rating.isnot(None)).group_by(model.rating))
+    if not parts:
+        return []
+    for rating, count in db.execute(union_all(*parts)).all():
+        try:
+            bucket = min(10, max(1, math.floor(float(rating) + 0.5)))
+        except (TypeError, ValueError):
+            continue
+        counts[bucket - 1] += int(count)
     return counts if sum(counts) else []
 
 
@@ -510,15 +515,18 @@ class ProfileView:
 
 
 def build(db: Session, user: models.User, profile: models.PublicProfile) -> ProfileView:
+    # Read once: the badge, the pin limit and the supporter extras all come from this row.
+    supporter = supporters.get_supporter(db, user.id)
+    supporting = supporters.is_active(supporter)
     return ProfileView(
         user=user, profile=profile,
         stats=_stats(db, user) if profile.show_stats and not user.statistics_private else [],
         favorites=_favorites(db, user) if profile.show_favorites else [],
         reviews=_reviews(db, user) if profile.show_reviews else [],
         collections=_collections(db, user) if profile.show_collections else [],
-        supporter=supporters.public_badge(db, user.id),
-        showcase=showcase_items(db, user, limit=showcase_limit(db, user)),
-        supporting=supporters.is_active(supporters.get_supporter(db, user.id)),
+        supporter=supporters.public_badge(db, user.id, supporter=supporter),
+        showcase=showcase_items(db, user, limit=SUPPORTER_SHOWCASE_LIMIT if supporting else SHOWCASE_LIMIT),
+        supporting=supporting,
         # A count only (never who): shown with the library stats the member chose to share.
         friends_brought=friend_invites.friends_brought(db, user.id) if profile.show_stats else 0,
         # Shown with the library stats, never revealing a shelf the member keeps private.
