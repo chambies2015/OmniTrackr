@@ -85,7 +85,7 @@
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261114-advent-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261115-home-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261109-workspace-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -476,6 +476,7 @@
         <p id="homeHeroDate" class="home-hero__date"></p>
         <h2 id="homeHeroTitle" class="home-hero__title">Welcome back</h2>
         <p id="homeHeroSummary" class="home-hero__summary"></p>
+        <p id="homeHeroNews" class="home-hero__news" hidden></p>
         <dl id="homeHeroStats" class="home-hero__stats"></dl>
         <div id="homeHeroMix" class="home-hero__mix" role="img" hidden></div>
       </div>
@@ -528,30 +529,6 @@
         <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
       </div>
       <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
-    </section>
-
-    <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
-      <div class="year-so-far__head">
-        <div>
-          <p class="year-so-far__eyebrow">Year in Review preview</p>
-          <h2 id="yearSoFarTitle">Your year so far</h2>
-        </div>
-        <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
-      </div>
-      <dl class="year-so-far__stats">
-        <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
-        <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
-        <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
-      </dl>
-      <div class="year-so-far__meter-row">
-        <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
-        <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
-      </div>
-      <p id="yearSoFarHint" class="year-so-far__hint"></p>
-      <div class="year-so-far__foot">
-        <p id="yearSoFarNote" class="year-so-far__note"></p>
-        <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
-      </div>
     </section>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -642,16 +619,27 @@
         </section>
         </div>
 
-        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
-          <div class="on-this-day__head">
+        <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
+        <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
+          <div class="home-news__head">
             <div>
-              <p class="on-this-day__eyebrow">On this day</p>
-              <h2 id="onThisDayTitle">From your past</h2>
+              <p id="homeNewsEyebrow" class="home-news__eyebrow">This week</p>
+              <h2 id="homeNewsTitle">What's new</h2>
+              <p id="homeNewsSummary" class="home-news__summary"></p>
             </div>
-            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
           </div>
-          <ul id="onThisDayList" class="on-this-day__list"></ul>
-          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
+          <div class="home-news__grid">
+            <div id="homeNewsShows" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Your shows</h3>
+              <ul id="homeNewsShowList" class="home-news__list"></ul>
+            </div>
+            <div id="homeNewsFriends" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Friends</h3>
+              <ul id="homeNewsFriendList" class="home-news__list"></ul>
+              <button id="homeNewsFriendsMore" type="button" class="home-news__link" data-switch-tab="friends-feed" hidden>Open the friends feed</button>
+            </div>
+          </div>
+          <p id="homeNewsStatus" class="home-news__status" role="status" aria-live="polite"></p>
         </section>
 
         <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
@@ -673,6 +661,18 @@
             <h3 id="nextUpQueueSuggestTitle" class="next-up-queue__suggest-title">Line up more from your library</h3>
             <ul id="nextUpQueueSuggestList" class="next-up-queue__suggest-list" aria-labelledby="nextUpQueueSuggestTitle"></ul>
           </div>
+        </section>
+
+        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
+          <div class="on-this-day__head">
+            <div>
+              <p class="on-this-day__eyebrow">On this day</p>
+              <h2 id="onThisDayTitle">From your past</h2>
+            </div>
+            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
+          </div>
+          <ul id="onThisDayList" class="on-this-day__list"></ul>
+          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
         </section>
 
         <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
@@ -773,8 +773,32 @@
       </div>
 
       <aside class="home-board__rail" aria-labelledby="homeBoardRailTitle">
-        <p id="homeBoardRailTitle" class="home-board__rail-title">Goals and extras</p>
+        <p id="homeBoardRailTitle" class="home-board__rail-title">This season</p>
         <div class="home-board__rail-cards">
+          <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
+            <div class="year-so-far__head">
+              <div>
+                <p class="year-so-far__eyebrow">Year in Review preview</p>
+                <h2 id="yearSoFarTitle">Your year so far</h2>
+              </div>
+              <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
+            </div>
+            <dl class="year-so-far__stats">
+              <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
+              <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
+              <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
+            </dl>
+            <div class="year-so-far__meter-row">
+              <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
+              <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
+            </div>
+            <p id="yearSoFarHint" class="year-so-far__hint"></p>
+            <div class="year-so-far__foot">
+              <p id="yearSoFarNote" class="year-so-far__note"></p>
+              <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
+            </div>
+          </section>
+
           <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
             <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
             <h2 id="seasonCardTitle">The seasonal hub is open</h2>
@@ -2358,6 +2382,7 @@
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261110-sweep-1"></script>
+  <script src="/static/home-today.js?v=20261115-home-1"></script>
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
