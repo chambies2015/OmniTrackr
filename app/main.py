@@ -363,6 +363,26 @@ def savebar_signup_html(google: bool) -> str:
             '<span><span class="lp-savebar__wide">Continue with </span>Google</span></a>' + email)
 
 
+HOME_CTA_COPY = {
+    "tour": ("That could be your library by tonight.", "Free, private until you share it, and you can export everything whenever you like."),
+    "tools": ("Keep what you find.", "Your picks, polls and plans save to one library, across all nine formats."),
+}
+
+
+def home_cta_html(google: bool, where: str) -> str:
+    """A sign-up row between homepage sections; data-home-cta says which one was pressed."""
+    title, note = HOME_CTA_COPY[where]
+    google_button = (f'<a class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup data-home-cta="{where}">'
+                     f'{GOOGLE_G_SVG}<span>Continue with Google</span></a>') if google else ""
+    email_label = "Sign up with email" if google else "Create a free account"
+    email_class = "lp-btn--ghost" if google else "lp-btn--primary"
+    return (
+        f'<div class="lp-cta lp-cta--{where}"><div class="lp-cta__copy"><p class="lp-cta__title">{title}</p><p class="lp-cta__note">{note}</p></div>'
+        f'<div class="lp-cta__actions">{google_button}'
+        f'<button type="button" class="lp-btn {email_class}" data-action="show-register-form" data-home-cta="{where}">{email_label}</button></div></div>'
+    )
+
+
 def season_link_html() -> str:
     """The seasonal hub tile in the homepage's no-account row: the running season, else the next one."""
     from datetime import datetime
@@ -387,7 +407,8 @@ def _warm_homepage_sections() -> None:
     large library). Run inline, it stalled every other request while it ran.
     """
     from . import guest_picks, landing_proof
-    for section in (guest_picks.homepage_section, landing_proof.homepage_section, landing_proof.hero_section):
+    for section in (guest_picks.homepage_section, landing_proof.homepage_section, landing_proof.hero_section,
+                    landing_proof.pulse_section):
         try:
             section()
         except Exception:
@@ -442,10 +463,28 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 hero_proof = ""  # The homepage never depends on this line.
             page = page.replace("<!--HERO_PROOF-->", hero_proof, 1)
+        if "<!--HOME_PULSE-->" in page:
+            try:
+                from . import landing_proof
+                pulse = landing_proof.pulse_section()
+            except Exception:
+                pulse = ""  # The homepage never depends on this band.
+            page = page.replace("<!--HOME_PULSE-->", pulse, 1)
+        for marker, build in (("<!--HOME_IMPORT-->", "import_section"), ("<!--HOME_TOOLS-->", "tools_section")):
+            if marker in page:
+                try:
+                    from . import landing_sections
+                    block = (landing_sections.tools_section(season_link_html()) if build == "tools_section"
+                             else landing_sections.import_section())
+                except Exception:
+                    block = ""  # The homepage never depends on these sections.
+                page = page.replace(marker, block, 1)
         if "<!--SEASON_LINK-->" in page:
             page = page.replace("<!--SEASON_LINK-->", season_link_html(), 1)
         from . import google_signin
         google = google_signin.configured()
+        for where in HOME_CTA_COPY:
+            page = page.replace(f"<!--HOME_CTA:{where}-->", home_cta_html(google, where), 1)
         for form, label in (("login", "Log in with Google"), ("register", "Sign up with Google")):
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
         page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)

@@ -63,13 +63,12 @@ def test_format_ribbon_links_every_tracker_page(client):
         assert client.get(href).status_code == 200, href
 
 
-def test_how_it_works_sits_beside_the_example_library(client):
+def test_how_it_works_anchor_now_opens_the_screen_tour(client):
     html = client.get("/").text
     section = html[html.index('id="how-it-works"'):]
-    section = section[:section.index('id="features"')]
-    assert "From recommendation to a memory you can revisit" in section
-    assert "landing-library-showcase" in section
-    assert section.count('<span class="lp-flow__num">') == 4
+    section = section[:section.index("</section>")]
+    assert "This is what your library looks like" in section
+    assert section.count('role="tab"') == 6 and section.count('role="tabpanel"') == 6
     assert html.count('id="how-it-works"') == 1
 
 

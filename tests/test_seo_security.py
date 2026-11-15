@@ -1328,8 +1328,8 @@ class TestSecurityMiddleware:
         assert "Free media tracker" in content
         visible = re.sub(r"<[^>]+>", "", content)
         assert "Every movie, show, game and book. One library." in visible
-        assert "From recommendation to a memory you can revisit" in content
-        assert "Things to try right now" in content
+        assert "This is what your library looks like" in content
+        assert "Tools people come back for" in content
         assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
@@ -1346,15 +1346,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "landing-library-showcase" in content
-        assert "Example library" in content
-        assert "Last watched: episode 18" in content
-        assert "Played</small>" in content
-        assert "Not read" in content
-        assert "journal moments" in content
-        assert "Cross-media explorer" in content
-        assert "18 of 28 episodes" not in content
-        assert "hours played" not in content
+        # The tour shows real screens, labelled as a sample library, with descriptive alt text.
+        assert "taken with a sample library of 48 titles" in content
+        assert "Frieren is at season 1, episode 18" in content
+        assert content.count('<div class="lp-shot" role="tabpanel"') == 6
+        assert "landing-library-showcase" not in content
         assert "Want to read" not in content
         assert "Your most active week this month" not in content
         assert 'class="showcase-progress"' not in content

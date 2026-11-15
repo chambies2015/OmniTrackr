@@ -64,10 +64,10 @@ def test_button_is_hidden_until_configured(client):
 
 def test_button_shows_on_both_forms_once_configured(client, google):
     page = client.get("/").text
-    # The log-in form, the sign-up form, the homepage hero and the save bar.
-    assert page.count('href="/auth/google/start"') == 4
+    # The log-in form, the sign-up form, the homepage hero, the save bar and the two rows between sections.
+    assert page.count('href="/auth/google/start"') == 6
     # Every sign-up button (not the log-in one) counts as starting to sign up.
-    assert page.count("data-google-signup") == 3
+    assert page.count("data-google-signup") == 5
     assert "Sign up with Google" in page and "Log in with Google" in page
 
 
