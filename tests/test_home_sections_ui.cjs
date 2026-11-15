@@ -100,3 +100,11 @@ test('tour tabs show one panel at a time and arrow keys move between them', () =
   assert.equal(ui.panels['tour-home'].hidden, false);
   assert.deepEqual(ui.reported, ['home_tour_opened']);
 });
+
+test('the guide link only ever takes a guide slug', () => {
+  const ui = setup();
+  ui.select.options[1].value = 'javascript:alert(1)';
+  ui.select.selectedIndex = 1;
+  ui.select.fire('change');
+  assert.equal(ui.parts['[data-binge-link]'].getAttribute('href'), '/binge-calculator/breaking-bad');
+});

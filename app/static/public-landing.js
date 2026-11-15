@@ -257,7 +257,8 @@
       finishLine.appendChild(document.createTextNode('.'));
       finishLine.hidden = false;
       var link = binge.querySelector('[data-binge-link]');
-      if (link) link.setAttribute('href', '/binge-calculator/' + option.value);
+      // Only a guide slug goes into the link (the options are written by the server).
+      if (link && /^[a-z0-9-]{1,80}$/.test(option.value)) link.setAttribute('href', '/binge-calculator/' + encodeURIComponent(option.value));
       if (fromVisitor && !bingeReported) {
         bingeReported = true;
         report('home_binge_demo_used');
