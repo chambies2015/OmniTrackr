@@ -324,9 +324,16 @@ def level_label(founding: bool, months: int) -> str:
     return f"{label} · {months} months" if months >= 2 else label
 
 
-def public_badge(db: Session, user_id: int) -> Optional[dict]:
-    """What a public page may show about this member's support, or None."""
-    supporter = get_supporter(db, user_id)
+_UNREAD = object()
+
+
+def public_badge(db: Session, user_id: int, supporter=_UNREAD) -> Optional[dict]:
+    """What a public page may show about this member's support, or None.
+
+    Pass ``supporter`` (the member's row, or None) when the caller already read it.
+    """
+    if supporter is _UNREAD:
+        supporter = get_supporter(db, user_id)
     if not is_active(supporter) or not supporter.show_badge:
         return None
     tier = member_tier(supporter)

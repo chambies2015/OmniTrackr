@@ -52,7 +52,9 @@ TRACKS = (
      "counts": "books read", "next": "Read {n} more {noun}", "noun": ("book", "books"), "shelf": "books"},
     {"key": "mangaka", "name": "Manga Reader", "emoji": "🗯️", "metric": "manga", "targets": (5, 25, 100),
      "counts": "manga series read", "next": "Finish {n} more manga {noun}", "noun": ("series", "series"), "shelf": "manga"},
-    {"key": "regular", "name": "Podcast Regular", "emoji": "🎙️", "metric": "podcasts", "targets": (5, 25, 100),
+    # Saved as "regular" until Nov 2026, the same key as the visits badge below;
+    # migrations.split_shared_regular_badge moved the stored rows apart.
+    {"key": "podcaster", "name": "Podcast Regular", "emoji": "🎙️", "metric": "podcasts", "targets": (5, 25, 100),
      "counts": "podcasts listened to", "next": "Listen to {n} more {noun}", "noun": ("podcast", "podcasts"), "shelf": "podcasts"},
     {"key": "earful", "name": "All Ears", "emoji": "🔊", "metric": "audiobooks", "targets": (5, 25, 100),
      "counts": "audiobooks finished", "next": "Finish {n} more {noun}", "noun": ("audiobook", "audiobooks"), "shelf": "audiobooks"},
@@ -84,6 +86,8 @@ TRACKS = (
      "next": "Open {n} more advent {noun}", "noun": ("door", "doors"), "shelf": None},
 )
 BY_KEY = {track["key"]: track for track in TRACKS}
+# Each key is one stored row per member, so two tracks sharing a key would share a tier.
+assert len(BY_KEY) == len(TRACKS), "badge track keys must be unique"
 TOTAL_LEVELS = len(TRACKS) * len(TIERS)
 # Where on the dashboard each badge's next step happens.
 LINKS = {

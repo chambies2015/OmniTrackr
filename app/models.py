@@ -2064,3 +2064,15 @@ class AdventReminder(Base):
     last_day = Column(Integer, nullable=False, default=0)
 
     __table_args__ = (UniqueConstraint("user_id", "year", name="uq_advent_reminder"),)
+
+
+class DataFix(Base):
+    """A one-time repair of stored rows that has already run (Nov 2026). A new table only.
+
+    Startup migrations run on every boot. A repair that must not run twice, such as
+    moving badge rows between keys, writes its name here in the same transaction.
+    """
+    __tablename__ = "data_fixes"
+
+    name = Column(String(64), primary_key=True)
+    ran_at = Column(DateTime, nullable=False, default=datetime.utcnow)
