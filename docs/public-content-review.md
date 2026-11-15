@@ -1,5 +1,38 @@
 # Public content review — September 17, 2026
 
+## Follow-up — November 15, 2026: crawl before the December review request
+
+Crawled the live site (900 pages, production on roughly the November 12 code) and a local
+build of November-Updates (297 pages). No broken links, nothing in the sitemap is noindex,
+and no noindex page loads the ad script. ads.txt and the www redirect are correct. The
+switches from November 4 still hold: roundups, past puzzles and the directories stay out of
+search. What needed fixing:
+
+- **The 30 "how long does it take" guides weren't in `editorial_index`.** They had bylines
+  and dates but were missing from the `/content-quality` ledger and from the "Elsewhere in
+  the guides" cross-links, so most had three to six links pointing at them. Indexable ones
+  (`binge_calculator.is_indexable`) are now a "binge" section, and `guide_links` reads
+  their titles, so the Game of Thrones watch order and the Game of Thrones binge guide link
+  to each other. The editorial standards page explains how their totals are worked out, and
+  how the awards pages handle nominees.
+- **Sign-in links were followed again.** About forty pages (Discover trails, awards,
+  gift and Black Friday guides, Release Radar, shared lists) linked to `/?next=<page>`
+  without `rel="nofollow"`. Those are copies of the homepage with a canonical to `/`.
+  `link_hints.nofollow_account_links`, an html_finish step, now adds nofollow to every link
+  to `/?next=` or `/?login=`, so new pages don't need to remember.
+- **Title pages linked to the calculator hub with their own query.** The live crawl found
+  twelve `/binge-calculator?lookup=...` URLs reachable from title pages. Those links are
+  nofollow now; the hub's canonical already pointed at `/binge-calculator`.
+- **The privacy policy was two weeks behind.** It now covers two-step sign-in, passkeys,
+  episode notes, award ballots, the advent calendar, gift lists, shared lists and clubs,
+  what stays in the browser before sign-up, Ko-fi and Amazon Associates. Updated date:
+  November 15, 2026.
+
+Left alone: hub pages such as `/new-releases` and `/challenges` are short (about 300
+words) but are lists of guides with an introduction, which is what a hub is. Awards pages
+waiting for nominees still have dates, history and how to watch (440 to 650 words). The
+Discover guides still don't load the ad script (October 16 decision).
+
 ## Follow-up — November 4, 2026: another "low value content" rejection
 
 Crawled the live sitemap (138 URLs) and every page those link to (362 more). Only six
