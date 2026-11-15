@@ -34,6 +34,18 @@ test('a row is looked up on the first visit and skipped on the next one that day
   assert.equal(later.ask('movies', 7, 'Blond'), true, 'an edited title is tried again');
 });
 
+test('fixing the year, artist or author gets a fresh try the same day', () => {
+  const storage = {};
+  const first = visit(storage, 1_000_000);
+  first.ask('movies', 7, 'Dune', 1984);
+  first.ask('books', 3, 'Dune', 'Frank Herbet');
+  first.flush();
+  const later = visit(storage, 1_000_000 + 60 * 60 * 1000);
+  assert.equal(later.ask('movies', 7, 'Dune', 1984), false);
+  assert.equal(later.ask('movies', 7, 'Dune', 2021), true);
+  assert.equal(later.ask('books', 3, 'Dune', 'Frank Herbert'), true);
+});
+
 test('a day later the row is tried again', () => {
   const storage = {};
   const first = visit(storage, 0);

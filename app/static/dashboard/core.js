@@ -373,8 +373,12 @@ let coverTriesEarlier = null;
 const coverTriesNow = {};
 let coverTrySaveQueued = false;
 
-function coverTryKey(kind, id, title) {
-  return `${kind}:${id}:${String(title || '').slice(0, 80)}`;
+// `detail` is whatever else the lookup searches with (year, artist, author), so a
+// member who fixes a wrong year or author gets a fresh try straight away.
+function coverTryKey(kind, id, title, detail) {
+  const key = `${kind}:${id}:${String(title || '').slice(0, 80)}`;
+  const extra = String(detail ?? '').slice(0, 60);
+  return extra ? `${key}:${extra}` : key;
 }
 
 function earlierCoverTries() {
@@ -403,8 +407,8 @@ function saveCoverTries() {
 }
 
 // True when the row should look for a cover now; false when an earlier visit already tried today.
-function shouldLookUpCover(kind, id, title) {
-  const key = coverTryKey(kind, id, title);
+function shouldLookUpCover(kind, id, title, detail) {
+  const key = coverTryKey(kind, id, title, detail);
   if (earlierCoverTries()[key]) return false;
   if (!coverTriesNow[key]) {
     coverTriesNow[key] = Date.now();
