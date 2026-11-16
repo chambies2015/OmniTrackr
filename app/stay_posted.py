@@ -23,7 +23,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import models
@@ -100,11 +100,11 @@ def email_offer(user: models.User) -> bool:
 
 
 def _library_size(db: Session, user_id: int) -> int:
+    """Titles across all nine libraries, in one query (the home screen asks every minute or so)."""
     from .badges import LIBRARY
-    total = 0
-    for model, _flag in LIBRARY.values():
-        total += int(db.query(func.count(model.id)).filter(model.user_id == user_id).scalar() or 0)
-    return total
+    parts = [select(func.count(model.id)).where(model.user_id == user_id).scalar_subquery()
+             for model, _flag in LIBRARY.values()]
+    return int(db.execute(select(sum(parts[1:], parts[0]))).scalar() or 0)
 
 
 def _settled(user: models.User, now: datetime) -> bool:
@@ -256,6 +256,10 @@ def answer(db: Session, user: models.User, reply: str, place: str = "card", now:
     row = get_row(db, user.id)
     if row is None:
         return False
+    # A channel is only counted as turned on when it is on. The buttons report it after the
+    # channel's own endpoint answered, so this only stops a hand-made request padding the totals.
+    if reply in CHANNELS and not channels(db, user)[reply]:
+        return False
     if place == "after":
         if row.after_save_at is None or now - row.after_save_at > timedelta(days=1):
             return False
@@ -267,6 +271,8 @@ def answer(db: Session, user: models.User, reply: str, place: str = "card", now:
     moment = row.moment if row.moment in MOMENTS else None
     if moment is None or row.shown_at is None:
         return False
+    if reply != "sample" and row.answer == reply and row.answered_at and row.answered_at >= row.shown_at:
+        return True  # the same button again for the same showing counts once
     count(f"card_{reply}_{moment}")
     if reply == "sample":
         return True  # a look at the sample leaves the card where it is

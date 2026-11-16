@@ -35,7 +35,7 @@ class AfterSave(BaseModel):
 
 
 @router.get("/api/stay-posted")
-def stay_posted_card(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def stay_posted_card(request: Request, response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     _no_store(response)
     try:
         card = stay_posted.current(db, user)

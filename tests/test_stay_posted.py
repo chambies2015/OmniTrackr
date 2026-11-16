@@ -254,6 +254,7 @@ def test_the_note_falls_back_to_email_and_skips_other_kinds(client, db_session, 
     assert after(client, user, category="movies") is None
     offer = after(client, user, push=False, title="Severance")
     assert offer["channel"] == "email" and "Severance" in offer["text"]
+    assert client.put("/api/for-you/email", headers=headers(user), json={"enabled": True, "source": "after_save"}).status_code == 200
     assert reply(client, user, "email", place="after").json() == {"saved": True}
     assert counted("after_email") == 1
     other = member(db_session, name="kai")
@@ -282,6 +283,7 @@ def test_endpoints_need_a_member(client):
 def test_site_stats_summary_groups_the_counters(client, db_session):
     user = member(db_session)
     seen(client, user, "library")
+    assert client.post("/api/calendar", headers=headers(user)).status_code == 200
     reply(client, user, "calendar")
     other = member(db_session, name="ash")
     after(client, other)
