@@ -833,6 +833,7 @@ def run_migrations():
     add_profile_now_column()
     add_showcase_note_column()
     add_calendar_episodes_column()
+    add_invite_taste_test_column()
     add_next_up_started_column()
     add_poll_round_column()
     add_lookup_indexes()
@@ -1079,6 +1080,22 @@ def add_calendar_episodes_column():
             print("Added include_episodes column to calendar_feeds table")
     except Exception as e:
         print(f"Migration warning (calendar episodes): {e}")
+
+
+def add_invite_taste_test_column():
+    """Add the taste test switch to friend invite links. Existing links get FALSE, so they work as before."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("friend_invites"):
+            return
+        if "taste_test" in {col["name"] for col in inspector.get_columns("friend_invites")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE friend_invites ADD COLUMN taste_test BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added taste_test column to friend_invites table")
+    except Exception as e:
+        print(f"Migration warning (invite taste test): {e}")
 
 
 # (table, creator column) for the "More by" lists on title pages.

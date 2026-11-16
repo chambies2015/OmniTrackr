@@ -414,6 +414,14 @@ body.dark-mode .monthly-replay__stat { background: rgba(0, 0, 0, .12); }
 .completion-ritual-modal textarea { box-sizing: border-box; min-height: 92px; width: 100%; }
 .completion-ritual-modal__favorite { align-items: center; color: var(--fg); display: flex; gap: 8px; margin: 14px 0 18px; }
 .completion-ritual-modal__actions { align-items: center; display: flex; gap: 12px; }
+.completion-ritual-modal__share { align-items: center; background: rgba(139, 92, 246, .1); border: 1px solid rgba(139, 92, 246, .3); border-radius: 12px; color: var(--fg); display: flex; gap: 12px 16px; justify-content: space-between; margin: 0 0 18px; padding: 12px 14px; }
+.completion-ritual-modal__share[hidden] { display: none; }
+.completion-ritual-modal__share p { font-size: .88rem; line-height: 1.45; margin: 0; }
+.completion-ritual-modal__share p strong { display: block; }
+.completion-ritual-modal__share-btn { background: transparent; border: 1px solid rgba(139, 92, 246, .6); border-radius: 999px; color: var(--fg); cursor: pointer; flex: none; font: 600 .88rem/1 inherit; padding: 9px 16px; }
+.completion-ritual-modal__share-btn:hover { background: rgba(139, 92, 246, .18); }
+.completion-ritual-modal__share-btn:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+@media (max-width: 480px) { .completion-ritual-modal__share { align-items: stretch; flex-direction: column; } }
 .completion-ritual-modal__skip { background: transparent; border: 0; color: var(--fg); cursor: pointer; opacity: .7; padding: 6px; }
 .completion-ritual-modal__skip:hover { opacity: 1; text-decoration: underline; }
 .completion-ritual-modal__review { border-top: 1px solid var(--border-color, rgba(127,127,127,.25)); margin: 0 0 16px; padding-top: 14px; }
@@ -5992,6 +6000,14 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
 .friend-invite__status:empty { display: none; }
 .friend-invite__status { margin: 10px 0 0 !important; overflow-wrap: anywhere; }
 .friend-invite__share { width: 100%; }
+.friend-invite__plain { background: none; border: 0; color: inherit; cursor: pointer; display: block; font: inherit; font-size: .88rem; margin: 10px auto 0; opacity: .8; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.friend-invite__plain:hover { opacity: 1; }
+.friend-invite p.friend-invite__fine { font-size: .78rem; margin: 12px 0 0; opacity: .65; }
+.friends-empty { display: grid; gap: 10px; padding: 16px 8px; }
+.friends-empty p { margin: 0; }
+.friends-empty__lead { font-size: .9rem; line-height: 1.45; opacity: .85; }
+.friends-empty__status:empty { display: none; }
+.friends-empty__status { font-size: .85rem; overflow-wrap: anywhere; }
 
 /* Yearly goals (dashboard) */
 .year-goals {

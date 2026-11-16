@@ -291,15 +291,19 @@
     try { return localStorage.getItem(INVITE_HIDE_KEY) === '1'; } catch (error) { return false; }
   }
 
+  // The no-friends box sends a taste test: the friend rates a few of the member's titles first.
   async function copyInvite(button) {
     button.disabled = true;
     try {
-      const data = await post('/api/friends/invite-link', {});
+      const data = await post('/api/friends/invite-link', { taste_test: true });
+      const what = data.taste_test ? 'Taste test' : 'Invite link';
       if (navigator.share && window.matchMedia?.('(pointer: coarse)').matches) {
         try { await navigator.share({ text: data.text, url: data.url }); setStatus(''); return; } catch (error) { /* fall back to copying */ }
       }
-      await navigator.clipboard.writeText(data.url);
-      setStatus('Invite link copied. Anyone who joins with it becomes your friend straight away.');
+      await navigator.clipboard.writeText(`${data.text} ${data.url}`);
+      const more = !data.taste_test && data.rated_needed
+        ? ` Rate ${data.rated_needed} more ${data.rated_needed === 1 ? 'title' : 'titles'} and it opens on a taste test.` : '';
+      setStatus(`${what} copied. Anyone who joins with it becomes your friend straight away.${more}`);
     } catch (error) {
       setStatus('Could not make an invite link right now. You can find it in Friends.');
     } finally {
@@ -309,9 +313,10 @@
 
   function renderInvite(box) {
     const wrap = el('div', 'home-news__invite');
-    wrap.append(el('p', 'home-news__empty', "When friends finish or rate something, it shows up here, and you can cheer them on. Nobody's here yet."));
+    wrap.append(el('p', 'home-news__empty', "When friends finish or rate something, it shows up here. Nobody's here yet. "
+      + "Send someone a taste test: they rate a few things you've rated and see how close your taste is."));
     const actions = el('div', 'home-news__actions');
-    const invite = el('button', 'home-news__btn home-news__btn--primary', 'Copy an invite link');
+    const invite = el('button', 'home-news__btn home-news__btn--primary', 'Send a taste test');
     invite.type = 'button';
     invite.addEventListener('click', () => copyInvite(invite));
     const hide = el('button', 'home-news__link', 'Hide');

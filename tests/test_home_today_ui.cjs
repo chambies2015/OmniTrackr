@@ -125,5 +125,5 @@ test('no friends shows an invite; nothing at all keeps the card hidden once the 
   second.nodes.homeNewsFriends.append = node => { invite = node; };
   second.module.render({ shows: [], releases: [], friends: { items: [], new: 0, friends: 0 }, counts: {} }, NOW);
   assert.equal(second.nodes.homeNews.hidden, false);
-  assert.match(invite.text, /Copy an invite link/);
+  assert.match(invite.text, /Send a taste test/);
 });

@@ -479,6 +479,7 @@
         { label: 'Invited, waiting to verify email (now)', count: invites.awaiting_verification },
         { label: 'Invite links created', count: invites.new_links },
         { label: 'Members with a link (all time)', count: invites.links },
+        { label: 'Links that open on a taste test (now)', count: invites.taste_tests || 0 },
       ],
       growthSupporters: [
         { label: 'Active supporters (now)', count: supporters.active },
