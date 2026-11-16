@@ -30,8 +30,10 @@ function updateMetadata(review) {
   const posterUrl = review.poster_url || review.cover_art_url || 'https://omnitrackr.xyz/omnitrackr_vortex.png';
   const fullPosterUrl = posterUrl.startsWith('http') ? posterUrl : `https://omnitrackr.xyz${posterUrl}`;
   const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
-  const reviewTitle = `${escapeHtml(review.title)} Review - OmniTrackr`;
-  const reviewDescription = review.review ? escapeHtml(review.review.substring(0, 160)) + (review.review.length > 160 ? '...' : '') : `Read a review of ${escapeHtml(review.title)} by ${escapeHtml(review.username)} on OmniTrackr.`;
+  // document.title and setAttribute() take plain text, so nothing here is HTML-escaped:
+  // escaping would show "Ocean&#39;s Eleven" in the browser tab and in link previews.
+  const reviewTitle = `${review.title || ''} Review - OmniTrackr`;
+  const reviewDescription = review.review ? review.review.substring(0, 160) + (review.review.length > 160 ? '...' : '') : `Read a review of ${review.title || ''} by ${review.username || ''} on OmniTrackr.`;
 
   document.title = reviewTitle;
 

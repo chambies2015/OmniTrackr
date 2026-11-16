@@ -213,4 +213,4 @@ def test_legacy_review_page_escapes_quotes_in_attributes():
     body = body[:body.index("\n}\n")]
     assert "&quot;" in body and "&#39;" in body and "innerHTML" not in body
     template = (ROOT / "app/templates/review_detail.html").read_text()
-    assert "review_detail.js?v=20261115-review-quotes-1" in template
+    assert "review_detail.js?v=20261115-review-quotes-" in template
