@@ -279,8 +279,11 @@ def _friend(user) -> dict:
 
 
 def page(db: Session, viewer_id: int, before: Optional[datetime] = None, limit: int = PAGE_SIZE,
-         now: Optional[datetime] = None) -> dict:
+         now: Optional[datetime] = None, count_since: Optional[datetime] = None) -> dict:
+    """One page of feed cards. With ``count_since``, also "since_count": how many cards in the
+    whole window are that new, so the home card can show a few and count them all."""
     cards, friends = collect(db, viewer_id, now)
+    since_count = None if count_since is None else sum(1 for card in cards if card.at >= count_since)
     if before is not None:
         cards = [card for card in cards if card.at < before]
     shown, more = cards[:limit], len(cards) > limit
@@ -333,8 +336,11 @@ def page(db: Session, viewer_id: int, before: Optional[datetime] = None, limit: 
             "title_path": paths.get(key), "in_library": (category, item.title.strip().lower()) in owned,
             "cheers": cheers.get(key, 0), "cheered": key in mine,
         })
-    return {"items": items, "next_before": shown[-1].at.isoformat() if more and shown else None,
+    data = {"items": items, "next_before": shown[-1].at.isoformat() if more and shown else None,
             "friends": len(friends_of_viewer(db, viewer_id))}
+    if since_count is not None:
+        data["since_count"] = since_count
+    return data
 
 
 def friends_of_viewer(db: Session, viewer_id: int) -> set[int]:
