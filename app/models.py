@@ -2109,3 +2109,27 @@ class SupportAsk(Base):
     kofi_at = Column(DateTime, nullable=True)
     kofi_from = Column(String(24), nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class StayPostedAsk(Base):
+    """When a member was last asked how they'd like to hear about new episodes and releases (Nov 2026).
+
+    A new table only, one row per member, made the first time the home-screen card or the note after
+    saving a show reaches their screen. It records the asking and the answer, never a channel itself:
+    the weekly email, notifications and the calendar keep their own switches, and nothing is turned on
+    unless the member presses that button.
+    """
+    __tablename__ = "stay_posted_asks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    moment = Column(String(16), nullable=True)
+    shown_at = Column(DateTime, nullable=True)
+    shown_count = Column(Integer, nullable=False, default=0)
+    answer = Column(String(12), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
+    snoozed_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    after_save_at = Column(DateTime, nullable=True)
+    after_save_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

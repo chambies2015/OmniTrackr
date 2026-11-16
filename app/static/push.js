@@ -52,8 +52,11 @@
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (error) { return null; }
   }
 
-  function subscriptionBody(subscription) {
-    return JSON.stringify({ ...subscription.toJSON(), time_zone: timeZone() });
+  // source: which button turned this device on, counted anonymously in Site stats.
+  function subscriptionBody(subscription, source) {
+    const body = { ...subscription.toJSON(), time_zone: timeZone() };
+    if (source) body.source = source;
+    return JSON.stringify(body);
   }
 
   function keyBytes(base64url) {
@@ -135,7 +138,7 @@
     }
   }
 
-  async function turnOn() {
+  async function turnOn(source) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       render(permission === 'denied' ? 'blocked' : 'off');
@@ -151,7 +154,7 @@
       subscription = null;
     }
     subscription = subscription || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-    await api('/notifications/push/subscription', { method: 'POST', body: subscriptionBody(subscription) });
+    await api('/notifications/push/subscription', { method: 'POST', body: subscriptionBody(subscription, source) });
     render('on');
   }
 
@@ -370,7 +373,7 @@
   });
 
   // Turn this device on from anywhere (the episode guide offers it). Resolves to the new state.
-  async function turnOnFromPrompt() {
+  async function turnOnFromPrompt(source) {
     if (busy) return lastState;
     if (lastState === null) await refresh();
     if (lastState === 'install') {
@@ -381,7 +384,7 @@
     if (lastState !== 'off') return lastState;
     busy = true;
     try {
-      await turnOn();
+      await turnOn(typeof source === 'string' ? source : undefined);
     } catch (error) {
       render('off');
     } finally {
@@ -421,7 +424,7 @@
     button.disabled = true;
     try {
       if (state === 'on') await turnOff();
-      else await turnOn();
+      else await turnOn(button.id === 'accountPushBtn' ? 'account' : 'bell');
     } catch (error) {
       render(state === 'on' ? 'on' : 'off', 'That didn’t work. Please try again.');
     } finally {

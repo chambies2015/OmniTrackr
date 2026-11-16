@@ -169,7 +169,7 @@ def _email_state(db: Session, user_id: int) -> dict:
 class EmailPreference(BaseModel):
     enabled: bool | None = None
     updates: bool | None = None  # occasional product news and come-back check-ins
-    source: Literal["start", "first_week", "dashboard", "account"] | None = None  # which prompt was used (counted anonymously)
+    source: Literal["start", "first_week", "dashboard", "account", "home_card", "after_save"] | None = None  # which prompt was used (counted anonymously)
 
 
 @router.get("/api/for-you/email")

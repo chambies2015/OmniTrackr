@@ -1,0 +1,125 @@
+/* Dashboard: the "stay posted" card under What's new, and the note after saving a show (stay-posted.js).
+   A cool teal so it reads as news, not as the amber support note. Colours come from the app-theme tokens. */
+.stay-posted {
+  --stay-tone: #2dd4bf;
+  --stay-deep: #38bdf8;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--stay-deep) 14%, transparent), transparent 52%),
+    linear-gradient(150deg, color-mix(in srgb, var(--stay-tone) 10%, var(--card-bg)), var(--card-bg) 70%);
+  border: 1px solid color-mix(in srgb, var(--stay-tone) 36%, var(--border));
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  margin: 0 0 var(--space-5, 20px);
+  padding: var(--space-5, 20px) var(--space-6, 24px);
+}
+.stay-posted[hidden], .stay-posted [hidden] { display: none !important; }
+.stay-posted__eyebrow {
+  align-items: center;
+  color: color-mix(in srgb, var(--stay-tone) 78%, var(--fg));
+  display: flex;
+  font-size: var(--text-xs, .75rem);
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: .08em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+.stay-posted__eyebrow::before { content: "●"; color: var(--stay-tone); font-size: .7em; letter-spacing: 0; }
+.stay-posted__title { font-family: var(--font-display); font-size: var(--text-xl, 1.25rem); line-height: 1.25; margin: 0 0 8px; overflow-wrap: anywhere; }
+.stay-posted__body { color: var(--fg-secondary); font-size: var(--text-sm, .875rem); line-height: 1.55; margin: 0 0 var(--space-4, 16px); max-width: 62ch; }
+
+.stay-posted__items { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); list-style: none; margin: 0 0 var(--space-4, 16px); padding: 0; }
+.stay-posted__item {
+  align-items: baseline;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border-radius: var(--radius-md, 12px);
+  display: grid;
+  gap: 2px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 12px;
+}
+.stay-posted__item strong { font-size: var(--text-sm, .875rem); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stay-posted__what { color: var(--fg-secondary); font-size: var(--text-xs, .75rem); grid-column: 1; }
+.stay-posted__when {
+  color: color-mix(in srgb, var(--stay-tone) 70%, var(--fg));
+  font-size: var(--text-xs, .75rem);
+  font-weight: 700;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.stay-posted__options { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.stay-posted__option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+.stay-posted__option.is-on { border-color: color-mix(in srgb, var(--stay-tone) 60%, var(--border)); }
+.stay-posted__btn {
+  background: color-mix(in srgb, var(--stay-tone) 18%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--stay-tone) 50%, var(--border));
+  border-radius: var(--radius-pill, 999px);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, .875rem);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 16px;
+  text-align: center;
+}
+.stay-posted__btn:hover:not(:disabled) { background: color-mix(in srgb, var(--stay-tone) 28%, var(--card-bg)); }
+.stay-posted__btn:focus-visible, .stay-posted__quiet:focus-visible, .stay-posted__copy:focus-visible { box-shadow: var(--ring); outline: none; }
+.stay-posted__btn:disabled { cursor: default; opacity: .85; }
+.stay-posted__option.is-on .stay-posted__btn { background: transparent; color: color-mix(in srgb, var(--stay-tone) 80%, var(--fg)); opacity: 1; }
+.stay-posted__hint { color: var(--fg-secondary); font-size: var(--text-xs, .75rem); line-height: 1.5; margin: 0; }
+.stay-posted__hint a, .stay-posted__links a { color: var(--fg); font-weight: 600; text-underline-offset: 3px; }
+.stay-posted__links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 2px 0 0; font-size: var(--text-sm, .8125rem); }
+.stay-posted__copy { background: none; border: 0; color: var(--fg-secondary); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+.stay-posted__foot { border-top: 1px solid var(--border); display: flex; gap: 18px; margin-top: var(--space-4, 16px); padding-top: 4px; }
+.stay-posted__quiet {
+  background: none;
+  border: 0;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, .8125rem);
+  min-height: 44px;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.stay-posted__quiet:hover { color: var(--fg); }
+.stay-posted__status { color: var(--fg-secondary); font-size: var(--text-sm, .8125rem); margin: 8px 0 0; }
+.stay-posted__status:empty { display: none; }
+
+/* The note after saving a show, in the corner notice stack. */
+.app-notice.stay-note::before { content: "🔔"; font-size: .75rem; }
+.stay-note__body { flex: 1; min-width: 0; }
+.stay-note__text { font-weight: 700; margin: 0; }
+.stay-note__hint { color: var(--fg-secondary, #aaa6cb); font-size: .82rem; margin: 2px 0 0; }
+.stay-note__actions { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; }
+.stay-note__yes {
+  background: color-mix(in srgb, #2dd4bf 20%, var(--card-bg, #15122b));
+  border: 1px solid color-mix(in srgb, #2dd4bf 55%, var(--border, #3d3670));
+  border-radius: var(--radius-pill, 999px);
+  color: var(--fg, #f1effc);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0 14px;
+}
+.stay-note__later { background: none; border: 0; color: var(--fg-secondary, #aaa6cb); cursor: pointer; font: inherit; min-height: 40px; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .stay-posted { padding: var(--space-4, 16px); }
+  .stay-posted__options { grid-template-columns: 1fr; }
+}
