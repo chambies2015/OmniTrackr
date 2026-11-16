@@ -168,3 +168,97 @@ def test_has_friends(db_session):
     db_session.add(models.Friendship(user1_id=a.id, user2_id=b.id))
     db_session.commit()
     assert friend_invites.has_friends(db_session, a.id) and friend_invites.has_friends(db_session, b.id)
+
+
+# ---------------------------------------------------------------- taste test invites
+
+def _shelf(db, user):
+    from tests.test_taste_compare import shelf
+    from app import taste_compare
+    taste_compare.DECK_CACHE.clear()
+    shelf(db, user)
+
+
+def _test_link(client, on=True):
+    response = client.post("/api/friends/invite-link", json={"taste_test": on})
+    assert response.status_code == 200
+    data = response.json()
+    return data, data["url"].rsplit("/", 1)[1]
+
+
+def test_taste_test_is_off_until_chosen_and_needs_rated_titles(authenticated_client, db_session):
+    data, token = _link(authenticated_client)
+    assert data["taste_test"] is False and data["taste_test_ready"] is False and data["rated_needed"] == 5
+    # Asking before there are enough rated titles shares a plain invite and leaves the switch off.
+    data, _ = _test_link(authenticated_client)
+    assert data["taste_test"] is False and "We'll be friends as soon as you sign up." in data["text"]
+    assert db_session.query(models.FriendInvite).one().taste_test is False
+
+    _shelf(db_session, _me(db_session))
+    data, same = _test_link(authenticated_client)
+    assert same == token and data["taste_test"] is True and data["rated_needed"] == 0
+    assert "How close is our taste?" in data["text"]
+    # Buttons that don't choose (start page, weekly email) leave it as it is.
+    assert _link(authenticated_client)[0]["taste_test"] is True
+    data, _ = _test_link(authenticated_client, on=False)
+    assert data["taste_test"] is False and db_session.query(models.FriendInvite).one().taste_test is False
+
+
+def test_taste_test_join_page_and_scoring(authenticated_client, db_session):
+    me = _me(db_session)
+    _shelf(db_session, me)
+    _, token = _test_link(authenticated_client)
+    page = authenticated_client.get(f"/join/{token}")  # signed in: the one-click accept page as before
+    assert "data-join-accept" in page.text and 'id="tasteCompare"' not in page.text
+
+    _sign_out(authenticated_client)
+    page = authenticated_client.get(f"/join/{token}")
+    assert page.status_code == 200
+    assert page.headers["x-robots-tag"] == "noindex, nofollow" and page.headers["cache-control"] == "private, no-store"
+    text = page.text
+    assert "testuser sent you a taste test" in text and 'id="tasteCompare"' in text
+    assert f'data-guess-url="/api/friends/invite/{token}/guess"' in text
+    assert f'href="/?invite={token}#signup"' in text and 'href="/#signup"' not in text
+    assert "Private thoughts on the docking scene." not in text and "Secret Diary" in text  # books are not private here
+    assert '"rating"' not in text  # the deck never carries the member's scores
+
+    deck = authenticated_client.get(f"/join/{token}").text
+    import json, re
+    cards = json.loads(re.search(r'id="compareDeck"[^>]*>(.*?)</script>', deck).group(1))
+    answers = [{"id": card["id"], "answer": "loved"} for card in cards[:4]]
+    result = authenticated_client.post(f"/api/friends/invite/{token}/guess", json={"answers": answers})
+    assert result.status_code == 200 and result.json()["rated_count"] == 4
+    assert result.headers["cache-control"] == "no-store"
+
+    # Switched off: the page is a plain invite again and the deck can't be scored.
+    db_session.query(models.FriendInvite).update({"taste_test": False})
+    db_session.commit()
+    assert 'id="tasteCompare"' not in authenticated_client.get(f"/join/{token}").text
+    assert authenticated_client.post(f"/api/friends/invite/{token}/guess", json={"answers": answers}).status_code == 404
+    assert authenticated_client.post("/api/friends/invite/short/guess", json={"answers": []}).status_code == 404
+
+
+def test_answers_from_a_taste_test_reach_a_new_friends_library(authenticated_client, db_session):
+    from app import taste_compare
+    me = _me(db_session)
+    _shelf(db_session, me)
+    cards = taste_compare.deck(db_session, me)
+    answers = [{"id": card["id"], "answer": "liked"} for card in cards[:3]]
+    newfan = member(db_session, "newfan")
+    db_session.commit()
+    _as(authenticated_client, newfan)
+    path = f"/api/taste-match/u/{me.id}/answers"
+    # No public compare link and not friends: nothing to save against.
+    assert authenticated_client.post(path, json={"answers": answers, "source": "guest"}).status_code == 404
+    friend_invites.befriend(db_session, me, newfan, joined=True)
+    db_session.commit()
+    saved = authenticated_client.post(path, json={"answers": answers, "source": "guest"})
+    assert saved.status_code == 200 and len(saved.json()["added"]) == 3
+    assert saved.json()["match"]["owner"]["username"] == "testuser"
+    assert authenticated_client.get(f"/api/taste-match/u/{me.id}").status_code == 200
+
+
+def test_taste_test_column_migration_is_safe_to_rerun():
+    from app.migrations import add_invite_taste_test_column
+    add_invite_taste_test_column()
+    add_invite_taste_test_column()

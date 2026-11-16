@@ -47,6 +47,24 @@ def link_for(db: Session, user, reset: bool = False) -> models.FriendInvite:
     return invite
 
 
+def set_taste_test(db: Session, invite: models.FriendInvite, on: bool) -> None:
+    """Switch the taste test on the member's link on or off (it is the same reusable link)."""
+    if bool(invite.taste_test) != bool(on):
+        invite.taste_test = bool(on)
+        db.commit()
+
+
+def taste_test_inviter(db: Session, token) -> Optional[models.User]:
+    """The active member behind a link whose taste test is switched on, or None."""
+    if not valid_token(token):
+        return None
+    invite = db.query(models.FriendInvite).filter(models.FriendInvite.token == token).first()
+    if invite is None or not invite.taste_test:
+        return None
+    user = db.query(models.User).filter(models.User.id == invite.user_id).first()
+    return user if user is not None and user.is_active else None
+
+
 def inviter_for(db: Session, token) -> Optional[models.User]:
     """The active member behind an invite token, or None."""
     if not valid_token(token):

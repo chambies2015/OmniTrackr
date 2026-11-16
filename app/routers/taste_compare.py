@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from .. import funnel, models, public_profiles, taste_compare, taste_match
 from ..auth import AUTH_COOKIE_NAME
+from ..crud.friends import are_friends
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..integer_bounds import PositiveDatabaseId
@@ -24,7 +25,7 @@ from .profiles import _CardCache, _avatar_html, _card_avatar, _fit, _font, _view
 
 router = APIRouter(tags=["taste-match"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261030-compare-1"
+ASSET_VERSION = "20261116-invite-test-1"
 _CARD_CACHE = _CardCache(size=96)
 
 
@@ -378,6 +379,18 @@ def _linked_owner(db: Session, owner_id: int) -> models.User:
     return _owner_or_404(db, public_profiles.find_user_by_id(db, owner_id))
 
 
+def _owner_for(db: Session, owner_id: int, viewer: models.User) -> models.User:
+    """The member a signed-in viewer is comparing with: their compare link is on, or the two are friends.
+
+    Friends already see each other's Taste Match, so this is how answers from a taste test invite
+    (sent without a public profile) reach the new member's library after sign-up.
+    """
+    owner = public_profiles.find_user_by_id(db, owner_id)
+    if owner is not None and owner.id != viewer.id and are_friends(db, owner.id, viewer.id):
+        return owner
+    return _owner_or_404(db, owner)
+
+
 def _member_match(db: Session, viewer: models.User, owner: models.User) -> dict:
     result = taste_match.match(db, viewer, owner)
     result.pop("friend", None)
@@ -402,7 +415,7 @@ def compare_library(owner_id: PositiveDatabaseId, request: Request, response: Re
                     db: Session = Depends(get_db)):
     """A signed-in member's full library lined up with the member who shared the link."""
     response.headers["Cache-Control"] = "private, no-store"
-    owner = _linked_owner(db, owner_id)
+    owner = _owner_for(db, owner_id, user)
     if owner.id == user.id:
         raise HTTPException(400, "That's your own link.")
     return _member_match(db, user, owner)
@@ -413,7 +426,7 @@ def compare_save(owner_id: PositiveDatabaseId, payload: CompareAnswers, request:
                  user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Put a member's deck answers into their library, then return the full match."""
     response.headers["Cache-Control"] = "private, no-store"
-    owner = _linked_owner(db, owner_id)
+    owner = _owner_for(db, owner_id, user)
     if owner.id == user.id:
         raise HTTPException(400, "That's your own link.")
     lock_progress_owner(db, user.id)
