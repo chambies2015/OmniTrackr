@@ -218,8 +218,8 @@ async def refresh_show(db: Session, client, category: str, title: str, year: Opt
         data = await FETCHERS[category](client, " ".join(title.split()), year, today)
     except asyncio.CancelledError:
         raise
-    except Exception:
-        await run_in_threadpool(title_metadata.store, db, key, None, "error")
+    except Exception as error:
+        await run_in_threadpool(title_metadata.store, db, key, title_metadata.problem(error), "error")
         return
     await run_in_threadpool(title_metadata.store, db, key, data, _status_of(data))
 

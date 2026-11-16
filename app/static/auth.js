@@ -448,7 +448,8 @@ function authErrorMessage(body, fallback) {
 // Funnel steps count once per visit (this tab's session), not once per page, so a
 // guest who opens sign-up on three pages is still one person starting to sign up.
 const reportedFunnelEvents = new Set();
-const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup']);
+const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup',
+    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed']);
 const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
 function funnelSentThisVisit(event) {
     if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
@@ -593,6 +594,7 @@ function setupPasswordHelpers() {
         if (!field || !field.id) return;
         if (field.getAttribute && field.getAttribute('aria-invalid') === 'true') clearFieldError(field.id);
         if (field.dataset && field.dataset.passwordStrength) updatePasswordStrength(field);
+        if (field.id === 'registerPassword' && field.value) reportFunnelEvent('signup_email_password');
     });
 }
 
@@ -615,6 +617,7 @@ function setupUsernameSuggestion() {
     });
     email.addEventListener('input', () => {
         hideEmailFix();
+        if (EMAIL_PATTERN.test(email.value.trim())) reportFunnelEvent('signup_email_typed');
         if (username.dataset.edited === 'true') return;
         username.value = suggestUsername(email.value);
         username.dataset.suggested = username.value ? 'true' : '';
@@ -1216,9 +1219,16 @@ function reportSignupStart() {
     if (savedGuestTitles()) reportFunnelEvent('guest_list_signup');
 }
 
+// The email form's own steps (Site stats, "Email sign-up form"), so a report can show
+// where people who chose email stopped: opened, typed an address, a password, pressed Create.
+function reportEmailFormOpened() {
+    reportSignupStart();
+    reportFunnelEvent('signup_email_opened');
+}
+
 function showRegisterForm(scroll = true, { report = true } = {}) {
     hideAuthPanels();
-    if (report) reportSignupStart();
+    if (report) reportEmailFormOpened();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -1453,12 +1463,13 @@ function setupAuthHandlers() {
         }
     });
 
-    document.getElementById('registerFormElement').addEventListener('focusin', () => reportSignupStart());
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportEmailFormOpened());
     setupUsernameSuggestion();
 
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
+        reportFunnelEvent('signup_email_pressed');
         const email = document.getElementById('registerEmail').value.trim();
         const usernameField = document.getElementById('registerUsername');
         // Autofill can set the email without the events that fill the folded username box.

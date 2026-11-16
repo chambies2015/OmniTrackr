@@ -456,6 +456,7 @@
     };
     fillList('signupIssues', data.funnel.issues);
     if ($('googleSignin')) fillList('googleSignin', data.funnel.google || []);
+    if ($('emailSignupForm')) fillList('emailSignupForm', data.funnel.email_form || []);
     if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
     if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
     const retention = data.retention || {};
@@ -808,6 +809,18 @@
     });
   }
 
+  // Episode guides and release calendars share the facts cache with title pages but are counted apart.
+  function otherLookups(details) {
+    return [['episode_guides', 'Episode guides'], ['release_schedules', 'Release calendar schedules']]
+      .filter(([key]) => details[key])
+      .map(([key, label]) => `${label}: ${number(details[key].found)} found, ${number(details[key].not_found)} not found, ${number(details[key].errors)} errors`);
+  }
+
+  function titleProblem(problem) {
+    const year = problem.year ? ` (${problem.year})` : '';
+    return `${problem.kind}: ${problem.title}${year}: ${problem.reason}${problem.checked ? `, checked ${problem.checked} UTC` : ''}`;
+  }
+
   function renderHealth(data) {
     const list = $('healthList');
     list.replaceChildren();
@@ -821,6 +834,16 @@
       row.append(el('span', '', `Title pages: details found for ${number(details.found)} (${number(details.not_found)} not found, ${number(details.errors)} errors)`),
         el('span', `stats-status ${details.errors > details.found ? 'stats-status--warn' : 'stats-status--ok'}`, details.errors > details.found ? '! Check' : '✓ OK'));
       list.appendChild(row);
+      otherLookups(details).forEach(text => {
+        const other = el('li');
+        other.append(el('span', '', text));
+        list.appendChild(other);
+      });
+      (details.problems || []).forEach(problem => {
+        const item = el('li', 'stats-health__problem');
+        item.append(el('span', '', titleProblem(problem)), el('span', 'stats-status stats-status--warn', problem.status === 'error' ? 'Error' : 'Not found'));
+        list.appendChild(item);
+      });
     }
     system.integrations.forEach(item => {
       const row = el('li');
@@ -1125,6 +1148,7 @@
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_form ? `Email sign-up form: ${data.funnel.email_form.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel && data.funnel.start ? `Start page: ${data.funnel.start.map(step => `${step.label} ${number(step.count)}`).join(' → ')}; ${(data.funnel.start_paths || []).map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
@@ -1139,6 +1163,9 @@
       `Health: ${data.system.database}; ${data.system.integrations.map(item => `${item.name}: ${item.configured ? 'ok' : 'NOT SET'}`).join('; ')}.`,
       `Release Radar: ${data.system.release_radar.map(entry => `${entry.category} ${entry.items} titles${entry.error ? ` (${entry.error})` : ''}`).join(', ')}.`,
       data.system.title_details ? `Title pages: details for ${number(data.system.title_details.found)}, not found ${number(data.system.title_details.not_found)}, errors ${number(data.system.title_details.errors)}.` : '',
+      ...(data.system.title_details ? otherLookups(data.system.title_details).map(text => `${text}.`) : []),
+      data.system.title_details && (data.system.title_details.problems || []).length
+        ? `Latest title page problems: ${data.system.title_details.problems.map(titleProblem).join('; ')}.` : '',
     ];
     return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n');
   }

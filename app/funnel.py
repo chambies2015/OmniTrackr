@@ -184,9 +184,18 @@ GOOGLE = (
     ("google_signin", "Log-ins with Google"),
     ("google_signin_failed", "Google sign-in that didn't finish"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+# The email form step by step, once per visit each. "Started signing up" mixes the email
+# form with Google buttons, and in the Nov 16 2026 report none of the 15 starts sent the
+# email form, with no rejections either: these show whether people chose email at all.
+EMAIL_FORM = (
+    ("signup_email_opened", "Email form opened"),
+    ("signup_email_typed", "Typed an email address"),
+    ("signup_email_password", "Typed a password"),
+    ("signup_email_pressed", "Pressed Create free account"),
+)
+SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
@@ -264,6 +273,8 @@ def summary(counts: dict[str, int]) -> dict:
         "issues": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in REJECTIONS],
         "guest": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GUEST],
         "google": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GOOGLE],
+        "email_form": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_FORM]
+                      + [{"event": "signup_submitted", "label": "Reached our server", "count": count("signup_submitted")}],
         "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
         "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
     }

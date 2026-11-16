@@ -129,8 +129,8 @@ async def get_or_fetch_layout(db: Session, client, category: str, title: str, ye
             await run_in_threadpool(title_metadata.store, db, key, {"seasons": seasons} if seasons else None,
                                     "ok" if seasons else "miss")
             return seasons or _decode(data)
-        except Exception:
-            await run_in_threadpool(title_metadata.store, db, key, None, "error")
+        except Exception as error:
+            await run_in_threadpool(title_metadata.store, db, key, title_metadata.problem(error, wait), "error")
             return _decode(data)
         finally:
             _locks.pop(key, None)
