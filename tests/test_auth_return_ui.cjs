@@ -565,7 +565,8 @@ test('the default sign-up form is not counted as opened until someone uses it', 
   s.context.initAuth();
   assert.equal(beacons.length, 0);
   s.context.showRegisterForm();
-  assert.equal(beacons.length, 1);
+  // "Started signing up" and the email form's own "opened" step.
+  assert.equal(beacons.length, 2);
 });
 
 test('a successful login marks the browser as a returning member', async () => {
