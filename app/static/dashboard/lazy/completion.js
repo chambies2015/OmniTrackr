@@ -74,6 +74,7 @@ async function openCompletionMoment(category, itemId) {
     activeCompletionMomentId = moment.id;
     activeCompletionCategory = category;
     document.getElementById('completionRitualTitle').textContent = moment.title;
+    showCompletionShare(category, itemId, moment.title);
     document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
     document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
     const step = document.getElementById('completionReviewStep');
@@ -95,6 +96,25 @@ async function openCompletionMoment(category, itemId) {
   } catch (error) {
     showNotice('Could not open the finish ritual. Please try again.');
   }
+}
+
+// Finishing something is when people say "you have to see this", so offer Recommend to a friend
+// right there. The dialog sends it to friends' inboxes or makes a link that doubles as an invite.
+function showCompletionShare(category, itemId, title) {
+  const box = document.getElementById('completionShare');
+  const button = document.getElementById('completionShareBtn');
+  if (!box || !button) return;
+  const recs = typeof window !== 'undefined' ? window.OmniFriendRecs : null;
+  box.hidden = !(recs && typeof recs.open === 'function');
+  if (box.hidden) return;
+  button.onclick = () => {
+    try {
+      if (typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'finish_recommend_opened' })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
+    recs.open({ category, item_id: itemId, title: title || 'this title' });
+  };
 }
 
 function closeCompletionRitual() {

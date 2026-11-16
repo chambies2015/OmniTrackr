@@ -163,7 +163,8 @@ def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated
     response = authenticated_client.get("/api/site-stats/overview?days=30")
     assert response.status_code == 200
     growth = response.json()["growth"]
-    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
+    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1,
+                                 "taste_tests": 0}
     assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
     assert growth["weekly_email"]["subscribers"] == 1 and growth["weekly_email"]["new"] == 1
     assert growth["weekly_email"]["opted_out"] == 0 and growth["weekly_email"]["emailed"] == 0

@@ -76,7 +76,7 @@ test('the copied report lists the growth features with their numbers', () => {
   const data = sample();
   assert.doesNotMatch(stats.buildReport(data), /Growth features/);
   data.growth = {
-    invites: { links: 9, new_links: 4, signups: 3, friends_made: 2, awaiting_verification: 1 },
+    invites: { links: 9, new_links: 4, signups: 3, friends_made: 2, awaiting_verification: 1, taste_tests: 2 },
     supporters: { active: 5, monthly: 2, all_time: 7, new: 3, payments: 6, unlinked_payments: 1 },
     weekly_email: { subscribers: 30, new: 8 },
     takes: { asked: 11, answered: 4 },
@@ -88,7 +88,8 @@ test('the copied report lists the growth features with their numbers', () => {
   assert.match(report, /- Weekly email: Subscribers \(now\) 30; New opt-ins 8/);
   assert.match(report, /- Ask a friend for their take: Links shared 11; Friends who answered 4/);
   assert.doesNotMatch(report, /undefined|NaN/);
-  assert.equal(stats.growthRows(data.growth).growthInvites.length, 5);
+  assert.equal(stats.growthRows(data.growth).growthInvites.length, 6);
+  assert.match(report, /Links that open on a taste test \(now\) 2/);
 });
 
 test('Ko-fi payments to link read as name, amount, kind and day', () => {
