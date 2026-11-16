@@ -270,8 +270,8 @@ def _day_one(library_total: int) -> tuple[str, str, str, list[tuple[str, str, li
         "Let's fill your library",
         "Your library is empty so far, which is normal on day one. Any of these gets it going in a couple of minutes.",
         [("Quick ways in", [
-            ("Quick add your first five", "Tap through popular movies, shows, anime, games, books and more. Seen it, "
-             "want to or skip, one at a time, until five are saved.", "/start"),
+            ("Tap your first five", "A wall of popular movies, shows, anime, games, books and more. Tap the "
+             "ones you've seen and each one is saved. Five taps and you're set.", "/start"),
             ("Take the taste quiz", "Tap through well-known movies, shows, anime and games, mark what you've seen "
              "and liked, and they go straight into your library.", "/taste-quiz"),
             ("Bring your lists over", "Import from Letterboxd, IMDb, Goodreads, MyAnimeList, AniList, Trakt or Steam. "

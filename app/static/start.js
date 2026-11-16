@@ -1,11 +1,12 @@
-// Start page (/start): quick add, search, and the hand-off to the first-week steps.
+// Start page (/start): a poster wall of popular titles, search, and the hand-off to the first-week steps.
 // Server text is only ever set as textContent.
 (function () {
   'use strict';
 
-  const ANSWER_WORDS = { seen: 'as seen', want: 'to your want-to list' };
-  const KEYS = { ArrowLeft: 'skip', ArrowUp: 'want', ArrowRight: 'seen' };
+  const PAGE = 18;
+  const ART_AT_ONCE = 4;
   const SAVED_BEFORE_SIGNUP = ['omnitrackr_guest_list', 'omnitrackr_taste_quiz', 'omnitrackr_taste_compare'];
+  const BADGES = { seen: '✓ Seen', want: '＋ Want to', have: 'In your library' };
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -32,10 +33,6 @@
     return post('/api/start/step', { step }, { keepalive: true }).catch(() => null);
   }
 
-  function metaLine(card) {
-    return [card.label, card.year, card.creator].filter(Boolean).join(' · ');
-  }
-
   function setup(root) {
     const find = selector => root.querySelector(selector);
     const findAll = selector => Array.from(root.querySelectorAll(selector));
@@ -48,14 +45,14 @@
       firstWeek: initial.first_week || {},
       screen: null,
       deck: [],
-      position: 0,
-      shown: new Set(),
+      shownCount: 0,
       deckRequest: 0,
-      saving: false,
-      lastSave: null,
+      saved: new Map(), // card id -> {answer, category, item_id, title}
+      busy: new Set(),
       art: new Map(),
+      artQueue: [],
+      artRunning: 0,
       searchRequest: 0,
-      celebrated: Number(initial.total || 0) >= Number(initial.goal || 5),
     };
 
     // ---------------------------------------------------------------- progress
@@ -85,14 +82,17 @@
         slots.appendChild(empty);
       }
       const count = find('[data-st-count]');
-      if (state.total >= state.goal) {
+      const met = state.total >= state.goal;
+      if (met) {
         count.textContent = state.total === state.goal ? 'Five saved. That\'s the goal.' : `${state.total} saved. Past the goal.`;
       } else if (!state.total) {
         count.textContent = `0 of ${state.goal} saved`;
       } else {
         count.textContent = `${state.total} of ${state.goal} saved · ${state.goal - state.total} to go`;
       }
-      root.classList.toggle('is-goal-met', state.total >= state.goal);
+      root.classList.toggle('is-goal-met', met);
+      find('.st-bar__done').hidden = !met || state.screen === 'done';
+      find('.st-bar__skip').hidden = met;
     }
 
     function addToShelf(result) {
@@ -102,121 +102,169 @@
       }].concat(state.shelf.filter(item => !(item.category === result.category && item.item_id === result.item_id)));
     }
 
+    function status(message) {
+      find('[data-st-status]').textContent = message || '';
+    }
+
     // ---------------------------------------------------------------- screens
     function show(name) {
       state.screen = name;
-      root.classList.toggle('is-working', name === 'quick' || name === 'search');
       root.classList.toggle('is-finished', name === 'done');
       findAll('[data-st-screen]').forEach(screen => { screen.hidden = screen.dataset.stScreen !== name; });
-      if (name === 'quick' && !state.deck.length) loadDeck();
-      if (name === 'search') window.setTimeout(() => document.getElementById('stSearch').focus(), 0);
+      if (name === 'pick' && !state.deck.length) loadDeck();
       if (name === 'done') {
         renderNext();
         const done = find('[data-st-screen="done"]');
         window.setTimeout(() => done.focus({ preventScroll: true }), 0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      if (name === 'quick') window.setTimeout(() => find('[data-st-answer="seen"]').focus({ preventScroll: true }), 0);
+      renderGoal();
     }
 
-    function maybeCelebrate() {
-      if (state.total >= state.goal && !state.celebrated) {
-        state.celebrated = true;
-        window.setTimeout(() => show('done'), 900);
-      }
-    }
-
-    // ---------------------------------------------------------------- quick add
+    // ---------------------------------------------------------------- the poster wall
     function chosenKinds() {
       return findAll('.st-formats input:checked').map(input => input.value);
     }
 
     async function loadDeck() {
       const kinds = chosenKinds();
-      const card = find('[data-st-card]');
+      const grid = find('[data-st-grid]');
+      const more = find('[data-st-more]');
       if (!kinds.length) {
         state.deck = [];
-        state.position = 0;
-        renderCard('Pick at least one format above.');
+        state.shownCount = 0;
+        grid.replaceChildren(el('li', 'st-grid__empty', 'Pick at least one format above.'));
+        more.hidden = true;
         return;
       }
       const ticket = ++state.deckRequest;
-      card.replaceChildren(el('p', 'st-card__empty', 'Finding popular titles…'));
-      setAnswering(false);
+      grid.setAttribute('aria-busy', 'true');
+      if (!grid.children.length || grid.querySelector('.st-grid__empty')) {
+        grid.replaceChildren(...Array.from({ length: 12 }, () => el('li', 'st-tile st-tile--ghost')));
+      }
       const { ok, data } = await request(`/api/start/deck?kinds=${encodeURIComponent(kinds.join(','))}`).catch(() => ({ ok: false, data: {} }));
       if (ticket !== state.deckRequest) return;
+      grid.removeAttribute('aria-busy');
       if (!ok) {
-        renderCard('Couldn\'t load titles just now. Try again in a moment, or search instead.');
+        grid.replaceChildren(el('li', 'st-grid__empty', 'Couldn\'t load titles just now. Try again in a moment, or search instead.'));
+        more.hidden = true;
         return;
       }
-      state.deck = (data.cards || []).filter(item => !state.shown.has(item.id));
-      state.position = 0;
-      renderCard();
+      state.deck = data.cards || [];
+      state.shownCount = 0;
+      grid.replaceChildren();
+      showMore();
     }
 
-    function setAnswering(enabled) {
-      findAll('[data-st-answer]').forEach(button => { button.disabled = !enabled; });
+    function showMore() {
+      const grid = find('[data-st-grid]');
+      const next = state.deck.slice(state.shownCount, state.shownCount + PAGE);
+      if (!next.length && !state.shownCount) {
+        grid.replaceChildren(el('li', 'st-grid__empty', 'You already have every popular title in these formats. Tick another format, or search for something specific.'));
+      }
+      next.forEach(card => grid.appendChild(tile(card)));
+      state.shownCount += next.length;
+      const more = find('[data-st-more]');
+      more.hidden = state.shownCount >= state.deck.length;
     }
 
-    function cardArt(card) {
-      const frame = el('div', `st-art st-art--${card.kind}`);
-      const initial = el('span', 'st-art__initial', (card.title || '?').slice(0, 1).toUpperCase());
-      frame.appendChild(initial);
+    // Covers nobody has looked up yet load a few at a time, as their posters scroll into view.
+    function fetchArt(card) {
+      if (!state.art.has(card.id)) {
+        state.art.set(card.id, new Promise(resolve => {
+          state.artQueue.push({ card, resolve });
+          pumpArt();
+        }));
+      }
+      return state.art.get(card.id);
+    }
+
+    function pumpArt() {
+      while (state.artRunning < ART_AT_ONCE && state.artQueue.length) {
+        const { card, resolve } = state.artQueue.shift();
+        state.artRunning += 1;
+        request(`/api/start/art/${card.kind}/${encodeURIComponent(card.slug)}`)
+          .then(({ ok, data }) => (ok && typeof data.image === 'string' && /^https?:\/\//.test(data.image) ? data.image : null))
+          .catch(() => null)
+          .then(image => { state.artRunning -= 1; resolve(image); pumpArt(); });
+      }
+    }
+
+    const artWatcher = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        artWatcher.unobserve(entry.target);
+        const load = entry.target.stLoadArt;
+        if (load) load();
+      });
+    }, { rootMargin: '200px 0px' }) : null;
+
+    function posterArt(card) {
+      const frame = el('span', `st-art st-art--${card.kind}`);
+      frame.appendChild(el('span', 'st-art__initial', (card.title || '?').slice(0, 1).toUpperCase()));
       const place = image => {
         if (!image) return;
         const img = el('img');
         img.alt = '';
         img.referrerPolicy = 'no-referrer';
         img.decoding = 'async';
+        img.loading = 'lazy';
         img.addEventListener('load', () => frame.classList.add('has-image'));
         img.addEventListener('error', () => img.remove());
         img.src = image;
         frame.appendChild(img);
       };
       if (card.image) place(card.image);
-      else fetchArt(card).then(place);
+      else if (!card.members) {
+        const load = () => fetchArt(card).then(place);
+        if (artWatcher) { frame.stLoadArt = load; artWatcher.observe(frame); } else load();
+      }
       return frame;
     }
 
-    function fetchArt(card) {
-      if (card.members) return Promise.resolve(null); // Member-saved titles came with whatever art exists.
-      if (!state.art.has(card.id)) {
-        state.art.set(card.id, request(`/api/start/art/${card.kind}/${encodeURIComponent(card.slug)}`)
-          .then(({ ok, data }) => (ok && typeof data.image === 'string' && /^https?:\/\//.test(data.image) ? data.image : null))
-          .catch(() => null));
-      }
-      return state.art.get(card.id);
+    function describe(card) {
+      return [card.label, card.year].filter(Boolean).join(' · ');
     }
 
-    function renderCard(emptyMessage) {
-      const holder = find('[data-st-card]');
-      const card = state.deck[state.position];
-      if (!card) {
-        holder.replaceChildren(el('p', 'st-card__empty', emptyMessage
-          || 'That\'s every title we have for these formats. Tick another format above, or search for something specific.'));
-        setAnswering(false);
-        return;
-      }
-      state.shown.add(card.id);
-      const text = el('div', 'st-card__text');
-      text.append(el('p', 'st-card__meta', metaLine(card)), el('h2', 'st-card__title', card.title));
-      if (card.members) text.appendChild(el('p', 'st-card__note', `In ${card.members} members' libraries`));
-      const left = state.deck.length - state.position - 1;
-      text.appendChild(el('p', 'st-card__left', left > 0 ? `${left} more after this one` : 'Last one for these formats'));
-      holder.replaceChildren(cardArt(card), text);
-      setAnswering(true);
-      // Warm the next card's artwork so the deck never waits on it.
-      const next = state.deck[state.position + 1];
-      if (next && !next.image) fetchArt(next);
+    function tile(card) {
+      const item = el('li', 'st-tile');
+      item.dataset.id = card.id;
+      const poster = el('button', 'st-tile__poster');
+      poster.type = 'button';
+      poster.dataset.stTap = 'seen';
+      poster.append(posterArt(card), el('span', 'st-tile__badge'));
+      const text = el('span', 'st-tile__text');
+      text.append(el('strong', '', card.title), el('span', '', describe(card)));
+      const want = el('button', 'st-tile__want', '＋ Want to');
+      want.type = 'button';
+      want.dataset.stTap = 'want';
+      item.append(poster, text, want);
+      item.stCard = card;
+      paint(item);
+      return item;
     }
 
-    function status(message, undo) {
-      const line = find('[data-st-status]');
-      line.replaceChildren(document.createTextNode(message));
-      if (undo) {
-        const button = el('button', 'st-link', 'Undo');
-        button.type = 'button';
-        button.addEventListener('click', undo);
-        line.append(' ', button);
+    function paint(item) {
+      const card = item.stCard;
+      const saved = state.saved.get(card.id);
+      const answer = saved ? saved.answer : '';
+      item.dataset.saved = answer;
+      item.querySelector('.st-tile__badge').textContent = answer ? BADGES[answer] : '';
+      const poster = item.querySelector('.st-tile__poster');
+      const want = item.querySelector('.st-tile__want');
+      const name = `${card.title}${card.year ? ` (${card.year})` : ''}`;
+      poster.setAttribute('aria-pressed', answer === 'seen' ? 'true' : 'false');
+      want.setAttribute('aria-pressed', answer === 'want' ? 'true' : 'false');
+      if (answer === 'have') {
+        poster.setAttribute('aria-label', `${name} is already in your library`);
+        poster.disabled = true;
+        want.hidden = true;
+      } else {
+        poster.disabled = false;
+        poster.setAttribute('aria-label', answer ? `Take ${name} back out of your library` : `Seen ${name}: save it as finished`);
+        want.hidden = answer === 'seen';
+        want.textContent = answer === 'want' ? 'Saved ✓' : '＋ Want to';
+        want.setAttribute('aria-label', answer === 'want' ? `Take ${name} back out of your list` : `Want to: save ${name} for later`);
       }
     }
 
@@ -230,33 +278,35 @@
       return data;
     }
 
-    async function answerCard(answer) {
-      const card = state.deck[state.position];
-      if (!card || state.saving) return;
-      if (answer === 'skip') {
-        state.position += 1;
-        status('');
-        renderCard();
-        return;
+    async function tap(item, answer) {
+      const card = item.stCard;
+      if (!card || state.busy.has(card.id)) return;
+      state.busy.add(card.id);
+      item.classList.add('is-busy');
+      const saved = state.saved.get(card.id);
+      try {
+        if (saved && saved.answer !== 'have') {
+          if (await undo(saved)) {
+            state.saved.delete(card.id);
+            status(`Took ${saved.title} back out.`);
+          }
+        } else if (!saved) {
+          const result = await save(card, answer, 'quick');
+          if (result.error) {
+            status(result.error);
+          } else if (result.state === 'created') {
+            state.saved.set(card.id, { answer, category: result.category, item_id: result.item_id, title: result.title });
+            status(`Saved ${result.title}${answer === 'want' ? ' to watch, play or read later' : ' as finished'}.`);
+          } else {
+            state.saved.set(card.id, { answer: 'have', title: result.title });
+            status(`${result.title} was already in your library, so it stays as it was.`);
+          }
+        }
+      } finally {
+        state.busy.delete(card.id);
+        item.classList.remove('is-busy');
+        paint(item);
       }
-      state.saving = true;
-      setAnswering(false);
-      const result = await save(card, answer, 'quick');
-      state.saving = false;
-      if (result.error) {
-        status(result.error);
-        setAnswering(true);
-        return;
-      }
-      state.position += 1;
-      renderCard();
-      if (result.state === 'created') {
-        const saved = { ...result, position: state.position - 1 };
-        status(`Saved ${result.title} ${ANSWER_WORDS[answer]}.`, () => undo(saved));
-      } else {
-        status(`${result.title} was already in your library, so it stays as it was.`);
-      }
-      maybeCelebrate();
     }
 
     async function undo(saved) {
@@ -264,17 +314,12 @@
         .catch(() => ({ ok: false, data: {} }));
       if (!ok) {
         status(data.detail || 'Couldn\'t undo that. You can remove it from your library.');
-        return;
+        return false;
       }
       state.total = Number(data.total || 0);
       state.shelf = state.shelf.filter(item => !(item.category === saved.category && item.item_id === saved.item_id));
-      if (state.total < state.goal) state.celebrated = false;
       renderGoal();
-      status(`Took ${saved.title} back out.`);
-      if (state.screen === 'quick' && state.deck[saved.position]) {
-        state.position = saved.position;
-        renderCard();
-      }
+      return true;
     }
 
     // ---------------------------------------------------------------- search
@@ -309,12 +354,16 @@
           }
           actions.replaceChildren(el('span', 'st-result__saved', saved.state === 'created'
             ? (answer === 'seen' ? 'Saved as seen ✓' : 'Saved to want to ✓') : 'Already in your library'));
-          maybeCelebrate();
         });
         actions.appendChild(button);
       });
       item.append(art, text, actions);
       return item;
+    }
+
+    function searching(on) {
+      find('[data-st-found]').hidden = !on;
+      find('[data-st-browse]').hidden = on;
     }
 
     async function runSearch(text) {
@@ -323,8 +372,10 @@
       const ticket = ++state.searchRequest;
       if (query.length < 2) {
         list.replaceChildren();
+        searching(false);
         return;
       }
+      searching(true);
       const { ok, data } = await request(`/api/titles/search?q=${encodeURIComponent(query)}`).catch(() => ({ ok: false, data: {} }));
       if (ticket !== state.searchRequest) return;
       const results = ok ? (data.results || []) : [];
@@ -443,7 +494,6 @@
       state.firstWeek = data.first_week || state.firstWeek;
       renderGoal();
       if (state.screen === 'done') renderNext();
-      if (state.screen === 'choose') maybeCelebrate();
     }
 
     function savedBeforeSignup() {
@@ -465,9 +515,21 @@
         show(go.dataset.stGo);
         return;
       }
-      const answer = event.target.closest('[data-st-answer]');
-      if (answer) {
-        answerCard(answer.dataset.stAnswer);
+      const tapped = event.target.closest('[data-st-tap]');
+      if (tapped) {
+        const item = tapped.closest('.st-tile');
+        if (item) tap(item, tapped.dataset.stTap);
+        return;
+      }
+      if (event.target.closest('[data-st-more]')) {
+        showMore();
+        return;
+      }
+      if (event.target.closest('[data-st-clear]')) {
+        const input = document.getElementById('stSearch');
+        input.value = '';
+        runSearch('');
+        input.focus();
         return;
       }
       const step = event.target.closest('[data-st-step]');
@@ -502,22 +564,11 @@
       runSearch(searchInput.value);
     });
 
-    document.addEventListener('keydown', event => {
-      if (state.screen !== 'quick' || event.altKey || event.ctrlKey || event.metaKey) return;
-      const target = event.target;
-      if (target && (target.tagName === 'INPUT' && target.type !== 'checkbox' || target.tagName === 'TEXTAREA')) return;
-      const answer = KEYS[event.key];
-      if (!answer) return;
-      event.preventDefault();
-      answerCard(answer);
-    });
-
     // Titles saved before sign-up move in through the dashboard's own scripts, which call this.
     window.refreshForYou = refreshState;
     if (savedBeforeSignup()) window.setTimeout(refreshState, 4000);
 
-    renderGoal();
-    show(state.total >= state.goal ? 'done' : 'choose');
+    show(state.total >= state.goal ? 'done' : 'pick');
   }
 
   const start = () => { const root = document.getElementById('startFlow'); if (root) setup(root); };
