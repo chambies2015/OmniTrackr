@@ -78,7 +78,7 @@ def test_supporter_section_is_upfront_that_tracking_is_free():
     modal = _modal()
     section = modal[modal.index('id="supporterSection"'):modal.index('id="settings-danger"')]
     assert "Every tracking feature is free and stays free." in section
-    assert 'href="/supporters"' in section
+    assert 'href="/supporters?from=settings"' in section
 
 
 def test_tier_wording_covers_every_ko_fi_tier():

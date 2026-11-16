@@ -471,6 +471,7 @@
     const calendar = growth.calendar || {};
     const push = growth.push || {};
     const reviews = growth.reviews || {};
+    const support = growth.support || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -514,6 +515,21 @@
         ...(push.sent_by_kind || []).map(item => ({ label: `Sent: ${item.kind}`, count: item.count })),
         { label: 'Away reminders sent', count: push.away_reminders || 0 },
       ],
+      growthSupportAsks: [
+        { label: 'Notes shown on the home screen', count: support.shown || 0 },
+        ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
+          label: `Shown for "${row.moment}" (then Ko-fi ${number(row.kofi)}, supporters page ${number(row.perks)}, not now ${number(row.later)}, don't ask ${number(row.stop)})`,
+          count: row.shown,
+        })),
+        { label: 'Ko-fi pressed from a note', count: support.kofi || 0 },
+        { label: 'Not now', count: support.later || 0 },
+        { label: 'Don\'t ask again', count: support.stopped || 0 },
+        { label: 'Notes switched off (now)', count: support.asks_off_now || 0 },
+        ...(support.page_seen || []).filter(item => item.count).map(item => ({ label: `Supporters page from: ${item.place}`, count: item.count })),
+        ...(support.page_kofi || []).filter(item => item.count).map(item => ({ label: `Supporters page Ko-fi button: ${item.place}`, count: item.count })),
+        { label: 'Payments linked within 2 weeks of a Ko-fi press', count: support.converted_total || 0 },
+        ...(support.converted || []).map(item => ({ label: `Paid after pressing: ${item.place}`, count: item.count })),
+      ],
       growthReviews: [
         { label: 'Reviews shared from the card', count: reviews.shared || 0 },
         { label: 'Members who shared one', count: reviews.sharers || 0 },
@@ -532,6 +548,7 @@
     growthTakes: 'Ask a friend for their take',
     growthPush: 'Phone and browser notifications',
     growthReviews: 'Share your reviews card',
+    growthSupportAsks: 'Support notes and the supporters page',
   };
 
   function growthReport(data) {
@@ -548,7 +565,7 @@
     if (!card) return;
     card.hidden = !data.growth;
     if (!data.growth) return;
-    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications and the "Share your reviews" card in the last ${data.days} days. Rows marked "now" are current totals.`;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications, the "Share your reviews" card and support notes in the last ${data.days} days. Rows marked "now" are current totals.`;
     Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
       const list = $(id);
       list.replaceChildren();

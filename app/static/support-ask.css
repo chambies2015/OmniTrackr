@@ -1,0 +1,93 @@
+/* Dashboard: the occasional support note in the home rail (support-ask.js), and its switch in Settings → Supporter.
+   Warm amber and coral, so it reads as a thank-you rather than another feature card. Colours come from the app-theme tokens. */
+.support-ask {
+  --support-warm: #f59e0b;
+  --support-rose: #fb7185;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--support-rose) 16%, transparent), transparent 50%),
+    linear-gradient(140deg, color-mix(in srgb, var(--support-warm) 13%, var(--card-bg)), var(--card-bg) 72%);
+  border: 1px solid color-mix(in srgb, var(--support-warm) 40%, var(--border));
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  margin: 0 0 var(--space-5, 20px);
+  padding: var(--space-5, 20px) var(--space-6, 24px);
+  position: relative;
+}
+.support-ask[hidden] { display: none; }
+.support-ask__eyebrow {
+  align-items: center;
+  color: color-mix(in srgb, var(--support-warm) 80%, var(--fg));
+  display: flex;
+  font-size: var(--text-xs, .75rem);
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: .08em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+.support-ask__eyebrow::before { content: "♥"; color: var(--support-rose); font-size: .95em; letter-spacing: 0; }
+.support-ask__title { font-family: var(--font-display); font-size: var(--text-xl, 1.25rem); line-height: 1.25; margin: 0 0 8px; }
+.support-ask__body { color: var(--fg-secondary); font-size: var(--text-sm, .875rem); line-height: 1.55; margin: 0 0 var(--space-4, 16px); }
+.support-ask__goal { align-items: center; display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 var(--space-4, 16px); }
+.support-ask__goal[hidden] { display: none; }
+.support-ask__meter {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  border-radius: var(--radius-pill, 999px);
+  flex: 1 1 120px;
+  height: 8px;
+  overflow: hidden;
+}
+.support-ask__fill {
+  background: linear-gradient(90deg, var(--support-warm), var(--support-rose));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  width: 4%;
+}
+.support-ask__goal-text { color: var(--fg-secondary); font-size: var(--text-xs, .75rem); }
+.support-ask__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.support-ask__actions[hidden], .support-ask__foot[hidden] { display: none; }
+.support-ask .support-ask__kofi {
+  align-items: center;
+  background: linear-gradient(135deg, var(--support-warm), var(--support-rose));
+  border: 0;
+  border-radius: var(--radius-pill, 999px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--support-rose) 30%, transparent);
+  color: #1c1206;
+  display: inline-flex;
+  font-size: var(--text-sm, .875rem);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 20px;
+  text-decoration: none;
+}
+.support-ask .support-ask__kofi:focus-visible { box-shadow: var(--ring); outline: none; }
+.support-ask .support-ask__kofi:hover { filter: brightness(1.06); }
+.support-ask__link { color: var(--fg); font-size: var(--text-sm, .875rem); font-weight: 600; text-underline-offset: 3px; }
+.support-ask__note { color: var(--fg-muted, var(--fg-secondary)); font-size: var(--text-xs, .75rem); margin: var(--space-3, 12px) 0 0; }
+.support-ask.is-thanked .support-ask__note { display: none; }
+.support-ask__foot { border-top: 1px solid var(--border); display: flex; gap: 18px; margin-top: var(--space-3, 12px); padding-top: 4px; }
+.support-ask__quiet {
+  background: none;
+  border: 0;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, .8125rem);
+  min-height: 44px;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.support-ask__quiet:hover { color: var(--fg); }
+.support-ask__quiet:focus-visible, .support-ask__link:focus-visible { border-radius: var(--radius-sm, 8px); box-shadow: var(--ring); outline: none; }
+.support-ask__status { color: var(--fg-secondary); font-size: var(--text-sm, .8125rem); margin: 0; }
+.support-ask__status:empty { display: none; }
+.support-ask--ended { --support-warm: #a78bfa; --support-rose: #f472b6; }
+.support-ask--ended .support-ask__kofi { color: #fff; }
+.support-ask-setting { margin: var(--space-4, 16px) 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .support-ask:not([hidden]) { animation: support-ask-in var(--dur, .24s) var(--ease, ease-out) both; }
+  @keyframes support-ask-in { from { opacity: 0; transform: translateY(6px); } }
+}

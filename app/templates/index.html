@@ -82,6 +82,7 @@
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261110-signin-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
+  <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
@@ -887,6 +888,26 @@
               <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
               <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
             </div>
+          </section>
+
+          <section id="supportAsk" class="support-ask" aria-labelledby="supportAskTitle" hidden>
+            <p id="supportAskEyebrow" class="support-ask__eyebrow"></p>
+            <h2 id="supportAskTitle" class="support-ask__title"></h2>
+            <p id="supportAskBody" class="support-ask__body"></p>
+            <div id="supportAskGoal" class="support-ask__goal" hidden>
+              <span class="support-ask__meter" aria-hidden="true"><span id="supportAskFill" class="support-ask__fill"></span></span>
+              <span id="supportAskGoalText" class="support-ask__goal-text"></span>
+            </div>
+            <div class="support-ask__actions">
+              <a id="supportAskKofi" class="action-btn support-ask__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Buy a $3 coffee ↗</a>
+              <a id="supportAskPerks" class="support-ask__link" href="/supporters?from=ask">What supporters get</a>
+            </div>
+            <p id="supportAskNote" class="support-ask__note"></p>
+            <div class="support-ask__foot">
+              <button id="supportAskLater" type="button" class="support-ask__quiet">Not now</button>
+              <button id="supportAskStop" type="button" class="support-ask__quiet">Don't ask again</button>
+            </div>
+            <p id="supportAskStatus" class="support-ask__status" role="status" aria-live="polite"></p>
           </section>
 
           <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
@@ -2399,7 +2420,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261114-advent-1"></script>
+  <script src="./auth.js?v=20261116-support-ask-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261113-episode-notes-1"></script>
@@ -2416,6 +2437,7 @@
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261114-profile-1"></script>
   <script src="/static/supporter.js?v=20261112-settings-1"></script>
+  <script src="/static/support-ask.js?v=20261116-support-1" defer></script>
   <script src="/static/account-settings.js?v=20261112-settings-1" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
@@ -3196,7 +3218,7 @@
           <ul class="supporter-tiers" id="supporterTiers" aria-label="Ways to support"></ul>
           <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, color
             themes for your own app, an accent color, banner and avatar frame for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
-            supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+            supporter for good. <a href="/supporters?from=settings" target="_blank" rel="noopener">What supporters get</a></p>
           <div class="supporter-membership" id="supporterMembership" hidden>
             <p id="supporterMembershipText"></p>
             <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
@@ -3228,6 +3250,15 @@
             </form>
             <p class="supporter-claim__status" id="supporterClaimStatus" role="status" aria-live="polite"></p>
           </details>
+          <div class="privacy-toggle-item support-ask-setting" id="supportAskSetting">
+            <label for="supportAskOn" class="toggle-label">
+              <span>Now and then, show a short support note on my home screen (never while I support, and at most every two months)</span>
+              <div class="toggle-container">
+                <input type="checkbox" id="supportAskOn" class="toggle-switch" checked>
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
           <form id="supporterForm" novalidate hidden>
             <div class="privacy-toggle-item">
               <label for="supporterShowBadge" class="toggle-label">

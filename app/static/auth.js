@@ -309,6 +309,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetNewYearPledge?.();
     window.resetAwardsBallot?.();
     window.resetAdventCard?.();
+    window.resetSupportAsk?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -1077,6 +1078,7 @@ function showAuthModal() {
     window.resetNewYearPledge?.();
     window.resetAwardsBallot?.();
     window.resetAdventCard?.();
+    window.resetSupportAsk?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -1137,6 +1139,7 @@ function showMainUI() {
     window.refreshNewYearPledge?.();
     window.refreshAwardsBallot?.();
     window.refreshAdventCard?.();
+    window.refreshSupportAsk?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();

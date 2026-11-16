@@ -400,6 +400,9 @@ def _link(db: Session, payment: models.KofiPayment, user_id: int) -> None:
     payment.linked_at = _now()
     if payment.kind in PERK_TYPES:
         _grant(db, user_id, payment)
+    if not looks_like_test(payment):
+        from .support_asks import note_support  # avoids a circular import
+        note_support(db, user_id)
 
 
 def _waiting():

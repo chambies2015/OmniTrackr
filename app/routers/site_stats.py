@@ -242,7 +242,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         },
         "push": _push(db, days, now, start),
         "reviews": _review_inbox(db, days, now),
+        "support": _support_asks(db, days, now),
     }
+
+
+def _support_asks(db: Session, days: int, now: datetime) -> dict:
+    """Support notes on the dashboard, /supporters visits and Ko-fi presses, and payments that followed a press."""
+    try:
+        from .. import support_asks
+        return support_asks.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _review_inbox(db: Session, days: int, now: datetime) -> dict:

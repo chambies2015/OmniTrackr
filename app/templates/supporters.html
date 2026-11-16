@@ -13,10 +13,10 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
-  <link rel="stylesheet" href="/static/supporters-page.css?v=20261104-styles-1">
+  <link rel="stylesheet" href="/static/supporters-page.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
-  <script src="/static/supporters-page.js?v=20261104-styles-1" defer></script>
+  <script src="/static/supporters-page.js?v=20261116-support-1" defer></script>
 </head>
 
 <body class="public-reader site supporters-page">
@@ -27,18 +27,46 @@
       <a href="/" class="back-link">← Back to OmniTrackr</a>
 
       <header class="privacy-header support-hero">
-        <p class="reader-kicker">Keep OmniTrackr free</p>
-        <h1>Support OmniTrackr</h1>
-        <p>OmniTrackr is built and run by one developer, with no investors and no paywall. Every tracking feature is free and stays free.
-          Supporters on Ko-fi pay for hosting and buy time for new features, and get a few thank-you extras.</p>
-        <!--SUPPORTERS_COUNT-->
-        <p class="support-hero__actions">
-          <a class="site-btn site-btn--primary" data-kofi href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>
-          <a class="site-btn site-btn--ghost" href="#try-heading">Try the perks on</a>
-        </p>
+        <div class="support-hero__copy">
+          <p class="reader-kicker">Keep OmniTrackr free</p>
+          <h1>Support OmniTrackr</h1>
+          <p>OmniTrackr is built and run by one developer, with no investors and no paywall. Every tracking feature is free and stays free.
+            Supporters on Ko-fi pay for hosting and buy time for new features, and get a few thank-you extras.</p>
+          <p class="support-me" data-support-me hidden></p>
+          <!--SUPPORTERS_COUNT-->
+          <p class="support-hero__actions" data-support-hero-actions>
+            <a class="site-btn site-btn--primary" data-kofi data-kofi-place="hero" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>
+            <a class="site-btn site-btn--ghost" href="#ways-heading">See the ways to support</a>
+          </p>
+        </div>
+        <aside class="support-hero__month" aria-label="This month">
+          <!--SUPPORTERS_GOAL-->
+          <!--SUPPORTERS_COFFEE-->
+          <ul class="support-hero__promises">
+            <li>Nothing is ever locked behind support</li>
+            <li>Payments go through Ko-fi. We never see your card</li>
+            <li>Perks switch on by themselves with the same email</li>
+          </ul>
+        </aside>
       </header>
 
-      <!--SUPPORTERS_GOAL-->
+      <section class="privacy-section support-members" aria-labelledby="ways-heading">
+        <h2 id="ways-heading">Ways to support</h2>
+        <p id="tiers-heading">Send a coffee once, or join a monthly membership. Every option turns on all the supporter perks below, and each
+          membership adds a few extras of its own.</p>
+        <!--SUPPORTERS_TIERS-->
+        <p class="support-perk__preview support-frames support-frames--members" aria-hidden="true">
+          <span class="support-theme support-theme--midnight"></span><span class="support-theme support-theme--matinee"></span>
+          <span class="avatar-frame avatar-frame--neon"><span class="avatar-frame__face">N</span><span class="avatar-frame__art"></span></span>
+          <span class="avatar-frame avatar-frame--orbit"><span class="avatar-frame__face">O</span><span class="avatar-frame__art"></span></span>
+          <span class="support-banner profile-banner profile-banner--neon"></span><span
+            class="support-banner profile-banner profile-banner--marquee profile-banner--motion"></span><span
+            class="support-banner profile-banner profile-banner--comic"></span>
+        </p>
+        <p class="support-members__note">Member extras, from left: the Midnight and Matinee themes, neon and orbit frames, and the neon,
+          marquee and comic banners. Cancel on Ko-fi whenever you like. Your extras stay on until the month you paid for ends, and your
+          picks are saved for when you come back.</p>
+      </section>
 
       <section class="privacy-section support-money" aria-labelledby="money-heading">
         <h2 id="money-heading">Where the money goes</h2>
@@ -152,22 +180,10 @@
         <div class="support-try__controls"><!--SUPPORTERS_TRY--></div>
       </section>
 
-      <section class="privacy-section support-members" aria-labelledby="tiers-heading">
-        <h2 id="tiers-heading">Monthly memberships</h2>
-        <p>Every membership includes all the supporter perks above for as long as it runs. Each tier adds a few extras of its own.</p>
-        <p class="support-perk__preview support-frames support-frames--members" aria-hidden="true">
-          <span class="support-theme support-theme--midnight"></span><span class="support-theme support-theme--matinee"></span>
-          <span class="avatar-frame avatar-frame--neon"><span class="avatar-frame__face">N</span><span class="avatar-frame__art"></span></span>
-          <span class="avatar-frame avatar-frame--orbit"><span class="avatar-frame__face">O</span><span class="avatar-frame__art"></span></span>
-        </p>
-        <p class="support-perk__preview support-banners support-banners--members" aria-hidden="true">
-          <span class="support-banner profile-banner profile-banner--neon"></span><span
-            class="support-banner profile-banner profile-banner--marquee profile-banner--motion"></span><span
-            class="support-banner profile-banner profile-banner--comic"></span>
-        </p>
-        <!--SUPPORTERS_TIERS-->
-        <p class="support-members__note">Cancel on Ko-fi whenever you like. Your extras stay on until the month you paid for ends,
-          and your picks are saved for when you come back.</p>
+      <section class="privacy-section support-built" aria-labelledby="built-heading">
+        <h2 id="built-heading">What support has paid for lately</h2>
+        <p>Support buys the time to keep building. These are the newest changes, straight from the changelog.</p>
+        <!--SUPPORTERS_RECENT-->
       </section>
 
       <section class="privacy-section" aria-labelledby="how-heading">
@@ -179,7 +195,37 @@
         <p>Perks switch on automatically when you use the same email on Ko-fi as on OmniTrackr. If your emails differ, copy your
           supporter code from <a href="/#supporter">Account → Supporter</a> into your Ko-fi message. Then pick your color and
           choose whether to join the wall in the same place.</p>
-        <p><a class="site-btn site-btn--primary" data-kofi href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+        <p><a class="site-btn site-btn--primary" data-kofi data-kofi-place="how" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+      </section>
+
+      <section class="privacy-section support-faq" aria-labelledby="faq-heading">
+        <h2 id="faq-heading">Questions</h2>
+        <details>
+          <summary>Will anything I use now end up behind a paywall?</summary>
+          <p>No. Every tracking feature is free for everyone and stays that way. Supporter perks are cosmetic: themes, colors, banners,
+            frames, a badge and a couple of extra showcase spots.</p>
+        </details>
+        <details>
+          <summary>Do I need an account to support?</summary>
+          <p>No. Anyone can send a coffee on Ko-fi. If you have an OmniTrackr account, use the same email on Ko-fi and the perks switch on
+            by themselves. If you sign up later with that email, they switch on then.</p>
+        </details>
+        <details>
+          <summary>Who handles the payment?</summary>
+          <p>Ko-fi does, with PayPal or a card. OmniTrackr never sees your card details. Ko-fi tells us the amount, the tier, the name you
+            gave and the email you used, so the perks can find your account.</p>
+        </details>
+        <details>
+          <summary>What happens if I cancel a membership?</summary>
+          <p>Your perks stay on until the month you paid for ends. Your picks are saved, so if you come back they're all where you left
+            them. Your library isn't touched either way.</p>
+        </details>
+        <details>
+          <summary>I'd rather not see support notes in the app.</summary>
+          <p>Members who haven't supported see a short note now and then, at most once every two months and only after something worth
+            marking, like a reached goal. Press "Don't ask again" on the note, or switch it off in Account → Supporter.</p>
+        </details>
+        <p><a class="site-btn site-btn--ghost" data-kofi data-kofi-place="faq" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
       </section>
 
       <section class="privacy-section support-wall" aria-labelledby="wall-heading">
@@ -194,6 +240,10 @@
           payment, and we'll link it by hand.</p>
       </section>
     </main>
+    <div class="support-sticky" data-support-sticky hidden>
+      <span class="support-sticky__text">Keep OmniTrackr free</span>
+      <a class="site-btn site-btn--primary site-btn--sm" data-kofi data-kofi-place="sticky" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>
+    </div>
   </div>
   <!--SITE_FOOTER-->
 </body>

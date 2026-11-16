@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import email as email_utils, models, public_profiles, supporters
+from .. import email as email_utils, models, public_profiles, support_asks, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -122,9 +122,21 @@ TIER_EXTRAS = {
 }
 
 
+def _coffee_card() -> str:
+    """The one-time option, beside the memberships, so a first-time supporter sees the small step too."""
+    return ('<article class="support-tier support-tier--coffee">'
+            '<p class="support-tier__price"><strong>$3</strong> once</p>'
+            '<h3>A coffee</h3>'
+            '<ul><li>Every supporter perk for 30 days</li><li>Founding supporter for good if it\'s before 2027</li>'
+            '<li>Give more if you like, and send another whenever you want</li></ul>'
+            f'<a class="site-btn site-btn--ghost" data-kofi data-kofi-place="coffee" href="{_e(supporters.KOFI_URL)}" '
+            'target="_blank" rel="noopener noreferrer">Buy a coffee ↗</a>'
+            '</article>')
+
+
 def _tiers_html() -> str:
     url = supporters.tiers_url()
-    cards = []
+    cards = [_coffee_card()]
     for tier in supporters.TIERS:
         extras = "".join(f"<li>{_e(line)}</li>" for line in TIER_EXTRAS.get(tier["slug"], ()))
         cards.append(
@@ -132,7 +144,8 @@ def _tiers_html() -> str:
             f'<p class="support-tier__price"><strong>{_e(_money(tier["price"]))}</strong> a month</p>'
             f'<h3>{_e(tier["name"])}</h3>'
             f'<ul>{extras}</ul>'
-            f'<a class="site-btn site-btn--{"primary" if tier["rank"] == 2 else "ghost"}" data-kofi href="{_e(url)}" '
+            f'<a class="site-btn site-btn--{"primary" if tier["rank"] == 2 else "ghost"}" data-kofi '
+            f'data-kofi-place="{_e(tier["slug"])}" href="{_e(url)}" '
             f'target="_blank" rel="noopener noreferrer">Join {_e(tier["name"])} ↗</a>'
             '</article>')
     return f'<div class="support-tiers">{"".join(cards)}</div>'
@@ -181,11 +194,30 @@ def _count_html(db: Session) -> str:
     return f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now.</p>'
 
 
+def _coffee_html() -> str:
+    return f'<p class="support-hero__coffee">{_e(support_asks.coffee_line())}</p>'
+
+
+def _recent_html() -> str:
+    """The newest feature entries from the changelog, so visitors can see the work support pays for."""
+    entries = support_asks.recent_work()
+    if not entries:
+        return ""
+    rows = "".join(
+        f'<li><a href="/changelog#{_e(anchor)}"><span class="support-recent__date">{_e(date)}</span>'
+        f'<span class="support-recent__title">{_e(title)}</span></a></li>'
+        for anchor, date, title in entries)
+    return (f'<ol class="support-recent">{rows}</ol>'
+            '<p class="support-recent__more"><a href="/changelog">Read the whole changelog</a></p>')
+
+
 def page_sections(db: Session) -> dict:
-    """Live parts of /supporters: the hosting goal, the supporter count, the membership tiers and the wall. All text is escaped."""
+    """Live parts of /supporters: the hosting goal, the supporter count, the ways to support, recent work and the wall.
+    All text is escaped."""
     return {"<!--SUPPORTERS_GOAL-->": _goal_html(db), "<!--SUPPORTERS_COUNT-->": _count_html(db),
             "<!--SUPPORTERS_COSTS-->": _costs_html(), "<!--SUPPORTERS_TRY-->": _try_controls_html(),
-            "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db)}
+            "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db),
+            "<!--SUPPORTERS_COFFEE-->": _coffee_html(), "<!--SUPPORTERS_RECENT-->": _recent_html()}
 
 
 def _no_store(response: Response) -> None:

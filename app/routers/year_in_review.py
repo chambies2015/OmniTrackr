@@ -549,7 +549,7 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
                 f'<h2 id="recap-support">Thank you for supporting OmniTrackr</h2>'
                 f'<p>Your Ko-fi support{_e(since)} helped pay for the hosting behind this recap, your library and '
                 f'everything else you used in {year}. It keeps every tracking feature free for everyone.</p>'
-                '<p><a class="site-btn site-btn--ghost" href="/supporters">See what supporters get</a></p></section>')
+                '<p><a class="site-btn site-btn--ghost" href="/supporters?from=recap">See what supporters get</a></p></section>')
     if supporter is not None:
         heading = f"Thanks for supporting OmniTrackr in {year}"
         lead = (f"Your Ko-fi support helped keep OmniTrackr running this year. If you'd like your badge back "
@@ -569,7 +569,7 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
             f'<code>{code}</code> into the Ko-fi message, and the badge finds your account.</p>'
             f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{kofi}" target="_blank" '
             'rel="noopener noreferrer" data-recap-kofi>Support on Ko-fi ↗</a>'
-            '<a class="site-btn site-btn--ghost" href="/supporters">How supporting works</a></p></section>')
+            '<a class="site-btn site-btn--ghost" href="/supporters?from=recap">How supporting works</a></p></section>')
 
 
 def _next_year_box(db: Session, user: models.User, year: int) -> str:
