@@ -21,8 +21,8 @@ from .discover import page
 from .titles import add_group_to_library
 
 router = APIRouter(tags=["start"])
-CSS_VERSION = "20261030-start-1"
-JS_VERSION = "20261030-start-1"
+CSS_VERSION = "20261116-start-wall-1"
+JS_VERSION = "20261116-start-wall-1"
 # The same scripts the dashboard uses to move titles saved before sign-up into the library.
 IMPORT_SCRIPTS = ("/static/guest-list.js?v=20261031-browse-1", "/static/taste-quiz.js?v=20261030-start-1",
                   "/static/taste-compare.js?v=20261030-start-1")
@@ -63,54 +63,34 @@ def _content(state: dict) -> str:
         '<section class="st" id="startFlow" aria-labelledby="stTitle">'
         '<header class="st-head">'
         '<p class="eyebrow">YOUR FIRST FIVE</p>'
-        '<h1 id="stTitle">Let\'s get five titles into your library</h1>'
-        '<p class="st-lead">Five is where OmniTrackr starts paying off: release alerts, picks and stats all work from '
-        'what you save. Most people get there in a couple of minutes.</p>'
-        f'<div class="st-goal"><ol class="st-slots" data-st-slots aria-hidden="true">{slots}</ol>'
-        '<p class="st-count" data-st-count role="status" aria-live="polite"></p></div>'
+        '<h1 id="stTitle">Tap anything you\'ve watched, played, read or heard</h1>'
+        '<p class="st-lead">Each tap saves it to your library as finished. Five is enough for release alerts, picks '
+        'and stats to start working.</p>'
         '</header>'
 
-        '<div class="st-screen" data-st-screen="choose">'
-        '<h2 class="st-subhead">How do you want to start?</h2>'
-        '<div class="st-paths">'
-        '<button type="button" class="st-path st-path--primary" data-st-go="quick">'
-        '<span class="st-path__tag">Fastest</span><strong>Quick add</strong>'
-        '<span>Tap through popular titles: seen it, want to, or skip. About a minute.</span></button>'
-        '<button type="button" class="st-path" data-st-go="search"><strong>Search by name</strong>'
-        '<span>Already know what you want to save? Find it and add it.</span></button>'
-        '<a class="st-path" href="/?start=import" data-st-step="import"><strong>Import a list</strong>'
-        '<span>Bring a Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu or Trakt export. '
-        'You see a preview before anything is added.</span></a>'
-        '</div>'
-        '<p class="st-quiz">Rather answer a few questions? <a href="/taste-quiz" data-st-step="quiz">Take the '
-        'one-minute taste quiz</a> and get picks chosen from your answers.</p>'
-        '</div>'
-
-        '<div class="st-screen st-quick" data-st-screen="quick" hidden>'
-        f'<fieldset class="st-formats"><legend>What are you into?</legend><div class="st-chips">{chips}</div></fieldset>'
-        '<article class="st-card" data-st-card aria-live="polite" aria-atomic="true"></article>'
-        '<div class="st-answers" role="group" aria-label="Your answer">'
-        '<button type="button" class="st-answer st-answer--skip" data-st-answer="skip">Skip</button>'
-        '<button type="button" class="st-answer st-answer--want" data-st-answer="want"><span aria-hidden="true">＋</span> Want to</button>'
-        '<button type="button" class="st-answer st-answer--seen" data-st-answer="seen"><span aria-hidden="true">✓</span> Seen it</button>'
-        '</div>'
-        '<p class="st-keys">On a keyboard: ← skip, ↑ want to, → seen it.</p>'
-        '<p class="st-status" data-st-status role="status" aria-live="polite"></p>'
-        '<p class="st-switch"><button type="button" class="st-link" data-st-go="search">Search instead</button>'
-        '<button type="button" class="st-link" data-st-go="choose">Other ways to start</button></p>'
-        '</div>'
-
-        '<div class="st-screen st-search" data-st-screen="search" hidden>'
+        '<div class="st-screen st-pick" data-st-screen="pick">'
         '<form class="st-search__form" role="search" data-st-search-form>'
-        '<label for="stSearch">Search for a movie, show, anime, game, book or album</label>'
+        '<label class="st-vh" for="stSearch">Search for a title</label>'
         '<input id="stSearch" type="search" maxlength="80" autocomplete="off" spellcheck="false" '
-        'placeholder="Try Dune, Frieren or Hades" aria-describedby="stSearchHint">'
+        'placeholder="Or search for one you love: Dune, Frieren, Hades…" aria-describedby="stSearchHint">'
         '</form>'
+        '<div class="st-found" data-st-found hidden>'
         '<ul class="st-results" data-st-results aria-live="polite"></ul>'
         '<p class="st-hint" id="stSearchHint">This searches titles other members already track. Can\'t find it? '
         '<a href="/">Add anything</a> in your library looks it up everywhere.</p>'
-        '<p class="st-switch"><button type="button" class="st-link" data-st-go="quick">Quick add instead</button>'
-        '<button type="button" class="st-link" data-st-go="choose">Other ways to start</button></p>'
+        '<p class="st-switch"><button type="button" class="st-link" data-st-clear>Back to popular titles</button></p>'
+        '</div>'
+        '<div class="st-browse" data-st-browse>'
+        f'<fieldset class="st-formats"><legend>Show me</legend><div class="st-chips">{chips}</div></fieldset>'
+        '<p class="st-tip">Tap a poster if you\'ve seen, played or read it. Tap <strong>Want to</strong> for things '
+        'on your list. Tap again to take it back.</p>'
+        '<ul class="st-grid" data-st-grid aria-live="polite"></ul>'
+        '<p class="st-more"><button type="button" class="st-mini" data-st-more hidden>Show more titles</button></p>'
+        '</div>'
+        '<p class="st-other">Already track somewhere else? <a href="/?start=import" data-st-step="import">Import from '
+        'Letterboxd, Goodreads, MyAnimeList, Steam and more</a>. Rather answer a few questions? '
+        '<a href="/taste-quiz" data-st-step="quiz">Take the one-minute taste quiz</a>.</p>'
+        '<p class="st-status" data-st-status role="status" aria-live="polite"></p>'
         '</div>'
 
         '<div class="st-screen st-done" data-st-screen="done" hidden tabindex="-1">'
@@ -119,10 +99,17 @@ def _content(state: dict) -> str:
         '<p class="st-lead">From here, a few small things make OmniTrackr feel like yours. None of them take long.</p>'
         '<ol class="st-next" data-st-next></ol>'
         '<div class="st-done__actions"><a class="button" href="/" data-st-library>Open my library</a>'
-        '<button type="button" class="st-link" data-st-go="quick">Keep adding titles</button></div>'
+        '<button type="button" class="st-link" data-st-go="pick">Keep adding titles</button></div>'
         '</div>'
 
-        '<footer class="st-foot"><button type="button" class="st-link" data-st-skip>Skip for now and open my library</button></footer>'
+        '<div class="st-bar" data-st-bar>'
+        f'<div class="st-goal"><ol class="st-slots" data-st-slots aria-hidden="true">{slots}</ol>'
+        '<p class="st-count" data-st-count role="status" aria-live="polite"></p></div>'
+        '<div class="st-bar__actions">'
+        '<button type="button" class="st-link st-bar__skip" data-st-skip>Skip for now</button>'
+        '<button type="button" class="button st-bar__done" data-st-go="done" hidden>See what\'s next</button>'
+        '</div>'
+        '</div>'
         '<noscript><p>This page needs JavaScript. You can add titles from <a href="/">your library</a> with Add anything.</p></noscript>'
         f'{_json_block("startState", state)}'
         '</section>'
@@ -167,6 +154,11 @@ def start_deck(response: Response, kinds: str = Query("", max_length=120),
     _private(response)
     wanted = [kind for kind in kinds.split(",") if kind in start_flow.FORMATS]
     cards = start_flow.deck(title_search.index(db), start_flow.owned_slugs(db, user.id), wanted)
+    for card in cards:
+        # Covers already on the site (cached title details) come with the deck, so the poster
+        # wall only asks for the few nobody has looked up yet.
+        if not card["image"] and not card["members"]:
+            card["image"] = cached_art(db, card)
     return {"cards": cards}
 
 
