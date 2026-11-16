@@ -869,8 +869,12 @@ app.include_router(support_asks_router.router)
 from .routers import stay_posted as stay_posted_router
 # The "stay posted" card and the note after saving a show are a click at a time.
 for route in stay_posted_router.router.routes:
-    if getattr(route, "path", None) in ("/api/stay-posted/seen", "/api/stay-posted/answer", "/api/stay-posted/after-save"):
+    path = getattr(route, "path", None)
+    if path in ("/api/stay-posted/seen", "/api/stay-posted/answer", "/api/stay-posted/after-save"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/stay-posted":
+        # The home screen asks at most once a minute per tab.
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(stay_posted_router.router)
 from .routers import site_search as site_search_router
 # The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
@@ -955,6 +959,9 @@ for route in invites.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_invite_accept)
     elif path == "/join/{token}":
         bind_rate_limited_endpoint(route, rate_limited_join_page)
+    elif path == "/api/friends/invite/{token}/guess":
+        # Anyone holding the link can score answers, like /api/taste-match/u/{owner_id}/guess.
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(invites.router)
 
 from .routers import goals as goals_router
@@ -1088,6 +1095,8 @@ from .routers import start as start_router
 rate_limited_start_save = limiter.limit("90/minute")(start_router.start_save)
 rate_limited_start_art = limiter.limit("60/minute")(start_router.start_art)
 rate_limited_start_undo = limiter.limit("30/minute")(start_router.start_undo)
+# Each format chip on the poster wall reloads the deck.
+rate_limited_start_deck = limiter.limit("60/minute")(start_router.start_deck)
 for route in start_router.router.routes:
     path = getattr(route, "path", None)
     if path == "/api/start/save":
@@ -1096,6 +1105,10 @@ for route in start_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_start_art)
     elif path == "/api/start/undo":
         bind_rate_limited_endpoint(route, rate_limited_start_undo)
+    elif path == "/api/start/deck":
+        bind_rate_limited_endpoint(route, rate_limited_start_deck)
+    elif path in ("/api/start/state", "/api/start/step"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(start_router.router)
 
 from .routers import if_you_liked as if_you_liked_router

@@ -237,9 +237,13 @@ def test_start_page_opens_on_the_poster_wall(authenticated_client):
 
 
 def test_deck_brings_covers_already_looked_up(authenticated_client, db_session, monkeypatch):
-    from app.routers import start as start_router
-    monkeypatch.setattr(start_router, "cached_art",
-                        lambda db, card: "https://image.tmdb.org/t/p/w342/known.jpg" if card["title"] == "Interstellar" else None)
+    import json
+    from app import title_metadata, title_pages
+    for title, year, status, poster in (("Interstellar", 2014, "ok", "https://image.tmdb.org/t/p/w342/known.jpg"),
+                                        ("The Matrix", 1999, "miss", "https://image.tmdb.org/t/p/w342/not-facts.jpg")):
+        db_session.add(models.TitleMetadata(key=title_metadata.cache_key("movie", title_pages.normalize(title), year),
+                                            status=status, data=json.dumps({"poster": poster}), fetched_at=datetime.utcnow()))
+    db_session.commit()
     cards = {card["id"]: card for card in authenticated_client.get("/api/start/deck?kinds=movie").json()["cards"]}
     assert len(cards) >= 18
     assert cards["movie/interstellar-2014"]["image"] == "https://image.tmdb.org/t/p/w342/known.jpg"
