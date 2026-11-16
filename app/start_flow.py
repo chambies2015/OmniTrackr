@@ -4,8 +4,9 @@ Right after a new account's first log-in, the dashboard sends the member here on
 (see COOKIE). The page offers three ways in, all of which already exist elsewhere
 on the site and are only gathered here:
 
-* Quick add: a deck of popular titles in the formats the member picks, answered
-  Seen it, Want to or Skip. Popular means saved by two or more members (from the
+* The poster wall: popular titles in the formats the member picks. A tap on a poster
+  saves it as finished, "Want to" saves it for later, a second tap takes it back
+  (counted as quick add on Site stats). Popular means saved by two or more members (from the
   homepage search index), topped up with a short list of widely known titles per
   format so a thin catalog (manga, podcasts, audiobooks) still has cards.
 * Import: the Import Studio on the dashboard (/?start=import).
@@ -36,7 +37,7 @@ GOAL = STARTER_GOAL
 LAUNCH = datetime(2026, 10, 30)
 COOKIE = "omnitrackr_start"
 COOKIE_MAX_AGE = 2 * 24 * 3600
-DECK_SIZE = 40
+DECK_SIZE = 72
 POPULAR_MIN_MEMBERS = 2
 
 # Format chips, in the order the page shows them: kind -> (chip label, card label).

@@ -166,7 +166,7 @@ START = (
     ("start_next_step", "Went on to a first-week step"),
 )
 START_PATHS = (
-    ("start_quick_add", "Used quick add"),
+    ("start_quick_add", "Tapped posters on the wall"),
     ("start_search", "Used search"),
     ("start_import", "Opened the importer"),
     ("start_quiz", "Opened the taste quiz"),
