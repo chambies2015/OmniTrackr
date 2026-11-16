@@ -82,7 +82,9 @@ def test_messages_have_no_emoji_and_funnel_events_are_still_sent():
     assert "✅" not in AUTH_JS
     for event in ("signup_form_opened", "guest_list_signup", "signup_rejected_invalid"):
         assert f"reportFunnelEvent('{event}')" in AUTH_JS, event
-    assert "document.getElementById('registerFormElement').addEventListener('focusin', () => reportSignupStart());" in AUTH_JS
+    # Using the email form counts as starting to sign up and as opening the email form (Nov 16).
+    assert "document.getElementById('registerFormElement').addEventListener('focusin', () => reportEmailFormOpened());" in AUTH_JS
+    assert "function reportEmailFormOpened() {\n    reportSignupStart();" in AUTH_JS
 
 
 def test_changelog_mentions_the_new_sign_in():
