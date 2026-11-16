@@ -539,7 +539,8 @@ def test_site_stats_reports_title_detail_coverage(authenticated_client, db_sessi
     title_metadata.store(db_session, "movie:a:2000", {"description": "x"}, "ok")
     title_metadata.store(db_session, "movie:b:2000", None, "miss")
     details = authenticated_client.get("/api/site-stats/overview").json()["system"]["title_details"]
-    assert details == {"found": 1, "not_found": 1, "errors": 0}
+    assert {key: details[key] for key in ("found", "not_found", "errors")} == {"found": 1, "not_found": 1, "errors": 0}
+    assert [problem["title"] for problem in details["problems"]] == ["b"]
 
 
 # ---------------------------------------------------------------- member content first (AdSense, Oct 2026)

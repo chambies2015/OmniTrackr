@@ -6,6 +6,7 @@ The page shell at /site-stats contains no data; the numbers come from
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -338,16 +339,47 @@ def _welcome_status(db: Session) -> dict | None:
         return None
 
 
+# Other lookups share the title_metadata table under their own key prefixes. They used to be
+# counted as title pages, so a show that isn't airing, or AniList being busy for a release
+# calendar refresh, showed up as a title page "not found" or "error".
+OTHER_LOOKUPS = (("episodes:", "episode_guides"), ("airing:", "release_schedules"))
+PROBLEMS_SHOWN = 10
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job).
 
-    Where-to-watch lookups share the table under "where:" keys. They are left out: a film
-    that streams nowhere is a normal answer, not a title page missing its details.
+    Where-to-watch lookups ("where:" keys) are left out: a film that streams nowhere is a
+    normal answer. Episode guides and release schedules are counted on their own lines.
     """
-    counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
-                  .filter(~models.TitleMetadata.key.startswith("where:"))
-                  .group_by(models.TitleMetadata.status).all())
-    return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
+    def counts(*conditions) -> dict:
+        rows = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                    .filter(*conditions).group_by(models.TitleMetadata.status).all())
+        return {"found": int(rows.get("ok", 0)) + int(rows.get("ended", 0)),
+                "not_found": int(rows.get("miss", 0)), "errors": int(rows.get("error", 0))}
+
+    others = [prefix for prefix, _ in OTHER_LOOKUPS] + ["where:"]
+    page_rows = [~models.TitleMetadata.key.startswith(prefix) for prefix in others]
+    result = counts(*page_rows)
+    for prefix, name in OTHER_LOOKUPS:
+        result[name] = counts(models.TitleMetadata.key.startswith(prefix))
+    problems = []
+    rows = (db.query(models.TitleMetadata.key, models.TitleMetadata.status, models.TitleMetadata.data,
+                     models.TitleMetadata.fetched_at)
+            .filter(*page_rows, models.TitleMetadata.status.in_(("miss", "error")))
+            .order_by(models.TitleMetadata.fetched_at.desc()).limit(PROBLEMS_SHOWN).all())
+    for key, status, data, fetched_at in rows:
+        try:
+            reason = (json.loads(data) or {}).get("reason") if data else None
+        except (ValueError, AttributeError):
+            reason = None
+        kind, _, rest = key.partition(":")
+        title, _, year = rest.rpartition(":")
+        problems.append({"kind": kind, "title": title, "year": year or None, "status": status,
+                         "reason": reason or ("Saved before reasons were kept" if status == "error" else "No source had this title"),
+                         "checked": fetched_at.strftime("%Y-%m-%d %H:%M") if fetched_at else None})
+    result["problems"] = problems
+    return result
 
 
 def _system() -> dict:

@@ -146,7 +146,8 @@ def test_site_stats_counts_title_facts_without_where_to_watch(authenticated_clie
     title_metadata.store(db_session, "where:movie:a:2000", None, "miss")
     title_metadata.store(db_session, "where:movie:b:2000", None, "miss")
     details = authenticated_client.get("/api/site-stats/overview").json()["system"]["title_details"]
-    assert details == {"found": 1, "not_found": 0, "errors": 0}
+    assert {key: details[key] for key in ("found", "not_found", "errors")} == {"found": 1, "not_found": 0, "errors": 0}
+    assert details["problems"] == []
 
 
 # ---------------------------------------------------------------- moved links
