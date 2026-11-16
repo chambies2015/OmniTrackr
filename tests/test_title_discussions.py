@@ -94,7 +94,7 @@ def test_long_threads_are_indexed_and_in_the_sitemap(client, db_session):
     started = _start(client, body="\n\n".join([LONG_REVIEW, LONG_REVIEW.replace("Interstellar", "It"), LONG_REVIEW.lower()]))
     _as(client, None)
     page = client.get(started["url"]).text
-    assert 'content="index, follow"' in page
+    assert 'content="index, follow, max-image-preview:large"' in page
     assert title_discussions.sitemap_paths(db_session)[0][0] == started["url"]
 
 

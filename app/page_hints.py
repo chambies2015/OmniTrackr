@@ -61,3 +61,23 @@ def add_preconnects(html: str) -> str:
     stylesheet = re.search(r'<link\b[^>]*rel="stylesheet"', head)
     at = stylesheet.start() if stylesheet else head_end
     return html[:at] + hints + "\n  " + html[at:]
+
+
+_PLAIN_INDEX = re.compile(r'<meta name="robots" content="index, follow"\s*/?>', re.I)
+
+
+def allow_large_image_previews(html: str) -> str:
+    """Let Google show a large image preview for indexed pages that don't say so yet.
+
+    Most public pages send "index, follow, max-image-preview:large". A few (public
+    lists, title indexes, profiles, the policy pages) send plain "index, follow",
+    which limits Search and Discover to a small thumbnail. Noindex pages are untouched.
+    """
+    head_end = html.find("</head>")
+    if head_end == -1:
+        return html
+    head = html[:head_end]
+    match = _PLAIN_INDEX.search(head)
+    if not match:
+        return html
+    return html[:match.start()] + '<meta name="robots" content="index, follow, max-image-preview:large">' + html[match.end():]

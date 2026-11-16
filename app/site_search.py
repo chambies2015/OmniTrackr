@@ -129,8 +129,9 @@ def _page_sources() -> list[dict]:
         if href not in seen and href not in UNLISTED_HUBS and (live is None or live()):
             seen.add(href)
             entries.append(_entry(name, href, "Page"))
-    entries.append(_entry("Binge calculator", "/binge-calculator", "Page",
-                          "How long a show, anime, film series or book series takes to finish", ["how long"]))
+    calculator = _entry("Binge calculator", "/binge-calculator", "Page",
+                        "How long a show, anime, film series or book series takes to finish", ["how long"])
+    entries = [entry for entry in entries if entry["url"] != calculator["url"]] + [calculator]
     return entries
 
 

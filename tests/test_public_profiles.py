@@ -171,7 +171,7 @@ def test_profiles_with_original_reviews_are_indexable_and_in_sitemap(client, db_
     enable(db_session, user)
     response = client.get("/u/writer")
     assert "x-robots-tag" not in response.headers
-    assert '<meta name="robots" content="index, follow">' in response.text
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
     assert "/u/writer" in public_profiles.sitemap_paths(db_session)
     assert "/u/writer</loc>" in client.get("/sitemap.xml").text
 
