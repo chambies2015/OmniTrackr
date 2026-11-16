@@ -425,3 +425,264 @@ body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, s
   body.app-shell .home-hero__cover { transition: none; }
   body.app-shell .home-hero__cover:is(:hover, :focus-visible) { transform: translateY(var(--drop)) rotate(var(--tilt)); }
 }
+
+/* =====================================================================
+   Library, Nov 16 2026: quick mark-done and rating, a "year · creator"
+   line, a slimmer toolbar and a real cover grid on phones. The buttons
+   come from library-quick.js; edit-mode rows are left alone.
+   ===================================================================== */
+
+/* ---------- Toolbar: search, sort, and a ••• menu for the data tools ---------- */
+body.app-shell .library-panel > .library-toolbar { grid-template-columns: minmax(0, 1fr) minmax(170px, 250px) auto; margin-bottom: 14px; }
+body.app-shell .library-tools-menu { position: relative; }
+body.app-shell .library-tools-menu > summary {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: .7rem;
+  height: 44px;
+  justify-content: center;
+  letter-spacing: .08em;
+  list-style: none;
+  user-select: none;
+  width: 44px;
+}
+body.app-shell .library-tools-menu > summary::-webkit-details-marker { display: none; }
+body.app-shell .library-tools-menu > summary:hover,
+body.app-shell .library-tools-menu[open] > summary { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .library-tools-menu > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+body.app-shell .library-tools-menu > .library-utilities {
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+}
+body.app-shell .library-section .library-tools-menu .library-utilities button.action-btn.library-utility {
+  border-radius: 8px;
+  color: var(--fg);
+  justify-content: flex-start;
+  min-height: 38px;
+  padding: 0 12px;
+  text-align: left;
+  width: 100%;
+}
+body.app-shell .library-section .library-tools-menu .library-utilities button.action-btn.library-utility:hover { background: var(--surface-hover); }
+
+/* "12 titles in this library" repeats the heading; it only shows when a search or filter is on. */
+body.app-shell .library-panel[data-library-filtered="false"]:not([data-library-state="empty"]) .library-filter-status {
+  clip-path: inset(50%); height: 1px; margin: 0; min-height: 0; overflow: hidden; position: absolute; width: 1px;
+}
+
+/* "Clear search & filters" only takes up room once there is something to clear. */
+body.app-shell .library-filters .library-filter-reset:disabled { display: none; }
+
+/* ---------- Quick done toggle ---------- */
+body.app-shell .library-table .library-quick-status {
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  pointer-events: auto;
+  transition: transform var(--dur-fast, .15s) ease;
+}
+body.app-shell .library-table .library-quick-status:hover { transform: scale(1.06); }
+body.app-shell .library-table .library-quick-status:active { transform: scale(.94); }
+body.app-shell .library-table .library-quick-status:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+body.app-shell .library-table .library-quick-status:disabled { cursor: progress; opacity: .6; }
+@media (min-width: 1025px) {
+  body.app-shell:not(.library-view-shelf) .library-table .library-quick-status:hover .watched-icon.unwatched[aria-label] {
+    border-color: hsl(var(--shelf-hue, 262deg) 70% 60% / .7);
+    color: var(--fg);
+  }
+}
+
+/* An unfinished title shows an empty ring: on its cover in Shelf (on hover with a mouse,
+   always on touch) and beside the rating on phone List cards. Wide List keeps its pill. */
+body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status .watched-icon.unwatched {
+  background: rgba(10, 8, 24, .38);
+  border: 2px solid rgba(255, 255, 255, .88);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+  box-sizing: border-box;
+  clip-path: none;
+  color: transparent;
+  display: inline-block;
+  font-size: 0;
+  height: 28px;
+  overflow: hidden;
+  position: static;
+  transition: opacity var(--dur-fast, .15s) ease;
+  width: 28px;
+}
+@media (max-width: 1024px) {
+  body.app-shell:not(.library-view-shelf) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status .watched-icon.unwatched {
+    background: transparent;
+    border: 2px solid var(--border-strong);
+    border-radius: 50%;
+    box-sizing: border-box;
+    clip-path: none;
+    color: transparent;
+    display: inline-block;
+    font-size: 0;
+    height: 24px;
+    overflow: hidden;
+    position: static;
+    width: 24px;
+  }
+}
+@media (hover: hover) {
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status .watched-icon.unwatched { opacity: 0; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)):is(:hover, :focus-within) td[data-card-field="status"] .library-quick-status .watched-icon.unwatched { opacity: 1; }
+}
+
+/* ---------- Quick rating ---------- */
+body.app-shell .library-table td.library-cell--quick-rate::before,
+body.app-shell .library-table td.library-cell--quick-rate::after { content: none !important; }
+body.app-shell .library-table .library-quick-rate {
+  align-items: baseline;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  box-shadow: none;
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  gap: 4px;
+  margin: 0 0 0 -8px;
+  min-height: 30px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+body.app-shell .library-table .library-quick-rate:hover { background: var(--surface-hover); border-color: var(--border); }
+body.app-shell .library-table .library-quick-rate:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+body.app-shell .library-table .library-quick-rate__star { color: var(--lib-star); }
+body.app-shell .library-table .library-quick-rate__out { color: var(--fg-secondary); font-size: .85em; font-weight: 500; }
+body.app-shell .library-table .library-quick-rate[data-rated="false"] { color: var(--fg-secondary); font-size: .85em; font-weight: 600; }
+body.app-shell .library-table .library-quick-rate[data-rated="false"]::before { color: var(--fg-secondary); content: "☆"; }
+body.app-shell .library-table .library-quick-rate[data-rated="false"]:hover { color: var(--primary); }
+
+body.app-shell .library-rate-pop {
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--fg);
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  position: fixed;
+  width: 316px;
+  z-index: 90;
+}
+body.app-shell .library-rate-pop[hidden] { display: none; }
+body.app-shell .library-rate-pop__title { font-size: var(--text-sm); font-weight: 650; margin: 0 2px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.app-shell .library-rate-pop__scale { display: grid; gap: 4px; grid-template-columns: repeat(10, minmax(0, 1fr)); }
+body.app-shell .library-rate-pop button {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  margin: 0;
+  min-height: 36px;
+  padding: 0;
+}
+body.app-shell .library-rate-pop__scale button:hover,
+body.app-shell .library-rate-pop__scale button:focus-visible {
+  background: hsl(var(--shelf-hue, 262deg) 70% 55% / .18);
+  border-color: hsl(var(--shelf-hue, 262deg) 70% 60% / .7);
+  outline: none;
+}
+body.app-shell .library-rate-pop__scale button[aria-pressed="true"] { background: var(--accent-solid); border-color: transparent; color: var(--on-accent); }
+body.app-shell .library-rate-pop button:disabled { cursor: progress; opacity: .6; }
+body.app-shell .library-rate-pop__foot { align-items: center; display: flex; gap: 8px; justify-content: space-between; margin-top: 10px; }
+body.app-shell .library-rate-pop__hint { color: var(--fg-secondary); font-size: var(--text-xs); }
+body.app-shell .library-rate-pop .library-rate-pop__clear { background: none; border: 0; color: var(--fg-secondary); font-size: var(--text-xs); min-height: 30px; padding: 0 8px; }
+body.app-shell .library-rate-pop .library-rate-pop__clear:hover { color: var(--danger); }
+body.app-shell .library-rate-pop .library-rate-pop__clear[hidden] { display: none; }
+@media (max-width: 420px) {
+  body.app-shell .library-rate-pop__scale { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  body.app-shell .library-rate-pop button { min-height: 42px; }
+}
+
+/* ---------- The "year · creator" line ---------- */
+body.app-shell .library-table .library-card-meta {
+  color: var(--fg-secondary);
+  display: block;
+  font-size: .78rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 1025px) {
+  /* The wide table already has a column for each of these. */
+  body.app-shell:not(.library-view-shelf) .library-table .library-card-meta { display: none; }
+}
+
+/* Details: a link on List cards, a menu entry on Shelf covers. */
+body.app-shell .library-table .row-menu__panel .library-card-details-shortcut { display: none; }
+body.app-shell.library-view-shelf .library-table .row-menu__panel .library-card-details-shortcut { display: flex; }
+body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) .library-card-details:not([aria-expanded="true"]) { display: none; }
+
+/* ---------- Shelf cards ---------- */
+body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] {
+  align-self: start;
+  display: block;
+  font-size: .82rem;
+  min-width: 0;
+}
+body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] .library-card-meta { margin-top: 1px; padding-left: 0; }
+body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] { margin-bottom: -2px; }
+@media (min-width: 1025px) {
+  body.app-shell.library-view-shelf .mobile-library tbody { gap: 30px 22px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+/* ---------- Phones and tablets ---------- */
+@media (max-width: 1024px) {
+  body.app-shell .library-panel > .library-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  body.app-shell .library-toolbar .library-filter-search { grid-column: 1 / -1; }
+  body.app-shell .library-toolbar .library-sort { grid-column: 1; }
+  body.app-shell .library-toolbar .library-tools-menu { grid-column: 2; }
+  body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] .library-quick-rate { margin-left: -8px; }
+  body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status { padding: 8px; margin: -8px; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status { margin: -6px; padding: 6px; }
+}
+@media (max-width: 600px) {
+  body.app-shell .card.library-panel { padding: 20px 14px 22px; }
+  body.app-shell .library-heading__stats { margin: 0 0 14px 2px; }
+  body.app-shell .library-panel > .library-toolbar { gap: 8px; grid-template-columns: minmax(0, 1fr) auto; margin-bottom: 12px; }
+  body.app-shell .library-filters { gap: 8px; margin-bottom: 16px; }
+  /* Two covers a row: the old 150px minimum only fitted one on most phones. */
+  body.app-shell.library-view-shelf .library-table.mobile-library tbody { gap: 22px 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .library-table .library-quick-status { transition: none; }
+  body.app-shell .library-table .library-quick-status:is(:hover, :active) { transform: none; }
+}

@@ -88,7 +88,7 @@
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261115-home-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
-  <link rel="stylesheet" href="/static/workspace-2026.css?v=20261109-workspace-1">
+  <link rel="stylesheet" href="/static/workspace-2026.css?v=20261116-library-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -975,7 +975,10 @@
           <input type="text" id="movieSearch" aria-label="Search this library" placeholder="Search by title or director"
             class="library-filter-search">
           <select id="movieSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1064,7 +1067,10 @@
           <input type="text" id="tvSearch" aria-label="Search this library" placeholder="Search by title"
             class="library-filter-search">
           <select id="tvSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1154,7 +1160,10 @@
           <input type="text" id="animeSearch" aria-label="Search this library" placeholder="Search by title"
             class="library-filter-search">
           <select id="animeSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1244,7 +1253,10 @@
           <input type="text" id="musicSearch" aria-label="Search this library" placeholder="Search by title, artist, or genre"
             class="library-filter-search">
           <select id="musicSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1333,7 +1345,10 @@
           <input type="text" id="bookSearch" aria-label="Search this library" placeholder="Search by title, author, or genre"
             class="library-filter-search">
           <select id="bookSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1430,7 +1445,10 @@
           <input type="text" id="mangaSearch" aria-label="Search this library" placeholder="Search by title, mangaka, or genre"
             class="library-filter-search">
           <select id="mangaSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1525,7 +1543,10 @@
           <input type="text" id="podcastSearch" aria-label="Search this library" placeholder="Search by title, host, or genre"
             class="library-filter-search">
           <select id="podcastSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1623,7 +1644,10 @@
           <input type="text" id="audiobookSearch" aria-label="Search this library" placeholder="Search by title, author, narrator, or genre"
             class="library-filter-search">
           <select id="audiobookSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1708,7 +1732,10 @@
           <input type="text" id="videoGameSearch" aria-label="Search this library" placeholder="Search by title or genres"
             class="library-filter-search">
           <select id="videoGameSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="release_date-asc">Release Date (Oldest → Newest)</option>
@@ -2398,6 +2425,7 @@
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261113-episode-notes-1"></script>
   <script src="/static/next-up-drag.js?v=20261109-queue-1" defer></script>
+  <script src="/static/library-quick.js?v=20261116-library-1"></script>
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>

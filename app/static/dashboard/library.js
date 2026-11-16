@@ -3362,6 +3362,7 @@ function enhanceLibraryCards(tableId) {
     window.OmniFriendRecs?.decorate(actions, row);
     window.OmniLibraryTags?.decorate(row, tableId);
     window.OmniTitleOrigins?.decorate(row, tableId);
+    window.OmniLibraryQuick?.decorate(row, tableId);
     syncNextUpButtons(actions);
     groupRowActions(actions);
   });
