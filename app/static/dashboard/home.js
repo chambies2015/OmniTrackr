@@ -631,8 +631,11 @@ function renderLibraryLaunchpad(insights, firstWeek = null) {
   const libraryDone = total > 0 && rated > 0 && reviewed > 0;
   // New members also get a few social steps once they have a title saved.
   const socialSteps = total > 0 ? firstWeekSteps(firstWeek) : [];
+  // An established library doesn't need the setup card, note or not: it kept Continue
+  // and What's new below the fold for members who simply never write notes.
+  const settled = total >= 10 && rated >= 3 && completed >= 3;
   // Let the existing dashboard take over when these introductory steps are done.
-  if (libraryDone && socialSteps.every((step) => step.complete)) {
+  if ((libraryDone || settled) && socialSteps.every((step) => step.complete)) {
     launchpad.hidden = true;
     return;
   }
@@ -784,6 +787,7 @@ function resetDailyDashboard() {
     document.getElementById(id)?.setAttribute('hidden', '');
   }
   window.OmniHomeHero?.reset();
+  window.OmniHomeToday?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1790,6 +1794,7 @@ function runDashboardLayoutBatch() {
   const launchpadRequest = refreshLibraryLaunchpad();
   const queueRequest = refreshNextUpQueue();
   const heroRequest = window.OmniHomeHero?.refresh();
+  const newsRequest = window.OmniHomeToday?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),
@@ -1801,7 +1806,7 @@ function runDashboardLayoutBatch() {
   firstDashboardLayoutBatchRan = true;
   window.dashboardHomeCards = null;
   if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
-  Promise.allSettled([launchpadRequest, queueRequest, heroRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
+  Promise.allSettled([launchpadRequest, queueRequest, heroRequest, newsRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
 }
 
 // Startup work that has to finish before the library is revealed, outside a batch.
