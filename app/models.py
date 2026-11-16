@@ -837,6 +837,9 @@ class FriendInvite(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     token = Column(String(32), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # The member chose to send a taste test: /join/<token> lets visitors rate a few of their
+    # rated titles first. Off for every link until the member presses "Send a taste test".
+    taste_test = Column(Boolean, nullable=False, default=False)
 
 
 class FriendInviteSignup(Base):

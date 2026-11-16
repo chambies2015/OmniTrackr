@@ -77,3 +77,14 @@ test('a link that was switched off drops the answers; a network error keeps them
   await api.importAnswers();
   assert.equal(api.read().pending, true);
 });
+
+test('answers from a taste test invite keep their /join link and move in after sign-up', async () => {
+  const { api, store, calls } = setup();
+  store.set(api.KEY, saved({ link: '/join/abcdefghijklmnop1234' }));
+  assert.equal(api.read().link, '/join/abcdefghijklmnop1234');
+  await api.importAnswers();
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /\/api\/taste-match\/u\/7\/answers$/);
+  assert.equal(calls[0].body.source, 'guest');
+  assert.equal(store.has(api.KEY), false);
+});

@@ -220,6 +220,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "signups": _counts_between(db, signup.created_at, start),
             "friends_made": _counts_between(db, signup.completed_at, start),
             "awaiting_verification": _count(db.query(func.count(signup.id)).filter(signup.completed_at.is_(None))),
+            "taste_tests": _count(db.query(func.count(models.FriendInvite.id)).filter(models.FriendInvite.taste_test.is_(True))),
         },
         "supporters": {
             "active": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now)),
