@@ -46,6 +46,7 @@ HUBS = {
     "/holidays/reading-and-listening": "Reading and listening",
     "/holidays/advent-calendar": "Advent calendar",
     "/halloween": "Halloween picks",
+    "/binge-calculator": "Binge calculator",
 }
 PARENTS = {
     "/new-this-week/": "/new-this-week/archive",
@@ -66,6 +67,10 @@ def _page_name(html: str) -> Optional[str]:
     if not match:
         return None
     name = _SUFFIX.sub("", " ".join(unescape(match.group(1)).split()))
+    # "How long to watch Breaking Bad? About 49 hours" reads as the question alone.
+    question, mark, _ = name.partition("? ")
+    if mark and len(question.split()) >= 3:
+        return question + "?"
     # "Movies like Interstellar: 7 to watch, play..." reads as "Movies like Interstellar".
     head, sep, _ = name.partition(": ")
     if sep and len(name) > 40 and len(head.split()) >= 2:

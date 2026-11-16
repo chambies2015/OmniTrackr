@@ -230,7 +230,32 @@ def directory_html() -> str:
                         for piece in links)
         groups.append(f'<div class="directory-group"><h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a></h3>'
                       f'<ul>{items}</ul></div>')
+    for heading, hub, links in _other_written_pages():
+        if not links:
+            continue
+        items = "".join(f'<li><a href="{escape(href, quote=True)}">{escape(name)}</a></li>' for name, href in links)
+        groups.append(f'<div class="directory-group"><h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a></h3>'
+                      f'<ul>{items}</ul></div>')
     return "".join(groups)
+
+
+def _other_written_pages() -> list[tuple[str, str, list[tuple[str, str]]]]:
+    """Written pages outside the guide catalog that the XML sitemap lists: switch guides,
+    browse shelves and monthly challenges. The site map linked only their hubs."""
+    from . import browse, challenges, switch_guides
+    switch = [(f"Switch from {guide['name']}" if guide["name"] != "your podcast app" else "Switch podcast apps",
+               switch_guides.path(slug)) for slug, guide in switch_guides.GUIDES.items()]
+    shelves = [(f"{kind.capitalize()} worth starting", browse.path(kind)) for kind in browse.KINDS]
+    months = []
+    for month in challenges.public_months():
+        label = date.fromisoformat(f"{month}-01")
+        months.append((f"{label:%B} {label.year}: {challenges.CHALLENGES[month]['name']}",
+                       f"/challenges/{challenges.slug_for(month)}"))
+    return [
+        ("Switch from another tracker", "/switch", switch),
+        ("Browse shelves", browse.path(), shelves),
+        ("Monthly challenges", "/challenges", months),
+    ]
 
 
 def ledger_html() -> str:

@@ -189,7 +189,7 @@ def test_trending_pages_are_indexed_and_in_sitemap_with_enough_titles(client, db
     db_session.commit()
     response = client.get("/trending")
     assert "X-Robots-Tag" not in response.headers
-    assert '<meta name="robots" content="index, follow">' in response.text
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
     sitemap = client.get("/sitemap.xml").text
     assert "/trending</loc>" in sitemap and "/trending/movie</loc>" in sitemap
     assert "/trending/book</loc>" not in sitemap

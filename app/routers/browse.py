@@ -224,8 +224,9 @@ def _structured(kind: str, items: list[dict], links: dict[str, str]) -> str:
                   "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": SITE_URL + "/"},
                   "mainEntity": {"@type": "ItemList", "numberOfItems": len(elements), "itemListElement": elements}}
     crumbs = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-        {"@type": "ListItem", "position": 1, "name": "Browse", "item": SITE_URL + browse.path()},
-        {"@type": "ListItem", "position": 2, "name": page["label"], "item": canonical}]}
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL + "/"},
+        {"@type": "ListItem", "position": 2, "name": "Browse", "item": SITE_URL + browse.path()},
+        {"@type": "ListItem", "position": 3, "name": page["label"], "item": canonical}]}
     return (f'<script type="application/ld+json">{_script_json(collection)}</script>'
             f'<script type="application/ld+json">{_script_json(crumbs)}</script>')
 

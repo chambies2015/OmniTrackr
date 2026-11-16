@@ -89,7 +89,6 @@ CORE_SITEMAP_PATHS = (
 def _database_parts(db: Session) -> list[str]:
     """Sitemap entries that come from member data: reviews, collections, guides, title pages, profiles."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
-    today = datetime.now().strftime('%Y-%m-%d')
     sitemap_parts = []
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
@@ -101,6 +100,8 @@ def _database_parts(db: Session) -> list[str]:
             model_cls.user_id.in_(user_query)
         )
 
+        review_changed = {}
+
         def visible_search_ready(category, candidates):
             item_ids = [item.id for item in candidates]
             state_map = {
@@ -110,6 +111,9 @@ def _database_parts(db: Session) -> list[str]:
                     models.PublicReviewState.item_id.in_(item_ids),
                 ).all()
             } if item_ids else {}
+            for item_id, state in state_map.items():
+                if state.updated_at:
+                    review_changed[(category, item_id)] = state.updated_at
             return [
                 item for item in candidates
                 if (item.title or "").strip() and evaluate_public_review(
@@ -127,131 +131,34 @@ def _database_parts(db: Session) -> list[str]:
             category_candidates = db.query(model_cls).filter(
                 public_detail_review_filter(model_cls)
             ).limit(200).all()
-            ready_count = len(visible_search_ready(category, category_candidates))
+            ready = visible_search_ready(category, category_candidates)
+            ready_count = len(ready)
             search_ready_total += ready_count
             if ready_count >= review_quality.MIN_INDEXED_CATEGORY_REVIEWS:
+                # The listing changes when one of its reviews does.
+                newest = max((review_changed[(category, item.id)] for item in ready
+                              if (category, item.id) in review_changed), default=None)
+                lastmod = f"\n    <lastmod>{newest.date().isoformat()}</lastmod>" if newest else ""
                 sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews?category={category}</loc>
-    <lastmod>{today}</lastmod>
+    <loc>{base_url}/reviews?category={category}</loc>{lastmod}
     <changefreq>daily</changefreq>
     <priority>0.72</priority>
   </url>""")
         
+        # One loop per media type; lastmod is when the public review last changed
+        # (PublicReviewState.updated_at). With no record of that the entry has no
+        # lastmod at all, since a date that always says "today" teaches Google to
+        # ignore every lastmod in the file.
         review_limit = 600
-        
-        movie_reviews = db.query(models.Movie).filter(
-            public_detail_review_filter(models.Movie)
-        ).limit(review_limit // 6).all()
-        movie_reviews = page_worthy(visible_search_ready("movie", movie_reviews))
-        
-        tv_reviews = db.query(models.TVShow).filter(
-            public_detail_review_filter(models.TVShow)
-        ).limit(review_limit // 6).all()
-        tv_reviews = page_worthy(visible_search_ready("tv_show", tv_reviews))
-        
-        anime_reviews = db.query(models.Anime).filter(
-            public_detail_review_filter(models.Anime)
-        ).limit(review_limit // 6).all()
-        anime_reviews = page_worthy(visible_search_ready("anime", anime_reviews))
-        
-        vg_reviews = db.query(models.VideoGame).filter(
-            public_detail_review_filter(models.VideoGame)
-        ).limit(review_limit // 6).all()
-        vg_reviews = page_worthy(visible_search_ready("video_game", vg_reviews))
-
-        music_reviews = db.query(models.Music).filter(
-            public_detail_review_filter(models.Music)
-        ).limit(review_limit // 6).all()
-        music_reviews = page_worthy(visible_search_ready("music", music_reviews))
-
-        book_reviews = db.query(models.Book).filter(
-            public_detail_review_filter(models.Book)
-        ).limit(review_limit // 6).all()
-        book_reviews = page_worthy(visible_search_ready("book", book_reviews))
-
-        manga_reviews = db.query(models.Manga).filter(
-            public_detail_review_filter(models.Manga)
-        ).limit(review_limit // 6).all()
-        manga_reviews = page_worthy(visible_search_ready("manga", manga_reviews))
-
-        podcast_reviews = db.query(models.Podcast).filter(
-            public_detail_review_filter(models.Podcast)
-        ).limit(review_limit // 6).all()
-        podcast_reviews = page_worthy(visible_search_ready("podcast", podcast_reviews))
-
-        audiobook_reviews = db.query(models.Audiobook).filter(
-            public_detail_review_filter(models.Audiobook)
-        ).limit(review_limit // 6).all()
-        audiobook_reviews = page_worthy(visible_search_ready("audiobook", audiobook_reviews))
-        
-        for review in movie_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=movie</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in tv_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=tv_show</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in anime_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=anime</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in vg_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=video_game</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in music_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=music</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in book_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=book</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in manga_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=manga</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in podcast_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=podcast</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in audiobook_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=audiobook</loc>
-    <lastmod>{today}</lastmod>
+        for category, model_cls in REVIEW_CATEGORY_MODELS:
+            candidates = db.query(model_cls).filter(
+                public_detail_review_filter(model_cls)
+            ).limit(review_limit // 6).all()
+            for review in page_worthy(visible_search_ready(category, candidates)):
+                changed = review_changed.get((category, review.id))
+                lastmod = f"\n    <lastmod>{changed.date().isoformat()}</lastmod>" if changed else ""
+                sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category={category}</loc>{lastmod}
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>""")
@@ -281,9 +188,13 @@ def _database_parts(db: Session) -> list[str]:
             )
             if available_count >= 3:
                 eligible_collection_count += 1
+                # The list's own dates; it is re-approved whenever its content changes.
+                changed = max((moment for moment in (collection.approved_at, collection.published_at, collection.created_at)
+                               if moment), default=None)
+                lastmod = f"<lastmod>{changed.date().isoformat()}</lastmod>" if changed else ""
                 sitemap_parts.append(
                     f"  <url><loc>{base_url}/collections/public/{collection.id}</loc>"
-                    f"<lastmod>{today}</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>"
+                    f"{lastmod}<changefreq>monthly</changefreq><priority>0.65</priority></url>"
                 )
         if eligible_collection_count >= 3:
             sitemap_parts.append(

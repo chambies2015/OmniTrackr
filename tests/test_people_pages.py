@@ -179,7 +179,7 @@ def test_directory_waits_for_enough_indexed_pages(client, db_session, monkeypatc
     assert "/people</loc>" not in client.get("/sitemap.xml").text
     monkeypatch.setattr(people_pages, "DIRECTORY_INDEX_MIN_PAGES", 1)
     people = client.get("/people")
-    assert "X-Robots-Tag" not in people.headers and '<meta name="robots" content="index, follow">' in people.text
+    assert "X-Robots-Tag" not in people.headers and '<meta name="robots" content="index, follow, max-image-preview:large">' in people.text
     assert "/people</loc>" in client.get("/sitemap.xml").text
 
 
