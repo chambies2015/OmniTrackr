@@ -16,7 +16,7 @@ from .. import auth, for_you, start_flow, title_metadata, title_pages, title_sea
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..library_lifecycle import delete_owned_media
 from ..progress import lock_progress_owner
-from ..taste_quiz import cached_art
+from ..taste_quiz import cached_art, cached_art_many
 from .discover import page
 from .titles import add_group_to_library
 
@@ -138,7 +138,7 @@ def start_page(request: Request, db: Session = Depends(get_db), user=Depends(get
 
 
 @router.get("/api/start/state")
-def start_state(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def start_state(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     state = _state(db, user)
     if state["total"] >= start_flow.GOAL and start_flow.row_for(db, user.id, create=False) is not None:
@@ -149,16 +149,17 @@ def start_state(response: Response, user=Depends(get_current_user), db: Session 
 
 
 @router.get("/api/start/deck")
-def start_deck(response: Response, kinds: str = Query("", max_length=120),
+def start_deck(request: Request, response: Response, kinds: str = Query("", max_length=120),
                user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     wanted = [kind for kind in kinds.split(",") if kind in start_flow.FORMATS]
     cards = start_flow.deck(title_search.index(db), start_flow.owned_slugs(db, user.id), wanted)
-    for card in cards:
-        # Covers already on the site (cached title details) come with the deck, so the poster
-        # wall only asks for the few nobody has looked up yet.
-        if not card["image"] and not card["members"]:
-            card["image"] = cached_art(db, card)
+    # Covers already on the site (cached title details) come with the deck, so the poster
+    # wall only asks for the few nobody has looked up yet. One query for the whole wall.
+    missing = [card for card in cards if not card["image"] and not card["members"]]
+    images = cached_art_many(db, missing) if missing else {}
+    for card in missing:
+        card["image"] = images.get(card["id"])
     return {"cards": cards}
 
 
