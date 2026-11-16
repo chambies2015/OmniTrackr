@@ -472,6 +472,9 @@
     const push = growth.push || {};
     const reviews = growth.reviews || {};
     const support = growth.support || {};
+    const stay = growth.stay || {};
+    const stayOn = stay.turned_on || {};
+    const after = stay.after || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -514,6 +517,22 @@
         { label: 'Notifications sent', count: push.sent || 0 },
         ...(push.sent_by_kind || []).map(item => ({ label: `Sent: ${item.kind}`, count: item.count })),
         { label: 'Away reminders sent', count: push.away_reminders || 0 },
+        ...(push.on_by_place || []).filter(item => item.count).map(item => ({ label: `Turned on from ${item.place}`, count: item.count })),
+      ],
+      growthStayPosted: [
+        { label: 'Home screen card shown', count: stay.shown || 0 },
+        ...(stay.cards || []).filter(row => row.shown || row.push || row.email || row.calendar || row.later || row.stop).map(row => ({
+          label: `Shown for "${row.moment}" (then notifications ${number(row.push)}, weekly email ${number(row.email)}, calendar ${number(row.calendar)}, not now ${number(row.later)}, don't ask ${number(row.stop)})`,
+          count: row.shown,
+        })),
+        { label: 'Note after saving a show shown', count: after.shown || 0 },
+        { label: 'Notifications turned on from them', count: stayOn.push || 0 },
+        { label: 'Weekly email turned on from them', count: stayOn.email || 0 },
+        { label: 'Calendar turned on from them', count: stayOn.calendar || 0 },
+        { label: 'Sample email opened from the card', count: stay.sample || 0 },
+        { label: 'Not now', count: stay.later || 0 },
+        { label: 'Don\'t ask again', count: stay.stopped || 0 },
+        { label: 'Members who said don\'t ask again (now)', count: stay.stopped_now || 0 },
       ],
       growthSupportAsks: [
         { label: 'Notes shown on the home screen', count: support.shown || 0 },
@@ -547,6 +566,7 @@
     growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
     growthPush: 'Phone and browser notifications',
+    growthStayPosted: 'Stay posted asks (card and note after saving)',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',
   };

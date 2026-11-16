@@ -462,6 +462,33 @@ def record_sent(kind: str, count: int) -> bool:
         return False
 
 
+# Where a device was turned on from, for Site stats (kind "push", keys on_<place>).
+SOURCES = {
+    "bell": "the bell",
+    "account": "Settings → Notifications",
+    "episode_guide": "the episode guide",
+    "home_card": "the home screen card",
+    "after_save": "the note after saving a show",
+}
+
+
+def record_turned_on(source: Optional[str]) -> bool:
+    """Count one newly turned-on device by the place it was turned on from. Never raises."""
+    if source not in SOURCES:
+        return False
+    try:
+        from .site_traffic import RECORDER
+        if not RECORDER.enabled:
+            return False
+        day = datetime.utcnow().date()
+        with RECORDER._lock:
+            RECORDER._pending[(day, "push", f"on_{source}")] += 1
+            RECORDER._events += 1
+        return True
+    except Exception:
+        return False
+
+
 def safe_link(link: Optional[str]) -> str:
     """Only same-site paths open from a notification."""
     if isinstance(link, str) and link.startswith("/") and not link.startswith("//") and "\\" not in link \

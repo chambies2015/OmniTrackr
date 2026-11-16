@@ -83,6 +83,7 @@
   <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
+  <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
@@ -641,6 +642,41 @@
             </div>
           </div>
           <p id="homeNewsStatus" class="home-news__status" role="status" aria-live="polite"></p>
+        </section>
+
+        <!-- Offered once in a while to members with no weekly email, notifications or calendar yet (stay-posted.js) -->
+        <section id="stayPosted" class="stay-posted" aria-labelledby="stayPostedTitle" hidden>
+          <div class="stay-posted__head">
+            <p id="stayPostedEyebrow" class="stay-posted__eyebrow">Stay posted</p>
+            <h2 id="stayPostedTitle" class="stay-posted__title"></h2>
+            <p id="stayPostedBody" class="stay-posted__body"></p>
+          </div>
+          <ul id="stayPostedItems" class="stay-posted__items" hidden></ul>
+          <div class="stay-posted__options" role="group" aria-label="Ways to hear about it">
+            <div class="stay-posted__option" data-channel="push" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="push">Notify me on this device</button>
+              <p class="stay-posted__hint">A notification on the day an episode or release is out, even with OmniTrackr closed.</p>
+            </div>
+            <div class="stay-posted__option" data-channel="email" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="email">Send me the weekly email</button>
+              <p class="stay-posted__hint">One email a week, only when there's news. <a id="stayPostedSample" href="/email/weekly/preview" target="_blank" rel="noopener">See this week's</a></p>
+            </div>
+            <div class="stay-posted__option" data-channel="calendar" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="calendar">Add to my calendar</button>
+              <p class="stay-posted__hint">Episodes and release days in Google, Apple or Outlook Calendar.</p>
+              <p id="stayPostedCalendarLinks" class="stay-posted__links" hidden>
+                <a id="stayPostedGoogle" href="#" target="_blank" rel="noopener noreferrer">Google Calendar</a>
+                <a id="stayPostedApple" href="#">Apple Calendar</a>
+                <a id="stayPostedOutlook" href="#" target="_blank" rel="noopener noreferrer">Outlook</a>
+                <button id="stayPostedCopy" type="button" class="stay-posted__copy">Copy address</button>
+              </p>
+            </div>
+          </div>
+          <div class="stay-posted__foot">
+            <button id="stayPostedLater" type="button" class="stay-posted__quiet">Not now</button>
+            <button id="stayPostedStop" type="button" class="stay-posted__quiet">Don't ask again</button>
+          </div>
+          <p id="stayPostedStatus" class="stay-posted__status" role="status" aria-live="polite"></p>
         </section>
 
         <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
@@ -2423,7 +2459,7 @@
   <script src="./auth.js?v=20261116-support-ask-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/episodes.js?v=20261113-episode-notes-1"></script>
+  <script src="/static/episodes.js?v=20261116-stay-1"></script>
   <script src="/static/next-up-drag.js?v=20261109-queue-1" defer></script>
   <script src="/static/library-quick.js?v=20261116-library-1"></script>
   <script src="./app.js"></script>
@@ -2454,7 +2490,8 @@
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friends-feed.js?v=20261114-sweep-1"></script>
   <script src="/static/follows.js?v=20261113-social-1"></script>
-  <script src="/static/push.js?v=20261031-push-4" defer></script>
+  <script src="/static/push.js?v=20261116-stay-1" defer></script>
+  <script src="/static/stay-posted.js?v=20261116-stay-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>

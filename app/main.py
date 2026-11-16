@@ -866,6 +866,12 @@ for route in support_asks_router.router.routes:
     elif path in ("/api/support-ask/seen", "/api/support-ask/answer", "/api/support-ask/settings"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(support_asks_router.router)
+from .routers import stay_posted as stay_posted_router
+# The "stay posted" card and the note after saving a show are a click at a time.
+for route in stay_posted_router.router.routes:
+    if getattr(route, "path", None) in ("/api/stay-posted/seen", "/api/stay-posted/answer", "/api/stay-posted/after-save"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(stay_posted_router.router)
 from .routers import site_search as site_search_router
 # The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
 rate_limited_site_search = {
