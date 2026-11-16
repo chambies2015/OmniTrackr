@@ -58,7 +58,7 @@ def test_sharing_makes_the_review_public_on_its_title_page(authenticated_client,
     [item] = _items(authenticated_client)["items"]
 
     page = authenticated_client.get("/titles/movie/interstellar-2014").text
-    assert "No public reviews yet" in page
+    assert "Be the first to review Interstellar" in page and "Read the full review" not in page
 
     response = authenticated_client.post(f"{API}/share", json={
         "category": "movie", "item_id": movie.id, "version": item["version"], "spoilers": True})
