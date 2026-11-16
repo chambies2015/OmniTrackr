@@ -30,7 +30,8 @@ NO_STORE = {"Cache-Control": "private, no-store"}
 TAG_MAX_LENGTH = 32
 TAGS_PER_ITEM = 10
 VIEWS_PER_SHELF = 12
-SORTS = {"", "rating-asc", "rating-desc", "year-asc", "year-desc", "release_date-asc", "release_date-desc"}
+SORTS = {"", "rating-asc", "rating-desc", "year-asc", "year-desc", "release_date-asc", "release_date-desc",
+         "title-asc", "title-desc", "added-desc", "added-asc", "length-asc", "length-desc"}
 
 
 def clean_tag(raw: str) -> str:
@@ -179,10 +180,18 @@ def library_page(
     if focus_id is not None:
         query = query.order_by(case((model.id == focus_id, 0), else_=1))
     sort_field = "release_date" if category == "video-games" and sort_by == "year" else sort_by
-    if sort_field in {"rating", "year", "release_date"} and hasattr(model, sort_field):
+    if category == "audiobooks" and sort_by == "length":
+        sort_field = "length_hours"
+    if sort_field in {"rating", "year", "release_date", "length_hours"} and hasattr(model, sort_field):
         column = getattr(model, sort_field)
         # Unrated or undated titles go last both ways, as on Postgres a plain DESC lists NULLs first.
         query = query.order_by((column.desc() if order.lower() == "desc" else column.asc()).nullslast())
+    elif sort_field == "title":
+        title = func.lower(func.coalesce(model.title, ""))
+        query = query.order_by(title.desc() if order.lower() == "desc" else title.asc())
+    elif sort_field == "added" and order.lower() == "desc":
+        # Row ids grow as titles are added, and they cover rows from before added_at existed.
+        query = query.order_by(model.id.desc())
     # Stable tie breaking prevents missing/duplicated rows on adjacent pages.
     query = query.order_by(model.id)
     offset = min(offset, ((total - 1) // limit) * limit) if total else 0

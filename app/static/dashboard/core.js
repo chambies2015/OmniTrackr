@@ -69,6 +69,37 @@ function libraryPageConfig(category) {
   }[category];
 }
 
+// The sort a member picks for a shelf is kept in this browser and comes back next visit.
+const LIBRARY_SORT_KEY = 'omnitrackr_library_sort';
+function rememberedLibrarySorts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LIBRARY_SORT_KEY) || '{}');
+    return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+  } catch (_) {
+    return {};
+  }
+}
+function restoreLibrarySort(category) {
+  const config = libraryPageConfig(category);
+  const select = config && document.getElementById(config[1]);
+  const wanted = rememberedLibrarySorts()[category];
+  if (!select || typeof wanted !== 'string') return;
+  if (Array.from(select.options).some(option => option.value === wanted)) select.value = wanted;
+}
+function rememberLibrarySort(category) {
+  const config = libraryPageConfig(category);
+  const select = config && document.getElementById(config[1]);
+  if (!select) return;
+  const saved = rememberedLibrarySorts();
+  if (select.value) saved[category] = select.value; else delete saved[category];
+  try { localStorage.setItem(LIBRARY_SORT_KEY, JSON.stringify(saved)); } catch (_) { /* this visit still sorts */ }
+}
+LIBRARY_SEARCH_SOURCES.forEach(source => {
+  restoreLibrarySort(source.tab);
+  const select = document.getElementById(libraryPageConfig(source.tab)[1]);
+  select?.addEventListener('change', () => rememberLibrarySort(source.tab));
+});
+
 function getLibraryFilters(category) {
   return libraryFilters.get(category) || { completion: 'all', unrated: false, hasProgress: false };
 }
@@ -175,6 +206,7 @@ function resetLibraryBrowsing() {
     const [tableId, sortId] = libraryPageConfig(source.tab);
     const sort = document.getElementById(sortId);
     if (sort) sort.value = '';
+    restoreLibrarySort(source.tab);
     renderLibraryFilters(source.tab);
     const status = document.getElementById(`${tableId}FilterStatus`);
     if (status) status.textContent = '';
@@ -198,6 +230,8 @@ function renderLibraryPager(category, page, loading = false, error = '') {
   const filters = getLibraryFilters(category);
   const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
     || !!document.getElementById(source.input).value;
+  const panel = table.closest?.('.library-panel');
+  if (panel) panel.dataset.libraryFiltered = String(filtered);
   if (feedback) feedback.textContent = error || (loading ? 'Loading titles…' : page.total
     ? `${page.total} ${page.total === 1 ? 'title' : 'titles'}${filtered ? (page.total === 1 ? ' matches your view' : ' match your view') : ' in this library'}.`
     : filtered ? 'No titles match. Try another search or clear your filters.'
