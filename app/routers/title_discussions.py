@@ -196,11 +196,16 @@ def thread_row_html(thread: models.TitleDiscussion, author: Optional[boards.Auth
             f'repl{"y" if replies == 1 else "ies"}</span></li>')
 
 
-def title_section_html(db: Session, group) -> str:
-    """The "Discussions" section on a title page: the latest threads and a way in."""
+def title_section_html(db: Session, group, when_empty: bool = True) -> str:
+    """The "Discussions" section on a title page: the latest threads and a way in.
+
+    With when_empty=False an empty board gives "" (the title page folds its prompt into the review panel).
+    """
     slug = group.path.rsplit("/", 1)[1]
     found = boards.summary_for_page(db, group.kind, slug)
     board = boards.board_path(group.kind, slug)
+    if not found["threads"] and not when_empty:
+        return ""
     if found["threads"]:
         people = boards.authors(db, [thread.user_id for thread in found["threads"]])
         rows = "".join(thread_row_html(thread, people.get(thread.user_id)) for thread in found["threads"])

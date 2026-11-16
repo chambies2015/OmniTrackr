@@ -28,8 +28,8 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261103-where-1"
-JS_VERSION = "20261109-title-detail-1"
-DETAIL_CSS_VERSION = "20261109-title-detail-1"
+JS_VERSION = "20261115-title-chapters-1"
+DETAIL_CSS_VERSION = "20261115-title-chapters-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
@@ -246,7 +246,8 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
         rows.append(("Ended", _pretty_date(metadata["end_date"])))
     if summary.get("creator") and group.kind in CREATOR_LABEL and not any(f["label"] == CREATOR_LABEL[group.kind] for f in metadata.get("facts") or []):
         rows.append((CREATOR_LABEL[group.kind], summary["creator"]))
-    rows += [(fact["label"], fact["value"]) for fact in metadata.get("facts") or []]
+    skip = {"Starring"} if summary.get("cast_shown") else set()
+    rows += [(fact["label"], fact["value"]) for fact in metadata.get("facts") or [] if fact["label"] not in skip]
     if _genres(metadata):
         rows.append(("Genres", ", ".join(_genres(metadata))))
     description = ""
@@ -270,6 +271,10 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
         return ""
     overview_html = f'<p class="title-overview">{overview}</p>' if overview else ""
     text = f'<div class="title-description">{overview_html}{description}</div>' if overview or description else ""
+    cast = summary.get("cast_nested") or ""
+    if cast:
+        # The cast fills the space under a short description, beside the facts card.
+        text = f'<div class="title-about__main">{text}{cast}</div>'
     facts_html = f'<dl class="title-facts">{facts}</dl>' if facts else ""
     return (f'<section class="title-section title-about" aria-labelledby="about-title"><h2 id="about-title">About {_e(group.title)}</h2>'
             f'{text}{facts_html}</section>')
@@ -408,12 +413,14 @@ def _community_html(group, summary: dict) -> str:
         if more > 0:
             reviews += (f'<details class="title-reviews-more"><summary>Show {more} more review{"s" if more != 1 else ""}</summary>'
                         f'<div class="title-reviews">{"".join(cards[REVIEWS_OPEN:])}</div></details>')
+        reviews = f'<h3 class="title-subhead">Member reviews</h3>{reviews}'
     else:
-        reviews = (f'<p class="title-empty">No public reviews yet. <a href="#write-review">Be the first to review '
-                   f'{_e(group.title)}</a>.</p>')
+        # No written reviews yet: the review prompt further down asks for the first one,
+        # so this section stays about the numbers instead of opening on an empty state.
+        reviews = ""
     return (f'<section class="title-section" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
             f'{_verdict_html(group, summary)}<div class="title-stats">{"".join(tiles)}</div>{_spread_html(group, summary)}'
-            f'<h3 class="title-subhead">Member reviews</h3>{reviews}</section>')
+            f'{reviews}</section>')
 
 
 def _rank_html(group, summary: dict) -> str:
@@ -482,10 +489,6 @@ def _verdict_html(group, summary: dict) -> str:
             f'<p>{_e(" ".join(sentences))}</p></div>')
 
 
-GLANCE_FACTS = ("Running time", "Episode length", "Episodes", "Seasons", "Average playtime", "Pages", "Length",
-                "Tracks", "Studio", "Network", "Platforms")
-
-
 def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
     """The sidebar summary: member numbers first, then the few facts people check before starting."""
     rows = []
@@ -506,19 +509,11 @@ def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
         facts.append(("Member chart", f'<a href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">#{_e(rank["rank"])} of {_e(rank["of"])} {_e(_plural(group.kind))}</a>'))
     if summary.get("recent_members"):
         facts.append(("Recently added", f'{_e(summary["recent_members"])} members in the last {title_pages.RECENT_DAYS} days'))
-    release = _pretty_date(metadata.get("release_date")) or (str(group.year) if group.year else None)
-    if release:
-        facts.append(("Released" if group.kind not in ("tv", "anime") else "Premiered", _e(release)))
-    if summary.get("creator") and group.kind in CREATOR_LABEL:
-        facts.append((CREATOR_LABEL[group.kind], _e(summary["creator"])))
-    found = {fact["label"]: fact["value"] for fact in metadata.get("facts") or [] if fact.get("value")}
-    facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
-    services = where_to_watch.names(summary.get("where"))
-    if services:
-        facts.append((where_to_watch.heading(group.kind),
-                      f'<a href="#where-title">{_e(", ".join(services))}</a>'))
-    if _genres(metadata):
-        facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
+    # Since Nov 15 2026 the sidebar only sits beside the reviews, and "About" below has the full
+    # facts at full width, so it keeps to member numbers plus the one length people check first.
+    length = _length_fact(group.kind, metadata)
+    if length:
+        facts.append(("How long", _e(length)))
     if not rows and not facts:
         return ""
     fact_html = "".join(f"<div><dt>{_e(label)}</dt><dd>{value}</dd></div>" for label, value in facts)
@@ -541,7 +536,7 @@ def _by_creator_html(group, summary: dict) -> str:
     more = (f'<a href="{_e(link)}">Every {_e(creator)} title, ranked <span aria-hidden="true">→</span></a>' if link else "")
     return (f'<section class="title-section" aria-labelledby="creator-title"><div class="title-section__head">'
             f'<h2 id="creator-title">More from {_e(creator)}</h2>{more}</div>'
-            f'<div class="title-related-grid">{_related_cards(items)}</div></section>')
+            f'{_rail(_related_cards(items))}</section>')
 
 
 def _section_nav(sections: list[tuple[str, str, str]]) -> str:
@@ -553,7 +548,11 @@ def _section_nav(sections: list[tuple[str, str, str]]) -> str:
 
 
 def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
-    """The prompt (and, for members, the form) that turns a visitor into the next reviewer."""
+    """The prompt (and, for members, the form) that turns a visitor into the next reviewer.
+
+    When nobody has started a discussion yet, the empty discussions box folds into this
+    panel as a second way in, instead of a second empty section further down.
+    """
     verb = VERBS[group.kind]
     first = not summary["reviews"]
     heading = f"Be the first to review {group.title}" if first else f"Add your review of {group.title}"
@@ -591,8 +590,17 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
         action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" rel="nofollow" href="{_e(signin)}">Sign in to write a review</a>'
                   '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div>'
                   '<p class="title-write__note">Free, and your library stays private unless you choose to share a review.</p>')
-    return (f'<section class="title-section title-write" id="write-review" aria-labelledby="write-review-title">'
-            f'<h2 id="write-review-title">{_e(heading)}</h2>{asked}<p class="title-write__lead">{_e(lead)}</p>{action}</section>')
+    talk = ""
+    board = summary.get("empty_board")
+    if board:
+        talk = (f'<div class="title-write__talk" id="discussions-title"><h3>Or start a discussion</h3>'
+                f'<p>Nobody has started a discussion about {_e(group.title)} yet. Ask a question, share a theory, '
+                'or pick a scene to talk about.</p>'
+                f'<a class="site-btn site-btn--ghost" href="{_e(board)}#start">Start a discussion</a></div>')
+    return (f'<section class="title-section title-write{" title-write--talk" if talk else ""}" id="write-review" '
+            f'aria-labelledby="write-review-title"><div class="title-write__review">'
+            f'<h2 id="write-review-title">{_e(heading)}</h2>{asked}<p class="title-write__lead">{_e(lead)}</p>{action}</div>'
+            f'{talk}</section>')
 
 
 # ---------------------------------------------------------------- overview and quick answers
@@ -915,7 +923,7 @@ def _similar_html(group, summary: dict) -> str:
             f'<h2 id="similar-title">{_e(KIND_PLURALS[group.kind])} like {_e(group.title)}</h2>'
             f'<a href="/titles/{_e(group.kind)}">Top-rated {_e(_plural(group.kind))} <span aria-hidden="true">→</span></a></div>'
             f'<p class="title-section__lead">Matched on shared genres among the {_e(_plural(group.kind))} OmniTrackr members track.</p>'
-            f'<div class="title-related-grid">{cards}</div></section>')
+            f'{_rail(cards)}</section>')
 
 
 def _collections_html(summary: dict) -> str:
@@ -924,6 +932,11 @@ def _collections_html(summary: dict) -> str:
     cards = "".join(f'<a class="title-collection" href="{_e(c["url"])}"><strong>{_e(c["name"])}</strong>'
                     f'<span>{_e(_excerpt(c["description"], 140))}</span></a>' for c in summary["collections"])
     return f'<section class="title-section" aria-labelledby="collections-title"><h2 id="collections-title">In public collections</h2><div class="title-collections">{cards}</div></section>'
+
+
+def _rail(cards: str) -> str:
+    """A row of posters that scrolls sideways; title-page.js adds the arrow buttons on wide screens."""
+    return f'<div class="title-rail" data-title-rail><div class="title-related-grid">{cards}</div></div>'
 
 
 def _related_cards(items: list) -> str:
@@ -941,7 +954,7 @@ def _related_html(summary: dict) -> str:
     if not summary["related"]:
         return ""
     cards = _related_cards(summary["related"])
-    return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2><div class="title-related-grid">{cards}</div></section>'
+    return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2>{_rail(cards)}</section>'
 
 
 def _if_you_liked_html(group) -> str:
@@ -997,6 +1010,96 @@ def _sources_html(metadata: dict) -> str:
     )
     return (f'<p class="title-sources">Title information from {parts}. Scores belong to their publishers; '
             'member data is aggregated from OmniTrackr libraries and never identifies who tracks a title.</p>')
+
+
+# ---------------------------------------------------------------- cast and crew, join band (Nov 15 2026)
+
+CREW_ROLE_LABELS = {"Director": "Director", "Creator": "Created by", "Writer": "Writer", "Cast": "Cast",
+                    "Author": "Author", "Mangaka": "Mangaka", "Host": "Host", "Artist": "Artist"}
+CAST_HEADINGS = {"movie": "Cast and crew", "tv": "Cast and crew", "anime": "Who made it", "book": "Who wrote it",
+                 "manga": "Who made it", "podcast": "Who hosts it", "album": "Who made it", "game": "Who made it",
+                 "audiobook": "Who wrote it"}
+CAST_MIN = 3
+CAST_MAX = 12
+
+
+def _initials(name: str) -> str:
+    words = [word for word in re.split(r"[\s.-]+", name) if word and word[0].isalnum()]
+    if not words:
+        return "?"
+    return (words[0][0] + (words[-1][0] if len(words) > 1 else "")).upper()
+
+
+def _hue(name: str) -> int:
+    """A steady colour per name, so the same person looks the same on every page."""
+    return sum(ord(ch) * (index + 1) for index, ch in enumerate(name.casefold())) % 360
+
+
+def _crew(group, summary: dict, metadata: dict) -> list[tuple[str, str]]:
+    """(name, roles) for the people credited on the title, crew first, then cast in billing order."""
+    from ..people_pages import PERSON, credits_in, is_real_name
+    found: dict[str, list[str]] = {}
+    creator = summary.get("creator")
+    credits = credits_in(group.kind, metadata)
+    if creator and group.kind in CREATOR_LABEL and is_real_name(creator) and not any(name == creator for _, _, name in credits):
+        found[creator] = [CREATOR_LABEL[group.kind]]
+    for entity, role, name in credits:
+        if entity != PERSON:
+            continue
+        label = CREW_ROLE_LABELS.get(role, role)
+        found.setdefault(name, [])
+        if label not in found[name]:
+            found[name].append(label)
+    crew = [(name, roles) for name, roles in found.items() if roles != ["Cast"]]
+    cast = [(name, roles) for name, roles in found.items() if roles == ["Cast"]]
+    return (crew + cast)[:CAST_MAX]
+
+
+def _cast_html(group, summary: dict, metadata: dict, nested: bool = False) -> str:
+    people = _crew(group, summary, metadata)
+    if len(people) < CAST_MIN:
+        return ""
+    links = summary.get("credit_links") or {}
+    cards = []
+    for name, roles in people:
+        face = (f'<span class="title-person__face" style="--hue:{_hue(name)}" aria-hidden="true">{_e(_initials(name))}</span>')
+        inner = f'{face}<span class="title-person__text"><strong>{_e(name)}</strong><small>{_e(", ".join(roles))}</small></span>'
+        cards.append(f'<li><a class="title-person" href="{_e(links[name])}">{inner}</a></li>' if name in links
+                     else f'<li><span class="title-person">{inner}</span></li>')
+    note = ('<p class="title-section__lead">Names with a page of their own are linked, with everything else they made '
+            'that OmniTrackr members track.</p>' if links else "")
+    heading = _e(CAST_HEADINGS.get(group.kind, "Cast and crew"))
+    if nested:  # inside "About", under the description
+        return (f'<div class="title-cast title-cast--nested"><h3 id="cast-title">{heading}</h3>{note}'
+                f'<ul class="title-cast__list">{"".join(cards)}</ul></div>')
+    return (f'<section class="title-section title-cast" aria-labelledby="cast-title"><h2 id="cast-title">'
+            f'{heading}</h2>{note}<ul class="title-cast__list">{"".join(cards)}</ul></section>')
+
+
+def _join_band_html(group, summary: dict, image: Optional[str]) -> str:
+    """For visitors without an account: what an OmniTrackr library is, between the answers and the next picks."""
+    covers = [image] if image else []
+    for item in (summary.get("related") or []) + (summary.get("by_creator") or []) + (summary.get("similar") or []):
+        if item.get("image") and item["image"] not in covers:
+            covers.append(item["image"])
+        if len(covers) == 4:
+            break
+    stack = ""
+    if len(covers) >= 3:
+        stack = ('<div class="title-join__stack" aria-hidden="true">'
+                 + "".join(f'<img src="{_e(cover)}" alt="" width="120" height="180" loading="lazy" decoding="async">' for cover in covers)
+                 + '</div>')
+    verb = {"game": "play", "book": "read", "manga": "read", "album": "hear", "podcast": "listen to",
+            "audiobook": "listen to"}.get(group.kind, "watch")
+    return (f'<section class="title-join{" title-join--stack" if stack else ""}" aria-labelledby="join-title">{stack}'
+            '<div class="title-join__copy"><p class="title-join__kicker">Free account</p>'
+            f'<h2 id="join-title">Keep {_e(group.title)} on a list that goes everywhere with you</h2>'
+            f'<ul class="title-join__points"><li>Save what you want to {_e(verb)} next, mark what you finished, rate it out of 10.</li>'
+            '<li>Movies, shows, anime, games, books, manga, music, podcasts and audiobooks in one library.</li>'
+            '<li>Bring your history over from Letterboxd, Goodreads, MyAnimeList, Steam and more.</li></ul>'
+            '<div class="title-join__actions"><a class="site-btn site-btn--primary" href="/#signup" data-title-signup>Create a free account</a>'
+            f'<button type="button" class="site-btn site-btn--ghost" data-join-save>Save {_e(group.title)} first</button></div>'
+            '<p class="title-join__note">Your library stays private unless you choose to share it.</p></div></section>')
 
 
 # ---------------------------------------------------------------- hero (Nov 2026 redesign)
@@ -1140,16 +1243,27 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
+    trailer_button = ('<a class="site-btn site-btn--ghost title-hero__trailer" href="#trailer-title" data-trailer-jump>'
+                      '<span aria-hidden="true">▶</span> Trailer</a>' if metadata.get("trailer") else "")
     faq = _faq(group, summary, metadata)
-    # Our own content first: member reviews and stats, then collections and "also track".
+    summary["cast_nested"] = _cast_html(group, summary, metadata, nested=True)
+    summary["cast_shown"] = bool(summary["cast_nested"])
+    about = _about_html(group, summary, metadata)
+    # With no About section to sit in, the cast gets a section of its own.
+    cast = "" if about else _cast_html(group, summary, metadata)
+    # Chapters in the order a visitor decides: what members think, where to get it and what it
+    # looks like, what it is and who made it, quick answers, then a way to join in and what to try next.
+    # Member reviews and numbers stay first: they are the part of the page nobody else has.
     sections = [
         (_community_html(group, summary), "community-title", "Reviews"),
+        (_where_html(group, summary), "where-title", where_to_watch.heading(group.kind)),
+        (_trailer_html(group, metadata), "trailer-title", "Trailer"),
+        (about, "about-title", "About"),
+        (cast or (summary["cast_nested"] and "nested"), "cast-title", CAST_HEADINGS.get(group.kind, "Cast and crew")),
+        (_faq_html(group, faq), "faq-title", "Quick answers"),
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
         (summary.get("discussions_html", ""), "discussions-title", "Discussions"),
-        (_trailer_html(group, metadata), "trailer-title", "Trailer"),
-        (_where_html(group, summary), "where-title", where_to_watch.heading(group.kind)),
-        (_about_html(group, summary, metadata), "about-title", "About"),
-        (_faq_html(group, faq), "faq-title", "Quick answers"),
+        ("" if signed_in else _join_band_html(group, summary, image), "join-title", "Join"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
         (_in_order_html(group), "in-order-title", "Series order"),
         (_collections_html(summary), "collections-title", "Collections"),
@@ -1159,8 +1273,27 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_gallery_html(group, metadata), "gallery-title", "Screenshots" if group.kind == "game" else "Images"),
         (_tracks_html(metadata), "tracks-title", "Track list"),
     ]
-    body = "".join(html for html, _, _ in sections)
-    nav = _tabs_html(_section_nav([section for section in sections if section[1] != "write-review"]), group, image, signed_in)
+    html_of = {anchor: html for html, anchor, _ in sections}
+    paired = bool(html_of["where-title"] and html_of["trailer-title"])
+    # Beside the sidebar: the member numbers, plus the review prompt while nobody has written one,
+    # so the first thing under the numbers is the invitation to add the first review.
+    lead_anchors = ["community-title"] + ([] if summary["reviews"] else ["write-review", "discussions-title"])
+    lead = "".join(html_of[anchor] for anchor in lead_anchors)
+    body = ""
+    for html, anchor, _ in sections:
+        if anchor in lead_anchors or (anchor == "trailer-title" and paired) or (anchor == "cast-title" and not cast):
+            continue
+        if anchor == "where-title" and paired:
+            # Where to get it and the trailer sit side by side on wide screens.
+            html = f'<div class="title-pair">{html}{html_of["trailer-title"]}</div>'
+        body += html
+    # Tabs follow the order on the page. An empty board lives inside the review panel, under the same
+    # anchor. A paired trailer shares the "where to watch" stop, which keeps the bar short.
+    ordered = sorted(sections, key=lambda section: section[1] not in lead_anchors)
+    nav_sections = [("talk", anchor, label) if anchor == "discussions-title" and summary.get("empty_board") else (html, anchor, label)
+                    for html, anchor, label in ordered
+                    if anchor not in ("write-review", "join-title") and not (paired and anchor == "trailer-title")]
+    nav = _tabs_html(_section_nav(nav_sections), group, image, signed_in)
     glance = _glance_html(group, summary, metadata, signed_in)
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
@@ -1213,7 +1346,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
           {_where_teaser_html(group, summary)}
-          <div class="title-hero__actions">{track}{reviews_link}{recommend}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
+          <div class="title-hero__actions">{track}{reviews_link}{trailer_button}{recommend}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
           {join}
           {_links_html(metadata)}
@@ -1222,8 +1355,13 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     </section>
     {nav}
     <div class="site-wrap title-body{' title-body--glance' if glance else ''}">
-      {glance}
-      <div class="title-main">
+      <div class="title-top">
+        {glance}
+        <div class="title-main title-main--lead">
+          {lead}
+        </div>
+      </div>
+      <div class="title-main title-main--rest">
         {body}
       </div>
       {_sources_html(metadata)}
@@ -1259,7 +1397,10 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
         summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
         summary["trending_rank"] = trending.rank_of(db, kind, group.path)
         from .title_discussions import title_section_html
-        summary["discussions_html"] = title_section_html(db, group)
+        summary["discussions_html"] = title_section_html(db, group, when_empty=False)
+        if not summary["discussions_html"]:
+            from ..title_discussions import board_path
+            summary["empty_board"] = board_path(group.kind, group.path.rsplit("/", 1)[1])
         from .. import people_pages
         try:
             summary["credit_links"] = people_pages.title_links(db, kind, metadata, summary.get("creator"),
