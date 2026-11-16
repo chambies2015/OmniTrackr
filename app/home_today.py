@@ -69,13 +69,14 @@ def _behind(category: str, checkpoint, episode: dict) -> Optional[bool]:
     return position < episode["number"]
 
 
-def show_updates(db: Session, user: models.User, today: date, since: datetime) -> list[dict]:
+def show_updates(db: Session, user: models.User, today: date, since: datetime,
+                 member_shows: Optional[list] = None) -> list[dict]:
     """One entry per unfinished show with an episode out in the last week or due in the next one."""
-    ensure_loaded(user, tuple(VISIBLE_FLAG.values()))
+    ensure_loaded(user, tuple(VISIBLE_FLAG.values()) + tuple(episode_calendar.PRIVATE_FLAG.values()))
     checkpoints = _checkpoints(db, user.id)
     week_ahead = today + timedelta(days=7)
     shows: dict[tuple[str, int], dict] = {}
-    for category, item, schedule, episode, _link in episode_calendar._member_episodes(db, user, today):
+    for category, item, schedule, episode, _link in episode_calendar._member_episodes(db, user, today, member_shows):
         if not getattr(user, VISIBLE_FLAG[category], True):
             continue
         day = date.fromisoformat(episode["date"])
@@ -132,18 +133,13 @@ def releases(db: Session, user_id: int, today: date, since: datetime) -> list[di
 
 
 def friends(db: Session, user_id: int, since: datetime, now: datetime) -> dict:
-    """The newest few friends feed cards, plus how many arrived since ``since``."""
-    data = friend_feed.page(db, user_id, limit=20, now=now)
-    items = data.get("items") or []
-    fresh = 0
-    for item in items:
-        try:
-            at = datetime.fromisoformat(item["at"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if at >= since:
-            fresh += 1
-    return {"items": items[:FRIEND_LIMIT], "new": fresh, "friends": data.get("friends", 0)}
+    """The newest few friends feed cards, plus how many arrived since ``since``.
+
+    Only the cards shown are built (title links, cheers, spoiler flags); the count covers every
+    card in the feed's window, so it no longer stops at 20.
+    """
+    data = friend_feed.page(db, user_id, limit=FRIEND_LIMIT, now=now, count_since=since)
+    return {"items": data.get("items") or [], "new": data.get("since_count", 0), "friends": data.get("friends", 0)}
 
 
 def build(db: Session, user: models.User, since: Optional[datetime] = None,
@@ -151,7 +147,9 @@ def build(db: Session, user: models.User, since: Optional[datetime] = None,
     now = now or datetime.utcnow()
     since = clamp_since(since, now)
     today = now.date()
-    shows = show_updates(db, user, today, since)
+    # Read once: the episode list and the stale-schedule check below both need it.
+    unfinished = episode_calendar.member_shows(db, user.id)
+    shows = show_updates(db, user, today, since, unfinished)
     released = releases(db, user.id, today, since)
     friend_part = friends(db, user.id, since, now)
     return {
@@ -167,5 +165,5 @@ def build(db: Session, user: models.User, since: Optional[datetime] = None,
             "friends": friend_part["new"],
         },
         # Unfinished shows whose schedules are missing or old; the router asks for them in the background.
-        "stale_shows": len(episode_calendar._stale_shows(db, [user.id])),
+        "stale_shows": len(episode_calendar._stale_shows(db, [user.id], {user.id: unfinished})),
     }

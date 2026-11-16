@@ -1037,12 +1037,17 @@ def _hue(name: str) -> int:
 
 def _crew(group, summary: dict, metadata: dict) -> list[tuple[str, str]]:
     """(name, roles) for the people credited on the title, crew first, then cast in billing order."""
-    from ..people_pages import PERSON, credits_in, is_real_name
+    from ..people_pages import PERSON, credits_in, split_names
     found: dict[str, list[str]] = {}
     creator = summary.get("creator")
     credits = credits_in(group.kind, metadata)
-    if creator and group.kind in CREATOR_LABEL and is_real_name(creator) and not any(name == creator for _, _, name in credits):
-        found[creator] = [CREATOR_LABEL[group.kind]]
+    if creator and group.kind in CREATOR_LABEL:
+        # "Phil Lord, Christopher Miller" is two people, the same way the credits and the people
+        # page links split it, so a pair of directors doesn't also get a card for the pair.
+        credited = {name for _, _, name in credits}
+        for name in split_names(creator, CREATOR_LABEL[group.kind]):
+            if name not in credited:
+                found.setdefault(name, [CREATOR_LABEL[group.kind]])
     for entity, role, name in credits:
         if entity != PERSON:
             continue
