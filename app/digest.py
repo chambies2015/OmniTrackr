@@ -67,6 +67,8 @@ SOURCES = {
     "dashboard": "the library home",
     "account": "Account settings",
     "email_link": "a link in an email",
+    "home_card": "the home screen card",
+    "after_save": "the note after saving a show",
 }
 OFF_SOURCES = {"account", "dashboard", "email_link"}
 

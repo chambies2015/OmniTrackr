@@ -788,6 +788,7 @@ function resetDailyDashboard() {
   }
   window.OmniHomeHero?.reset();
   window.OmniHomeToday?.reset();
+  window.OmniStayPosted?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1795,6 +1796,8 @@ function runDashboardLayoutBatch() {
   const queueRequest = refreshNextUpQueue();
   const heroRequest = window.OmniHomeHero?.refresh();
   const newsRequest = window.OmniHomeToday?.refresh();
+  // Not waited on: the "stay posted" card is optional and refreshes at most once a minute.
+  window.OmniStayPosted?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

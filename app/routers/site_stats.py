@@ -244,7 +244,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "push": _push(db, days, now, start),
         "reviews": _review_inbox(db, days, now),
         "support": _support_asks(db, days, now),
+        "stay": _stay_posted(db, days, now),
     }
+
+
+def _stay_posted(db: Session, days: int, now: datetime) -> dict:
+    """The "stay posted" card and the note after saving a show: shown, and which channel members picked."""
+    try:
+        from .. import stay_posted
+        return stay_posted.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _support_asks(db: Session, days: int, now: datetime) -> dict:
@@ -276,6 +287,9 @@ def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
         table.kind == "push", table.key.like("sent_%"), table.day >= (now - timedelta(days=days - 1)).date(),
     ).group_by(table.key).all()
     titles = {**web_push.TITLES, "held": "Catch-up after quiet hours"}
+    places = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "push", table.key.like("on_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
     by_kind = sorted(({"kind": titles.get(key[5:], key[5:].replace("_", " ")), "count": int(total or 0)}
                       for key, total in counts if total), key=lambda row: -row["count"])
     return {
@@ -287,6 +301,8 @@ def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
         "sent": sum(row["count"] for row in by_kind),
         "sent_by_kind": by_kind[:8],
         "away_reminders": _counts_between(db, models.PushNudge.sent_at, start),
+        "on_by_place": [{"place": label, "count": int(places.get(f"on_{key}") or 0)}
+                        for key, label in web_push.SOURCES.items()],
     }
 
 
