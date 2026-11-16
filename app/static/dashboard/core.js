@@ -859,6 +859,7 @@ async function addLibrarySearchTitle(button) {
     if (config && currentTab === tab) config[2]();
     if (typeof refreshForYou === 'function') refreshForYou();
     showNotice(data.state === 'existing' ? `${data.title || title} is already in your library.` : `Added ${data.title || title} to your library. Pick it again to open it.`, 'success');
+    if (data.state !== 'existing') window.OmniStayPosted?.afterSave(tab, data.title || title);
   } catch (error) {
     button.disabled = false;
     if (tag) tag.textContent = 'Try again';

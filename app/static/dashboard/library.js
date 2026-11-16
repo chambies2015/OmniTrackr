@@ -2737,6 +2737,7 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
       delete titleInput.dataset.posterUrl;
     }
     loadTVShows();
+    if (!tvShow.watched) window.OmniStayPosted?.afterSave('tv-shows', title);
   } else {
     const errorData = await response.json().catch(() => ({}));
     showNotice(apiErrorText(errorData, 'Could not add that TV show. Please try again.'));
@@ -2798,6 +2799,7 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     }
     toggleCollapsible('animeForm');
     loadAnime();
+    if (!anime.watched) window.OmniStayPosted?.afterSave('anime', title);
   } else {
     const errorData = await response.json().catch(() => ({}));
     showNotice(apiErrorText(errorData, 'Could not add that anime. Please try again.'));

@@ -899,7 +899,7 @@
     const offer = button.closest?.('[data-episode-push]') || button;
     button.disabled = true;
     let state;
-    try { state = await window.omniPush.turnOn(); } catch (_) { state = 'off'; }
+    try { state = await window.omniPush.turnOn('episode_guide'); } catch (_) { state = 'off'; }
     const says = {
       on: 'Done. New episodes of your shows will show up on this device.',
       blocked: 'Notifications are blocked for OmniTrackr in this browser’s settings.',
