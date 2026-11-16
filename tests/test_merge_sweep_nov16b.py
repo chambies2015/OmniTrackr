@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import event
 
 from app import digest, models, stay_posted, title_metadata, title_pages
+from app.routers import invites as invites_router
 from app.routers import start as start_router
 from app.routers import stay_posted as stay_posted_router
 from app.site_traffic import RECORDER
@@ -38,6 +39,13 @@ def test_every_start_and_stay_posted_api_route_is_rate_limited():
                 continue
             for method in route.methods:
                 assert _limited(router, route.path, method), (method, route.path)
+
+
+def test_taste_test_invite_routes_are_rate_limited():
+    """The guess route answers anyone holding a /join link, so it gets the compare guess limit."""
+    for route in invites_router.router.routes:
+        for method in route.methods:
+            assert _limited(invites_router.router, route.path, method), (method, route.path)
 
 
 # ---------------------------------------------------------------- the poster wall

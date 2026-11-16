@@ -959,6 +959,9 @@ for route in invites.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_invite_accept)
     elif path == "/join/{token}":
         bind_rate_limited_endpoint(route, rate_limited_join_page)
+    elif path == "/api/friends/invite/{token}/guess":
+        # Anyone holding the link can score answers, like /api/taste-match/u/{owner_id}/guess.
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(invites.router)
 
 from .routers import goals as goals_router
