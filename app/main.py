@@ -1360,6 +1360,12 @@ for route in review_inbox_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_review_inbox[route.path])
 app.include_router(review_inbox_router.router)
 
+from .routers import home_today as home_today_router
+for route in home_today_router.router.routes:
+    if getattr(route, "path", None) == "/api/home/today":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(home_today_router.today))
+app.include_router(home_today_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
