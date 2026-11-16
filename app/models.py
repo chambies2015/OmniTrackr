@@ -2076,3 +2076,33 @@ class DataFix(Base):
 
     name = Column(String(64), primary_key=True)
     ran_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SupportAsk(Base):
+    """When a member last saw a "support OmniTrackr" note on the dashboard, and how they answered (Nov 2026).
+
+    A new table only, one row per member, made the first time a note is shown. The ``*_done`` columns
+    are the highest milestone already asked about, so the same moment never asks twice. ``kofi_at`` and
+    ``kofi_from`` remember a press of a Ko-fi button for two weeks, so Site stats can tell which places
+    lead to support. Nothing here is shown to anyone else.
+    """
+    __tablename__ = "support_asks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    moment = Column(String(24), nullable=True)
+    ask_key = Column(String(48), nullable=True)
+    shown_at = Column(DateTime, nullable=True)
+    shown_count = Column(Integer, nullable=False, default=0)
+    answer = Column(String(8), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
+    snoozed_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    titles_done = Column(Integer, nullable=False, default=0)
+    days_done = Column(Integer, nullable=False, default=0)
+    years_done = Column(Integer, nullable=False, default=0)
+    goal_done = Column(Integer, nullable=False, default=0)
+    lapse_done = Column(DateTime, nullable=True)
+    kofi_at = Column(DateTime, nullable=True)
+    kofi_from = Column(String(24), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

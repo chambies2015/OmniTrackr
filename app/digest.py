@@ -618,6 +618,19 @@ def _friends_section(activity: list | None, base: str) -> tuple[str, list[str]]:
     return html, text + [""]
 
 
+def _support_section(support: dict | None, base: str) -> tuple[str, list[str]]:
+    """A quiet line about Ko-fi support, about every six weeks for members who don't support yet; empty otherwise."""
+    if not support:
+        return "", []
+    url = f"{base}{support['path']}"
+    html = (
+        '<p style="color:#3b3557;font-size:13px;line-height:1.6;margin:24px 0 0;padding:12px 14px;background:#fff7ed;'
+        f'border-radius:10px">{escape(support["text"])} '
+        f'<a href="{escape(url, quote=True)}" style="color:#c2410c;font-weight:700">See what supporters get</a></p>'
+    )
+    return html, [f"{support['text']} See what supporters get: {url}", ""]
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
@@ -629,7 +642,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
                  badge: dict | None = None, recap: dict | None = None,
                  friends: list | None = None, episodes: list | None = None,
                  next_up: dict | None = None, past: list | None = None,
-                 following: list | None = None) -> tuple[str, str, str] | None:
+                 following: list | None = None, support: dict | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
     `challenge`, `badge`, `recap`, `next_up`, `past` and `following` never force a send; friend activity and episodes can."""
     matches, popular = report["matches"], report["popular"]
@@ -708,6 +721,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if invite_html:
         sections.append(invite_html)
         text += invite_text
+    support_html, support_text = _support_section(support, base)
+    if support_html:
+        sections.append(support_html)
+        text += support_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
@@ -845,9 +862,15 @@ def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: 
     except Exception:
         db.rollback()
         following = []  # Optional, like the ask above.
+    try:
+        from . import support_asks
+        support = support_asks.email_note() if support_asks.email_note_due(db, user, now) else None
+    except Exception:
+        db.rollback()
+        support = None  # Optional, like the ask above.
     return build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
                         member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past,
-                        following)
+                        following, support)
 
 
 async def send_due_digests(session_factory, client=None, now: datetime | None = None, sender=_send,

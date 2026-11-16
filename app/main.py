@@ -857,6 +857,15 @@ from .routers import trending as trending_router
 app.include_router(trending_router.router)
 from .routers import people as people_router
 app.include_router(people_router.router)
+from .routers import support_asks as support_asks_router
+# The dashboard note and the /supporters counters are a click at a time.
+for route in support_asks_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/support/event":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path in ("/api/support-ask/seen", "/api/support-ask/answer", "/api/support-ask/settings"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(support_asks_router.router)
 from .routers import site_search as site_search_router
 # The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
 rate_limited_site_search = {
