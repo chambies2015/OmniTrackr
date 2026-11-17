@@ -205,6 +205,24 @@
   .st-result { grid-template-columns: 40px 1fr; }
   .st-result__actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
+/* Phones (Nov 17 2026): the first posters used to start below the first screen.
+   A tighter card, a two-line heading and no repeat of the tip bring them up. */
+@media (max-width: 480px) {
+  .st { border-radius: 20px; margin-top: 8px; padding: 16px 14px 18px; }
+  .st .eyebrow { margin-bottom: 4px; }
+  .st h1 { font-size: 1.42rem; letter-spacing: -.01em; margin: 2px 0 12px; }
+  /* The tip above the posters says the same thing, closer to where it applies. */
+  .st:not(.is-finished) .st-head .st-lead { display: none; }
+  .st-search__form { margin-bottom: 12px; }
+  .st-search__form input { min-height: 48px; text-overflow: ellipsis; }
+  .st-formats legend { color: var(--site-soft); font-size: .86rem; margin-bottom: 6px; }
+  .st-chips { margin-inline: -14px; padding-inline: 14px; }
+  .st-tip { font-size: .9rem; line-height: 1.45; margin-bottom: 12px; }
+  .st-bar { margin-inline: -6px; }
+}
+/* A text button is still a button: give it a thumb-sized target. */
+.st-link { align-items: center; display: inline-flex; min-height: 44px; }
+
 @media (prefers-reduced-motion: reduce) {
   .st-slot.is-filled, .st-tile__badge { animation: none; }
   .st-tile__poster, .st-tile__poster .st-art { transition: none; }
