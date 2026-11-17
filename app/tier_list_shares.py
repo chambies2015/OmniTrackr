@@ -325,6 +325,7 @@ CARD_PAD = 44
 CARD_LABEL = 92
 CARD_TILE_W, CARD_TILE_H, CARD_GAP = 50, 74, 6
 CARD_TOP, CARD_BOTTOM = 128, 62
+CARD_POSTER_PIXELS = 12_000_000  # after JPEG draft scaling; a real poster is well under 2 million
 
 
 def card_per_row() -> int:
@@ -385,9 +386,13 @@ def render_card(name: str, data: dict, by: str, posters: dict) -> bytes:
                 try:
                     with Image.open(BytesIO(poster)) as source:
                         source.draft("RGB", (CARD_TILE_W * 2, CARD_TILE_H * 2))
-                        tile = ImageOps.fit(source.convert("RGB"), (CARD_TILE_W, CARD_TILE_H))
-                    image.paste(tile, (x, tile_y))
-                    drawn = True
+                        width, height = source.size
+                        # A small file can still decode to hundreds of megabytes (a huge PNG on
+                        # Wikimedia or archive.org), so oversized posters get a text tile instead.
+                        if 0 < width * height <= CARD_POSTER_PIXELS:
+                            tile = ImageOps.fit(source.convert("RGB"), (CARD_TILE_W, CARD_TILE_H))
+                            image.paste(tile, (x, tile_y))
+                            drawn = True
                 except Exception:
                     drawn = False
             if not drawn:

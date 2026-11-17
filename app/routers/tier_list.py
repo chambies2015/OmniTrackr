@@ -488,6 +488,13 @@ def _shared_not_found():
     return response
 
 
+def _person(request: Request) -> bool:
+    from ..site_traffic import BOT_PATTERN
+    agent = request.headers.get("user-agent", "")
+    purpose = (request.headers.get("sec-purpose", "") + request.headers.get("purpose", "")).lower()
+    return bool(agent) and not BOT_PATTERN.search(agent) and "prefetch" not in purpose and "prerender" not in purpose
+
+
 def _shared_tile(item: dict) -> str:
     meta = " · ".join(str(part) for part in (title_pages.KINDS[item["kind"]][3] if item.get("kind") else "", item.get("year") or "") if part)
     label = f'{item["title"]}{f", {meta}" if meta else ""}'
@@ -527,7 +534,8 @@ def shared_tier_list(token: str, request: Request, user=Depends(get_optional_cur
     visitor, _, retained = visitor_identity(request)
     made_here = retained and share.owner_id is None and share.visitor == visitor
     owner = (user is not None and share.owner_id == user.id) or made_here
-    if not owner:
+    # Chat apps fetch the page to unfurl it, and browsers prefetch it; neither is someone opening the link.
+    if not owner and _person(request):
         tier_list_shares.count_view(db, share)
         if user is None:
             funnel.record("tier_list_link_opened", request)
@@ -589,6 +597,8 @@ def shared_tier_list(token: str, request: Request, user=Depends(get_optional_cur
 _SHARE_CARDS = None
 CARD_POSTERS_MAX = 60
 CARD_POSTER_SECONDS = 8.0
+CARD_FETCH_SLOTS = 3  # of the IMAGE_CONCURRENCY shared slots, at most this many go to share cards
+_card_fetch_slots: asyncio.Semaphore | None = None
 
 
 def _share_cards():
@@ -599,16 +609,30 @@ def _share_cards():
     return _SHARE_CARDS
 
 
+def _card_slots() -> asyncio.Semaphore:
+    global _card_fetch_slots
+    if _card_fetch_slots is None:
+        _card_fetch_slots = asyncio.Semaphore(CARD_FETCH_SLOTS)
+    return _card_fetch_slots
+
+
 async def _poster_bytes(client, url: str):
     cached = _cached_image(url)
     if cached is not None:
         return cached[1]
-    slots = _slots()
-    await slots.acquire()
+    # Cards wait for their own few slots first, so one card asking for 60 posters can't take
+    # every shared slot and stall people saving their tier list as an image.
+    card_slots = _card_slots()
+    await card_slots.acquire()
     try:
-        media_type, body = await asyncio.wait_for(_fetch_image(client, url), timeout=IMAGE_FETCH_SECONDS)
+        slots = _slots()
+        await slots.acquire()
+        try:
+            media_type, body = await asyncio.wait_for(_fetch_image(client, url), timeout=IMAGE_FETCH_SECONDS)
+        finally:
+            slots.release()
     finally:
-        slots.release()
+        card_slots.release()
     _remember_image(url, media_type, body)
     return body
 

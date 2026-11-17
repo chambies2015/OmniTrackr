@@ -63,6 +63,18 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov17-2026-heading">
+        <h2 id="security-nov17-2026-heading">November 17, 2026: Security and speed check of check-ins, shared tier lists and account removal</h2>
+        <p>We went over today's updates: the check-in email and page, shared tier list links, the Grammys ballot, the owner's account removal tool, the phone fixes and the new guide sections. Check-in links only reach the titles named in the email and only change anything when a button is pressed. Tier list links only store cleaned text and posters from known poster sites, and every new page adds names as plain text. Four things are fixed.</p>
+        <ul>
+          <li>A shared tier list counted a view every time a chat app fetched the link to show its preview, so "opened 5 times" could mean nobody opened it. Only people opening the page count now. The page also gets a rate limit, since each open is saved.</li>
+          <li>The preview picture for a shared tier list decoded every poster at full size. Some poster sites host images that are huge once decoded, which could stall the server. Oversized posters now get a text tile.</li>
+          <li>Drawing one preview picture could use every slot the site keeps for fetching posters, so saving a tier list as an image had to wait. Previews now use at most half of them.</li>
+          <li>Working out who is due a check-in email looked through each member's library with 18 lookups per member. It now takes 9 lookups in total.</li>
+        </ul>
+        <p>Your library, your tier list links and your email settings are untouched.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="tier-links-nov17-2026-heading">
         <h2 id="tier-links-nov17-2026-heading">November 17, 2026: Share a tier list as a link</h2>
         <p>The <a href="/tier-list">tier list maker</a> can now turn your board into a link, and whoever opens it can rank the same titles themselves.</p>
