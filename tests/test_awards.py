@@ -50,11 +50,15 @@ def _demo_show() -> dict:
 
 
 @pytest.fixture
-def demo(monkeypatch):
-    """A show with nominees, three weeks before its ceremony. The real shows are emptied, so these tests
-    read the same whichever of them has announced."""
+def unannounced(monkeypatch):
+    """Every real show back in its "nominees coming" state, so a test reads the same whoever has announced."""
     for slug, show in list(awards_data.SHOWS.items()):
         monkeypatch.setitem(awards_data.SHOWS, slug, dict(show, categories=[]))
+
+
+@pytest.fixture
+def demo(monkeypatch, unannounced):
+    """A show with nominees, three weeks before its ceremony, beside real shows that have none."""
     monkeypatch.setitem(awards_data.SHOWS, SHOW, _demo_show())
     monkeypatch.setattr(awards, "_now", lambda: NOW)
     return awards_data.SHOWS[SHOW]
@@ -139,7 +143,7 @@ def test_calendar_page(client):
     assert "private" in response.headers["cache-control"]
 
 
-def test_show_page_before_nominees(client):
+def test_show_page_before_nominees(client, unannounced):
     response = client.get("/awards/the-game-awards-2026")
     assert response.status_code == 200
     html = response.text
@@ -185,7 +189,7 @@ def test_sign_in_returns_to_the_ballot_and_ads_may_load():
 
 # ---------------------------------------------------------------- reminders
 
-def test_member_asks_to_hear_when_the_ballot_opens(authenticated_client, db_session, monkeypatch):
+def test_member_asks_to_hear_when_the_ballot_opens(authenticated_client, db_session, monkeypatch, unannounced):
     slug = "the-game-awards-2026"
     page = authenticated_client.get(f"/awards/{slug}").text
     assert "Tell me when the ballot opens" in page and "/static/ad-loader.js" not in page
