@@ -235,6 +235,26 @@ def candidates(db: Session, user_id: int, limit: int = MAX_ITEMS, unfinished_onl
     return chosen[:limit]
 
 
+def members_with_something_to_ask(db: Session, user_ids: list[int]) -> set[int]:
+    """The members among `user_ids` for whom candidates() would find at least one title.
+
+    The same rules as candidates(), one query per library instead of two per library per member.
+    """
+    from sqlalchemy import and_, or_
+    found: set[int] = set()
+    for start in range(0, len(user_ids), 400):
+        chunk = user_ids[start:start + 400]
+        for category, (model, done_field, _label, _button) in CATEGORIES.items():
+            done = getattr(model, done_field)
+            unrated = and_(done == True, model.rating.is_(None))  # noqa: E712
+            ask = unrated if category in NEVER_ASK_FINISHED else or_(done != True, unrated)  # noqa: E712
+            rows = db.query(model.user_id).filter(
+                model.user_id.in_(chunk), model.title.isnot(None), func.trim(model.title) != "", ask,
+            ).distinct().all()
+            found.update(user_id for (user_id,) in rows)
+    return found
+
+
 def aligned_items(db: Session, user_id: int, refs: list[tuple[str, int]]) -> list[Optional[dict]]:
     """The titles a link names, as they are now, in the link's order. None for one deleted since."""
     cards: list[Optional[dict]] = []
@@ -371,14 +391,13 @@ def due_members(db: Session, now: datetime, limit: int | None = None) -> list[mo
     ).group_by(models.EmailCampaignSend.user_id):
         if sent_at is not None:
             last_email[user_id] = sent_at
+    waiting = [user for user in candidates_q
+               if oldest_away < _away_since(user) <= newest_away
+               and not (user.id in last_email and last_email[user.id] > now - GAP)]
+    askable = members_with_something_to_ask(db, [user.id for user in waiting]) if waiting else set()
     due = []
-    for user in candidates_q:
-        away_since = _away_since(user)
-        if not oldest_away < away_since <= newest_away:
-            continue
-        if user.id in last_email and last_email[user.id] > now - GAP:
-            continue
-        if not candidates(db, user.id, limit=1):
+    for user in waiting:
+        if user.id not in askable:
             continue
         due.append(user)
         if limit is not None and len(due) >= limit:

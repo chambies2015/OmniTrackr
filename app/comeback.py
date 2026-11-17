@@ -239,9 +239,10 @@ def _things_to_try(today: date) -> list[tuple[str, str, str]]:
 def build_email(username: str, library_total: int, waiting: list[dict], matches: list[dict],
                 unsubscribe_url: str, weekly_url: str | None, today: date,
                 check_ins: tuple[list[dict], str] | None = None) -> tuple[str, str, str]:
-    """`check_ins` is (titles, signed link) from app/check_in.py: "Still on your list" then gets
+    """(subject, html, text) for one member.
+
+    `check_ins` is (titles, signed link) from app/check_in.py: "Still on your list" then gets
     one-tap Finished / Still going buttons that work without signing in."""
-    """(subject, html, text) for one member."""
     if matches:
         subject = f"{matches[0]['title']} is coming up, and it's on your list"
     elif waiting:
