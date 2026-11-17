@@ -686,3 +686,60 @@ body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(inpu
   body.app-shell .library-table .library-quick-status { transition: none; }
   body.app-shell .library-table .library-quick-status:is(:hover, :active) { transform: none; }
 }
+
+/* ---------- Phone polish (Nov 17 2026) ----------
+   Small screens get the same product with less squinting: no sideways scroll,
+   fields that don't make iPhones zoom, the bell and avatar sharing the brand row,
+   and taps that land. */
+@media (max-width: 760px) {
+  /* iOS Safari zooms the whole page when a field under 16px gets focus, and it
+     stays zoomed after. 1em keeps any field that was already larger. */
+  body.app-shell :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"]), select, textarea) {
+    font-size: max(16px, 1em) !important;
+  }
+
+  /* The bell and avatar move up into the brand row instead of taking a row of their own. */
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar {
+    margin: 0; position: absolute; right: 26px; top: 28px; width: auto; z-index: 40;
+  }
+  /* A long placeholder ends in an ellipsis instead of a cut-off word. */
+  body.app-shell #librarySearchInput { text-overflow: ellipsis; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .header .app-brand { min-height: 44px; padding-right: 112px; }
+}
+@media (max-width: 640px) {
+  /* The tab row explains itself: drop the tiny LIBRARY label and the hint line,
+     and fade the right edge so the row reads as something to swipe. */
+  body.app-shell .library-nav__group:not(.library-nav__group--tools) > .library-nav__label { display: none; }
+  body.app-shell .library-nav__hint { display: none; }
+  body.app-shell .library-nav__group:not(.library-nav__group--tools) {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    padding-right: 28px;
+  }
+
+  /* Labels that were 10-11px. */
+  body.app-shell #homeHero .home-hero__stat dt { font-size: .75rem; }
+  body.app-shell :is(.library-pulse__eyebrow, .home-news__eyebrow, .for-you-card__eyebrow, .badge-case__eyebrow, .home-board__rail-title) { font-size: .72rem; }
+
+  /* Taps that land: small buttons get at least 40px of height. */
+  body.app-shell .library-view-toggle button { font-size: .82rem; min-height: 40px; }
+  body.app-shell .home-news__link { min-height: 40px; }
+  body.app-shell .library-table .library-quick-rate { min-height: 36px; }
+
+  /* Continue: the episode buttons and Update progress share one row under the title
+     instead of taking two, and wrap only when a phone is too narrow for both. */
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .library-pulse__item { flex: 1 0 100%; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > :is(.episode-actions, .progress-update) { margin: 0 0 0 12px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .episode-actions:not([hidden]) + .progress-update { margin-left: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row .episode-actions button { min-height: 40px; }
+}
+@media (max-width: 380px) {
+  /* The body gutter is 10px here, so the swipe row may only reach 10px past it.
+     At -16px it widened the page and the whole home screen slid sideways. */
+  body.app-shell .home-board .home-board__rail-cards { margin-inline: -10px; padding-inline: 10px; scroll-padding-inline: 10px; }
+  /* The mark box shrank to 28px but the image stayed 40px and covered the "O". */
+  body.app-shell .app-brand__mark { height: 32px; width: 32px; }
+  body.app-shell .app-brand__mark img { height: 32px; width: 32px; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar { right: 20px; top: 22px; }
+}
