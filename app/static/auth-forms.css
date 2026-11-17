@@ -752,3 +752,9 @@ body.dark-mode :is(.auth-container, .account-settings) {
     padding: var(--space-8, 32px) var(--space-3, 12px);
   }
 }
+
+/* Phones: "Change" and the other text buttons in the card get a taller tap area
+   without moving the text around them. */
+@media (max-width: 640px) {
+  .auth-card .auth-form .auth-linkbtn { display: inline-block; margin-block: -10px; padding-block: 10px; }
+}

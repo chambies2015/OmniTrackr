@@ -645,3 +645,17 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-pulse__cell { padding: 14px 16px; }
   .lp-pulse__title span { display: block; margin: 4px 0 0; }
 }
+
+/* ---------- Phones (Nov 17 2026): thumb-sized taps ----------
+   Text links under the hero, in the tools and under the guides were 24-32px tall.
+   Padding with a matching negative margin grows the tap area without moving anything. */
+@media (max-width: 640px) {
+  .lp .lp-search--hero .lp-search__input { padding-left: 44px; padding-right: 92px; text-overflow: ellipsis; }
+  .lp-search--hero .lp-search__icon { left: 15px; }
+  .lp-search--hero .lp-search__go { padding: 0 14px; }
+  .lp-hero__alt a:not(.lp-btn), .lp-linkbtn, .lp-link-arrow, .lp-reads__more a {
+    display: inline-block; margin-block: -9px; padding-block: 9px;
+  }
+  .lp-tool__link { min-height: 44px; }
+  .lp-reads__more { gap: 18px 22px; }
+}
