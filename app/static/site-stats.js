@@ -1065,6 +1065,69 @@
     }
   }
 
+  function renderCheckIn(data) {
+    const info = data.check_in;
+    const card = $('checkInCard');
+    if (!card) return;
+    card.hidden = !info;
+    if (!info) return;
+    let statusLabel = COMEBACK_STATES[info.status] || info.status;
+    if (info.status === 'sending' && info.waiting_on_whats_new) statusLabel = 'On, waiting until the “What’s new” email finishes';
+    const away = Array.isArray(info.away_days) ? info.away_days : [9, 29];
+    const rows = [
+      ['Status', statusLabel],
+      ['Members due now', `${number(info.due_now)} (last visit ${away[0]} to ${away[1]} days ago)`],
+      ['Sent in the last 30 days', number(info.sent_30d)],
+      [`Came back within ${info.came_back_window_days} days of one`, number(info.came_back)],
+      ['Sent all time', number(info.sent_all_time)],
+      ['Daily limit', `${number(info.daily_limit)} (shares the daily email budget, so sign-up and reset emails always go out)`],
+    ];
+    if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
+    const list = $('checkInList');
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', String(value)));
+      list.appendChild(row);
+    });
+    const pageStats = info.page || {};
+    const sources = Array.isArray(pageStats.by_source) ? pageStats.by_source : [];
+    $('checkInPage').replaceChildren(table(
+      ['Check-in page, this range', 'Opened', 'Marked finished', 'Scores given', 'Still going', 'Answered every title'],
+      sources.map(row => [`From the ${row.source.toLowerCase()}`, number(row.opened), number(row.finished),
+        number(row.rated), number(row.still), number(row.all_done)]),
+    ));
+    $('checkInStart').hidden = info.status === 'sending';
+    $('checkInStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
+    $('checkInPause').hidden = info.status !== 'sending';
+  }
+
+  async function checkInAction(action) {
+    const status = $('checkInStatus');
+    if (action === 'start' && !window.confirm('Turn on the check-in email? Members whose last visit was 9 to 29 days ago get one “did you finish it?” email per stretch away, at most every 90 days, up to 20 a day. You can pause any time.')) return;
+    const buttons = document.querySelectorAll('[data-check-in]');
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = action === 'test' ? 'Sending a test to your email…' : 'Saving…';
+    try {
+      const response = await fetch('/api/site-stats/check-in', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      if (state.data) {
+        state.data.check_in = { ...result, page: result.page || state.data.check_in?.page };
+        renderCheckIn(state.data);
+      }
+      status.textContent = result.message || (action === 'start' ? 'On. The first emails go out within the hour.' : 'Paused. Nothing more will be sent until you resume.');
+    } catch (error) {
+      status.textContent = `Couldn't do that: ${error.message}`;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function renderWelcome(data) {
     const info = data.welcome;
     const card = $('welcomeCard');
@@ -1137,6 +1200,7 @@
     renderAnnouncement(data);
     renderComeback(data);
     renderWelcome(data);
+    renderCheckIn(data);
   }
 
   // ---------------------------------------------------------------- report
@@ -1174,6 +1238,7 @@
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
       data.comeback ? `Come-back email: ${data.comeback.status}, ${number(data.comeback.due_now)} members due now, ${number(data.comeback.sent_30d)} sent in 30 days, ${number(data.comeback.came_back)} came back within ${data.comeback.came_back_window_days} days of one.` : '',
       data.welcome ? `Welcome emails: ${data.welcome.status}, ${number(data.welcome.sent_30d)} sent in 30 days, ${number(data.welcome.came_back)} came back within ${data.welcome.came_back_window_days} days of one.` : '',
+      data.check_in ? `Check-in email: ${data.check_in.status}, ${number(data.check_in.due_now)} members due now, ${number(data.check_in.sent_30d)} sent in 30 days, ${number(data.check_in.came_back)} came back within ${data.check_in.came_back_window_days} days of one. Check-in page: ${(data.check_in.page?.by_source || []).map(row => `from the ${row.source.toLowerCase()} ${number(row.opened)} opened, ${number(row.finished)} finished, ${number(row.rated)} scored, ${number(row.still)} still going, ${number(row.all_done)} answered all`).join('; ')}.` : '',
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
@@ -1286,6 +1351,9 @@
     });
     document.querySelectorAll('[data-welcome]').forEach(button => {
       button.addEventListener('click', () => welcomeAction(button.dataset.welcome));
+    });
+    document.querySelectorAll('[data-check-in]').forEach(button => {
+      button.addEventListener('click', () => checkInAction(button.dataset.checkIn));
     });
     let resizeTimer = null;
     window.addEventListener('resize', () => {
