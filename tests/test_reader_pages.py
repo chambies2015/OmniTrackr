@@ -69,7 +69,7 @@ def test_a_page_keeps_its_own_related_paragraph_above_the_cards(client):
 def test_reading_line_is_drawn_by_the_server(client):
     html = client.get("/movie-tracker").text
     header = html[html.index('<header class="content-header">'):html.index("</header>", html.index('<header class="content-header">'))]
-    assert re.search(r'<p class="reader-meta">By OmniTrackr · \d+ min read · Updated <time datetime="2026-06-23">June 23, 2026</time></p>', header)
+    assert re.search(r'<p class="reader-meta">By OmniTrackr · \d+ min read · Updated <time datetime="2026-11-17">November 17, 2026</time></p>', header)
     # Policy pages keep their own "Last Updated" line and show only the reading time.
     privacy = client.get("/privacy").text
     assert re.search(r'<p class="reader-meta">\d+ min read</p>', privacy)
