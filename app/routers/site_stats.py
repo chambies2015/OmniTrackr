@@ -356,6 +356,15 @@ def _welcome_status(db: Session) -> dict | None:
         return None
 
 
+def _check_in_status(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import check_in
+        return check_in.status(db, now, days)
+    except Exception:
+        db.rollback()
+        return None
+
+
 # Other lookups share the title_metadata table under their own key prefixes. They used to be
 # counted as title pages, so a show that isn't airing, or AniList being busy for a release
 # calendar refresh, showed up as a title page "not found" or "error".
@@ -478,6 +487,7 @@ def site_stats_overview(
         "announcement": _announcement_status(db),
         "comeback": _comeback_status(db),
         "welcome": _welcome_status(db),
+        "check_in": _check_in_status(db, days, now),
     }
 
 
@@ -664,6 +674,53 @@ async def welcome_action(payload: WelcomeAction, response: Response,
         return {**welcome_emails.status(db), "message": f"All three sent to {current_user.email}."}
     welcome_emails.set_status(db, "sending" if payload.action == "start" else "paused")
     return welcome_emails.status(db)
+
+
+# ---------------------------------------------------------------- check-in email
+
+class CheckInAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/check-in-preview", include_in_schema=False)
+def check_in_preview(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The check-in email as the owner would receive it, buttons and all (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import check_in
+    _require_admin(current_user)
+    built = check_in.email_for(db, current_user)
+    if built is None:
+        response = HTMLResponse('<p style="font:15px Arial,sans-serif;padding:24px">Your library has nothing to check in on: '
+                                'every title is finished and has a score. Save a title without ticking it off to see a preview.</p>')
+    else:
+        subject, html, _text, _url = built
+        banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+                  f'Preview only, filled in from your own library. The buttons work and change your own titles. '
+                  f'Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+        response = HTMLResponse(html.replace('<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/check-in")
+async def check_in_action(payload: CheckInAction, response: Response,
+                          current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import check_in
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not check_in.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            sent = await check_in.send_test(db, current_user)
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        if not sent:
+            raise HTTPException(status_code=409, detail="Your library has nothing to check in on, so there's no email to send.")
+        return {**check_in.status(db), "message": f"Test sent to {current_user.email}."}
+    check_in.set_status(db, "sending" if payload.action == "start" else "paused")
+    return check_in.status(db)
 
 
 # ---------------------------------------------------------------- remove an account

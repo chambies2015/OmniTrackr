@@ -237,7 +237,10 @@ def _things_to_try(today: date) -> list[tuple[str, str, str]]:
 
 
 def build_email(username: str, library_total: int, waiting: list[dict], matches: list[dict],
-                unsubscribe_url: str, weekly_url: str | None, today: date) -> tuple[str, str, str]:
+                unsubscribe_url: str, weekly_url: str | None, today: date,
+                check_ins: tuple[list[dict], str] | None = None) -> tuple[str, str, str]:
+    """`check_ins` is (titles, signed link) from app/check_in.py: "Still on your list" then gets
+    one-tap Finished / Still going buttons that work without signing in."""
     """(subject, html, text) for one member."""
     if matches:
         subject = f"{matches[0]['title']} is coming up, and it's on your list"
@@ -275,7 +278,14 @@ def build_email(username: str, library_total: int, waiting: list[dict], matches:
              _link(card["url"]) if card.get("url") else None) for card in matches[:3]]))
         text += ["Coming up from your library:"] + [
             f"- {card['title']} ({card['label']}, {_day(card.get('date'))})" for card in matches[:3]] + [""]
-    if waiting:
+    if check_ins and check_ins[0]:
+        from . import check_in
+        items, token = check_ins
+        html_sections += ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">Still on your list</h2>'
+                          '<p style="color:#5b5675;font-size:13px;margin:0 0 6px">Finished any of these? One tap saves it, '
+                          'no need to sign in.</p>' + check_in.item_rows_html(items, token))
+        text += ["Still on your list (one tap saves it, no need to sign in):"] + check_in.item_rows_text(items, token) + [""]
+    elif waiting:
         html_sections += section("Still on your list", rows([
             (item["title"], f"{item['label']} you saved but haven't finished", None) for item in waiting]))
         text += ["Still on your list:"] + [f"- {item['title']} ({item['label']})" for item in waiting] + [""]
@@ -331,7 +341,16 @@ def email_for(db: Session, user: models.User, pool=None, today: date | None = No
     total, waiting = library_snapshot(db, user.id)
     unsubscribe_url = f"{app_url()}/email/updates/unsubscribe?token={unsubscribe_token(user.id)}"
     weekly_url = None if digest.subscription_for(db, user.id) else digest.subscribe_link(user.id)
-    subject, html, text = build_email(user.username, total, waiting, matches, unsubscribe_url, weekly_url, today)
+    check_ins = None
+    try:
+        from . import check_in
+        items = check_in.candidates(db, user.id, limit=3, unfinished_only=True)
+        if items:
+            check_ins = (items, check_in.make_token(user.id, items, "comeback"))
+    except Exception:
+        db.rollback()  # the plain list still goes out
+    subject, html, text = build_email(user.username, total, waiting, matches, unsubscribe_url, weekly_url, today,
+                                      check_ins)
     return subject, html, text, unsubscribe_url
 
 
