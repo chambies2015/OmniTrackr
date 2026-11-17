@@ -1244,6 +1244,8 @@ TIER_SHARE_LIMITS = {
     "/api/tier-list/shares/claim": {"POST": "10/minute"},
     "/api/tier-list/shares/{token}": {"GET": "60/minute", "PUT": "40/minute", "DELETE": "20/minute"},
     "/tier-list/s/{token}/card.png": {"GET": "30/minute"},
+    # Every open of a shared page that isn't the maker's counts a view (a write), so the page has a limit too.
+    "/tier-list/s/{token}": {"GET": "60/minute"},
 }
 for route in tier_list_router.router.routes:
     path = getattr(route, "path", None)
