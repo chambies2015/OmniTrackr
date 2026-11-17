@@ -1745,6 +1745,37 @@ class TonightPollVote(Base):
                       UniqueConstraint("poll_id", "visitor", name="uq_tonight_vote_visitor"))
 
 
+class TierListShare(Base):
+    """A tier list someone turned into a link (Nov 2026). New table only.
+
+    The board is a copy of what the maker ranked (titles, years, art), so nothing here
+    reads or changes anyone's library. A member's links belong to their account; links
+    made without an account have no owner, are edited with a key kept in the maker's
+    browser and stop working at ``expires_at`` unless a new account claims them.
+    """
+    __tablename__ = "tier_list_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Keyed hash of the maker's browser cookie, only for capping links made without an account.
+    visitor = Column(String(64), nullable=True, index=True)
+    # SHA-256 of the edit key the maker's browser holds.
+    key_hash = Column(String(64), nullable=False)
+    name = Column(String(80), nullable=False)
+    board = Column(Text, nullable=False)  # JSON: {"labels": {...}, "tiers": {"S": [item, ...], ...}}
+    item_count = Column(Integer, nullable=False, default=0)
+    template_key = Column(String(60), nullable=True)
+    # The shared list this one ranks the same titles as. No foreign key: deleting the
+    # original leaves the copies standing.
+    source_id = Column(Integer, nullable=True, index=True)
+    views = Column(Integer, nullable=False, default=0)
+    remixes = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)
+
+
 class TitleOrigin(Base):
     """Why a member added one library record: who recommended it, or where they heard of it.
 
