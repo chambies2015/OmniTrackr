@@ -1238,6 +1238,13 @@ from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
 rate_limited_tier_image = limiter.limit("240/minute")(tier_list_router.tier_list_image)
+TIER_SHARE_LIMITS = {
+    "/api/tier-list/shares": {"POST": "10/minute;60/day"},
+    "/api/tier-list/shares/mine": {"GET": "30/minute"},
+    "/api/tier-list/shares/claim": {"POST": "10/minute"},
+    "/api/tier-list/shares/{token}": {"GET": "60/minute", "PUT": "40/minute", "DELETE": "20/minute"},
+    "/tier-list/s/{token}/card.png": {"GET": "30/minute"},
+}
 for route in tier_list_router.router.routes:
     path = getattr(route, "path", None)
     if path == "/api/tier-list/templates":
@@ -1246,6 +1253,14 @@ for route in tier_list_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_tier_library)
     elif path == "/api/tier-list/image":
         bind_rate_limited_endpoint(route, rate_limited_tier_image)
+    else:
+        # Shared tier lists (Nov 2026). Making a link works without an account, so it has a daily cap as well.
+        methods = getattr(route, "methods", set()) or set()
+        rate = TIER_SHARE_LIMITS.get(path, {})
+        for method in methods:
+            if method in rate:
+                bind_rate_limited_endpoint(route, limiter.limit(rate[method])(route.endpoint))
+                break
 app.include_router(tier_list_router.router)
 
 from .routers import daily as daily_router
