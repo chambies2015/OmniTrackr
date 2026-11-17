@@ -39,7 +39,7 @@ SEASON = {
              "This page keeps their dates in one place. Once a show's nominees are out, you can fill in a ballot "
              "here, share it, and see how many you called when the winners are read out."),
     "published": "2026-11-12",
-    "reviewed": "2026-11-12",
+    "reviewed": "2026-11-17",
     "how": (
         "Each show gets a ballot as soon as its nominees are announced and checked against the official list. Pick "
         "one nominee per category. You can skip categories you have no opinion on, and change any pick until the "
@@ -66,8 +66,8 @@ SEASON = {
          "The Game Awards open it on December 10, 2026. The Golden Globes follow on January 10, 2027, the Grammys on "
          "February 7 and the Oscars close it on March 14."),
         ("When can I fill in a ballot?",
-         "From the day a show's nominees are announced until its ceremony starts. Grammy nominations are due on "
-         "November 16, 2026, Game Awards nominees in mid-November, Golden Globe nominations on December 7 and Oscar "
+         "From the day a show's nominees are announced until its ceremony starts. The Grammys ballot is open now. "
+         "Game Awards nominees are revealed on November 17, 2026, Golden Globe nominations on December 7 and Oscar "
          "nominations on January 21, 2027."),
         ("Do I need an account?",
          "No. Picks made without an account stay in your browser. A free account saves them, gives you a link and a "
@@ -98,7 +98,150 @@ def _game(title: str, year=2025) -> dict:
     return {"kind": "game", "title": title, "year": year}
 
 
+def _album(name: str, artist: str) -> dict:
+    return {"name": name, "detail": artist, "kind": "album", "creator": artist}
+
+
+def _track(name: str, detail: str) -> dict:
+    return {"name": name, "detail": detail}
+
+
 _CLAIR = "Clair Obscur: Expedition 33"
+
+# The 69th Grammy Awards ballot: the four general awards, eight genre album categories and the video game
+# score award. Typed from Grammy.com's list and checked against ABC News, Audacy and Us Weekly on November 17,
+# 2026. Titles and names are styled the way the Recording Academy prints them.
+_GRAMMYS_2027 = [
+    {"name": "Album of the Year",
+     "blurb": "For a whole album: the artist, and the producers, engineers and songwriters who worked on it.",
+     "nominees": [
+         _album("Lost Weekend", "Phoebe Bridgers"),
+         _album("The Art of Loving", "Olivia Dean"),
+         _album("Dandelion", "Ella Langley"),
+         _album("The Romantic", "Bruno Mars"),
+         _album("THIS MUSIC MAY CONTAIN HOPE.", "RAYE"),
+         _album("you seem pretty sad for a girl so in love", "Olivia Rodrigo"),
+         _album("LUX (Complete Works)", "ROSALÍA"),
+         _album("The Life of a Showgirl", "Taylor Swift"),
+     ]},
+    {"name": "Record of the Year",
+     "blurb": "For one recording: the performance and the production of a single track.",
+     "nominees": [
+         _track("Man I Need", "Olivia Dean"),
+         _track("Choosin' Texas", "Ella Langley"),
+         _track("I Just Might", "Bruno Mars"),
+         _track("WHERE IS MY HUSBAND!", "RAYE"),
+         _track("the cure", "Olivia Rodrigo"),
+         _track("Berghain", "ROSALÍA, Björk and Yves Tumor"),
+         _track("The Fate of Ophelia", "Taylor Swift"),
+         _track("Dracula", "Tame Impala and JENNIE"),
+     ]},
+    {"name": "Song of the Year",
+     "blurb": "A songwriters' award: it goes to the people who wrote the song.",
+     "nominees": [
+         _track("Berghain", "ROSALÍA, Björk and Yves Tumor. Written by Björk, Noah Goldstein, Jake Miller, "
+                            "ROSALÍA and Dylan Wiggins"),
+         _track("Choosin' Texas", "Ella Langley. Written by Luke Dick, Miranda Lambert, Ella Langley and "
+                                  "Joybeth Taylor"),
+         _track("the cure", "Olivia Rodrigo. Written by Daniel Nigro and Olivia Rodrigo"),
+         _track("hate that i made you love me", "Ariana Grande. Written by Ariana Grande, Max Martin and Ilya"),
+         _track("I Knew It, I Knew You", "Taylor Swift, from Toy Story 5. Written by Jack Antonoff and Taylor Swift"),
+         _track("Man I Need", "Olivia Dean. Written by Olivia Dean, Tobias Jesso, Jr. and Zach Nahome"),
+         _track("Risk It All", "Bruno Mars. Written by Dernst Emile II, James Fauntleroy, Philip Lawrence and "
+                               "Bruno Mars"),
+         _track("WHERE IS MY HUSBAND!", "RAYE. Written by RAYE and Mike Sabath"),
+     ]},
+    {"name": "Best New Artist",
+     "nominees": [
+         {"name": "Angine de Poitrine"},
+         {"name": "Geese"},
+         {"name": "Ella Langley"},
+         {"name": "Slayyyter"},
+         {"name": "Sienna Spiro"},
+         {"name": "Don Toliver"},
+         {"name": "Remi Wolf"},
+         {"name": "The Womack Sisters"},
+     ]},
+    {"name": "Best Pop Vocal Album",
+     "nominees": [
+         _album("The Art of Loving", "Olivia Dean"),
+         _album("petal", "Ariana Grande"),
+         _album("The Romantic", "Bruno Mars"),
+         _album("THIS MUSIC MAY CONTAIN HOPE.", "RAYE"),
+         _album("you seem pretty sad for a girl so in love", "Olivia Rodrigo"),
+     ]},
+    {"name": "Best Rap Album",
+     "nominees": [
+         _album("DILLAGENCE II", "Busta Rhymes"),
+         _album("AM I THE DRAMA?", "Cardi B"),
+         _album("God Gotta Afro & Gold Hoops", "Rapsody"),
+         _album("OCTANE", "Don Toliver"),
+         _album("everything is a lot.", "Wale"),
+         _album("BULLY - DELUXE", "Kanye West"),
+     ]},
+    {"name": "Best Rock Album",
+     "nominees": [
+         _album("Vol. II", "Angine de Poitrine"),
+         _album("Your Favorite Toy", "Foo Fighters"),
+         _album("The Wow! Signal", "Muse"),
+         _album("Foreign Tongues", "The Rolling Stones"),
+         _album("Frozen Charlotte", "Jack White"),
+     ]},
+    {"name": "Best Alternative Music Album",
+     "nominees": [
+         _album("I Must Be Dreaming", "Alabama Shakes"),
+         _album("Lost Weekend", "Phoebe Bridgers"),
+         _album("Music, Fashion, Film", "Charli xcx"),
+         _album("Getting Killed", "Geese"),
+         _album("The Mountain", "Gorillaz"),
+         _album("LUX (Complete Works)", "ROSALÍA"),
+     ]},
+    {"name": "Best R&B Album",
+     "nominees": [
+         _album("BROWN (The Chocolate Edition)", "Chris Brown"),
+         _album("When The City Sleeps", "Alex Isley"),
+         _album("Kehlani", "Kehlani"),
+         _album("Saturday Night", "PJ Morton"),
+         _album("To Whom This May Concern", "Jill Scott"),
+     ]},
+    {"name": "Best Dance/Electronic Album",
+     "nominees": [
+         _album("CONFESSIONS II", "Madonna"),
+         _album("Sexistential", "Robyn"),
+         _album("SOMA", "Skrillex"),
+         _album("WOR$T GIRL IN AMERICA", "Slayyyter"),
+         _album("Deadbeat", "Tame Impala"),
+     ]},
+    {"name": "Best Contemporary Country Album",
+     "nominees": [
+         _album("Mount Pleasant", "Kelsea Ballerini"),
+         _album("Cherry Valley", "Carter Faith"),
+         _album("Dandelion", "Ella Langley"),
+         _album("Cloud 9", "Megan Moroney"),
+         _album("Middle of Nowhere", "Kacey Musgraves"),
+     ]},
+    {"name": "Best Música Urbana Album",
+     "nominees": [
+         _album("Cosa Nuestra: Capítulo 0", "Rauw Alejandro"),
+         _album("OMERTA", "J Balvin and Ryan Castro"),
+         _album("HOPI SENDÉ", "Ryan Castro"),
+         _album("OMAKASE", "Alvaro Diaz"),
+         _album("EL GREEN PRINT: La Saga (Disc 1) - FEID VS FERXXO", "Feid"),
+         _album("Do Not Disturb: Late Checkout", "Young Miko"),
+     ]},
+    {"name": "Best Score Soundtrack for Video Games and Other Interactive Media",
+     "blurb": "For the composer of a game's score. The nominees are listed by game.",
+     "nominees": [
+         {"name": "Avatar: Frontiers of Pandora - From the Ashes", "detail": "John Paesano, composer",
+          "kind": "game", "title": "Avatar: Frontiers of Pandora", "year": 2023},
+         {"name": "007: First Light", "detail": "Joe Henson and Alexis Leon Smith, composers", "kind": "game",
+          "aka": ("007 First Light",)},
+         {"name": "Ghost of Yōtei", "detail": "Toma Otowa, composer", "kind": "game", "year": 2025,
+          "aka": ("Ghost of Yotei",)},
+         {"name": "Marvel's Wolverine", "detail": "David Fleming, composer", "kind": "game"},
+         {"name": "Star Wars: Zero Company", "detail": "Gordy Haab, composer", "kind": "game"},
+     ]},
+]
 
 SHOWS = {
     "the-game-awards-2026": {
@@ -110,20 +253,20 @@ SHOWS = {
         "description": ("The Game Awards 2026 are on December 10 in Los Angeles. When the nominees are due, how the "
                         "winners are chosen, where to watch, last year's results and a free ballot to pick the winners."),
         "lead": ("The Game Awards 2026 are on Thursday, December 10 at the Peacock Theater in Los Angeles. The "
-                 "nominees are due in mid-November. When they land, this page becomes a ballot: pick a winner in "
+                 "nominees are revealed on Tuesday, November 17. When they land, this page becomes a ballot: pick a winner in "
                  "every category, save it, and see your score once the show is over."),
         "published": "2026-11-12",
-        "reviewed": "2026-11-12",
+        "reviewed": "2026-11-17",
         "ceremony_day": "2026-12-10",
         "ceremony_at": "2026-12-11T00:30:00",
         "lock_label": "Thursday, December 10 at 4:30 p.m. Pacific",
         "watch": "Free streams on YouTube, Twitch and other platforms",
-        "nominees_day": None,
-        "nominees_label": "Mid-November 2026",
-        "nominees_note": ("The organizers say the nominees are coming in mid-November and had not named a day when "
-                          "this page was last checked. Last year's list came out on November 17."),
+        "nominees_day": "2026-11-17",
+        "nominees_label": "November 17, 2026",
+        "nominees_note": ("Geoff Keighley reveals the nominees on Tuesday, November 17, 2026 at noon Eastern, "
+                          "9 a.m. Pacific and 5 p.m. in the UK."),
         "dates": (
-            ("Nominees announced", "Mid-November 2026 (day not confirmed)"),
+            ("Nominees announced", "Tuesday, November 17, 2026, noon Eastern"),
             ("Public vote", "Opens with the nominees on thegameawards.com"),
             ("Ceremony", "Thursday, December 10, 2026"),
             ("Venue", "Peacock Theater, Los Angeles"),
@@ -202,8 +345,8 @@ SHOWS = {
             ("When are The Game Awards 2026?",
              "Thursday, December 10, 2026, at the Peacock Theater in Los Angeles."),
             ("When are the nominees announced?",
-             "The organizers say mid-November and had not named a day when this page was last checked. The 2025 "
-             "nominees came out on November 17."),
+             "Tuesday, November 17, 2026, at noon Eastern, 9 a.m. Pacific. The ballot here opens once the list "
+             "is checked against the official one."),
             ("Does this ballot count toward the real vote?",
              "No. The public vote is on thegameawards.com and counts for 10% of the result. The ballot here is a "
              "prediction: you pick who you think will win and get a score after the show."),
@@ -301,24 +444,23 @@ SHOWS = {
         "short": "The Grammys",
         "format": "Music",
         "title": "Grammys 2027: date, nominations and your ballot",
-        "search_title": "Grammys 2027: date, nominations, new categories and a ballot",
-        "description": ("The 69th Grammy Awards are on February 7, 2027, on ABC for the first time since 1972. When "
-                        "nominations come out, the new categories, last year's winners and a free ballot."),
+        "search_title": "Grammys 2027: nominees, date, new categories and a ballot",
+        "description": ("The 69th Grammy Awards are on February 7, 2027, on ABC for the first time since 1972. The "
+                        "nominees in 13 categories, who leads, last year's winners and a free ballot."),
         "lead": ("The 69th Grammy Awards are on Sunday, February 7, 2027 at Crypto.com Arena in Los Angeles. "
-                 "Nominations are announced on Monday, November 16, and the ballot here opens once the list is "
-                 "checked and loaded."),
+                 "Nominations came out on Monday, November 16, with RAYE in front on 11. The ballot below is open: "
+                 "pick a winner in each of 13 categories and see your score after the show."),
         "published": "2026-11-12",
-        "reviewed": "2026-11-12",
+        "reviewed": "2026-11-17",
         "ceremony_day": "2027-02-07",
         "ceremony_at": "2027-02-08T00:00:00",
         "lock_label": "Sunday, February 7 at 4 p.m. Pacific",
         "watch": "ABC, streaming on Disney+ and Hulu",
         "nominees_day": "2026-11-16",
         "nominees_label": "November 16, 2026",
-        "nominees_note": ("Nominations are announced on Monday, November 16, 2026. The livestream starts at 7:45 a.m. "
-                          "Eastern on Grammy.com and the Grammys' YouTube channel, and the full list goes up at 9 a.m."),
+        "nominees_note": "Nominations were announced on Monday, November 16, 2026.",
         "dates": (
-            ("Eligible releases", "August 30, 2025 to August 29, 2026"),
+            ("Eligible releases", "August 31, 2025 to August 28, 2026"),
             ("Nominations announced", "Monday, November 16, 2026"),
             ("Final-round voting", "December 10, 2026 to January 7, 2027"),
             ("Ceremony", "Sunday, February 7, 2027, 7 p.m. Eastern"),
@@ -326,10 +468,27 @@ SHOWS = {
             ("Ballots here lock", "February 7 at 4 p.m. Pacific"),
         ),
         "sections": (
+            ("nominees", "Who is nominated", (
+                "RAYE has the most nominations this year with 11, and Audacy counts nine for ROSALÍA, the next "
+                "most. Both are up for Album and Record of the Year: RAYE with THIS MUSIC MAY CONTAIN HOPE. and "
+                "WHERE IS MY HUSBAND!, ROSALÍA with LUX (Complete Works) and Berghain, which she recorded with "
+                "Björk and Yves Tumor.",
+                "Ella Langley is nominated in all four general categories: Dandelion for Album of the Year, "
+                "Choosin' Texas for Record and Song of the Year, and Best New Artist. Olivia Dean won Best New "
+                "Artist in February and is back with nominations for Album, Record and Song of the Year.",
+                "Four other Best New Artist nominees also have an album in a genre category: Angine de Poitrine in "
+                "rock, Geese in alternative, Slayyyter in dance/electronic and Don Toliver in rap.",
+                "Taylor Swift's The Life of a Showgirl is up for Album of the Year and The Fate of Ophelia for "
+                "Record of the Year. Her Song of the Year nomination is for a different song, I Knew It, I Knew "
+                "You, written with Jack Antonoff for Toy Story 5.",
+                "The ballot also has the award for video game scores, because its nominees are games you can "
+                "track here: 007: First Light, Ghost of Yōtei, Marvel's Wolverine, Star Wars: Zero Company and the "
+                "Avatar: Frontiers of Pandora expansion From the Ashes.",
+            )),
             ("chosen", "How the winners are chosen", (
-                "Voting members of the Recording Academy pick the winners. The first round, which decides the "
+                "Voting members of the Recording Academy pick the winners. The first round, which decided the "
                 "nominees, ran from October 12 to 22. The final round runs from December 10, 2026 to January 7, 2027.",
-                "Recordings released between August 30, 2025 and August 29, 2026 are eligible, by Grammy.com's "
+                "Recordings released between August 31, 2025 and August 28, 2026 are eligible, by Grammy.com's "
                 "dates. Anything from this autumn waits for the 2028 show.",
             )),
             ("watch", "How to watch", (
@@ -344,11 +503,13 @@ SHOWS = {
                 "R&B Collaboration or Duo/Group Performance, Best Traditional Pop Vocal Performance, Best Latin "
                 "Song, and Best Traditional Folk Album, which is back for the first time since 2011. Best Folk "
                 "Album is now Best Contemporary Folk Album.",
-                "A hundred categories is too many for one ballot. The one here will cover the four general awards "
-                "(Album, Record and Song of the Year, and Best New Artist) and the main genre album categories.",
+                "A hundred categories is too many for one ballot. The one here covers 13: the four general awards "
+                "(Album, Record and Song of the Year, and Best New Artist), eight genre album categories and the "
+                "video game score award. Titles and names are written the way the Recording Academy lists them, "
+                "capitals included.",
             )),
         ),
-        "categories": [],
+        "categories": _GRAMMYS_2027,
         "last_year": {
             "heading": "Last year: the 68th Grammy Awards",
             "intro": (
@@ -383,17 +544,21 @@ SHOWS = {
              "Sunday, February 7, 2027, at Crypto.com Arena in Los Angeles, starting at 7 p.m. Eastern."),
             ("What channel are the 2027 Grammys on?",
              "ABC, with streams on Disney+ and Hulu. It is the first Grammys broadcast on ABC since 1972."),
-            ("When are the 2027 Grammy nominations?",
-             "Monday, November 16, 2026. The livestream starts at 7:45 a.m. Eastern and the full list is posted on "
-             "Grammy.com at 9 a.m."),
+            ("Who has the most Grammy nominations for 2027?",
+             "RAYE, with 11. Nominations were announced on Monday, November 16, 2026."),
+            ("Who is nominated for Album of the Year?",
+             "Phoebe Bridgers, Olivia Dean, Ella Langley, Bruno Mars, RAYE, Olivia Rodrigo, ROSALÍA and Taylor Swift."),
             ("Which releases are eligible?",
-             "Recordings released between August 30, 2025 and August 29, 2026."),
+             "Recordings released between August 31, 2025 and August 28, 2026."),
             ("Can I change my picks?",
              "Yes, until the show starts on February 7. After that the ballot locks."),
         ),
         "sources": (
             ("Grammy.com: how to watch the nominations", "https://www.grammy.com/news/how-to-watch-2027-grammys-nominations/"),
-            ("Grammy.com: 69th Grammy Awards", "https://www.grammy.com/awards/69th-annual-grammy-awards-2027/"),
+            ("Grammy.com: 69th Grammy Awards nominees", "https://www.grammy.com/awards/69th-annual-grammy-awards-2027/"),
+            ("Grammy.com: video game score nominees", "https://www.grammy.com/awards/categories/best-score-soundtrack-for-video-games-and-other-interactive-media/"),
+            ("ABC News: the full list of nominees", "https://abcnews.com/GMA/Culture/grammy-nominations-2027-full-list/story?id=138113372"),
+            ("Audacy: the nominees", "https://www.audacy.com/national/music/grammy-awards-2027-nominees"),
             ("69th Annual Grammy Awards (Wikipedia)", "https://en.wikipedia.org/wiki/69th_Annual_Grammy_Awards"),
             ("68th Annual Grammy Awards (Wikipedia)", "https://en.wikipedia.org/wiki/68th_Annual_Grammy_Awards"),
         ),

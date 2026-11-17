@@ -460,10 +460,10 @@ def payload(db: Session, user, slug: str, now: Optional[datetime] = None) -> dic
 def card_payload(db: Session, user, now: Optional[datetime] = None) -> dict:
     """The dashboard card: the next open ballot, or the member's score for a show that just finished."""
     now = now or _now()
-    for slug, show in ordered():
-        if not is_open(show, now):
-            continue
-        row = get_ballot(db, user.id, slug)
+    # With more than one ballot open, the nearest show the member hasn't finished comes first.
+    open_now = [(slug, show, get_ballot(db, user.id, slug)) for slug, show in ordered() if is_open(show, now)]
+    unfinished = [entry for entry in open_now if len(picks_of(entry[2], entry[1])) < len(entry[1]["categories"])]
+    for slug, show, row in (unfinished or open_now)[:1]:
         chosen = picks_of(row, show)
         return {"show": True, "state": "open", "slug": slug, "name": show["name"], "short": show["short"],
                 "picked": len(chosen), "total": len(show["categories"]), "days_left": days_left(show, now),
