@@ -51,7 +51,10 @@ def _demo_show() -> dict:
 
 @pytest.fixture
 def demo(monkeypatch):
-    """A show with nominees, three weeks before its ceremony."""
+    """A show with nominees, three weeks before its ceremony. The real shows are emptied, so these tests
+    read the same whichever of them has announced."""
+    for slug, show in list(awards_data.SHOWS.items()):
+        monkeypatch.setitem(awards_data.SHOWS, slug, dict(show, categories=[]))
     monkeypatch.setitem(awards_data.SHOWS, SHOW, _demo_show())
     monkeypatch.setattr(awards, "_now", lambda: NOW)
     return awards_data.SHOWS[SHOW]
@@ -445,6 +448,38 @@ def test_dashboard_card(authenticated_client, db_session, demo, monkeypatch):
     assert card["state"] == "locked" and card["correct"] == 1 and card["judged"] == 1 and card["decided"] == 1
     monkeypatch.setattr(awards, "_now", lambda: datetime(2026, 12, 30))
     assert authenticated_client.get("/api/awards/card").json() == {"show": False}
+
+
+def test_dashboard_card_moves_on_from_a_finished_ballot(authenticated_client, demo, monkeypatch):
+    # Two ballots open at once: the card shows the nearer show until every category is picked, then the next.
+    later = dict(_demo_show(), name="Later Awards 2027", ceremony_day="2027-02-07", ceremony_at="2027-02-08T00:00:00")
+    monkeypatch.setitem(awards_data.SHOWS, "later-awards-2027", later)
+    assert authenticated_client.get("/api/awards/card").json()["slug"] == SHOW
+    picks = {"game-of-the-year": "hades-ii", "best-performance": "troy-baker", "best-esports-team": "gen-g"}
+    assert authenticated_client.put(f"/api/awards/{SHOW}/ballot", json={"picks": picks}).status_code == 200
+    card = authenticated_client.get("/api/awards/card").json()
+    assert card["slug"] == "later-awards-2027" and card["picked"] == 0
+    authenticated_client.put("/api/awards/later-awards-2027/ballot", json={"picks": picks})
+    # Both done: back to the nearer show, which is the next one to be scored.
+    card = authenticated_client.get("/api/awards/card").json()
+    assert card["slug"] == SHOW and card["picked"] == card["total"] == 3
+
+
+def test_every_real_ballot_can_be_filled_in(authenticated_client, monkeypatch):
+    # Whatever nominees are loaded for the real shows, one pick per category saves and reads back.
+    monkeypatch.setattr(awards, "_now", lambda: NOW)
+    for slug, show in awards.ordered():
+        listed = awards.categories(show)
+        if not listed:
+            continue
+        picks = {category["key"]: category["nominees"][-1]["key"] for category in listed}
+        assert authenticated_client.put(f"/api/awards/{slug}/ballot", json={"picks": picks}).status_code == 200, slug
+        assert authenticated_client.get(f"/api/awards/{slug}").json()["picks"] == picks
+        page = authenticated_client.get(f"/awards/{slug}").text
+        assert f"{len(listed)} of {len(listed)}" in page, slug
+        for category in listed:
+            assert len(category["nominees"]) <= 10 and all(len(n["key"]) <= 120 for n in category["nominees"]), slug
+            assert len(category["key"]) <= 80, (slug, category["key"])
 
 
 def test_no_card_while_no_show_has_nominees(authenticated_client, monkeypatch):
