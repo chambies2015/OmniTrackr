@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, funnel, google_signin, models, release_radar, supporters
+from .. import account_removal, editorial_collections, funnel, google_signin, models, release_radar, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -664,3 +664,62 @@ async def welcome_action(payload: WelcomeAction, response: Response,
         return {**welcome_emails.status(db), "message": f"All three sent to {current_user.email}."}
     welcome_emails.set_status(db, "sending" if payload.action == "start" else "paused")
     return welcome_emails.status(db)
+
+
+# ---------------------------------------------------------------- remove an account
+
+class AccountRemoval(BaseModel):
+    user_id: int = Field(..., ge=1)
+    username: str = Field(..., min_length=1, max_length=100)
+    confirm: str = Field(..., max_length=100)
+
+
+def _account_for(db: Session, username: str) -> models.User:
+    member = db.query(models.User).filter(models.User.username == username.strip().lstrip("@")).first()
+    if member is None:
+        raise HTTPException(status_code=404, detail="No member has that username (capitals count).")
+    return member
+
+
+def _account_card(member: models.User, plan: dict) -> dict:
+    library = {"movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks"}
+    domain = (member.email or "").rpartition("@")[2]
+    return {
+        **plan,
+        "joined_at": member.created_at.isoformat() if member.created_at else None,
+        "verified": bool(member.is_verified),
+        "active": bool(member.is_active),
+        "deactivated_at": member.deactivated_at.isoformat() if member.deactivated_at else None,
+        "last_seen_on": member.last_seen_on.isoformat() if member.last_seen_on else None,
+        "google": bool(member.google_sub),
+        "email_domain": domain or None,
+        "titles": sum(row["count"] for row in plan["rows"] if row["table"] in library),
+    }
+
+
+@router.get("/api/site-stats/accounts")
+def account_removal_preview(response: Response, username: str = Query(..., min_length=1, max_length=100),
+                            current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """What removing one account would delete. Nothing changes."""
+    _require_admin(current_user)
+    _no_store(response)
+    member = _account_for(db, username)
+    return _account_card(member, account_removal.plan_for(db, member, current_user).summary())
+
+
+@router.post("/api/site-stats/accounts/remove")
+def account_removal_action(payload: AccountRemoval, response: Response,
+                           current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete one account for good. The owner types the username again to confirm."""
+    _require_admin(current_user)
+    _no_store(response)
+    member = db.query(models.User).filter(models.User.id == payload.user_id).first()
+    if member is None or member.username != payload.username:
+        raise HTTPException(status_code=404, detail="That account changed or is already gone. Look it up again.")
+    if payload.confirm != member.username:
+        raise HTTPException(status_code=422, detail="Type the username exactly as shown to confirm.")
+    try:
+        summary = account_removal.remove(db, member, current_user)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {"removed": True, **summary}

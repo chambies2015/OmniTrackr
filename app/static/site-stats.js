@@ -1139,6 +1139,115 @@
     renderWelcome(data);
   }
 
+  // ---------------------------------------------------------------- remove an account
+  const removal = { account: null };
+
+  function removalRowsText(account) {
+    const rows = (account.rows || []).filter(row => row.count);
+    const cleared = (account.kept_with_link_cleared || []).reduce((sum, row) => sum + row.count, 0);
+    const parts = rows.map(row => `${number(row.count)} ${row.label}`);
+    let text = parts.length
+      ? `Deletes the account and ${number(account.total_rows)} row${account.total_rows === 1 ? '' : 's'} it owns: ${parts.join(', ')}.`
+      : 'Deletes the account row only. It owns nothing else.';
+    if (cleared) text += ` ${number(cleared)} row${cleared === 1 ? '' : 's'} elsewhere stay${cleared === 1 ? 's' : ''}, with the link to this account cleared (a Ko-fi payment, "added by" on someone's list).`;
+    return text;
+  }
+
+  function renderRemoval(account) {
+    removal.account = account;
+    const box = $('removePreview');
+    box.hidden = false;
+    const signIn = account.google ? 'Google' : 'Email and password';
+    const status = !account.active ? `Deactivated ${dayOnly(account.deactivated_at)}` : 'Active';
+    const details = [
+      ['Account', `@${account.username} (id ${account.user_id})`],
+      ['Joined', dayOnly(account.joined_at)],
+      ['Email', account.email_domain ? `at ${account.email_domain}${account.verified ? ', verified' : ', not verified'}` : 'none'],
+      ['Signs in with', signIn],
+      ['Status', status],
+      ['Last seen', account.last_seen_on ? dayOnly(account.last_seen_on) : 'never'],
+      ['Titles', number(account.titles)],
+    ];
+    $('removeDetails').replaceChildren(...details.map(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', value));
+      return row;
+    }));
+    $('removeRows').textContent = removalRowsText(account);
+    $('removeRows').hidden = !account.can_remove && !(account.other_members_rows || []).length;
+    const reason = $('removeReason');
+    reason.hidden = account.can_remove;
+    reason.textContent = account.can_remove ? '' : (account.reason || 'This account can\'t be removed here.');
+    $('removeForm').hidden = !account.can_remove;
+    const label = $('removeConfirmLabel');
+    label.replaceChildren('Type ', el('b', '', account.username), ' to confirm');
+    $('removeConfirm').value = '';
+    $('removeButton').disabled = true;
+  }
+
+  async function lookUpRemoval(username) {
+    const status = $('removeStatus');
+    removal.account = null;
+    $('removePreview').hidden = true;
+    status.textContent = '';
+    const name = (username || '').trim().replace(/^@/, '');
+    if (!name) return;
+    try {
+      const response = await fetch(`/api/site-stats/accounts?username=${encodeURIComponent(name)}`, { credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      renderRemoval(result);
+    } catch (error) {
+      status.textContent = `Could not look that up: ${error.message}`;
+    }
+  }
+
+  async function confirmRemoval() {
+    const account = removal.account;
+    const typed = $('removeConfirm').value;
+    const button = $('removeButton');
+    const status = $('removeStatus');
+    if (!account || typed !== account.username) return;
+    button.disabled = true;
+    button.textContent = 'Removing…';
+    try {
+      const response = await fetch('/api/site-stats/accounts/remove', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: account.user_id, username: account.username, confirm: typed }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      removal.account = null;
+      $('removePreview').hidden = true;
+      $('removeUsername').value = '';
+      status.textContent = `Removed @${result.username} and ${number(result.total_rows)} row${result.total_rows === 1 ? '' : 's'} it owned.`;
+      load();
+    } catch (error) {
+      status.textContent = `Could not remove it: ${error.message}`;
+      button.disabled = false;
+    } finally {
+      button.textContent = 'Remove for good';
+    }
+  }
+
+  function bindRemoval() {
+    const lookup = $('removeLookup');
+    if (!lookup) return;
+    lookup.addEventListener('submit', event => {
+      event.preventDefault();
+      lookUpRemoval($('removeUsername').value);
+    });
+    $('removeConfirm').addEventListener('input', () => {
+      $('removeButton').disabled = !removal.account || $('removeConfirm').value !== removal.account.username;
+    });
+    $('removeForm').addEventListener('submit', event => {
+      event.preventDefault();
+      confirmRemoval();
+    });
+  }
+
   // ---------------------------------------------------------------- report
   function buildReport(data) {
     const { traffic, members, insights, days } = data;
@@ -1278,6 +1387,7 @@
     $('statsCopy').addEventListener('click', copyReport);
     $('editorPublish')?.addEventListener('click', publishEditor);
     bindKofiSearch();
+    bindRemoval();
     document.querySelectorAll('[data-announcement]').forEach(button => {
       button.addEventListener('click', () => announcementAction(button.dataset.announcement));
     });
@@ -1300,7 +1410,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, growthRows, paymentLabel, kofiSummary, niceMax, delta, percent, funnelSteps, trafficSet };
+    module.exports = { buildReport, growthRows, paymentLabel, removalRowsText, kofiSummary, niceMax, delta, percent, funnelSteps, trafficSet };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

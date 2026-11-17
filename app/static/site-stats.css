@@ -186,3 +186,13 @@
 .stats-traffic-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
 .stats-step__label small { color: var(--site-muted, var(--site-soft)); display: block; font-size: .78rem; line-height: 1.35; margin-top: 2px; opacity: .8; }
 .stats-subhead--gap { margin-top: 22px; }
+.stats-remove { border-top: 1px solid var(--site-border); display: grid; gap: 10px; padding-top: 12px; }
+.stats-remove__rows { color: var(--site-muted); font-size: .86rem; margin: 0; overflow-wrap: anywhere; }
+.stats-remove__reason { color: var(--site-danger); font-size: .88rem; margin: 0; }
+.stats-remove [hidden] { display: none; }
+.stats-remove__confirm label { color: var(--site-muted); font-size: .84rem; }
+.stats-remove__confirm label b { color: #fff; }
+.stats-remove__button { background: #9f1239; border: 1px solid #be123c; color: #fff; }
+.stats-remove__button:hover:not(:disabled), .stats-remove__button:focus-visible { background: #be123c; }
+.stats-remove__button:disabled { cursor: not-allowed; opacity: .45; }
+@media (max-width: 560px) { .stats-remove__confirm input { width: 100%; } .stats-remove__confirm .site-btn { flex: 1; } }

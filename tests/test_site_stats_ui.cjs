@@ -108,3 +108,16 @@ test('Ko-fi card summary counts what is waiting and says when only the newest ar
   assert.match(stats.kofiSummary([{ message_id: 'a' }], 60), /^60 payments came in.*The newest 1 are shown/);
   assert.match(stats.kofiSummary([], 0, 4), /linked to a member.* 4 Ko-fi test payments left out\.$/);
 });
+
+test('remove-account preview says what goes and what stays', () => {
+  const text = stats.removalRowsText({
+    total_rows: 3,
+    rows: [{ label: 'movies', count: 2 }, { label: 'friendships', count: 1 }, { label: 'books', count: 0 }],
+    kept_with_link_cleared: [{ label: 'kofi payments', count: 1 }],
+  });
+  assert.match(text, /^Deletes the account and 3 rows it owns: 2 movies, 1 friendships\./);
+  assert.doesNotMatch(text, /books/);
+  assert.match(text, /1 row elsewhere stays, with the link to this account cleared/);
+  assert.equal(stats.removalRowsText({ total_rows: 0, rows: [], kept_with_link_cleared: [] }),
+    'Deletes the account row only. It owns nothing else.');
+});
