@@ -73,7 +73,7 @@ def test_privacy_policy_covers_the_november_features(client):
                   "Ko-fi:", "Amazon Associates:"):
         assert f"<strong>{label}</strong>" in html, label
     assert "As an Amazon Associate, OmniTrackr earns from qualifying purchases" in html
-    assert "Last Updated: November 15, 2026" in html
+    assert "Last Updated: November 17, 2026" in html
 
 
 def test_calculator_lookup_links_from_title_pages_are_nofollow():

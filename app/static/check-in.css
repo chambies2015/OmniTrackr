@@ -1,0 +1,87 @@
+/* Check-in page (/check-in/<token>). Builds on discover.css (eyebrow, button) and the site.css tokens. */
+.ci {
+  background: radial-gradient(620px 360px at 100% 0%, rgba(139, 92, 246, .18), transparent 70%),
+              radial-gradient(520px 300px at 0% 100%, rgba(45, 212, 191, .1), transparent 70%), var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 28px;
+  margin: clamp(12px, 3vw, 28px) auto 48px;
+  max-width: 760px;
+  padding: clamp(18px, 4vw, 36px);
+}
+.ci h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); line-height: 1.12; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.ci-lead { color: var(--site-soft); font-size: 1.02rem; line-height: 1.6; margin: 0 0 16px; max-width: 58ch; }
+.ci-progress { align-items: center; color: var(--site-muted); display: flex; font-size: .9rem; font-weight: 600; gap: 12px; margin: 0 0 22px; }
+.ci-progress progress {
+  appearance: none; background: rgba(11, 10, 24, .55); border: 1px solid var(--site-border); border-radius: 999px;
+  flex: 0 1 220px; height: 10px; overflow: hidden;
+}
+.ci-progress progress::-webkit-progress-bar { background: transparent; }
+.ci-progress progress::-webkit-progress-value { background: linear-gradient(90deg, #7c3aed, #2dd4bf); border-radius: 999px; }
+.ci-progress progress::-moz-progress-bar { background: linear-gradient(90deg, #7c3aed, #2dd4bf); border-radius: 999px; }
+
+.ci-list { display: grid; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.ci-item {
+  background: rgba(11, 10, 24, .45); border: 1px solid var(--site-border); border-radius: 20px;
+  display: grid; gap: 16px; grid-template-columns: 84px minmax(0, 1fr); padding: 16px; scroll-margin-top: 90px;
+}
+.ci-item.is-focus { border-color: rgba(167, 139, 250, .7); box-shadow: 0 0 0 3px rgba(124, 58, 237, .2); }
+.ci-item.is-answered { background: rgba(11, 10, 24, .3); }
+.ci-cover {
+  align-items: center; aspect-ratio: 2 / 3; background: linear-gradient(150deg, #312e81, #0f172a); border-radius: 12px;
+  display: flex; justify-content: center; overflow: hidden; position: relative;
+}
+.ci-cover img { display: block; height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+.ci-cover__initial { color: rgba(255, 255, 255, .85); font-family: var(--site-display); font-size: 1.8rem; font-weight: 800; }
+.ci-body { min-width: 0; }
+.ci-label { color: var(--site-muted); font-size: .78rem; font-weight: 700; letter-spacing: .06em; margin: 0 0 2px; text-transform: uppercase; }
+.ci-title { font-size: 1.15rem; line-height: 1.25; margin: 0 0 8px; overflow-wrap: anywhere; }
+.ci-q { color: var(--site-soft); margin: 0 0 10px; }
+.ci-done { color: var(--site-teal); font-weight: 700; margin: 4px 0 0; }
+
+.ci-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ci-btn {
+  background: #7c3aed; border: 1px solid #7c3aed; border-radius: 999px; color: #fff; cursor: pointer;
+  font: inherit; font-size: .95rem; font-weight: 700; min-height: 44px; padding: 8px 18px;
+}
+.ci-btn:hover { background: #6d28d9; }
+.ci-btn--ghost { background: transparent; border-color: var(--site-border-strong); color: var(--site-text); }
+.ci-btn--ghost:hover { background: rgba(255, 255, 255, .06); }
+.ci-btn:focus-visible, .ci-score:focus-visible { outline: 3px solid var(--site-violet-soft); outline-offset: 3px; }
+
+.ci-scores { display: grid; gap: 6px; grid-template-columns: repeat(10, minmax(0, 1fr)); max-width: 460px; }
+.ci-score {
+  aspect-ratio: 1; background: rgba(11, 10, 24, .6); border: 1px solid var(--site-border-strong); border-radius: 12px;
+  color: var(--site-text); cursor: pointer; font: inherit; font-weight: 800; min-height: 40px; padding: 0;
+}
+.ci-score:hover, .ci-score.is-current { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.ci-change { margin-top: 8px; }
+.ci-change summary { color: var(--site-muted); cursor: pointer; font-size: .9rem; margin-bottom: 8px; }
+
+.ci-picks { margin-top: 30px; }
+.ci-picks h2 { font-size: 1.3rem; margin: 0 0 4px; }
+.ci-picks > p { color: var(--site-soft); margin: 0 0 12px; }
+.ci-picks ul { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.ci-pick {
+  align-items: center; background: rgba(11, 10, 24, .45); border: 1px solid var(--site-border); border-radius: 16px;
+  color: inherit; display: grid; gap: 12px; grid-template-columns: 48px minmax(0, 1fr); padding: 10px; text-decoration: none;
+}
+.ci-pick:hover { border-color: rgba(167, 139, 250, .6); }
+.ci-pick img, .ci-pick .ci-cover__initial {
+  aspect-ratio: 2 / 3; background: linear-gradient(150deg, #312e81, #0f172a); border-radius: 8px; display: grid;
+  font-size: 1.1rem; height: auto; object-fit: cover; place-items: center; width: 48px;
+}
+.ci-pick__text { display: grid; gap: 2px; min-width: 0; }
+.ci-pick__text strong { overflow-wrap: anywhere; }
+.ci-pick__text span { color: var(--site-muted); font-size: .85rem; line-height: 1.4; }
+
+.ci-foot { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.ci-link { align-items: center; display: inline-flex; text-decoration: none; }
+.ci-progress span { white-space: nowrap; }
+.ci-small { color: var(--site-muted); font-size: .85rem; margin: 18px 0 0; }
+
+@media (max-width: 520px) {
+  .ci-item { gap: 12px; grid-template-columns: 64px minmax(0, 1fr); padding: 12px; }
+  .ci-scores { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 260px; }
+  .ci-foot .button, .ci-foot .ci-btn { flex: 1 1 100%; justify-content: center; text-align: center; }
+  .ci-progress progress { flex: 1 1 auto; }
+}

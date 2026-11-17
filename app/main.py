@@ -127,6 +127,10 @@ async def lifespan(application: FastAPI):
     welcome_task = None
     if welcome_emails.enabled_for_process():
         welcome_task = asyncio.create_task(welcome_emails.welcome_loop(application))
+    from . import check_in
+    check_in_task = None
+    if check_in.enabled_for_process():
+        check_in_task = asyncio.create_task(check_in.check_in_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -144,7 +148,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task):
+                     episode_task, check_in_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -878,6 +882,13 @@ for route in stay_posted_router.router.routes:
         # The home screen asks at most once a minute per tab.
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(stay_posted_router.router)
+from .routers import check_in as check_in_router
+# The emailed check-in page works without signing in: the signed link is the key, so it is limited per address.
+for route in check_in_router.router.routes:
+    if getattr(route, "path", None) == "/check-in/{token}":
+        methods = getattr(route, "methods", set())
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute" if "POST" in methods else "60/minute")(route.endpoint))
+app.include_router(check_in_router.router)
 from .routers import site_search as site_search_router
 # The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
 rate_limited_site_search = {
