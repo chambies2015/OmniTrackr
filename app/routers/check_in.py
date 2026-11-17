@@ -38,6 +38,13 @@ def _indexes(value: Optional[str], size: int) -> list[int]:
     return sorted(found)
 
 
+def _here(query: str) -> str:
+    """A query-only address: the browser keeps the page's own path, so a redirect never carries the link."""
+    if not query.startswith("?"):
+        raise ValueError("query-only addresses start with ?")
+    return query
+
+
 def _expired():
     html = message_page(
         "Check-in", "This check-in link has run out",
@@ -213,7 +220,7 @@ async def check_in_answer(token: str, request: Request, db: Session = Depends(ge
     choice = str(form.get("choice", ""))[:16]
     size = len(data["items"])
     if not raw_item.isdigit() or int(raw_item) >= size:
-        return _private(RedirectResponse(f"/check-in/{token}?r=1", status_code=303))
+        return _private(RedirectResponse(_here("?r=1"), status_code=303))
     index = int(raw_item)
     settled = _indexes(str(form.get("ok", "")), size)
     category, item_id = data["items"][index]
@@ -223,14 +230,14 @@ async def check_in_answer(token: str, request: Request, db: Session = Depends(ge
         action, _, raw_score = choice.partition("-")
         score = int(raw_score) if raw_score.isdigit() and 1 <= int(raw_score) <= 10 else None
         if score is None:
-            return _private(RedirectResponse(f"/check-in/{token}?r=1#ci-{index}", status_code=303))
-    target = f"/check-in/{token}?saved={index}&r=1"
+            return _private(RedirectResponse(_here(f"?r=1#ci-{index}"), status_code=303))
+    target = f"?saved={index}&r=1"
     current = check_in.aligned_items(db, user.id, [(category, item_id)])[0]
     was_answered = index in settled or bool(current and current["finished"] and current["rating"] is not None)
     if action == "open":
         # "Finished it" opens the score buttons first; nothing is saved yet.
         query = f"?pick={index}&a=finished&r=1&ok={','.join(map(str, settled))}"
-        return _private(RedirectResponse(f"/check-in/{token}{query}#ci-{index}", status_code=303))
+        return _private(RedirectResponse(_here(f"{query}#ci-{index}"), status_code=303))
     if action in ("still", "noscore"):
         settled = sorted(set(settled) | {index})
         if action == "still":
@@ -239,13 +246,13 @@ async def check_in_answer(token: str, request: Request, db: Session = Depends(ge
         before = current
         result = check_in.answer(db, user, category, item_id, action, score)
         if result is None:
-            return _private(RedirectResponse(f"/check-in/{token}?r=1", status_code=303))
+            return _private(RedirectResponse(_here("?r=1"), status_code=303))
         if action == "finished" and before and not before["finished"]:
             check_in.count(f"finished_{source}")
         if score is not None:
             check_in.count(f"rated_{source}")
     else:
-        return _private(RedirectResponse(f"/check-in/{token}?r=1#ci-{index}", status_code=303))
+        return _private(RedirectResponse(_here(f"?r=1#ci-{index}"), status_code=303))
     try:
         visits.record_visit(db, user)  # answering is opening OmniTrackr, signed in or not
     except Exception:
@@ -255,4 +262,4 @@ async def check_in_answer(token: str, request: Request, db: Session = Depends(ge
     if items and len(done) == len(items) and not was_answered:
         check_in.count(f"all_done_{source}")
     target += f"&ok={','.join(map(str, settled))}#ci-{index}"
-    return _private(RedirectResponse(target, status_code=303))
+    return _private(RedirectResponse(_here(target), status_code=303))

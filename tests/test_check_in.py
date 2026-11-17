@@ -3,7 +3,7 @@ import asyncio
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 import pytest
 
@@ -146,10 +146,11 @@ def test_finishing_with_a_score_saves_it_and_counts_a_visit(client, db_session):
     db_session.commit()
     token = check_in.make_token(user.id, [{"category": "tv-shows", "id": show.id}], "checkin")
     opened = client.post(f"/check-in/{token}", data={"item": "0", "choice": "open"}, follow_redirects=False)
-    assert opened.status_code == 303 and "pick=0&a=finished" in opened.headers["location"]
+    assert opened.status_code == 303 and opened.headers["location"].startswith("?pick=0&a=finished")
+    assert token not in opened.headers["location"]  # redirects never repeat the link itself
     db_session.refresh(show)
     assert show.watched is False  # opening the score buttons saves nothing
-    page = client.get(opened.headers["location"])
+    page = client.get(urljoin(f"/check-in/{token}", opened.headers["location"]))
     assert 'value="finished-8"' in page.text and "Save as finished, no score" in page.text
 
     saved = client.post(f"/check-in/{token}", data={"item": "0", "choice": "finished-8"}, follow_redirects=False)
@@ -160,7 +161,7 @@ def test_finishing_with_a_score_saves_it_and_counts_a_visit(client, db_session):
     entries = db_session.query(models.ActivityEntry).filter_by(user_id=user.id, item_id=show.id, action="completed").all()
     assert len(entries) == 1 and entries[0].rating == 8.0 and entries[0].category == "tv-shows"
     assert user.last_seen_on == visits.today_utc() and user.visit_days == 2
-    done = client.get(saved.headers["location"])
+    done = client.get(urljoin(f"/check-in/{token}", saved.headers["location"]))
     assert "All caught up" in done.text and "your score 8/10" in done.text
     assert counted("finished_checkin") == 1 and counted("rated_checkin") == 1 and counted("all_done_checkin") == 1
     assert counted("opened_checkin") == 0  # our own redirects are not opens
@@ -183,7 +184,7 @@ def test_still_going_changes_nothing(client, db_session):
     assert "ok=0" in response.headers["location"]
     db_session.refresh(book)
     assert book.read is False and book.rating is None
-    page = client.get(response.headers["location"])
+    page = client.get(urljoin(f"/check-in/{token}", response.headers["location"]))
     assert "Still going. It stays on your list." in page.text and "1 of 2 answered" in page.text
     assert counted("still_comeback") == 1
     # The email's own "Still going" button answers on opening, since nothing changes.
