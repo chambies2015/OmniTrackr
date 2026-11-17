@@ -1067,7 +1067,8 @@ class TestSecurityMiddleware:
         assert "Privacy choices in the sample" in content
         assert "What statistics would show" in content
         assert "copied from a user account" in content
-        assert "Signal Harbor" in content
+        assert "Arrival (2016)" in content
+        assert "Fictional" not in content
         assert '"@type": "ItemList"' in content
         hrefs = extract_hrefs(content)
         assert "/demo" in hrefs
