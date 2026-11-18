@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import models
+from . import models, year_in_review
 from .user_columns import VISIBLE, ensure_loaded
 from .title_pages import COMPLETE_FIELD, IMAGE_FIELD, LIBRARY_TO_KIND, _safe_image
 
@@ -84,17 +84,27 @@ def build(db: Session, user: models.User, *, now: datetime | None = None) -> dic
         item.pop("_added")
 
     # Every finish writes a "completed" journal entry, whether or not the member reflects on it.
+    # Titles are counted the way the year recap and the monthly challenge count them: once each,
+    # and a removed duplicate's finish folds into the copy that is still there. Deleting a title
+    # clears its entries' item_id, so a plain DISTINCT (category, item_id) counted every removed
+    # copy once more, and two different removed titles in one format as one.
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     shown_keys = [library["key"] for library in libraries if library["visible"]]
-    finished_this_month = 0 if not shown_keys else db.query(
-        models.ActivityEntry.category, models.ActivityEntry.item_id,
-    ).filter(
-        models.ActivityEntry.user_id == user.id,
-        models.ActivityEntry.action == "completed",
-        models.ActivityEntry.occurred_at >= month_start,
-        # Hidden tabs stay out of every other number on the strip, so out of this one too.
-        models.ActivityEntry.category.in_(shown_keys),
-    ).distinct().count()
+    finished_this_month = 0
+    if shown_keys:
+        finishes: dict[tuple, dict] = {}
+        for category, item_id, title in db.query(
+            models.ActivityEntry.category, models.ActivityEntry.item_id, models.ActivityEntry.title,
+        ).filter(
+            models.ActivityEntry.user_id == user.id,
+            models.ActivityEntry.action == "completed",
+            models.ActivityEntry.occurred_at >= month_start,
+            # Hidden tabs stay out of every other number on the strip, so out of this one too.
+            models.ActivityEntry.category.in_(shown_keys),
+        ).all():
+            finishes.setdefault(year_in_review._title_key(category, item_id, title),
+                                {"category": category, "title": title})
+        finished_this_month = len(year_in_review.fold_deleted_copies(finishes))
 
     shown = [library for library in libraries if library["visible"]]
     total = sum(library["total"] for library in shown)

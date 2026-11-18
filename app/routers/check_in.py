@@ -147,8 +147,10 @@ def _content(user: models.User, items: list[dict], token: str, settled: list[int
     total = len(rendered)
     all_done = answered == total
     if all_done:
+        # Only point at "the picks below" when there are some: with no suggestions the page has none to show.
         lead = ("That’s everything. Your library is up to date, and your scores are already shaping the picks below."
-                if any(item and item["rating"] is not None for item in items) else "That’s everything. Your library is up to date.")
+                if suggestions and any(item and item["rating"] is not None for item in items)
+                else "That’s everything. Your library is up to date.")
     else:
         lead = "Tap an answer for each one. It saves straight to your library, and you don’t need to sign in."
     library_label = "Open my library" if signed_in else "Log in to my library"
