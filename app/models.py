@@ -1932,6 +1932,23 @@ class UserTwoFactor(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SignupCodeAttempt(Base):
+    """Wrong confirmation codes typed for one new account (Nov 2026).
+
+    A new table only; accounts without a row never typed a wrong code. The emailed
+    6-digit code (email.signup_code) works until ``failures`` reaches
+    routers.auth.SIGNUP_CODE_MAX_FAILURES; after that only the link in the email
+    confirms the account. Never reset by a new email, so guesses can't be spread
+    over many codes.
+    """
+    __tablename__ = "signup_code_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    failures = Column(Integer, nullable=False, default=0)
+    last_failed_at = Column(DateTime, nullable=True)
+
+
 class MemberStart(Base):
     """How a new member used the start page (/start) in their first session (Oct 2026).
 

@@ -50,6 +50,7 @@ DERIVED_STEPS = {"signup_sent", "account_confirmed"}
 FIRST_LOGIN_MAX_AGE = timedelta(days=30)
 REJECTIONS = (
     ("signup_rejected_email_taken", "Email already registered"),
+    ("signup_rejected_email_pending", "Email already signed up but never confirmed (offered a new code)"),
     ("signup_rejected_username_taken", "Username taken"),
     ("signup_rejected_username_invalid", "Username not allowed"),
     ("signup_rejected_email_invalid", "Email address not accepted"),
@@ -211,9 +212,20 @@ EMAIL_FORM = (
     ("signup_email_password", "Typed a password"),
     ("signup_email_pressed", "Pressed Create free account"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+# After the email form: how new accounts confirm their address (Nov 18 2026). The email
+# now carries a 6-digit code that can be typed on the card, so the tab that signed up
+# (and the titles a guest saved there) opens the library; before, only the link did,
+# and on phones the mail app opens links in its own browser, which then asked to log in.
+EMAIL_CONFIRM = (
+    ("email_confirmed_code", "Confirmed by typing the code"),
+    ("email_confirmed_link", "Confirmed with the link, signed straight in"),
+    ("email_link_other_browser", "Confirmed with the link in another browser, asked to log in"),
+    ("signup_code_wrong", "Wrong or expired code typed"),
+    ("signup_inbox_opened", "Open Gmail (or another mail service) pressed"),
+)
+SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM + EMAIL_CONFIRM} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
@@ -299,6 +311,8 @@ def summary(counts: dict[str, int]) -> dict:
         "google": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GOOGLE],
         "email_form": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_FORM]
                       + [{"event": "signup_submitted", "label": "Reached our server", "count": count("signup_submitted")}],
+        "email_confirm": [{"event": "signup_created_email", "label": "Accounts made with the email form", "count": email_created}]
+                         + [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_CONFIRM],
         "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
         "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
     }

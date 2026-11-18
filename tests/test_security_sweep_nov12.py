@@ -23,8 +23,9 @@ def test_every_sign_in_step_is_rate_limited():
                 continue
             assert _limited(auth_router.router, route.path, method), (method, route.path)
             checked += 1
-    assert checked == 12
+    assert checked == 13  # Nov 18 2026: POST /auth/verify-code (the emailed sign-up code)
     assert _limited(auth_router.router, "/auth/verify-email", "GET")
+    assert _limited(auth_router.router, "/auth/verify-code", "POST")
 
 
 def test_confirming_an_email_still_works_through_the_limited_route(client, db_session):
