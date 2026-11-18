@@ -256,7 +256,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "support": _support_asks(db, days, now),
         "stay": _stay_posted(db, days, now),
         "week_one": _week_one(db, days, now),
+        "backlog_draw": _backlog_draw(db, days, now),
     }
+
+
+def _backlog_draw(db: Session, days: int, now: datetime) -> dict:
+    """Draw from your backlog: dealt, kept, nights picked, evening emails, and who came back after their night."""
+    try:
+        from .. import backlog_draw
+        return backlog_draw.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _week_one(db: Session, days: int, now: datetime) -> dict:

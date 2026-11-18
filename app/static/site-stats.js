@@ -510,6 +510,9 @@
     const weekOne = growth.week_one || {};
     const weekCounts = weekOne.counts || {};
     const weekLabels = weekOne.labels || {};
+    const draw = growth.backlog_draw || {};
+    const drawCounts = draw.counts || {};
+    const drawLabels = draw.labels || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -577,6 +580,12 @@
         ...Object.keys(weekLabels).map(key => ({ label: weekLabels[key], count: weekCounts[key] || 0 })),
         { label: 'Reminder emails waiting to go out (now)', count: weekOne.pending_reminders || 0 },
       ],
+      growthBacklogDraw: [
+        ...Object.keys(drawLabels).map(key => ({ label: drawLabels[key], count: drawCounts[key] || 0 })),
+        { label: 'Members with a card kept (now)', count: draw.kept_now || 0 },
+        { label: 'Evening emails waiting to go out (now)', count: draw.pending_emails || 0 },
+        { label: 'Picks finished, all time', count: draw.finished_all_time || 0 },
+      ],
       growthSupportAsks: [
         { label: 'Notes shown on the home screen', count: support.shown || 0 },
         ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
@@ -611,6 +620,7 @@
     growthPush: 'Phone and browser notifications',
     growthStayPosted: 'Stay posted asks (card and note after saving)',
     growthWeekOne: 'New members\' first-week card',
+    growthBacklogDraw: 'Draw from your backlog',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',
   };

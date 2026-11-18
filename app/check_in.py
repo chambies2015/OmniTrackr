@@ -62,7 +62,7 @@ PICK_COUNT = 3
 UTM = "utm_source=email&utm_campaign=check-in"
 
 # Where a check-in link came from. Counted per source on Site stats.
-SOURCES = {"checkin": "Check-in email", "comeback": "Come-back email"}
+SOURCES = {"checkin": "Check-in email", "comeback": "Come-back email", "draw": "Backlog draw evening email"}
 
 # Library category -> (model, finished field, label, "finished" button text)
 CATEGORIES = {
