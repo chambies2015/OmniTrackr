@@ -35,8 +35,8 @@ let dashboardTabVisibilityReady = Promise.resolve();
 
 const LIBRARY_SEARCH_SOURCES = [
   { endpoint: '/movies/', tab: 'movies', label: 'Movie', input: 'movieSearch', status: item => item.watched ? 'Watched' : 'Not watched' },
-  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'In progress' },
-  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'Not finished' },
+  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'Not finished' },
   { endpoint: '/video-games/', tab: 'video-games', label: 'Game', input: 'videoGameSearch', status: item => item.played ? 'Played' : 'Not played' },
   { endpoint: '/music/', tab: 'music', label: 'Album', input: 'musicSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
   { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },

@@ -2619,6 +2619,51 @@ document.getElementById('videoGameTitle').addEventListener('keypress', function(
   }
 });
 
+// Every other way to add a title (the start page, picks, guides, Add anything) says when it is
+// already in the library. The add forms saved a second copy without a word, and the copy then
+// counted twice in stats, badges and the year recap. Say so once; pressing Add again saves it anyway.
+function libraryTitleKey(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function libraryItemYear(item) {
+  if (Number.isInteger(item?.year)) return item.year;
+  const fromDate = parseInt(String(item?.release_date || '').slice(0, 4), 10);
+  return Number.isInteger(fromDate) && fromDate > 0 ? fromDate : null;
+}
+
+async function confirmNotAlreadyInLibrary(form, endpoint, title, year, noun, status) {
+  const wanted = libraryTitleKey(title);
+  const wantedYear = Number.isInteger(year) && year > 0 ? year : null;
+  const key = `${wanted}|${wantedYear ?? ''}`;
+  if (!form || !wanted) return true;
+  if (form.dataset.duplicateOk === key) {
+    delete form.dataset.duplicateOk;
+    return true;
+  }
+  let items = [];
+  try {
+    const response = await authenticatedFetch(`${API_BASE}${endpoint}?search=${encodeURIComponent(title)}`);
+    if (!response || !response.ok) return true;
+    const data = await response.json();
+    items = Array.isArray(data) ? data : [];
+  } catch (error) {
+    return true; // the save itself reports a lost connection or an expired session
+  }
+  const match = items.find(item => {
+    if (libraryTitleKey(item?.title) !== wanted) return false;
+    const itemYear = libraryItemYear(item);
+    return wantedYear === null || itemYear === null || itemYear === wantedYear;
+  });
+  if (!match) return true;
+  form.dataset.duplicateOk = key;
+  const matchYear = libraryItemYear(match);
+  const message = `${match.title}${matchYear ? ` (${matchYear})` : ''} is already in your ${noun}. Press Add again if you want a second copy.`;
+  if (status) status.textContent = message;
+  else showNotice(message);
+  return false;
+}
+
 document.getElementById('addMovieForm').onsubmit = async function (e) {
   e.preventDefault();
   const titleInput = document.getElementById('movieTitle');
@@ -2666,6 +2711,8 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     movie.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addMovieForm'), '/movies/', title, year, 'movies', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2726,6 +2773,8 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
     tvShow.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addTVShowForm'), '/tv-shows/', title, year, 'TV shows', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/tv-shows/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2787,6 +2836,8 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     anime.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addAnimeForm'), '/anime/', title, year, 'anime', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/anime/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2839,6 +2890,8 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
     videoGame.rawg_link = titleInput.dataset.rawgLink;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addVideoGameForm'), '/video-games/', title, libraryItemYear(videoGame), 'games', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/video-games/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2922,6 +2975,8 @@ document.getElementById('addMusicForm').onsubmit = async function (e) {
     music.cover_art_url = titleInput.dataset.coverArtUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addMusicForm'), '/music/', title, year, 'music', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/music/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -3018,6 +3073,8 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your book…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/books/', title, year, 'books', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/books/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3104,6 +3161,8 @@ document.getElementById('addMangaForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your manga…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/manga/', title, year, 'manga', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/manga/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3187,6 +3246,8 @@ document.getElementById('addPodcastForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your podcast…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/podcasts/', title, year, 'podcasts', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/podcasts/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3278,6 +3339,8 @@ document.getElementById('addAudiobookForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your audiobook…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/audiobooks/', title, year, 'audiobooks', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/audiobooks/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

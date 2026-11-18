@@ -20,8 +20,8 @@ router = APIRouter(prefix="/statistics", tags=["statistics"])
 
 LIBRARY_CATEGORIES = [
     {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
-    {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
-    {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+    {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "Not finished"},
+    {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "Not finished"},
     {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
     {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
     {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},

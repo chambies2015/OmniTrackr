@@ -216,7 +216,7 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
         found["reflected"] = found["reflected"] or reflected
         if found["item_id"] is None:
             found["item_id"] = item_id
-    return list(finished.values())
+    return list(year_in_review.fold_deleted_copies(finished).values())
 
 
 def _release_year(db: Session, finish: dict) -> Optional[int]:
