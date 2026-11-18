@@ -103,7 +103,37 @@ def _title_key(category: str, item_id, title: str) -> tuple:
     # key both by title then so one finish still counts once.
     if item_id is not None and item_id > 0:
         return (category, item_id)
-    return (category, " ".join((title or "").lower().split()))
+    return (category, _plain_title(title))
+
+
+def _plain_title(title: str) -> str:
+    return " ".join((title or "").lower().split())
+
+
+def fold_deleted_copies(finished: dict[tuple, dict]) -> dict[tuple, dict]:
+    """Count a removed copy's finish under the copy still in the library.
+
+    A removed title is keyed by its name (see _title_key). When the same title is
+    still in the library, say a duplicate was added by mistake and then deleted,
+    both finishes are one title: keep the live row, carrying over a favourite,
+    reflection or rating the removed copy had. Changes and returns ``finished``.
+    """
+    live: dict[tuple, tuple] = {}
+    for key, row in finished.items():
+        if not isinstance(key[1], str):
+            live.setdefault((row["category"], _plain_title(row.get("title"))), key)
+    for key in [key for key in finished if isinstance(key[1], str)]:
+        target = live.get(key)
+        if target is None:
+            continue
+        gone = finished.pop(key)
+        kept = finished[target]
+        for field, value in gone.items():
+            if isinstance(value, bool):
+                kept[field] = bool(kept.get(field)) or value
+            elif kept.get(field) is None:
+                kept[field] = value
+    return finished
 
 
 def _year_bounds(year: int) -> tuple[datetime, datetime]:
@@ -164,7 +194,7 @@ def _finished_titles(entries: list, moments: list) -> dict[tuple, dict]:
             row["item_id"] = moment.item_id
         if row["rating"] is None:
             row["rating"] = moment.rating
-    return finished
+    return fold_deleted_copies(finished)
 
 
 def finished_counts(db: Session, user_id: int, year: int) -> dict[str, int]:
