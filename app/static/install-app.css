@@ -1,7 +1,7 @@
 /* The installed app (Nov 2026): Add to Home Screen steps in the install dialog, and the short
    note that slides up on phones on a return visit (static/pwa.js). Colours come from the
    app-theme tokens, so light and dark mode both work. */
-body.app-shell .install-app-dialog { max-width: min(440px, calc(100vw - 32px)); padding: 22px 22px 18px; }
+body.app-shell dialog.install-app-dialog { max-width: min(440px, calc(100vw - 32px)); padding: 22px 22px 18px; }
 .install-app-dialog__head { align-items: center; display: flex; gap: 12px; margin: 0 0 14px; }
 .install-app-dialog__head img { border-radius: 11px; box-shadow: 0 6px 18px rgb(0 0 0 / .28); flex: none; height: 44px; width: 44px; }
 body.app-shell .install-app-dialog__head h2 { font-family: var(--font-display, 'Poppins', sans-serif); font-size: 1.12rem; line-height: 1.3; margin: 0; }
