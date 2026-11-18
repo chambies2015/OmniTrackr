@@ -86,6 +86,12 @@ class UsernameChange(BaseModel):
     password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
+class SignupCode(BaseModel):
+    """The 6-digit code from the confirm-your-email message, typed on the sign-up card."""
+    email: str = Field(..., min_length=3, max_length=320)
+    code: str = Field(..., min_length=1, max_length=20)
+
+
 class TwoFactorLogin(BaseModel):
     """The second sign-in step: an authenticator or recovery code."""
     code: str = Field(..., min_length=1, max_length=32)

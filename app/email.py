@@ -2,6 +2,8 @@
 Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
+import hashlib
+import hmac
 import os
 import secrets
 from html import escape as _escape_html, unescape as _unescape_html
@@ -321,45 +323,66 @@ def verify_email_change_token(token: str, max_age: int = 3600) -> tuple:
         raise
 
 
-async def send_verification_email(email: str, username: str, token: str):
+def signup_code(token: str) -> str:
+    """The 6-digit code that goes with one verification link (Nov 2026).
+
+    Typing it on the sign-up card confirms the address without leaving the tab, which
+    matters on phones, where the mail app opens links in its own browser (not signed
+    in, and without the titles a guest saved). It is derived from the stored token,
+    so it needs no column of its own and a new email (a new token) replaces it.
     """
-    Send email verification email to user.
-    
-    Args:
-        email: User's email address
-        username: User's username
-        token: Verification token
-    """
-    verification_url = f"{APP_URL}/?token={token}&email_verified=true"
-    
-    html = f"""
+    digest = hmac.new(SECRET_KEY.encode("utf-8"), f"omnitrackr-signup-code:{token}".encode("utf-8"), hashlib.sha256).digest()
+    return f"{int.from_bytes(digest[:8], 'big') % 1_000_000:06d}"
+
+
+def verification_email_html(username: str, code: str, verification_url: str) -> str:
+    """The confirm-your-email message: the code first, then the one-tap link."""
+    spaced = f"{code[:3]} {code[3:]}"
+    return f"""
     <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Welcome to OmniTrackr!</h1>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2333;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 26px 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Confirm your email</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-                <h2>Hi {_escape_html(username)},</h2>
-                <p>Thank you for registering with OmniTrackr! To complete your registration, please verify your email address by clicking the button below:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" 
-                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Verify Email Address
+                <p style="margin-top: 0;">Hi {_escape_html(username)},</p>
+                <p>Type this code on the OmniTrackr sign-up screen to open your library:</p>
+                <p style="font-size: 34px; font-weight: bold; letter-spacing: 6px; text-align: center; margin: 26px 0; color: #4c3bb5; font-family: 'Courier New', monospace;">{spaced}</p>
+                <p>Or confirm with one tap:</p>
+                <div style="text-align: center; margin: 24px 0;">
+                    <a href="{verification_url}"
+                       style="background-color: #667eea; color: white; padding: 14px 28px; text-decoration: none; border-radius: 999px; display: inline-block; font-weight: bold;">
+                        Confirm my email
                     </a>
                 </div>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
-                <p><strong>This link will expire in 48 hours.</strong></p>
+                <p style="color: #555; font-size: 14px;">Tap the button on the device you signed up on and you go straight into your library. The code and the button work for 48 hours.</p>
+                <p style="color: #555; font-size: 13px;">If the button doesn't work, copy this link into your browser:</p>
+                <p style="word-break: break-all; color: #667eea; font-size: 13px;">{verification_url}</p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="color: #666; font-size: 12px;">
-                    If you didn't create an account with OmniTrackr, you can safely ignore this email.
+                    If you didn't sign up for OmniTrackr, you can ignore this email. No account opens without this code or link.
                 </p>
             </div>
         </body>
     </html>
     """
-    
-    message = html_message("Verify Your OmniTrackr Email", [email], html)
+
+
+async def send_verification_email(email: str, username: str, token: str):
+    """
+    Send the confirm-your-email message to a new member: a 6-digit code and a link.
+
+    Args:
+        email: User's email address
+        username: User's username
+        token: Verification token (the code is derived from it, see signup_code)
+    """
+    verification_url = f"{APP_URL}/?token={token}&email_verified=true"
+    code = signup_code(token)
+    html = verification_email_html(username, code, verification_url)
+
+    # The code leads the subject, so a phone's notification shows it without opening the mail.
+    message = html_message(f"{code} is your OmniTrackr code", [email], html)
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
@@ -387,6 +410,7 @@ async def send_verification_email(email: str, username: str, token: str):
         print(f"{'='*60}")
         print(f"To: {email}")
         print(f"Username: {username}")
+        print(f"Code: {code}")
         print(f"Verification URL: {verification_url}")
         print(f"{'='*60}\n")
 

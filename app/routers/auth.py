@@ -1,6 +1,7 @@
 """
 Authentication endpoints for the OmniTrackr API.
 """
+import hmac
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -47,6 +48,15 @@ async def register(
         raise HTTPException(status_code=400, detail=error_msg)
     
     if email_taken(db, user.email):
+        waiting = _waiting_for_confirmation(db, user.email)
+        if waiting is not None:
+            # Someone who signed up earlier and never confirmed: the card offers a new
+            # code for that account instead of a dead end ("already registered").
+            funnel.record("signup_rejected_email_pending", request)
+            return JSONResponse(status_code=400, content={
+                "detail": "This email is already registered and waiting to be confirmed. We can send you a new code.",
+                "unverified": True, "email": waiting.email,
+            })
         funnel.record("signup_rejected_email_taken", request)
         raise HTTPException(status_code=400, detail="Email already registered. Log in, or reset your password if you forgot it.")
     if username_taken(db, user.username):
@@ -75,13 +85,17 @@ async def register(
             db.rollback()
             print(f"Failed to turn on the weekly email at sign-up: {e}")
     
+    email_sent = True
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
     except Exception as e:
+        email_sent = False
         funnel.record("signup_email_failed", request)
         print(f"Failed to send verification email: {e}")
 
     auth.set_pending_signup_cookie(response, db_user.id)
+    # The "check your inbox" step says so when the email didn't go, instead of waiting for nothing.
+    response.headers["X-Verification-Email"] = "sent" if email_sent else "failed"
     return db_user
 
 
@@ -168,11 +182,17 @@ def login(
     
     if not user.is_verified:
         funnel.record("login_blocked_unverified", request)
-        raise HTTPException(
+        # The password was right, so this is the account's owner: say which address to
+        # look in, let the card take the emailed code, and mark this browser like the one
+        # that signed up so the link opened here signs in too.
+        blocked = JSONResponse(
             status_code=403,
-            detail="Please verify your email address before logging in. Check your inbox for the verification link.",
-            headers={"WWW-Authenticate": "Bearer"},
+            content={"detail": "Please verify your email address before logging in. Check your inbox for the verification link.",
+                     "unverified": True, "email": user.email},
+            headers={"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"},
         )
+        auth.set_pending_signup_cookie(blocked, user.id)
+        return blocked
 
     if needs_code:
         # The password was right; the session waits for the authenticator code.
@@ -365,7 +385,14 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
     pending = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE)) if request else None
     if pending != user.id or not user.is_active:
         # A different browser (often the mail app's): log in as usual, with the email filled in.
+        funnel.record("email_link_other_browser", request)
         return {"message": message, "signed_in": False, "login_hint": user.email}
+    funnel.record("email_confirmed_link", request)
+    return _open_new_session(request, user, db, message)
+
+
+def _open_new_session(request: Request, user: models.User, db: Session, message: str):
+    """Sign a just-confirmed account in on this browser (after the link or the code)."""
     funnel.record_first_login(user, request)
     first_visit = start_flow.wants_start(user)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -385,6 +412,81 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
     return response
 
 
+def _confirm_account(db: Session, user: models.User) -> None:
+    """Mark a new account's email as confirmed, by the emailed link or code."""
+    funnel.record("email_verified")
+    user.is_verified = True
+    user.verification_token = None
+    db.commit()
+    db.refresh(user)
+    try:
+        from .. import friend_invites
+        friend_invites.complete_signup(db, user)
+    except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
+        db.rollback()
+        print(f"Failed to complete friend invite: {e}")
+    from .. import supporters
+    supporters.link_after_verification(db, user)  # Ko-fi payments made before the account existed
+
+
+def _waiting_for_confirmation(db: Session, email: str) -> models.User | None:
+    """The account this address signed up with that still waits for its email to be confirmed."""
+    user = crud.get_user_by_email(db, (email or "").strip())
+    if (user is None or user.is_verified or not user.is_active or not user.verification_token
+            or user.verification_token.startswith("email_change:")):
+        return None
+    return user
+
+
+# Wrong codes an account may see before the code stops working (the link in the email
+# still does). Ten guesses at a 6-digit code succeed one time in 100,000.
+SIGNUP_CODE_MAX_FAILURES = 10
+CODE_DIDNT_WORK = "That code didn't work. Check the newest email from us, or send a new one."
+
+
+@router.post("/verify-code")
+def verify_code(payload: schemas.SignupCode, request: Request, db: Session = Depends(get_db)):
+    """Confirm a new account with the 6-digit code from its email, and sign in on this browser.
+
+    The code proves the address the same way the link (or a password-reset link)
+    does, so it opens the account wherever it is typed: usually the tab that just
+    signed up, with the titles the visitor saved as a guest still there.
+    """
+    code = "".join(ch for ch in payload.code if ch.isdigit())
+    if len(code) != 6:
+        raise HTTPException(status_code=400, detail="Enter the 6-digit code from the email.")
+    user = _waiting_for_confirmation(db, payload.email)
+    if user is None:
+        funnel.record("signup_code_wrong", request)
+        raise HTTPException(status_code=400, detail=CODE_DIDNT_WORK)
+    attempts = db.query(models.SignupCodeAttempt).filter(models.SignupCodeAttempt.user_id == user.id).first()
+    if attempts is not None and attempts.failures >= SIGNUP_CODE_MAX_FAILURES:
+        funnel.record("signup_code_wrong", request)
+        raise HTTPException(status_code=429, detail="Too many wrong codes. Open the link in the email to confirm instead.")
+    if not hmac.compare_digest(code, email_utils.signup_code(user.verification_token)):
+        funnel.record("signup_code_wrong", request)
+        if attempts is None:
+            attempts = models.SignupCodeAttempt(user_id=user.id, failures=0)
+            db.add(attempts)
+        attempts.failures = (attempts.failures or 0) + 1
+        attempts.last_failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.commit()
+        raise HTTPException(status_code=400, detail=CODE_DIDNT_WORK)
+    try:
+        email_utils.verify_token(user.verification_token, max_age=email_utils.VERIFICATION_MAX_AGE)
+    except Exception:
+        funnel.record("signup_code_wrong", request)
+        raise HTTPException(status_code=400, detail="That code has expired. Send a new one and use the newest email.")
+
+    _confirm_account(db, user)
+    funnel.record("email_confirmed_code", request)
+    message = "Your email is confirmed."
+    if two_factor.enabled_for(db, user) is not None:
+        # Not reachable today (two-factor needs a confirmed account), but never skip the code step.
+        return {"message": message, "signed_in": False, "login_hint": user.email}
+    return _open_new_session(request, user, db, message)
+
+
 @router.get("/verify-email")
 def verify_email(token: str, background_tasks: BackgroundTasks, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
@@ -401,20 +503,7 @@ def verify_email(token: str, background_tasks: BackgroundTasks, request: Request
         if not user.verification_token or not secrets.compare_digest(user.verification_token, token):
             raise HTTPException(status_code=400, detail="This verification link was replaced. Request a new verification email.")
 
-        funnel.record("email_verified")
-        user.is_verified = True
-        user.verification_token = None
-        db.commit()
-        db.refresh(user)
-        try:
-            from .. import friend_invites
-            friend_invites.complete_signup(db, user)
-        except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
-            db.rollback()
-            print(f"Failed to complete friend invite: {e}")
-        from .. import supporters
-        supporters.link_after_verification(db, user)  # Ko-fi payments made before the account existed
-
+        _confirm_account(db, user)
         return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
         raise
@@ -504,6 +593,7 @@ async def resend_verification_email(
         print(f"WARNING: Email will only be printed to console in development mode.")
         verification_url = f"{email_utils.APP_URL}/?token={verification_token}&email_verified=true"
         print(f"INFO: Verification URL for {user.email}: {verification_url}")
+        print(f"INFO: Verification code for {user.email}: {email_utils.signup_code(verification_token)}")
         # Still return success message for security (don't reveal email wasn't sent)
         return {"message": "If that email is registered and unverified, a verification email has been sent."}
     
