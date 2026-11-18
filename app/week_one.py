@@ -243,9 +243,11 @@ def airing_pool(db: Session, today: date) -> list[dict]:
 
     Read from the episode schedule cache and the libraries; kept for half an hour per process.
     """
-    cached = _POOL.get("pool")
-    if cached and _POOL.get("day") == today and clock.monotonic() - _POOL.get("at", 0) < POOL_SECONDS:
-        return cached
+    # Keyed by day: members' local dates differ by up to two days around UTC midnight, and one
+    # shared slot made each time zone rebuild the pool (every shared show row) on every card load.
+    cached = _POOL.get(today)
+    if cached and clock.monotonic() - cached[0] < POOL_SECONDS:
+        return cached[1]
     from . import episode_calendar
     from .editorial_collections import EDITOR_USERNAME
     from .for_you import LIBRARY, _safe_image, _shareable_ids
@@ -297,10 +299,13 @@ def airing_pool(db: Session, today: date) -> list[dict]:
                     "next": {"date": episode["date"],
                              "what": f"S{season} E{episode['number']}" if season else f"Episode {episode['number']}"},
                     "members": len({entry.user_id for entry in members}),
+                    "source_id": best.id,
                 })
     pool.sort(key=lambda show: (-show["members"], show["next"]["date"], show["title"].lower()))
     pool = pool[:POOL_LIMIT]
-    _POOL.update({"pool": pool, "day": today, "at": clock.monotonic()})
+    for day in [day for day in _POOL if not isinstance(day, date) or abs((day - today).days) > 2]:
+        _POOL.pop(day, None)
+    _POOL[today] = (clock.monotonic(), pool)
     return pool
 
 
@@ -313,7 +318,7 @@ def suggestions(db: Session, user: models.User, today: date) -> list[dict]:
         if normalize_title(show["title"]) in mine or normalize_title(show["library_title"]) in mine:
             continue
         # Counts under two members could point at one person's shelf, so they aren't shown.
-        picks.append({**{k: v for k, v in show.items() if k != "library_title"},
+        picks.append({**{k: v for k, v in show.items() if k not in ("library_title", "source_id")},
                       "members": show["members"] if show["members"] >= 2 else None})
         if len(picks) >= SUGGEST_LIMIT:
             break
@@ -366,12 +371,20 @@ def save_suggestion(db: Session, user: models.User, key: str, today: date) -> di
         if normalize_title(entry.title) in (normalize_title(found["title"]), normalize_title(found["library_title"])):
             return {"state": "existing", "category": category, "item_id": entry.id, "title": entry.title}
     from . import episode_calendar
-    entries = [entry for entry in db.query(model).filter(model.user_id.in_(_shareable_ids(db, category))).all()
-               if (entry.title or "").strip() and episode_calendar.airing_key(category, entry.title, entry.year) == key]
-    if not entries:
-        raise LookupError("That show isn't on this week's list any more. Reload and try another.")
-    source = max(entries, key=lambda entry: (bool(_safe_image(entry.poster_url)),
-                                             sum(bool(getattr(entry, field, None)) for field in fields)))
+
+    def still_shared(entry) -> bool:
+        return (entry is not None and (entry.title or "").strip() != ""
+                and episode_calendar.airing_key(category, entry.title, entry.year) == key)
+
+    # The pool names the row it was built from, so a save reads one row instead of every shared shelf.
+    source = db.get(model, found["source_id"]) if found.get("source_id") else None
+    if not still_shared(source) or _shareable_ids(db, category).filter(models.User.id == source.user_id).first() is None:
+        entries = [entry for entry in db.query(model).filter(model.user_id.in_(_shareable_ids(db, category))).all()
+                   if still_shared(entry)]
+        if not entries:
+            raise LookupError("That show isn't on this week's list any more. Reload and try another.")
+        source = max(entries, key=lambda entry: (bool(_safe_image(entry.poster_url)),
+                                                 sum(bool(getattr(entry, field, None)) for field in fields)))
     # Only public details are copied (title, year, seasons, poster); ratings and notes stay with their owner.
     payload = {field: getattr(source, field, None) for field in fields}
     payload["poster_url"] = _safe_image(payload.get("poster_url"))
@@ -623,6 +636,13 @@ def due(db: Session, now: datetime) -> list[models.WeekOnePlan]:
     ).order_by(models.WeekOnePlan.remind_at).limit(200).all()
 
 
+def _opted_out_since(db: Session, row: models.WeekOnePlan) -> bool:
+    """The member unsubscribed from product updates after asking for the reminder (its footer link is that
+    unsubscribe), so it is dropped. Asking again after unsubscribing still sends: that ask is newer."""
+    opted = db.query(models.EmailOptOut.created_at).filter(models.EmailOptOut.user_id == row.user_id).scalar()
+    return opted is not None and (row.reminder_set_at is None or opted >= row.reminder_set_at)
+
+
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
     from .digest import _send as send_mail
     await send_mail(to, subject, html, unsubscribe_url)
@@ -640,7 +660,7 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
         for row in due(db, now):
             user = db.get(models.User, row.user_id)
             if (user is None or not user.is_active or not user.is_verified or row.remind_on is None
-                    or now - row.remind_at > LATE):
+                    or now - row.remind_at > LATE or _opted_out_since(db, row)):
                 row.reminder_status = "dropped"
                 db.commit()
                 count("dropped")

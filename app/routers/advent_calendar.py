@@ -29,7 +29,7 @@ CSS_VERSION = "20261114-advent-1"
 JS_VERSION = "20261114-advent-1"
 SEASONAL_CSS = "/static/seasonal.css?v=20261106-holiday-guides-1"
 LIKED_CSS = "/static/if-you-liked.css?v=20261106-holiday-guides-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SIGNUP_NEXT = quote(advent.BASE_PATH, safe="")
 FORMAT_PLURALS = {"movie": "films", "tv": "TV", "anime": "anime", "game": "games", "book": "books", "album": "albums",
                   "manga": "manga", "podcast": "podcasts", "audiobook": "audiobooks"}

@@ -1328,7 +1328,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/discussions.css?v=20261113-discussions-2">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261031-browse-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261118-sheet-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image, faq)}
@@ -1659,6 +1659,10 @@ def import_guest_list(
                 browsed = (door["browse_kind"], door)
             else:
                 curated = door
+        if group is None and curated is None and browsed is None:
+            # A pick saved from a Discover trail or monthly edition.
+            from ..discover_catalog import find_guest_pick
+            curated = find_guest_pick(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
             missing += 1
             continue

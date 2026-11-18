@@ -396,3 +396,35 @@ def published_editions(today: Optional[date] = None) -> dict:
     """
     day = (today or datetime.utcnow().date()).isoformat()
     return {slug: edition for slug, edition in MONTHLY_EDITIONS.items() if edition["published_date"] <= day}
+
+
+# ---------------------------------------------------------------- guest saves
+# Visitors without an account save single picks to the browser-only guest list
+# (static/guest-list.js), keyed by kind and title slug like every other guide.
+# POST /api/guest-list/import finds them here after sign-up.
+CATEGORY_KIND = {"movies": "movie", "tv-shows": "tv", "anime": "anime", "video-games": "game", "music": "album",
+                 "books": "book", "manga": "manga", "podcasts": "podcast", "audiobooks": "audiobook"}
+CREATOR_META = ("director", "author", "artist")
+
+
+def guest_fields(item: dict) -> Optional[dict]:
+    """The guest-list kind, slug and title for one pick, or None for a category the list can't hold."""
+    from .title_pages import title_slug
+
+    kind = CATEGORY_KIND.get(item.get("category", ""))
+    if kind is None:
+        return None
+    year = item.get("meta", {}).get("year")
+    return {"kind": kind, "slug": title_slug(item["title"], year)[:130], "title": item["title"]}
+
+
+def find_guest_pick(kind: str, slug: str) -> Optional[dict]:
+    """A pick from any trail or published edition, shaped for pick.add_to_library()."""
+    for trail in (*TRAILS.values(), *published_editions().values()):
+        for item in trail["items"]:
+            fields = guest_fields(item)
+            if fields and fields["kind"] == kind and fields["slug"] == slug:
+                meta = item.get("meta", {})
+                creator = next((meta[name] for name in CREATOR_META if meta.get(name)), "")
+                return {"kind": kind, "title": item["title"], "year": meta.get("year"), "creator": creator}
+    return None

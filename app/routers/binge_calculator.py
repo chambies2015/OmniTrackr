@@ -27,7 +27,7 @@ from .discover import page
 router = APIRouter(tags=["binge-calculator"])
 CSS_VERSION = "20261110-binge-2"
 JS_VERSION = "20261112-sweep-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SITE = "https://omnitrackr.xyz"
 TITLE = "Binge calculator: how long to watch a show or read a series"
 DESCRIPTION = ("Work out how many hours a TV show, anime, film series or book series takes and the date you'll finish at "

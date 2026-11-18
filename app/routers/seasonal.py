@@ -25,7 +25,7 @@ from .discover import page
 router = APIRouter(tags=["seasonal"])
 CSS_VERSION = "20261106-holiday-guides-1"
 JS_VERSION = "20261022-holidays-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SITE = "https://omnitrackr.xyz"
 MAX_ADD = 30
 # Pages that sit beside a hub, shown on its dashboard card and in its "More for the season" cards.
