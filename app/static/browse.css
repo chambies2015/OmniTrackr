@@ -99,3 +99,8 @@
   .browse-card__actions { grid-column: 1 / -1; }
   .browse-chart__list { grid-template-columns: 1fr; }
 }
+
+/* Choosing advice on the Browse hub */
+.browse-notes p { color: var(--site-soft); font-family: var(--read-font); font-size: 1.04rem; line-height: 1.65; margin: 0; max-width: 46rem; }
+.browse-notes p + p { margin-top: 14px; }
+.browse-notes strong { color: var(--site-text); }

@@ -206,6 +206,39 @@ def _new_year_feature() -> str:
             f'<a class="button" href="{_e(new_year_challenge.path(year))}">Make your pledge →</a></section>')
 
 
+# Written for the hub: how to set a challenge of your own with the same shape as the monthly ones.
+OWN_CHALLENGE = (
+    '<section class="editorial hub-notes" id="make-your-own" aria-labelledby="own-challenge-heading">'
+    '<h2 id="own-challenge-heading">Make a challenge of your own</h2>'
+    '<p>The monthly challenges are small on purpose, and the same shape works for a challenge built around your own '
+    'backlog: three steps, one month, and nothing that asks you to watch, read or play more than you normally would. '
+    'The steps should change what you pick, not how much. Some that work well:</p>'
+    '<ul>'
+    '<li><strong>Finish what you started.</strong> Choose three things already in progress and either finish or drop '
+    'each one. Dropping counts. The pile gets smaller either way, and the guilt goes with it.</li>'
+    '<li><strong>One decade.</strong> Spend a month in a single decade across formats: a 1970s film, an album from the '
+    'same years and a novel written then. Side by side, they show what the decade looked and sounded like.</li>'
+    '<li><strong>Follow one person.</strong> Pick a director, author, composer or studio and finish three of their works '
+    'in the order they were made. You see the habits form and the ideas they kept coming back to.</li>'
+    '<li><strong>Somewhere new.</strong> Three titles from a country whose films, books or games you rarely see. Subtitles '
+    'and translations open up most of the world.</li>'
+    '<li><strong>Short things only.</strong> Films under 100 minutes, novellas, albums under 40 minutes and games you can '
+    'finish in an evening. Good for a busy month, and a reminder that length is not the same as weight.</li>'
+    '<li><strong>The one you keep being told about.</strong> Finish the thing a friend has been recommending for years, '
+    'then tell them what you thought. It is the only step on this list that comes with a conversation.</li>'
+    '</ul>'
+    '<h3>Getting the size right</h3>'
+    '<p>Look at how many titles you finished last month and set the challenge at that number or just below it. A '
+    'challenge you can only meet by giving up sleep is a backlog with a deadline. If a step turns out to be wrong for '
+    'the month you are having, change it. Nobody is checking.</p>'
+    '<h3>Keeping track</h3>'
+    '<p>In an OmniTrackr library you can tag each title with the challenge\'s name and filter by that tag, which turns '
+    'the month into a list you can look back on. Your Year in Review counts what you finished whether or not it was '
+    'part of a challenge.</p>'
+    '</section>'
+)
+
+
 @router.get("/challenges", include_in_schema=False)
 def challenges_index(db: Session = Depends(get_db)):
     from .discover import page
@@ -221,7 +254,7 @@ def challenges_index(db: Session = Depends(get_db)):
                    f'<a class="button" href="/challenges/{_e(challenges.slug_for(current))}">Read this month\'s guide →</a></section>')
     content = (
         '<header class="hero"><p class="eyebrow">ONE SMALL CHALLENGE A MONTH</p><h1>Monthly challenges</h1>'
-        '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, music and books. They are written to '
+        '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, books, music, manga, podcasts and audiobooks. They are written to '
         'nudge you toward something new. None of them asks you to watch more than usual. Join from your dashboard, and your progress fills in from '
         'what you already track.</p></header>'
         + _new_year_feature()
@@ -234,6 +267,7 @@ def challenges_index(db: Session = Depends(get_db)):
         '<p>Challenges are private and opt-in. There are no streaks to protect and no ranking of members. When you complete one, '
         'you can share a card that shows the challenge and the steps, never the titles you finished.</p></section>'
         + _how_it_counts()
+        + OWN_CHALLENGE
     )
     description = "A small, opt-in challenge every month across movies, TV, anime, games, music and books, with a written guide."
     structured = {

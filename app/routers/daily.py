@@ -224,7 +224,8 @@ def daily_archive(request: Request):
     )
     return _respond(page("OmniTrackr Daily archive: every past puzzle", "Every past OmniTrackr Daily puzzle, playable "
                          "again, with its answer, six clues and a note from the editors.", "/daily/archive", content,
-                         indexable=bool(numbers), head=f'<link rel="stylesheet" href="/static/daily.css?v={CSS_VERSION}">'))
+                         indexable=bool(numbers) and daily.archive_indexable(),
+                         head=f'<link rel="stylesheet" href="/static/daily.css?v={CSS_VERSION}">'))
 
 
 @router.get("/daily/{number}", include_in_schema=False)

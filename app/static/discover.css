@@ -231,3 +231,21 @@ button:disabled { cursor: wait; opacity: .6; }
 .dc-bar__count { color: #e6e9f5; margin: 0; }
 .dc-bar .button { margin-top: 0; }
 .save-panel__guest { background: rgba(0, 0, 0, .18); border-radius: 14px; padding: 12px 14px; }
+
+/* Longer written sections on the guide hubs (If you liked, release guides, challenges) */
+.hub-notes h3 { color: var(--site-text); font-size: 1.05rem; margin: 24px 0 6px; }
+.hub-notes p + p, .hub-notes p + ul, .hub-notes p + ol, .hub-notes ul + p, .hub-notes ol + p { margin-top: 12px; }
+.hub-notes ul, .hub-notes ol { margin: 12px 0 0; padding-left: 22px; }
+.hub-notes li { line-height: 1.6; }
+.hub-notes li + li { margin-top: 8px; }
+.hub-notes strong { color: var(--site-text); }
+.hub-table-wrap { margin-top: 16px; overflow-x: auto; }
+.hub-table { border-collapse: collapse; min-width: 480px; width: 100%; }
+/* The legacy stylesheet styles every table as the app's library table; undo that here. */
+.hub-table th, .hub-table td { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--site-border); box-shadow: none; color: #d8dced; font-size: .95rem; letter-spacing: 0; padding: 10px 14px 10px 0; position: static; text-align: left; text-transform: none; vertical-align: top; white-space: normal; z-index: auto; }
+.hub-table thead th { border-top: 0; color: #aeb6d2; font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.hub-table tbody tr, .hub-table tbody tr:nth-child(2n), .hub-table tbody tr:hover { background: none; box-shadow: none; transform: none; }
+.hub-table tbody tr:nth-child(2n) td:last-child, .hub-table tbody tr:hover td:last-child { background: none; }
+.hub-table tbody th { font-weight: 600; }
+.hub-table tbody th a { color: var(--site-text); }
+.hub-table td:last-child, .hub-table thead th:last-child { padding-right: 0; text-align: right; }
