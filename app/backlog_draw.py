@@ -155,21 +155,43 @@ def _left_out(db: Session, user_id: int, now: datetime) -> set[tuple[str, int]]:
             if status != "put_back" or (closed and now - closed < PUT_BACK_REST)}
 
 
-def backlog(db: Session, user: models.User, now: Optional[datetime] = None) -> list[tuple[str, object]]:
-    """(category, library row) for every title the member could be dealt, oldest-saved order per format."""
+def _pool(db: Session, user: models.User, now: Optional[datetime] = None) -> list[tuple[str, int]]:
+    """(category, id) of every title the member could be dealt. Ids only: a home load reads no library rows."""
     now = now or _now()
     skip = _started(db, user.id) | _left_out(db, user.id, now)
-    found = []
+    refs: list[tuple[str, int]] = []
     for category in _visible(user):
         model, done_field, _label, _button = _categories()[category]
         if category == "podcasts":
             continue  # a podcast is never really "started" or finished in one night
-        rows = db.query(model).filter(
+        ids = db.query(model.id).filter(
             model.user_id == user.id, getattr(model, done_field) != True,  # noqa: E712
             model.title.isnot(None), func.trim(model.title) != "",
         ).order_by(model.id).limit(POOL_PER_CATEGORY).all()
-        found += [(category, row) for row in rows if (category, row.id) not in skip]
-    return found
+        refs += [(category, item_id) for (item_id,) in ids if (category, item_id) not in skip]
+    return refs
+
+
+def _rows(db: Session, user_id: int, refs: list[tuple[str, int]]) -> list[tuple[str, object]]:
+    """The library rows for `refs`, in the same order; one query per format."""
+    wanted: dict[str, list[int]] = {}
+    for category, item_id in refs:
+        wanted.setdefault(category, []).append(item_id)
+    found = {}
+    for category, ids in wanted.items():
+        model = _categories()[category][0]
+        for row in db.query(model).filter(model.user_id == user_id, model.id.in_(ids)).all():
+            found[(category, row.id)] = row
+    return [(category, found[(category, item_id)]) for category, item_id in refs if (category, item_id) in found]
+
+
+def backlog(db: Session, user: models.User, now: Optional[datetime] = None) -> list[tuple[str, object]]:
+    """(category, library row) for every title the member could be dealt."""
+    return _rows(db, user.id, _pool(db, user, now))
+
+
+def backlog_count(db: Session, user: models.User, now: Optional[datetime] = None) -> int:
+    return len(_pool(db, user, now))
 
 
 def _queued(db: Session, user_id: int) -> set[tuple[str, int]]:
@@ -291,23 +313,24 @@ def _tag_hand(hand: list[dict]) -> None:
 
 def deal(db: Session, user: models.User, today: date, number: int = 0, now: Optional[datetime] = None) -> list[dict]:
     """Three cards. The same member, day and deal number always give the same three."""
-    pool = backlog(db, user, now)
+    pool = _pool(db, user, now)
     if not pool:
         return []
-    pool.sort(key=lambda entry: (entry[0], entry[1].id))
+    pool.sort()
     rng = random.Random(zlib.crc32(f"{user.id}:{today.isoformat()}:{int(number)}".encode()))
     rng.shuffle(pool)
-    hand: list[tuple[str, object]] = []
+    refs: list[tuple[str, int]] = []
     for entry in pool:  # a different format for each card while there are formats left
-        if len(hand) == HAND:
+        if len(refs) == HAND:
             break
-        if all(entry[0] != chosen[0] for chosen in hand):
-            hand.append(entry)
+        if all(entry[0] != chosen[0] for chosen in refs):
+            refs.append(entry)
     for entry in pool:
-        if len(hand) == HAND:
+        if len(refs) == HAND:
             break
-        if entry not in hand:
-            hand.append(entry)
+        if entry not in refs:
+            refs.append(entry)
+    hand = _rows(db, user.id, refs)
     lengths = _lengths(db, hand)
     queued = _queued(db, user.id)
     cards = [_card(category, row, today, lengths[(category, row.id)], (category, row.id) in queued)
@@ -376,7 +399,7 @@ def build(db: Session, user: models.User, today: date, now: Optional[datetime] =
             count("finished")
             return {"state": "finished", "today": today.isoformat(), "draw_id": draw.id,
                     "pick": _card(draw.category, row, today), "rating": row.rating,
-                    "total": len(backlog(db, user, now))}
+                    "total": backlog_count(db, user, now)}
         else:
             length = _lengths(db, [(draw.category, row)])[(draw.category, row.id)]
             return {
@@ -391,7 +414,7 @@ def build(db: Session, user: models.User, today: date, now: Optional[datetime] =
                 "email_offer": _email_offer(db, user),
                 "remind_hour": REMIND_HOUR,
             }
-    total = len(backlog(db, user, now))
+    total = backlog_count(db, user, now)
     if total < MIN_BACKLOG:
         return None
     return {"state": "deal", "today": today.isoformat(), "total": total}
@@ -403,7 +426,7 @@ def pick(db: Session, user: models.User, category: str, item_id: int, number: in
     now = now or _now()
     if category not in _categories():
         raise LookupError("That title isn't in your library.")
-    if not any(entry[0] == category and entry[1].id == item_id for entry in backlog(db, user, now)):
+    if (category, int(item_id)) not in set(_pool(db, user, now)):
         raise LookupError("That title isn't waiting on your list any more.")
     current = active(db, user.id)
     if current is not None:

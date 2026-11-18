@@ -73,7 +73,7 @@ def backlog_draw_deal(payload: Deal, request: Request, response: Response, user:
     if not cards:
         raise HTTPException(404, "Nothing is waiting on your list right now.")
     backlog_draw.count("redealt" if payload.deal else "dealt")
-    return {"cards": cards, "deal": payload.deal, "total": len(backlog_draw.backlog(db, user))}
+    return {"cards": cards, "deal": payload.deal, "total": backlog_draw.backlog_count(db, user)}
 
 
 @router.post("/api/backlog-draw/pick")
