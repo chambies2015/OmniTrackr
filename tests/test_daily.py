@@ -107,6 +107,8 @@ def test_archive_and_past_pages(client, on_day):
     on_day(3)
     archive = client.get("/daily/archive")
     assert archive.status_code == 200 and 'href="/daily/2"' in archive.text and 'href="/daily/3"' not in archive.text
+    # A list of noindex puzzle pages stays out of search too, but its links are still followed.
+    assert '<meta name="robots" content="noindex, follow' in archive.text
     past = client.get("/daily/1")
     entry = daily.puzzle(1)
     assert past.status_code == 200
@@ -176,7 +178,7 @@ def test_guest_list_import_accepts_daily_answers(authenticated_client, db_sessio
 def test_sitemap_footer_and_llms_list_the_game(client, on_day):
     on_day(3)
     sitemap = client.get("/sitemap.xml").text
-    assert "https://omnitrackr.xyz/daily</loc>" in sitemap and "/daily/archive</loc>" in sitemap
+    assert "https://omnitrackr.xyz/daily</loc>" in sitemap and "/daily/archive</loc>" not in sitemap
     assert "/daily/2</loc>" not in sitemap and "/daily/3</loc>" not in sitemap
 
 
@@ -184,7 +186,8 @@ def test_past_puzzles_can_be_indexed_again(client, on_day, monkeypatch):
     monkeypatch.setattr(daily, "INDEX_PAST_PUZZLES", True)
     on_day(3)
     assert '<meta name="robots" content="index, follow' in client.get("/daily/1").text
+    assert '<meta name="robots" content="index, follow' in client.get("/daily/archive").text
     sitemap = client.get("/sitemap.xml").text
-    assert "/daily/2</loc>" in sitemap and "/daily/3</loc>" not in sitemap
+    assert "/daily/2</loc>" in sitemap and "/daily/3</loc>" not in sitemap and "/daily/archive</loc>" in sitemap
     assert 'href="/daily"' in client.get("/about").text
     assert "/daily" in client.get("/llms.txt").text

@@ -1,5 +1,46 @@
 # Public content review — September 17, 2026
 
+## Follow-up — November 18, 2026: the hubs, the Daily archive and stale copy
+
+Crawled a local build of November-Updates again (the sitemap plus every followed link, 270
+pages, 168 indexable) and ranked indexable pages by how many of their words appear on no more
+than two other pages. The guides themselves held up: in-order, if-you-liked, best-of, Discover,
+release and holiday guides all carry 1,000 to 5,000 words of their own. The thinnest indexable
+pages were the hubs a reviewer reaches from the header menu, and one directory:
+
+| Page | Own words before | After |
+| --- | --- | --- |
+| `/challenges` | 250 | 613 |
+| `/browse` | 265 | 841 |
+| `/new-releases` | 322 | 1,064 |
+| `/if-you-liked` | 395 | 1,201 |
+
+- **Hubs.** Each gained writing that is useful before you open a guide. If you liked: how a
+  guide is put together, a table of what each guide's picks share (from the guides' own
+  `threads`), and five questions for working out what you liked about something. Release
+  guides: what a release date means in each format (cinema windows, streaming drop patterns,
+  anime seasons and simulcasts, game unlocks and early access, US Tuesday and UK Thursday book
+  days, Friday album releases) and when to go on day one. Challenges: making a challenge of
+  your own, sizing it, and tracking it with library tags. Browse: choosing a first manga,
+  podcast and audiobook, and borrowing through Libby and Hoopla. Facts that change often are
+  written as usual practice, not rules.
+- **The Daily archive is noindex.** It is a list of past puzzle pages, all noindex since
+  November 4, one templated line each and a line longer every day: the same shape as the
+  People and Studios directories that were taken out of search then. It now follows
+  `daily.INDEX_PAST_PUZZLES` (`daily.archive_indexable()`), stays linked and followed, and
+  left the sitemap. `/daily` stays indexed.
+- **Stale copy.** Three pages (`/guides`, `/content-quality` and the related-pages blurb)
+  still called the sample library "made-up" or "fictional"; it has used nine real titles since
+  November 17. The December challenge said OmniTrackr has six formats; it tracks nine, and the
+  challenge counts all nine. The challenges hub listed six formats too.
+
+Left alone: the twelve `/switch/<service>` guides are now the thinnest indexable pages (450 to
+590 words of their own, about a third shared with the other switch guides). They don't load
+ads, and anything more would be detail about other services' export files that is easy to get
+wrong. The awards pages waiting for nominees (Golden Globes and Oscars, about 500 words each)
+fill in on December 7 and January 21. `/demo` keeps its fictional practice titles and stays
+indexed; a test pins it to the sitemap and it is clearly labelled as a sandbox.
+
 ## Follow-up — November 15, 2026: crawl before the December review request
 
 Crawled the live site (900 pages, production on roughly the November 12 code) and a local

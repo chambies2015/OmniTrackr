@@ -256,11 +256,11 @@ def _database_parts(db: Session) -> list[str]:
             f"<url><loc>{base_url}{awards.path(awards_slug)}</loc><lastmod>{awards_show['reviewed']}</lastmod>"
             "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
         )
-    # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
+    # OmniTrackr Daily: the archive and each finished puzzle, only if past puzzles are indexed
     # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
     daily_numbers = daily.archive_numbers()
-    if daily_numbers:
+    if daily_numbers and daily.archive_indexable():
         sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
     for number in (daily_numbers if daily.INDEX_PAST_PUZZLES else []):
         sitemap_parts.append(
