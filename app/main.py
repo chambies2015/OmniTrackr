@@ -895,6 +895,15 @@ for route in week_one_router.router.routes:
     elif path and path.startswith("/api/week-one/"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(week_one_router.router)
+from .routers import weekly_preview as weekly_preview_router
+# The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
+for route in weekly_preview_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/weekly-email/preview":
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/weekly-email/copy":
+        bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+app.include_router(weekly_preview_router.router)
 from .routers import check_in as check_in_router
 # The emailed check-in page works without signing in: the signed link is the key, so it is limited per address.
 for route in check_in_router.router.routes:

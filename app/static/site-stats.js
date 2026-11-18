@@ -534,6 +534,9 @@
         ...(email.opted_out_by_place || []).filter(item => item.count).map(item => ({ label: `Turned off from ${item.place}`, count: item.count })),
         { label: 'Members sent one', count: email.emailed || 0 },
         { label: 'Members sent one in the last 7 days (now)', count: email.emailed_7d || 0 },
+        ...((email.preview && email.preview.previews) || []).filter(item => item.count).map(item => ({ label: `Saw their own email in ${item.place}`, count: item.count })),
+        { label: 'Sent themselves a copy', count: (email.preview && email.preview.copies_sent) || 0 },
+        ...((email.preview && email.preview.copies_failed) ? [{ label: 'Copies that failed to send', count: email.preview.copies_failed }] : []),
       ],
       growthCalendar: [
         { label: 'Members with a private calendar (now)', count: calendar.feeds || 0 },

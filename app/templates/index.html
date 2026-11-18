@@ -84,6 +84,7 @@
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
+  <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
@@ -518,9 +519,10 @@
         <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
         <div class="weekly-invite__actions">
           <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
-          <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
+          <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See the whole email</a>
           <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
         </div>
+        <div class="wk-peek-host" data-weekly-preview="for_you" data-weekly-actions="copy"></div>
       </div>
     </section>
 
@@ -695,7 +697,7 @@
             </div>
             <div class="stay-posted__option" data-channel="email" hidden>
               <button type="button" class="stay-posted__btn" data-stay-channel="email">Send me the weekly email</button>
-              <p class="stay-posted__hint">One email a week, only when there's news. <a id="stayPostedSample" href="/email/weekly/preview" target="_blank" rel="noopener">See this week's</a></p>
+              <p class="stay-posted__hint">One email a week, only when there's news. <a id="stayPostedSample" href="/email/weekly/preview" target="_blank" rel="noopener" aria-controls="stayPostedPeek" aria-expanded="false">See what yours would say</a></p>
             </div>
             <div class="stay-posted__option" data-channel="calendar" hidden>
               <button type="button" class="stay-posted__btn" data-stay-channel="calendar">Add to my calendar</button>
@@ -708,6 +710,7 @@
               </p>
             </div>
           </div>
+          <div id="stayPostedPeek" class="wk-peek-host stay-posted__peek" data-weekly-preview="home_card" data-weekly-actions="copy" hidden></div>
           <div class="stay-posted__foot">
             <button id="stayPostedLater" type="button" class="stay-posted__quiet">Not now</button>
             <button id="stayPostedStop" type="button" class="stay-posted__quiet">Don't ask again</button>
@@ -817,9 +820,10 @@
             <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
             <div class="weekly-invite__actions">
               <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
-              <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
+              <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See the whole email</a>
               <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
             </div>
+            <div class="wk-peek-host" data-weekly-preview="for_you" data-weekly-actions="copy"></div>
           </div>
           <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
           <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
@@ -2510,7 +2514,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261110-sweep-1"></script>
   <script src="/static/home-today.js?v=20261116-invite-test-1"></script>
-  <script src="/static/for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/for-you.js?v=20261118-peek-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261114-profile-1"></script>
@@ -2533,7 +2537,8 @@
   <script src="/static/friends-feed.js?v=20261118-talk-1"></script>
   <script src="/static/follows.js?v=20261113-social-1"></script>
   <script src="/static/push.js?v=20261116-stay-1" defer></script>
-  <script src="/static/stay-posted.js?v=20261116-stay-1" defer></script>
+  <script src="/static/stay-posted.js?v=20261118-peek-1" defer></script>
+  <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261118-sheet-1"></script>
@@ -3065,6 +3070,7 @@
                 </div>
               </label>
               <p class="info-text toggle-note" id="weeklyEmailMeta" hidden><span id="weeklyEmailMetaText"></span> <a href="/email/weekly/preview" target="_blank" rel="noopener" id="weeklyEmailPreviewLink">See this week's email</a></p>
+              <div class="wk-peek-host toggle-peek" data-weekly-preview="settings"></div>
             </div>
             <div class="privacy-toggle-item">
               <label for="updatesEmailToggle" class="toggle-label">

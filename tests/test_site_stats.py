@@ -170,7 +170,8 @@ def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated
     assert growth["weekly_email"]["opted_out"] == 0 and growth["weekly_email"]["emailed"] == 0
     assert [row["place"] for row in growth["weekly_email"]["opted_in_by_place"]] == [
         "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email",
-        "the home screen card", "the note after saving a show"]
+        "the home screen card", "the note after saving a show",
+        "a preview of their own email", "the copy they sent themselves"]
     assert growth["takes"] == {"asked": 1, "answered": 1}
     no_places = [{"place": label, "count": 0} for label in web_push.SOURCES.values()]
     assert growth["push"] == {"members": 0, "devices": 0, "new_devices": 0, "reached_7d": 0, "sent": 0,
