@@ -1465,6 +1465,8 @@ class CompletionMoment(BaseModel):
     # Whether the library entry already has a written review (the finish modal then
     # skips its "share a review" step instead of offering to overwrite it).
     has_review: Optional[bool] = None
+    # The title's discussion board, when its title page exists: {"url", "count"} (Nov 2026).
+    talk: Optional[dict] = None
 
 
 class CompletionReview(BaseModel):

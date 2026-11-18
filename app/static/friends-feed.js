@@ -429,8 +429,33 @@
     if (dot) dot.hidden = true;
   }
 
+  // The rail's Discussions card: new replies where you're talking, or talk about titles on your list.
+  async function loadTalk() {
+    const list = $('socialTalkList');
+    const summary = $('socialTalkSummary');
+    if (!list || !summary) return;
+    try {
+      const data = await api('/api/discussions/summary');
+      const rows = Array.isArray(data.threads) ? data.threads.filter(row => /^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions\/[1-9]\d{0,9}$/.test(row.url || '')) : [];
+      const fresh = Number(data.new_replies) || 0;
+      if (fresh) summary.textContent = `${fresh} new repl${fresh === 1 ? 'y' : 'ies'} where you're talking.`;
+      else if (rows.length) summary.textContent = 'People are talking about titles on your list.';
+      list.replaceChildren(...rows.map(row => {
+        const item = el('li', 'social-talk__item');
+        const link = el('a', 'social-talk__thread', row.subject || 'A discussion');
+        link.href = row.url;
+        item.append(link, el('span', 'social-talk__about', row.new_replies ? `${row.title} · ${row.new_replies} new` : row.title));
+        return item;
+      }));
+      list.hidden = !rows.length;
+    } catch (error) {
+      // Optional; the card still links to /discussions.
+    }
+  }
+
   async function load(reset = true) {
     if (!$('friendsFeedList') || state.loading) return;
+    if (reset) loadTalk();
     const request = ++state.request;
     state.loading = true;
     if (reset) status(state.loaded ? '' : 'Loading your friends\' updates…');

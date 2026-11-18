@@ -625,7 +625,38 @@ def _title_page_link(review: dict) -> str:
     return f'<p class="review-title-link"><a href="{_escape(path)}">Trailer, details and more reviews of {_escape(review.get("title"))} <span aria-hidden="true">→</span></a></p>'
 
 
-def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpful_count: int = 0) -> str:
+def _review_talk_html(review: dict, talk: Optional[dict]) -> str:
+    """Reviews are one verdict each, so a reply goes on the title's discussion board, opening with @name (Nov 2026)."""
+    if not talk or not review.get("username"):
+        return ""
+    name = review["username"]
+    count = int(talk.get("count") or 0)
+    more = (f'<a class="site-btn site-btn--ghost site-btn--sm" href="{_escape(talk["url"])}">'
+            f'Read {count} discussion{"s" if count != 1 else ""}</a>' if count else "")
+    return (
+        '<section class="review-talk" aria-labelledby="review-talk-title">'
+        f'<h2 id="review-talk-title">Agree with {_escape(name)}?</h2>'
+        f'<p>Answer on the {_escape(review.get("title"))} discussion board. Your post opens with '
+        f'@{_escape(name)}, so they get a note about it.</p>'
+        f'<div class="review-talk__actions"><a class="site-btn site-btn--primary site-btn--sm" rel="nofollow" data-review-talk '
+        f'href="{_escape(talk["url"])}?mention={quote(name, safe="")}#start">Reply to {_escape(name)}</a>{more}</div>'
+        '</section>'
+    )
+
+
+def _review_talk(db, review: dict) -> Optional[dict]:
+    from ..title_pages import path_for_review_category
+    from .. import title_discussions as boards
+    path = path_for_review_category(review.get("category"), review.get("title") or "", review.get("year"),
+                                    review.get("release_date"))
+    if not path:
+        return None
+    kind, slug = path.split("/")[2], path.rsplit("/", 1)[1]
+    return {"url": boards.board_path(kind, slug), "count": boards.board_count(db, kind, slug)}
+
+
+def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpful_count: int = 0,
+                        talk: Optional[dict] = None) -> str:
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
     review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
@@ -744,10 +775,10 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261029-follows-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261118-talk-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
-  <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
+  <script src="/static/review_report.js?v=20261118-talk-1" defer></script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="dark-mode site review-page">
@@ -771,6 +802,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
         <div class="review-main">
           {review_spoilers.wrap(review, f'<section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>')}
           {_helpful_html(review, helpful_count)}
+          {_review_talk_html(review, talk)}
         </div>
         <aside class="review-aside" aria-label="Keep this title">
           <p class="site-eyebrow">Sounds like your kind of thing?</p>
@@ -860,7 +892,11 @@ def review_detail(
             _attach_profile_urls(db, [review])
             _attach_supporter_badges(db, [review])
             helpful = review_helpful_counts(db, [(review["category"], review["id"])]).get((review["category"], int(review["id"])), 0)
-            page = apply_site_chrome(_review_detail_html(review, more, helpful))
+            try:
+                talk = _review_talk(db, review)
+            except Exception:
+                talk = None  # The reply box is optional; never block the review.
+            page = apply_site_chrome(_review_detail_html(review, more, helpful, talk))
             response = strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
             if not _review_is_indexable(review):
                 response.headers["X-Robots-Tag"] = "noindex, follow"

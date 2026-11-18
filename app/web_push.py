@@ -86,6 +86,8 @@ TITLES = {
     "club_due_soon": "Club pick due soon",
     "discussion_reply": "New reply in a discussion",
     "discussion_report": "A discussion post was reported",
+    "discussion_mention": "Someone mentioned you",
+    "discussion_started": "New talk about a title you track",
     "friend_feed_cheer": "A friend cheered you on",
     "push_enabled": "Notifications are on",
     "held": "While you were away",
@@ -112,8 +114,12 @@ TOPICS = (
       "recommendation_invitation", "take_received")),
     ("friends", "Friend requests", "New requests, and friends who accept or join from your invite.", True,
      ("friend_request_received", "friend_request_accepted", "friend_invite_accepted")),
-    ("discussions", "Discussion replies", "Replies in title discussions you started or joined.", True,
-     ("discussion_reply", "discussion_report")),
+    ("discussions", "Discussion replies", "Replies in title discussions you started or joined, and posts that "
+     "mention you by @name.", True,
+     ("discussion_reply", "discussion_report", "discussion_mention")),
+    ("shelf_talk", "Talk about your titles", "When someone starts a discussion about a title on your list. "
+     "At most one a day.", False,
+     ("discussion_started",)),
     ("club_talk", "Club talk and list updates", "New posts about a club pick, people joining and titles added.", False,
      ("club_post", "shared_list_joined", "shared_list_item")),
     ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges, "

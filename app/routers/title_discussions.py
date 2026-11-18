@@ -13,7 +13,8 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import models, supporters, title_discussions as boards, title_metadata, title_pages
+from .. import discussion_hub, funnel, models, supporters, title_discussions as boards, title_metadata, title_pages
+from ..signup_rules import USERNAME_MAX, USERNAME_MIN, USERNAME_RE
 from ..admin_access import is_moderator
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db, get_optional_current_user
@@ -22,7 +23,9 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["discussions"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261113-discussions-2"
+ASSET_VERSION = "20261118-talk-1"
+KIND_LABELS = {"movie": "Movie", "tv": "TV show", "anime": "Anime", "game": "Game", "album": "Album", "book": "Book",
+               "manga": "Manga", "podcast": "Podcast", "audiobook": "Audiobook"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
                 "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 
@@ -97,7 +100,7 @@ def _body_html(post) -> str:
 
 
 def _page(*, title: str, description: str, canonical: str, robots: str, body: str, structured: str = "",
-          image: Optional[str] = None, signed_in: bool = False) -> str:
+          image: Optional[str] = None, signed_in: bool = False, nav: str = "titles") -> str:
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -123,7 +126,7 @@ def _page(*, title: str, description: str, canonical: str, robots: str, body: st
   {structured}
 </head>
 <body class="site disc-page{' disc-page--member' if signed_in else ''}">
-  <!--SITE_NAV:titles-->
+  <!--SITE_NAV:{nav}-->
   <main>
     {body}
   </main>
@@ -151,19 +154,40 @@ def _head_html(kind: str, title: str, title_path: Optional[str], poster: Optiona
 
 def _composer_tips() -> str:
     return ('<p class="disc-form__tip">Hide a twist inside a sentence with double bars: '
-            '<code>||Bruce Willis was dead||</code>. Readers tap it to see it.</p>')
+            '<code>||Bruce Willis was dead||</code>. Readers tap it to see it. Write <code>@name</code> '
+            'and that member hears about your post.</p>')
 
 
-def _start_form(kind: str, slug: str, title: str, open_: bool) -> str:
+def _openers_html(kind: str, title: str) -> str:
+    """Tap one and it fills in the title and a first line to finish, so nobody faces a blank box."""
+    chips = "".join(
+        f'<button type="button" class="disc-opener" data-disc-opener data-subject="{_e(item["subject"])}" '
+        f'data-body="{_e(item["body"])}">{_e(item["subject"])}</button>'
+        for item in discussion_hub.openers(kind, title))
+    return (f'<div class="disc-openers"><p class="disc-openers__label">Need an opener? Tap one and finish the thought.</p>'
+            f'<div class="disc-openers__list">{chips}</div></div>')
+
+
+def _mention_name(value: Optional[str]) -> Optional[str]:
+    name = (value or "").strip().lstrip("@")
+    if USERNAME_MIN <= len(name) <= USERNAME_MAX and USERNAME_RE.fullmatch(name):
+        return name
+    return None
+
+
+def _start_form(kind: str, slug: str, title: str, open_: bool, subject: str = "", body: str = "",
+                from_opener: bool = False) -> str:
     return (f'<details class="disc-start" id="start"{" open" if open_ else ""}><summary class="site-btn site-btn--primary">'
             'Start a discussion</summary>'
-            f'<form class="disc-form" data-disc-start data-kind="{_e(kind)}" data-slug="{_e(slug)}" novalidate>'
+            f'<form class="disc-form" data-disc-start data-kind="{_e(kind)}" data-slug="{_e(slug)}"'
+            f'{" data-opener-used" if from_opener else ""} novalidate>'
+            f'{_openers_html(kind, title)}'
             '<label class="disc-form__label" for="discSubject">Title</label>'
             f'<input id="discSubject" name="subject" type="text" minlength="{boards.SUBJECT_MIN}" maxlength="{boards.SUBJECT_MAX}" required '
-            f'placeholder="What do you want to talk about?" autocomplete="off">'
+            f'placeholder="What do you want to talk about?" autocomplete="off" value="{_e(subject)}">'
             '<label class="disc-form__label" for="discBody">Your post</label>'
             f'<textarea id="discBody" name="body" rows="6" maxlength="{boards.THREAD_BODY_MAX}" required '
-            f'placeholder="A question, a theory, a scene you keep thinking about…"></textarea>'
+            f'placeholder="A question, a theory, a scene you keep thinking about…">{_e(body)}</textarea>'
             f'{_composer_tips()}'
             '<label class="disc-form__check"><input name="spoiler" type="checkbox"> The whole post has spoilers</label>'
             '<div class="disc-form__row"><button type="submit" class="site-btn site-btn--primary">Post discussion</button>'
@@ -178,8 +202,9 @@ def _guest_prompt(path: str, verb: str) -> str:
             '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div></div>')
 
 
-def thread_row_html(thread: models.TitleDiscussion, author: Optional[boards.Author]) -> str:
-    """One thread in a list (board page and title page)."""
+def thread_row_html(thread: models.TitleDiscussion, author: Optional[boards.Author], show_title: bool = False,
+                    new_replies: int = 0) -> str:
+    """One thread in a list (board page and title page). The /discussions hub also names the title."""
     if thread.deleted_at:
         excerpt = '<p class="disc-row__excerpt disc-muted">The opening post was deleted. The replies are still here.</p>'
     elif thread.spoiler:
@@ -188,10 +213,15 @@ def thread_row_html(thread: models.TitleDiscussion, author: Optional[boards.Auth
         excerpt = f'<p class="disc-row__excerpt">{_e(boards.plain_excerpt(thread.body, 160))}</p>'
     replies = thread.reply_count or 0
     flags = '<span class="disc-tag disc-tag--muted">Locked</span> ' if thread.locked_at else ""
-    return (f'<li class="disc-row">{_avatar_html(author)}<div class="disc-row__main">'
+    fresh = (f'<span class="disc-tag disc-tag--new">{new_replies} new</span> ' if new_replies else "")
+    about = (f'<a class="disc-row__title" href="{_e(boards.board_path(thread.kind, thread.slug))}">'
+             f'{_e(KIND_LABELS.get(thread.kind, "Title"))} · {_e(thread.title)}</a>' if show_title else "")
+    when = thread.last_activity_at if show_title and thread.last_activity_at else thread.created_at
+    when_label = "active " if show_title and thread.reply_count else ""
+    return (f'<li class="disc-row">{_avatar_html(author)}<div class="disc-row__main">{about}'
             f'<a class="disc-row__link" href="{_e(boards.thread_path(thread))}">'
-            f'<strong class="disc-row__subject">{flags}{_e(thread.subject)}</strong></a>{excerpt}'
-            f'<p class="disc-row__meta">{_author_html(author)} · {_time_html(thread.created_at)}</p></div>'
+            f'<strong class="disc-row__subject">{fresh}{flags}{_e(thread.subject)}</strong></a>{excerpt}'
+            f'<p class="disc-row__meta">{_author_html(author)} · {when_label}{_time_html(when)}</p></div>'
             f'<span class="disc-row__count{" disc-row__count--none" if not replies else ""}"><strong>{replies}</strong> '
             f'repl{"y" if replies == 1 else "ies"}</span></li>')
 
@@ -214,8 +244,11 @@ def title_section_html(db: Session, group, when_empty: bool = True) -> str:
                 if count > len(found["threads"]) else "")
         content = f'<ul class="disc-list">{rows}</ul><div class="disc-section__actions"><a class="site-btn site-btn--primary" href="{_e(board)}#start">Start a discussion</a>{more}</div>'
     else:
+        starters = "".join(f'<li><a href="{_e(board)}?opener={index}#start">{_e(item["subject"])}</a></li>'
+                           for index, item in enumerate(discussion_hub.openers(group.kind, group.title)[:3]))
         content = (f'<p class="title-empty">Nobody has started a discussion about {_e(group.title)} yet. Ask a question, share a theory, '
-                   'or pick a scene to talk about.</p>'
+                   'or pick a scene to talk about. Members who track it hear about a new discussion.</p>'
+                   f'<ul class="disc-starter-links">{starters}</ul>'
                    f'<div class="disc-section__actions"><a class="site-btn site-btn--primary" href="{_e(board)}#start">Start the first discussion</a></div>')
     return (f'<section class="title-section disc-section" aria-labelledby="discussions-title">'
             f'<h2 id="discussions-title">Discussions</h2>{content}</section>')
@@ -242,6 +275,7 @@ def _group_and_title(db: Session, kind: str, slug: str):
 
 @router.get("/titles/{kind}/{slug}/discussions", include_in_schema=False)
 def board_page(kind: str, slug: str, page: int = Query(1, ge=1, le=1000),
+               opener: Optional[int] = Query(None, ge=0, le=20), mention: Optional[str] = Query(None, max_length=40),
                user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     if kind not in title_pages.KINDS:
         raise HTTPException(404, "Unknown title type")
@@ -266,7 +300,7 @@ def board_page(kind: str, slug: str, page: int = Query(1, ge=1, le=1000),
     else:
         listing = (f'<div class="disc-empty"><h2>No discussions yet</h2><p>Be the first to start one about {_e(title)}. '
                    'Good openers: a question you had at the end, a character you can\'t make up your mind about, or '
-                   'what someone new to it should know going in.</p></div>')
+                   'what someone new to it should know going in. Members who track it get a note when you post.</p></div>')
     pager = ""
     if pages > 1:
         links = []
@@ -276,8 +310,15 @@ def board_page(kind: str, slug: str, page: int = Query(1, ge=1, le=1000),
         if page < pages:
             links.append(f'<a class="site-btn site-btn--ghost" rel="next" href="{_e(path)}?page={page + 1}">Older</a>')
         pager = f'<nav class="disc-pager" aria-label="Pages">{"".join(links)}</nav>'
-    composer = (_start_form(kind, slug, title, open_=not threads) if user is not None
-                else _guest_prompt(path + "#start", "start a discussion"))
+    picked = discussion_hub.opener(kind, title, opener)
+    named = _mention_name(mention)
+    subject, text = (picked["subject"], picked["body"]) if picked else ("", "")
+    if named:
+        subject = subject or f"About {named}'s review of {title}"[:boards.SUBJECT_MAX]
+        text = f"@{named} " + text
+    composer = (_start_form(kind, slug, title, open_=not threads or bool(picked or named), subject=subject, body=text,
+                            from_opener=bool(picked))
+                if user is not None else _guest_prompt(path + "#start", "start a discussion"))
     meta = (f'{count} discussion{"s" if count != 1 else ""} · '
             + (f'<a href="{_e(title_path)}#community-title">Read the reviews</a>' if title_path else "Discussions from members"))
     body = (_head_html(kind, title, title_path, _poster(db, group), f"{title} discussions", meta)
@@ -304,12 +345,12 @@ def _rules_aside() -> str:
             '<li>Three reports hide a post until a moderator looks at it.</li></ul></aside>')
 
 
-def _post_actions(kind: str, post, viewer, *, is_thread: bool, thread) -> str:
+def _post_actions(kind: str, post, viewer, *, is_thread: bool, thread, reply_to: str = "") -> str:
     """Report for other members, edit and delete for the author, moderator tools for moderators."""
     if viewer is None:
         return ""
     target = "" if is_thread else f' data-reply-id="{_e(post.id)}"'
-    bits = []
+    bits = [reply_to] if reply_to else []
     own = viewer.id == post.user_id
     if own and not (is_thread and thread.deleted_at):
         bits.append(f'<button type="button" class="disc-action" data-disc-edit{target}>Edit</button>')
@@ -334,6 +375,14 @@ def _post_actions(kind: str, post, viewer, *, is_thread: bool, thread) -> str:
         if not own:
             bits.append(f'<button type="button" class="disc-action disc-action--mod" data-disc-delete{target}>Delete</button>')
     return f'<div class="disc-actions">{"".join(bits)}</div>'
+
+
+def _reply_to(author: Optional[boards.Author], viewer, author_id: int) -> str:
+    """A "Reply to name" button for other members' posts: it starts the reply with @name, so they hear about it."""
+    if viewer is None or author is None or viewer.id == author_id:
+        return ""
+    return (f'<button type="button" class="disc-action disc-reply-to" data-disc-reply-to="{_e(author.username)}">'
+            f'Reply to {_e(author.username)}</button>')
 
 
 def _hidden_note(post) -> str:
@@ -362,6 +411,8 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
     path = boards.thread_path(thread)
     board = boards.board_path(kind, slug)
     edited = ' <span class="disc-muted">(edited)</span>' if thread.edited_at else ""
+    opening_tools = _post_actions(kind, thread, user, is_thread=True, thread=thread,
+                                  reply_to=_reply_to(starter, user, thread.user_id))
     if thread.deleted_at:
         opening = ('<article class="disc-post disc-post--op" id="post"><p class="disc-muted">The person who started this '
                    'discussion deleted their post. The replies below are still here.</p></article>')
@@ -370,18 +421,20 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
                    f'{_avatar_html(starter)}{_author_html(starter)} <span class="disc-tag disc-tag--op">Started it</span>'
                    f'<span class="disc-post__when">{_time_html(thread.created_at)}{edited}</span></header>'
                    f'{_hidden_note(thread)}<div class="disc-post__content" data-raw="{_e(thread.body)}" data-spoiler="{str(thread.spoiler).lower()}">'
-                   f'{_body_html(thread)}</div>{_post_actions(kind, thread, user, is_thread=True, thread=thread)}</article>')
+                   f'{_body_html(thread)}</div>{opening_tools}</article>')
     reply_cards = []
     for number, post in enumerate(replies, start=1):
         post_edited = ' <span class="disc-muted">(edited)</span>' if post.edited_at else ""
         mine = " disc-post--mine" if user is not None and user.id == post.user_id else ""
         starter_tag = ' <span class="disc-tag disc-tag--op">Started it</span>' if post.user_id == thread.user_id else ""
+        post_tools = _post_actions(kind, post, user, is_thread=False, thread=thread,
+                                   reply_to=_reply_to(people.get(post.user_id), user, post.user_id))
         reply_cards.append(
             f'<article class="disc-post{mine}" id="reply-{post.id}"><header class="disc-post__head">'
             f'{_avatar_html(people.get(post.user_id), small=True)}{_author_html(people.get(post.user_id))}{starter_tag}'
             f'<span class="disc-post__when"><a href="#reply-{post.id}">#{number}</a> · {_time_html(post.created_at)}{post_edited}</span></header>'
             f'{_hidden_note(post)}<div class="disc-post__content" data-raw="{_e(post.body)}" data-spoiler="{str(post.spoiler).lower()}">'
-            f'{_body_html(post)}</div>{_post_actions(kind, post, user, is_thread=False, thread=thread)}</article>')
+            f'{_body_html(post)}</div>{post_tools}</article>')
     count = len([post for post in replies if not post.hidden_at])
     replies_html = (f'<h2 class="disc-replies__title" id="replies">{count} repl{"y" if count == 1 else "ies"}</h2>'
                     f'<div class="disc-replies">{"".join(reply_cards)}</div>' if reply_cards else
@@ -452,6 +505,89 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
     return response
 
 
+def _waiting_card(entry: discussion_hub.Waiting) -> str:
+    art = (f'<img class="disc-wait__poster" src="{_e(entry.image)}" alt="" width="64" height="96" loading="lazy">'
+           if entry.image else f'<span class="disc-wait__poster disc-wait__poster--empty" aria-hidden="true">{_e(entry.title[:1].upper())}</span>')
+    return (f'<li class="disc-wait">{art}<div class="disc-wait__copy">'
+            f'<p class="disc-wait__why">{_e(KIND_LABELS.get(entry.kind, "Title"))} · {_e(entry.reason)}</p>'
+            f'<a class="disc-wait__title" href="{_e(entry.url)}">{_e(entry.title)}</a>'
+            f'<a class="disc-wait__opener" href="{_e(entry.board)}?opener={entry.opener["index"]}#start">'
+            f'“{_e(entry.opener["subject"])}”<span aria-hidden="true"> →</span></a></div></li>')
+
+
+def _hub_section(heading: str, anchor: str, lead: str, inner: str) -> str:
+    return (f'<section class="disc-hub__section" aria-labelledby="{anchor}"><div class="disc-hub__head">'
+            f'<h2 id="{anchor}">{heading}</h2>{f"<p>{lead}</p>" if lead else ""}</div>{inner}</section>')
+
+
+def _hub_aside(signed_in: bool) -> str:
+    how = ('<aside class="disc-aside"><h2>How talking works</h2><ul>'
+           '<li>Every title page has its own board. Open a title and look for Discussions.</li>'
+           '<li>Write <code>@name</code> in a post and that member gets a note.</li>'
+           '<li>When someone starts a discussion about a title you track, you hear about it, at most once a day.</li>'
+           '<li>Keep spoilers folded: tick the spoiler box, or wrap the twist in <code>||double bars||</code>.</li>'
+           '</ul>')
+    if not signed_in:
+        how += ('<p class="disc-aside__cta"><a class="site-btn site-btn--primary" rel="nofollow" '
+                f'href="{_e(_sign_in("/discussions"))}">Sign in to join in</a></p>')
+    return how + '</aside>'
+
+
+@router.get("/discussions", include_in_schema=False)
+def hub_page(request: Request, user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
+    """Every board in one place: your conversations, talk about titles you track, and titles waiting for a first post."""
+    funnel.record("discussion_hub_viewed", request)
+    sections = []
+    shown: set = set()
+    yours = discussion_hub.yours(db, user.id) if user is not None else []
+    shelf = discussion_hub.on_shelf(db, user.id, exclude={j.thread.id for j in yours}) if user is not None else []
+    shown.update(j.thread.id for j in yours)
+    shown.update(t.id for t in shelf)
+    latest = discussion_hub.latest(db, exclude=shown)
+    waiting = discussion_hub.waiting(db, user)
+    people = boards.authors(db, [j.thread.user_id for j in yours] + [t.user_id for t in shelf] + [t.user_id for t in latest])
+    if yours:
+        rows = "".join(thread_row_html(j.thread, people.get(j.thread.user_id), show_title=True, new_replies=j.new_replies)
+                       for j in yours)
+        fresh = sum(j.new_replies for j in yours)
+        lead = (f"{fresh} new repl{'y' if fresh == 1 else 'ies'} since you last posted." if fresh
+                else "Threads you started or replied in.")
+        sections.append(_hub_section("Where you're talking", "hub-yours", lead, f'<ul class="disc-list">{rows}</ul>'))
+    if shelf:
+        rows = "".join(thread_row_html(t, people.get(t.user_id), show_title=True) for t in shelf)
+        sections.append(_hub_section("About titles on your list", "hub-shelf", "Discussions on things you've added.",
+                                     f'<ul class="disc-list">{rows}</ul>'))
+    if waiting:
+        cards = "".join(_waiting_card(entry) for entry in waiting)
+        lead = ("Nobody has talked about these yet. Tap a question to open it with the first line written for you."
+                if user is not None else "Nobody has talked about these yet. Members can open one with a ready-made question.")
+        sections.append(_hub_section("Start the first conversation", "hub-waiting", lead,
+                                     f'<ul class="disc-waits">{cards}</ul>'))
+    if latest:
+        rows = "".join(thread_row_html(t, people.get(t.user_id), show_title=True) for t in latest)
+        sections.append(_hub_section("Latest across OmniTrackr", "hub-latest", "", f'<ul class="disc-list">{rows}</ul>'))
+    if not sections:
+        sections.append('<div class="disc-empty"><h2>No discussions yet</h2><p>Open any title page and start one. '
+                        'Members who track that title hear about it.</p>'
+                        '<p><a class="site-btn site-btn--primary" href="/titles">Find a title</a></p></div>')
+    total = discussion_hub.total_threads(db)
+    meta = ("Questions, theories and favourite moments about what members watch, play, read and hear. "
+            "Spoilers stay folded." + (f" {total} discussion{'s' if total != 1 else ''} so far." if total else ""))
+    body = (f'<header class="disc-head disc-head--hub"><div class="site-wrap"><p class="site-eyebrow">Community</p>'
+            f'<h1>Discussions</h1><p class="disc-head__meta">{_e(meta)}</p></div></header>'
+            f'<div class="site-wrap disc-wrap"><div class="disc-main disc-hub">{"".join(sections)}</div>'
+            f'{_hub_aside(user is not None)}</div>')
+    html = _page(title="Discussions | OmniTrackr",
+                 description="Talk about movies, shows, anime, games, books, music and podcasts with other OmniTrackr members.",
+                 canonical=SITE_URL + "/discussions", robots="noindex, follow", body=body, signed_in=user is not None,
+                 nav="discussions")
+    response = strict_html_response(html)
+    response.headers["Cache-Control"] = "private, no-store" if user is not None else "public, max-age=120"
+    response.headers["Vary"] = "Cookie"
+    response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
 @router.get("/discussions/moderation", include_in_schema=False)
 def moderation_page(user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     if user is None or not is_moderator(user):
@@ -491,6 +627,7 @@ class ThreadCreate(BaseModel):
     subject: str = Field(..., max_length=boards.SUBJECT_MAX + 40)
     body: str = Field(..., max_length=boards.THREAD_BODY_MAX + 200)
     spoiler: bool = False
+    opener: bool = False  # Started from one of the suggested openers (counted only).
 
 
 class ReplyCreate(BaseModel):
@@ -538,6 +675,20 @@ def list_threads(kind: str, slug: str, response: Response, page: int = Query(1, 
     } for t in threads]}
 
 
+@router.get("/api/discussions/summary")
+def talk_summary(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """For the friends feed rail: new replies where you're talking, and talk about titles on your list."""
+    _private(response)
+    yours = discussion_hub.yours(db, user.id, limit=20)
+    shelf = discussion_hub.on_shelf(db, user.id, limit=3, exclude={j.thread.id for j in yours})
+    picks = [j for j in yours if j.new_replies][:3]
+    rows = [{"subject": j.thread.subject, "title": j.thread.title, "url": boards.thread_path(j.thread),
+             "new_replies": j.new_replies} for j in picks]
+    rows += [{"subject": t.subject, "title": t.title, "url": boards.thread_path(t), "new_replies": 0}
+             for t in shelf[:3 - len(rows)]]
+    return {"new_replies": sum(j.new_replies for j in yours), "threads": rows}
+
+
 @router.post("/api/titles/{kind}/{slug}/discussions", status_code=201)
 def start_thread(kind: str, slug: str, payload: ThreadCreate, request: Request, response: Response,
                  user=Depends(get_current_user), db: Session = Depends(get_db)):
@@ -549,6 +700,9 @@ def start_thread(kind: str, slug: str, payload: ThreadCreate, request: Request, 
         thread = boards.start(db, user, group, payload.subject, payload.body, payload.spoiler)
     except boards.DiscussionError as error:
         _fail(error)
+    funnel.record("discussion_started", request)
+    if payload.opener:
+        funnel.record("discussion_started_from_opener", request)
     return {"id": thread.id, "url": boards.thread_path(thread)}
 
 
@@ -561,6 +715,7 @@ def add_reply(thread_id: PositiveDatabaseId, payload: ReplyCreate, request: Requ
         post = boards.reply(db, user, thread, payload.body, payload.spoiler)
     except boards.DiscussionError as error:
         _fail(error)
+    funnel.record("discussion_replied", request)
     return {"id": post.id, "url": f"{boards.thread_path(thread)}#reply-{post.id}"}
 
 

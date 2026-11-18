@@ -22,7 +22,7 @@ def test_discussion_posts_and_rows_show_an_initial_avatar(client, db_session):
     assert '<span class="disc-tag disc-tag--op">Started it</span>' in page
     board = client.get(BOARD).text
     assert '<li class="disc-row"><span class="disc-avatar' in board and "<strong>1</strong> reply" in board
-    assert "discussions.css?v=20261113-discussions-2" in board
+    assert "discussions.css?v=20261118-talk-1" in board
 
 
 def test_avatar_colour_follows_the_name():

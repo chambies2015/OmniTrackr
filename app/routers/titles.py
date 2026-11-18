@@ -593,9 +593,13 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
     talk = ""
     board = summary.get("empty_board")
     if board:
+        from .. import discussion_hub
+        starters = "".join(f'<li><a href="{_e(board)}?opener={index}#start">{_e(item["subject"])}</a></li>'
+                           for index, item in enumerate(discussion_hub.openers(group.kind, group.title)[:3]))
         talk = (f'<div class="title-write__talk" id="discussions-title"><h3>Or start a discussion</h3>'
                 f'<p>Nobody has started a discussion about {_e(group.title)} yet. Ask a question, share a theory, '
-                'or pick a scene to talk about.</p>'
+                'or pick a scene to talk about. Members who track it hear when you do.</p>'
+                f'<ul class="disc-starter-links">{starters}</ul>'
                 f'<a class="site-btn site-btn--ghost" href="{_e(board)}#start">Start a discussion</a></div>')
     return (f'<section class="title-section title-write{" title-write--talk" if talk else ""}" id="write-review" '
             f'aria-labelledby="write-review-title"><div class="title-write__review">'
@@ -1325,7 +1329,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
-  <link rel="stylesheet" href="/static/discussions.css?v=20261113-discussions-2">
+  <link rel="stylesheet" href="/static/discussions.css?v=20261118-talk-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261118-sheet-1" defer></script>'}

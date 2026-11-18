@@ -79,7 +79,27 @@
   const start = document.querySelector('[data-disc-start]');
   if (start) {
     const status = start.querySelector('.disc-form__status');
-    if (window.location.hash === '#start') start.closest('details').open = true;
+    if (window.location.hash === '#start') {
+      start.closest('details').open = true;
+      // Arrived with an opener or a reply to someone's review: put the cursor at the end of the first line.
+      const prefilled = start.elements.body;
+      if (prefilled && prefilled.value) {
+        prefilled.focus();
+        prefilled.setSelectionRange(prefilled.value.length, prefilled.value.length);
+      }
+    }
+    // Openers fill in the title and a first line to finish. A mention someone came in with stays at the front.
+    start.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-disc-opener]');
+      if (!chip) return;
+      const mention = (start.elements.body.value.match(/^@[A-Za-z0-9][A-Za-z0-9_.-]{2,29} /) || [''])[0];
+      start.elements.subject.value = chip.dataset.subject || '';
+      start.elements.body.value = mention + (chip.dataset.body || '');
+      start.dataset.openerUsed = '';
+      start.querySelectorAll('[data-disc-opener]').forEach((other) => other.setAttribute('aria-pressed', other === chip ? 'true' : 'false'));
+      start.elements.body.focus();
+      start.elements.body.setSelectionRange(start.elements.body.value.length, start.elements.body.value.length);
+    });
     start.addEventListener('submit', async (event) => {
       event.preventDefault();
       const subject = start.elements.subject.value.trim();
@@ -99,7 +119,7 @@
       status.textContent = 'Posting…';
       try {
         const data = await send('POST', `/api/titles/${encodeURIComponent(start.dataset.kind)}/${encodeURIComponent(start.dataset.slug)}/discussions`,
-          { subject, body, spoiler: start.elements.spoiler.checked });
+          { subject, body, spoiler: start.elements.spoiler.checked, opener: 'openerUsed' in start.dataset });
         goTo(data.url);
       } catch (error) {
         status.textContent = error.message;
@@ -110,6 +130,19 @@
 
   // ---------- Reply ----------
   const replyForm = document.querySelector('[data-disc-reply]');
+  // "Reply to name" starts the reply with @name, which tells them about it.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-disc-reply-to]');
+    if (!button || !replyForm) return;
+    const name = button.dataset.discReplyTo || '';
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$/.test(name)) return;
+    const box = replyForm.elements.body;
+    const tag = `@${name} `;
+    if (!box.value.includes(tag.trim())) box.value = box.value ? `${tag}${box.value}` : tag;
+    replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    box.focus();
+    box.setSelectionRange(box.value.length, box.value.length);
+  });
   if (replyForm) {
     const status = replyForm.querySelector('.disc-form__status');
     replyForm.addEventListener('submit', async (event) => {
