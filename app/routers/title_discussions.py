@@ -659,7 +659,7 @@ def _thread(db: Session, thread_id: int, user) -> models.TitleDiscussion:
 
 
 @router.get("/api/titles/{kind}/{slug}/discussions")
-def list_threads(kind: str, slug: str, response: Response, page: int = Query(1, ge=1, le=1000),
+def list_threads(kind: str, slug: str, request: Request, response: Response, page: int = Query(1, ge=1, le=1000),
                  db: Session = Depends(get_db)):
     if kind not in title_pages.KINDS:
         raise HTTPException(404, "Unknown title type")
@@ -676,7 +676,7 @@ def list_threads(kind: str, slug: str, response: Response, page: int = Query(1, 
 
 
 @router.get("/api/discussions/summary")
-def talk_summary(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def talk_summary(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     """For the friends feed rail: new replies where you're talking, and talk about titles on your list."""
     _private(response)
     yours = discussion_hub.yours(db, user.id, limit=20)
@@ -732,7 +732,7 @@ def edit_post(thread_id: PositiveDatabaseId, payload: PostEdit, request: Request
 
 
 @router.delete("/api/discussions/{thread_id}")
-def delete_thread(thread_id: PositiveDatabaseId, response: Response, reply_id: Optional[PositiveDatabaseId] = None,
+def delete_thread(thread_id: PositiveDatabaseId, request: Request, response: Response, reply_id: Optional[PositiveDatabaseId] = None,
                   user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     thread = _thread(db, thread_id, user)
@@ -758,7 +758,7 @@ def report_post(thread_id: PositiveDatabaseId, payload: PostReport, request: Req
 
 
 @router.post("/api/discussions/{thread_id}/moderate")
-def moderate_post(thread_id: PositiveDatabaseId, payload: PostModerate, response: Response,
+def moderate_post(thread_id: PositiveDatabaseId, payload: PostModerate, request: Request, response: Response,
                   user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     if not is_moderator(user):
