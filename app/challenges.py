@@ -104,7 +104,7 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Four is about one a week. If a long game or a thick book is taking most of your time, keep going with it and fit a couple of albums or films around it."},
             {"kind": "formats", "count": 3,
              "label": "Use at least three formats",
-             "detail": "Three of OmniTrackr's six formats is enough to make your Year in Review show a fuller picture of what you enjoyed, and it is a good excuse to return to a format you drifted away from earlier in the year."},
+             "detail": "Three of the nine formats OmniTrackr tracks is enough to make your Year in Review show a fuller picture of what you enjoyed, and it is a good excuse to return to a format you drifted away from earlier in the year."},
             {"kind": "reflect", "count": 2,
              "label": "Rate or note two of them",
              "detail": "A rating and a takeaway are the details you will forget first. Add them now and your recap will say why you liked something, and your next recommendations will be better for it."},

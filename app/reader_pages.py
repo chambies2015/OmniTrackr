@@ -135,7 +135,7 @@ OTHER_PAGES = {
     "demo": ReaderPage("/demo", "Try the demo", "tools",
         "A sample library to click through, no account needed.", ()),
     "sample_library": ReaderPage("/sample-library", "Sample library", "tools",
-        "What a tracked library looks like, filled with made-up entries.", ()),
+        "What a tracked library looks like, with nine real titles and the notes a member might keep.", ()),
     "reviews": ReaderPage("/reviews", "Member reviews", "tools",
         "Reviews members chose to share, across every kind of media.", ()),
     "binge_calculator": ReaderPage("/binge-calculator", "Binge calculator", "tools",

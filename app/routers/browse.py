@@ -25,7 +25,7 @@ from .titles import _script_json
 
 router = APIRouter()
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261110-browse-2"
+CSS_VERSION = "20261118-browse-notes-1"
 JS_VERSION = "20261031-browse-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 PAGE_CACHE_SECONDS = 600
@@ -288,6 +288,33 @@ def render_kind(db: Session, kind: str, chart: Optional[dict], signed_in: bool) 
     return apply_site_chrome(html, member=signed_in), pending
 
 
+# Written for the hub: how to choose a first manga, podcast or audiobook, and where to get them
+# without paying full price. Shelf pages carry the picks; this is the advice that applies to all of them.
+INDEX_NOTES = """
+      <section class="title-section browse-notes" id="choosing-a-manga" aria-labelledby="browse-manga-heading">
+        <h2 id="browse-manga-heading">Choosing a first manga</h2>
+        <p><strong>Check the length before the premise.</strong> A finished series under fifteen volumes is a few weekends. A long-running one can be a hundred volumes and counting, which is wonderful if you love it and a poor first test if you are not sure you like manga at all. That is why the first shelf is finished series under fifteen volumes.</p>
+        <p><strong>Read the first volume, not the first chapter.</strong> Series are planned and paced for the collected volume, and many take most of one to find their footing. If volume one has not caught you, volume two rarely will.</p>
+        <p><strong>Treat the magazine label as a hint, not a rule.</strong> Shōnen, shōjo, seinen and josei name the readers a magazine was aimed at (teenage boys, teenage girls, adult men and adult women), not the quality or even the genre. Some of the most loved series sit outside the label you would expect.</p>
+        <p><strong>Know which way it reads.</strong> Most English editions of Japanese manga keep the original right-to-left order, so you start at what looks like the back. Korean webtoons are made to scroll top to bottom on a phone, one long strip per chapter.</p>
+        <p><strong>Read it legally for little or nothing.</strong> Shueisha's Manga Plus and Viz's Shonen Jump app carry current chapters of many Jump series. Many public libraries lend manga, on the shelf and through apps such as Libby and Hoopla, and Webtoon and Tapas have large free catalogues of webtoons.</p>
+      </section>
+      <section class="title-section browse-notes" id="choosing-a-podcast" aria-labelledby="browse-podcast-heading">
+        <h2 id="browse-podcast-heading">Choosing a podcast</h2>
+        <p><strong>Know which kind of show it is.</strong> A narrative series tells one story over a season and should be heard from episode one. A conversation or interview show can be started anywhere, so try the newest episode, or one with a guest or topic you already care about.</p>
+        <p><strong>Give it two episodes.</strong> First episodes carry the most setup, and hosts often take a few to settle. If the second still feels like work, move on: there are more good shows than anyone has time for.</p>
+        <p><strong>Pick the speed by the show.</strong> Most apps play at 1.25 or 1.5 times speed, which suits a chat show. Fiction and sound-designed documentaries are usually better at normal speed, because their pauses and music were timed for it.</p>
+        <p><strong>Check where it lives.</strong> Most podcasts come from an open feed that any podcast app can play for free. Some are exclusive to one service, and some also sell a paid feed with no ads or with extra episodes.</p>
+      </section>
+      <section class="title-section browse-notes" id="choosing-an-audiobook" aria-labelledby="browse-audiobook-heading">
+        <h2 id="browse-audiobook-heading">Choosing an audiobook</h2>
+        <p><strong>Play the sample first.</strong> Most stores and library apps let you hear a few minutes from the start. If the narrator's voice bothers you in five minutes, it will bother you more in fifteen hours, and the same book read by someone else can be a different experience.</p>
+        <p><strong>Start with something that suits the ear.</strong> Dialogue-heavy fiction, memoirs read by the people who lived them and full-cast productions tend to make the easiest listens. Dense nonfiction built on tables, maps or footnotes is harder, though some publishers include a PDF of the figures.</p>
+        <p><strong>Borrow before you buy.</strong> If your library offers them, Libby and Hoopla lend audiobooks free with a library card. Popular new titles can have long waiting lists, so place holds early. If you buy, Libro.fm shares the money with an independent bookshop you choose.</p>
+        <p><strong>Use the hours.</strong> Every shelf pick lists its length. A commute of forty minutes each way gets through a ten-hour novel in about a week and a half of working days.</p>
+      </section>"""
+
+
 def render_index(signed_in: bool) -> str:
     cards = ""
     for kind, page in CATALOG.items():
@@ -311,7 +338,7 @@ def render_index(signed_in: bool) -> str:
       <p>Manga, podcasts and audiobooks are the newest things OmniTrackr tracks, and the newest libraries are the emptiest. These pages are the starting stock: a live chart from the source each tracker already searches, and shelves of titles we would hand you, each with a line on why and who it suits.</p>
     </div></section>
     <div class="site-wrap title-body browse-body">
-      <div class="browse-hub__grid">{cards}</div>
+      <div class="browse-hub__grid">{cards}</div>{INDEX_NOTES}
       <section class="title-section"><h2>Already track movies, shows or games?</h2>
       <p class="title-section__lead">The six older formats have enough members that their pages build themselves. <a href="/titles">Popular titles</a> shows what members track most, <a href="/trending">Trending</a> shows what they picked up this week, and <a href="/discover">Discover</a> has editorial trails across all of them.</p></section>
     </div>

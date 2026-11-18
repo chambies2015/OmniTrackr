@@ -214,6 +214,81 @@ def _structured(slug: str, entry: dict) -> dict:
     }
 
 
+# The hub's own reading, below the list of guides: how a guide is put together, and how to work out
+# what you liked about something before looking for more of it. Written for the hub, not repeated on
+# the guides themselves.
+HUB_METHOD = (
+    '<section class="editorial hub-notes" id="how-a-guide-is-made" aria-labelledby="yl-method-heading">'
+    '<h2 id="yl-method-heading">How a guide is put together</h2>'
+    '<p>Each guide starts with a question asked before any titles: what do the people who love this actually love '
+    'about it? Fans of Breaking Bad rarely say "chemistry". They talk about watching an ordinary man become someone '
+    'else one decision at a time, and about consequences that keep arriving long after the choice that caused them. '
+    'Those answers become the two or three threads at the top of every guide, and each pick has to share at least one.</p>'
+    '<p>A few rules keep the lists honest:</p>'
+    '<ul>'
+    '<li><strong>At least three formats.</strong> A game or a novel gets weighed against the obvious shows, because the '
+    'feeling you are after does not care what screen or page it arrives on.</li>'
+    '<li><strong>A caveat for every pick.</strong> Slow pacing, a weak last season, a long running time, violence you '
+    'may want to know about. If the caveat describes exactly what you dislike, skip that pick. That is what it is for.</li>'
+    '<li><strong>Old is fine.</strong> Nothing is included for being new or popular this week, and several picks are '
+    'decades old.</li>'
+    '<li><strong>No endings.</strong> Where a comparison would give away a twist, the guide describes the feeling instead.</li>'
+    '<li><strong>One place to start.</strong> Every guide ends with a single suggestion per format, for when you want '
+    'one answer rather than seven.</li>'
+    '</ul></section>'
+)
+
+HUB_FINDING = (
+    '<section class="editorial hub-notes" id="what-you-liked" aria-labelledby="yl-liked-heading">'
+    '<h2 id="yl-liked-heading">Work out what you liked before you look for more</h2>'
+    '<p>Most "if you liked" lists match on genre: another crime drama after Breaking Bad, another space film after '
+    'Interstellar. That works when the genre was the point. Often it was not, and a second crime drama with none of '
+    'the same patience feels like a cover version. A few questions help separate a story\'s premise from the thing '
+    'that kept you watching:</p>'
+    '<ol>'
+    '<li><strong>Which scene would you rewatch tonight?</strong> The answer usually names a mood, such as dread, '
+    'warmth or awe, or a kind of character, more precisely than any genre label.</li>'
+    '<li><strong>Was it the pace?</strong> A slow, patient story and a fast one in the same genre have little in common. '
+    'If you loved how little happened in an episode, look for "episodic" or "slice of life", not the same setting.</li>'
+    '<li><strong>Was it who made it?</strong> Writers, directors, composers and animation studios carry their habits from '
+    'one project to the next. Following a showrunner or a studio is one of the more reliable ways to find a next favourite.</li>'
+    '<li><strong>Was it how it ended?</strong> If the last act is what stayed with you, look for finished works known for '
+    'landing their endings, and be wary of anything still running.</li>'
+    '<li><strong>Would the source do it?</strong> Many of the shows in these guides began as manga, novels or games. '
+    'The original often gives you more of the same world at a different rhythm, and sometimes a different ending.</li>'
+    '</ol>'
+    '<h3>Trying a pick without losing an evening</h3>'
+    '<p>First episodes carry the most setup, so give a series two or three before deciding, and a novel around fifty '
+    'pages. An album is the quickest test: one full listen, start to finish, with shuffle off. For a game, an hour or '
+    'two usually shows whether its main loop suits you, and many have a free demo. On Steam, a game bought in the last '
+    'fourteen days and played for less than two hours can normally be refunded, which makes an honest try cheaper '
+    'than it looks.</p>'
+    '<p>If none of the guides here fits, <a href="/pick">Pick for me</a> suggests one title at a time from all of them '
+    'and the <a href="/discover">Discover trails</a>, which are organised by mood rather than by a single title. To '
+    'suggest a title for a new guide, use the <a href="/contact">contact page</a>.</p>'
+    '</section>'
+)
+
+
+def _threads_table() -> str:
+    """Every guide's threads in one table, so a reader can choose a guide by what it matches on."""
+    rows = "".join(
+        f'<tr><th scope="row"><a href="{if_you_liked.path(slug)}">{_e(entry["anchor"]["title"])}</a></th>'
+        f'<td>{_e(" · ".join(thread[0] for thread in entry["threads"]))}</td>'
+        f'<td>{len({item["kind"] for item in entry["picks"]})}</td></tr>'
+        for slug, entry in GUIDES.items()
+    )
+    return (
+        '<section class="editorial hub-notes" id="what-each-guide-follows" aria-labelledby="yl-threads-heading">'
+        '<h2 id="yl-threads-heading">What each guide follows</h2>'
+        '<p>The threads are what the picks in a guide have in common. Two guides with the same kind of title can follow '
+        'quite different threads, so this is the quickest way to choose between them.</p>'
+        '<div class="hub-table-wrap"><table class="hub-table"><thead><tr><th scope="col">After</th>'
+        '<th scope="col">The picks share</th><th scope="col">Formats</th></tr></thead>'
+        f'<tbody>{rows}</tbody></table></div></section>'
+    )
+
+
 @router.get(if_you_liked.BASE_PATH, include_in_schema=False)
 def if_you_liked_index(request: Request, db: Session = Depends(get_db)):
     groups = []
@@ -244,8 +319,8 @@ def if_you_liked_index(request: Request, db: Session = Depends(get_db)):
         + '<section class="editorial yl-why"><h2>Why mix formats?</h2><p>The feeling you are chasing after a great story is rarely tied to '
           'its format. The awe of Interstellar can come back in a puzzle game, and the grief at the heart of Frieren lives '
           'in a novel about an English butler. Every guide includes at least three formats, with a caveat for each pick so '
-          'you know what you are getting into.</p><p>Not sure where to begin at all? <a href="/pick">Pick for me</a> '
-          'suggests one title at a time from these guides and the <a href="/discover">Discover trails</a>.</p></section>'
+          'you know what you are getting into.</p></section>'
+        + _threads_table() + HUB_METHOD + HUB_FINDING
     )
     structured = {
         "@context": "https://schema.org", "@type": "CollectionPage", "name": HUB_TITLE, "description": HUB_DESCRIPTION,
