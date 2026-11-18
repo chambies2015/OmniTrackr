@@ -114,12 +114,26 @@ def test_spaces_and_dashes_in_a_pasted_code_are_fine(client, db_session):
     assert send_code(client, f" {code[:3]}-{code[3:]} ").status_code == 200
 
 
-def test_the_code_works_in_another_browser_too(client, db_session):
+def test_the_code_works_in_another_browser_after_logging_in_there(client, db_session):
     register(client)
-    client.cookies.clear()  # typed on a phone after signing up on a laptop
+    client.cookies.clear()  # on a phone after signing up on a laptop: logging in shows the code box
+    assert client.post("/auth/login", data={"username": "newfan", "password": "tea on the porch"}).status_code == 403
     response = send_code(client, code_for(db_session))
     assert response.status_code == 200 and response.json()["signed_in"] is True
     assert client.get("/account/me").status_code == 200
+
+
+def test_a_browser_that_never_showed_the_password_confirms_but_must_log_in(client, db_session):
+    """Like the link: a code typed where nobody signed up or logged in confirms the address, then asks to log in.
+    The Nov 18 2026 sweep changed this from signing straight in (see test_merge_sweep_nov18b)."""
+    register(client)
+    client.cookies.clear()
+    response = send_code(client, code_for(db_session))
+    assert response.status_code == 200
+    assert response.json()["signed_in"] is False and response.json()["login_hint"] == "newfan@example.com"
+    assert account(db_session).is_verified
+    assert auth.AUTH_COOKIE_NAME not in response.headers.get("set-cookie", "")
+    assert client.get("/account/me").status_code == 401
 
 
 def test_the_email_is_matched_ignoring_capitals(client, db_session):

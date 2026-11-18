@@ -62,6 +62,12 @@ MAX_MENTIONS = 3
 # push only if they turned on "Talk about your titles"). One such note per member a day.
 SHELF_NOTE_LIMIT = 40
 SHELF_NOTE_GAP = timedelta(hours=20)
+# An account younger than NEW_ACCOUNT_HOURS reaches only a few of them, so one throwaway sign-up
+# can't put its subject line in front of everyone who tracks a popular title (Nov 18 2026 sweep).
+NEW_ACCOUNT_SHELF_NOTES = 5
+# Notes that went to people who never joined the thread. Taken back while still unread when the
+# thread is hidden (reports or a moderator) or deleted outright, since they can't open it any more.
+WITHDRAWN_NOTES = ("discussion_started", "discussion_mention")
 INLINE_SPOILER = re.compile(r"\|\|([^|\n]{1,500})\|\|")
 
 
@@ -347,7 +353,10 @@ def _notify_shelf(db: Session, author, group, thread: models.TitleDiscussion, sk
         recent = {uid for uid, in db.query(models.Notification.user_id).filter(
             models.Notification.user_id.in_(people), models.Notification.type == "discussion_started",
             models.Notification.created_at >= _now() - SHELF_NOTE_GAP)}
-        chosen = sorted(active - recent, key=lambda uid: ranked[uid])[:SHELF_NOTE_LIMIT]
+        created = getattr(author, "created_at", None)
+        young = created is not None and _now() - created < timedelta(hours=NEW_ACCOUNT_HOURS)
+        limit = NEW_ACCOUNT_SHELF_NOTES if young else SHELF_NOTE_LIMIT
+        chosen = sorted(active - recent, key=lambda uid: ranked[uid])[:limit]
         for uid in chosen:
             db.add(models.Notification(
                 user_id=uid, type="discussion_started", link=thread_path(thread),
@@ -355,6 +364,17 @@ def _notify_shelf(db: Session, author, group, thread: models.TitleDiscussion, sk
                         f'"{_short(thread.subject)}"'))
     except Exception:
         return
+
+
+def withdraw_notes(db: Session, thread: models.TitleDiscussion) -> int:
+    """Delete unread "new discussion" and @mention notes that open this thread (see WITHDRAWN_NOTES).
+
+    Read notes stay: they are the member's own history. Reply notes stay too, since those went to
+    people already in the thread. Returns how many were taken back; the caller commits.
+    """
+    return (db.query(models.Notification).filter(
+        models.Notification.link == thread_path(thread), models.Notification.type.in_(WITHDRAWN_NOTES),
+        models.Notification.read_at.is_(None)).delete(synchronize_session=False))
 
 
 def _owned_reply(db: Session, thread, reply_id: int) -> models.TitleDiscussionReply:
@@ -376,6 +396,7 @@ def delete_thread(db: Session, user, thread: models.TitleDiscussion) -> str:
         db.commit()
         return "cleared"
     _drop_reports(db, "thread", [thread.id])
+    withdraw_notes(db, thread)  # Gone for good, so its notes would only open a missing page.
     db.delete(thread)
     db.commit()
     return "deleted"
@@ -452,6 +473,8 @@ def report(db: Session, user, thread: models.TitleDiscussion, reply_id: Optional
         post.spoiler = True
     if serious >= REPORT_HIDE_THRESHOLD and not post.hidden_at:
         post.hidden_at = _now()
+        if post is thread:
+            withdraw_notes(db, thread)
         _notify_moderators(db, thread, f'A post in "{thread.subject}" on {thread.title} was hidden after '
                                        f'{serious} reports. Have a look and restore or remove it.')
     elif len(open_reports) == 1:
@@ -484,6 +507,8 @@ def moderate(db: Session, user, thread: models.TitleDiscussion, reply_id: Option
         thread.locked_at = now if action == "lock" else None
     elif action == "hide":
         post.hidden_at = post.hidden_at or now
+        if post is thread:
+            withdraw_notes(db, thread)
     elif action == "restore":
         post.hidden_at = None
     else:

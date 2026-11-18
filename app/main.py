@@ -832,6 +832,11 @@ for route in site_stats.router.routes:
     elif getattr(route, "path", None) == "/api/visit":
         bind_rate_limited_endpoint(route, rate_limited_page_visit)
 app.include_router(site_stats.router)
+# The full weekly email preview builds the whole email on every load (nothing cached), so it is limited.
+rate_limited_weekly_preview_page = limiter.limit("20/minute")(for_you.weekly_preview)
+for route in for_you.router.routes:
+    if getattr(route, "path", None) == "/email/weekly/preview":
+        bind_rate_limited_endpoint(route, rate_limited_weekly_preview_page)
 app.include_router(for_you.router)
 rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
 rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
@@ -854,16 +859,29 @@ rate_limited_discussion_start = limiter.limit("10/hour")(title_discussions.start
 rate_limited_discussion_reply = limiter.limit("30/minute")(title_discussions.add_reply)
 rate_limited_discussion_edit = limiter.limit("30/minute")(title_discussions.edit_post)
 rate_limited_discussion_report = limiter.limit("20/hour")(title_discussions.report_post)
+# The friends feed rail asks on each Friends tab open; it reads the member's whole recent library.
+rate_limited_discussion_summary = limiter.limit("30/minute")(title_discussions.talk_summary)
+rate_limited_discussion_list = limiter.limit("60/minute")(title_discussions.list_threads)
+rate_limited_discussion_delete = limiter.limit("30/minute")(title_discussions.delete_thread)
+rate_limited_discussion_moderate = limiter.limit("60/minute")(title_discussions.moderate_post)
 for route in title_discussions.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
     if path == "/api/titles/{kind}/{slug}/discussions" and "POST" in methods:
         bind_rate_limited_endpoint(route, rate_limited_discussion_start)
+    elif path == "/api/titles/{kind}/{slug}/discussions" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_list)
+    elif path == "/api/discussions/{thread_id}" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_delete)
+    elif path == "/api/discussions/{thread_id}/moderate":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_moderate)
     elif path == "/api/discussions/{thread_id}/replies":
         bind_rate_limited_endpoint(route, rate_limited_discussion_reply)
     elif path == "/api/discussions/{thread_id}" and "PATCH" in methods:
         bind_rate_limited_endpoint(route, rate_limited_discussion_edit)
     elif path == "/api/discussions/{thread_id}/report":
         bind_rate_limited_endpoint(route, rate_limited_discussion_report)
+    elif path == "/api/discussions/summary":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_summary)
 # Before titles.router: its /titles/{kind}/{slug} route must not shadow the board pages.
 app.include_router(title_discussions.router)
 app.include_router(titles.router)
