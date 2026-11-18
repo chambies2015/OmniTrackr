@@ -23,7 +23,7 @@ from .titles import CSS_VERSION, KIND_PLURALS, SITE_URL
 
 router = APIRouter(tags=["search"])
 SEARCH_CSS_VERSION = "20261114-search-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 PAGE_RESULTS = 36
 API_LIMIT_MAX = 24
 POPULAR_ON_PAGE = 12

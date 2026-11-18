@@ -440,6 +440,35 @@
     });
   }
 
+  // Search visitors by the kind of page they landed on (app/search_journey.py).
+  function renderSearchJourney(journey) {
+    const steps = $('searchJourney');
+    const sections = $('searchJourneySections');
+    if (!steps || !sections) return;
+    if (!journey) {
+      steps.replaceChildren(el('p', 'stats-empty', 'Not counted yet.'));
+      sections.replaceChildren();
+      return;
+    }
+    drawSteps(steps, journey.steps || []);
+    const rows = journey.sections || [];
+    if (!rows.length) {
+      sections.replaceChildren(el('p', 'stats-empty', 'No visits from a search engine in this range yet.'));
+      return;
+    }
+    sections.replaceChildren(table(['Landed on', 'Landed', 'Saved a title', 'Started sign-up', 'Made an account'],
+      rows.map(row => [row.label, number(row.landed), number(row.saved), number(row.signup), number(row.account)])));
+  }
+
+  function searchJourneyReport(journey) {
+    if (!journey || !journey.steps) return [];
+    const rows = (journey.sections || []).map(row => `${row.label} ${number(row.landed)}/${number(row.saved)}/${number(row.signup)}/${number(row.account)}`);
+    return [
+      `From search engines: ${journey.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}`,
+      `From search, by landing page (landed/saved/started sign-up/account): ${rows.join('; ') || 'none yet'}`,
+    ];
+  }
+
   function renderSignupFunnel(data) {
     const container = $('signupFunnel');
     if (!container || !data.funnel) return;
@@ -459,6 +488,7 @@
     if ($('emailSignupForm')) fillList('emailSignupForm', data.funnel.email_form || []);
     if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
     if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
+    renderSearchJourney(data.search_journey);
     const retention = data.retention || {};
     fillList('guestList', [
       ...data.funnel.guest,
@@ -1346,6 +1376,7 @@
       `Journey: ${insights.activation.map(stage => `${stage.label} ${number(stage.count)}`).join(' → ')}`,
       data.funnel ? `Sign-up funnel: ${funnelSteps(data.funnel).map(step => `${step.label} ${number(step.count)}${step.detail ? ` (${step.detail})` : ''}`).join(' → ')}` : '',
       data.funnel && data.funnel.homepage ? `Homepage path: ${data.funnel.homepage.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
+      ...searchJourneyReport(data.search_journey),
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',

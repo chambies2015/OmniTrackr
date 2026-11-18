@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import account_removal, editorial_collections, funnel, google_signin, models, release_radar, supporters
+from .. import account_removal, editorial_collections, funnel, google_signin, models, release_radar, search_journey, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -193,6 +193,15 @@ def _funnel(db: Session, days: int, today: date) -> dict:
     counts = dict(db.query(table.key, func.sum(table.count)).filter(
         table.kind == "funnel", table.day >= start).group_by(table.key).all())
     return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+
+
+def _search_journey(db: Session, days: int, today: date) -> dict:
+    """Search visitors by landing section: landed, saved, started signing up, made an account."""
+    table = models.SiteTrafficDaily
+    start = today - timedelta(days=days - 1)
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == search_journey.KIND, table.day >= start).group_by(table.key).all())
+    return search_journey.summary({key: int(value or 0) for key, value in counts.items()})
 
 
 def _retention(db: Session) -> dict:
@@ -489,6 +498,7 @@ def site_stats_overview(
         "journal_activity": _library_additions(db, days, today),
         "traffic": _traffic(db, days, today),
         "funnel": _funnel(db, days, today),
+        "search_journey": _search_journey(db, days, today),
         "retention": _retention(db),
         "growth": _growth(db, days, now),
         "popular_titles": _popular_titles(db),

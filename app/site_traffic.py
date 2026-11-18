@@ -39,6 +39,8 @@ from urllib.parse import parse_qs, urlsplit
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from . import search_journey
+
 EXCLUDED_PREFIXES = (
     "/api/", "/static/", "/auth/", "/docs", "/redoc", "/openapi.json", "/site-stats",
     "/profile-pictures/", "/custom-tab-posters/", "/favicon", "/robots.txt", "/sitemap",
@@ -292,6 +294,8 @@ class TrafficRecorder:
             pending[(day, "human_audience", "member" if member else "guest")] += 1
             if source:
                 pending[(day, "human_source", source)] += 1
+                if not member and search_journey.is_search(source):
+                    pending[(day, search_journey.KIND, search_journey.key(search_journey.section_for(path), "landed"))] += 1
             if path == "/" and not member and not state[3]:
                 state[3] = True
                 pending[(day, "funnel", "landing_seen")] += 1  # one per person per day
