@@ -508,6 +508,7 @@
     const stayOn = stay.turned_on || {};
     const after = stay.after || {};
     const weekOne = growth.week_one || {};
+    const app = growth.app || {};
     const weekCounts = weekOne.counts || {};
     const weekLabels = weekOne.labels || {};
     const draw = growth.backlog_draw || {};
@@ -560,6 +561,19 @@
         ...(push.sent_by_kind || []).map(item => ({ label: `Sent: ${item.kind}`, count: item.count })),
         { label: 'Away reminders sent', count: push.away_reminders || 0 },
         ...(push.on_by_place || []).filter(item => item.count).map(item => ({ label: `Turned on from ${item.place}`, count: item.count })),
+      ],
+      growthApp: [
+        { label: 'Members who opened the installed app (now)', count: app.members || 0 },
+        { label: 'Members who opened it in the last 7 days (now)', count: app.members_7d || 0 },
+        { label: 'Members who opened it in this range', count: app.members_range || 0 },
+        { label: 'Members who opened it for the first time', count: app.new_members || 0 },
+        ...(app.by_platform || []).filter(item => item.count).map(item => ({ label: `Members on ${item.platform} (now)`, count: item.count })),
+        ...(app.offers || []).filter(row => row.shown || row.pressed || row.later).map(row => ({
+          label: `${row.place}: shown ${number(row.shown)}, not now ${number(row.later)}; Install pressed`,
+          count: row.pressed,
+        })),
+        ...(app.steps || []).filter(item => item.count).map(item => ({ label: `Add to Home Screen steps opened: ${item.browser}`, count: item.count })),
+        ...(app.outcomes || []).map(item => ({ label: item.label, count: item.count })),
       ],
       growthStayPosted: [
         { label: 'Home screen card shown', count: stay.shown || 0 },
@@ -618,6 +632,7 @@
     growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
     growthPush: 'Phone and browser notifications',
+    growthApp: 'The app on home screens',
     growthStayPosted: 'Stay posted asks (card and note after saving)',
     growthWeekOne: 'New members\' first-week card',
     growthBacklogDraw: 'Draw from your backlog',
@@ -639,7 +654,7 @@
     if (!card) return;
     card.hidden = !data.growth;
     if (!data.growth) return;
-    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications, the "Share your reviews" card and support notes in the last ${data.days} days. Rows marked "now" are current totals.`;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications, the installed app, the "Share your reviews" card and support notes in the last ${data.days} days. Rows marked "now" are current totals.`;
     Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
       const list = $(id);
       list.replaceChildren();

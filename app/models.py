@@ -2210,6 +2210,23 @@ class WeekOnePlan(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class InstalledAppOpen(Base):
+    """A member who opened OmniTrackr from its home-screen or desktop icon (Nov 2026).
+
+    A new table only, one row per member, made the first time the installed app reports an open and
+    touched at most once a day after that. It lets Site stats count members who actually keep the app,
+    which the anonymous counters can't. Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "installed_app_opens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    platforms = Column(String(32), nullable=True)  # "ios", "android", "desktop", comma-separated
+    first_opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_opened_on = Column(Date, nullable=True, index=True)
+    open_days = Column(Integer, nullable=False, default=0)
+
+
 class BacklogDraw(Base):
     """One title a member drew from their own backlog on the home screen and kept (Nov 2026).
 

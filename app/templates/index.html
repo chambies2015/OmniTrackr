@@ -47,7 +47,24 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261104-share-1" defer></script>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- iPhone launch screens (scripts/make_app_images.py): the app's colour and icon instead of a white flash. -->
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-640x1136.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-750x1334.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1242x2208.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1125x2436.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-828x1792.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1242x2688.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1170x2532.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1284x2778.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1179x2556.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1290x2796.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1206x2622.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1320x2868.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1260x2736.png?v=20261118-app-1">
+  <script src="/static/pwa.js?v=20261118-app-1" defer></script>
   <script src="/static/visit.js?v=20261118-search-1" defer></script>
   <link rel="preload" href="./styles.css?v=20261118-talk-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -88,6 +105,7 @@
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
+  <link rel="stylesheet" href="/static/install-app.css?v=20261118-app-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261118-backlog-draw-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
@@ -384,14 +402,30 @@
   </div>
 
   <dialog id="installAppDialog" class="install-app-dialog" aria-labelledby="installAppDialogTitle">
-    <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
-    <ol>
-      <li>Tap the <strong>Share</strong> button in Safari.</li>
-      <li>Choose <strong>Add to Home Screen</strong>.</li>
-      <li>Tap <strong>Add</strong>. OmniTrackr then opens full screen from its own icon.</li>
-    </ol>
-    <button id="installAppDialogClose" class="action-btn" type="button">Got it</button>
+    <div class="install-app-dialog__head">
+      <img src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="44" height="44" loading="lazy" decoding="async">
+      <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
+    </div>
+    <!--INSTALL_STEPS-->
+    <p class="install-app-dialog__why">It opens full screen from its own icon, starts faster, and on iPhone it can show the notifications you turn on from the bell.</p>
+    <div class="install-app-dialog__actions">
+      <button id="installAppDialogClose" class="action-btn" type="button" autofocus>Got it</button>
+      <a class="install-app-dialog__more" href="/app">More about the app</a>
+    </div>
   </dialog>
+
+  <!-- Phones: on a return visit, a short note at the bottom offers the app (static/pwa.js decides when). -->
+  <aside id="installAppSheet" class="install-sheet" aria-labelledby="installAppSheetTitle" hidden>
+    <img class="install-sheet__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="44" height="44" loading="lazy" decoding="async">
+    <div class="install-sheet__copy">
+      <h2 id="installAppSheetTitle">Put OmniTrackr on your home screen</h2>
+      <p id="installAppSheetSummary">One tap opens your library full screen, without the browser around it.</p>
+    </div>
+    <div class="install-sheet__actions">
+      <button id="installAppSheetInstall" type="button" class="action-btn">Install app</button>
+      <button id="installAppSheetDismiss" type="button" class="install-sheet__dismiss">Not now</button>
+    </div>
+  </aside>
 
   <!-- Friends panel overlays the workspace without changing its layout. -->
   <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
@@ -2555,7 +2589,7 @@
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friends-feed.js?v=20261118-talk-1"></script>
   <script src="/static/follows.js?v=20261113-social-1"></script>
-  <script src="/static/push.js?v=20261116-stay-1" defer></script>
+  <script src="/static/push.js?v=20261118-app-1" defer></script>
   <script src="/static/stay-posted.js?v=20261118-peek-1" defer></script>
   <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>

@@ -256,6 +256,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "support": _support_asks(db, days, now),
         "stay": _stay_posted(db, days, now),
         "week_one": _week_one(db, days, now),
+        "app": _installed_app(db, days, now),
         "backlog_draw": _backlog_draw(db, days, now),
     }
 
@@ -275,6 +276,16 @@ def _week_one(db: Session, days: int, now: datetime) -> dict:
     try:
         from .. import week_one
         return week_one.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _installed_app(db: Session, days: int, now: datetime) -> dict:
+    """The installed app: offers, presses, Add to Home Screen steps, and members who open it from its icon."""
+    try:
+        from .. import app_install
+        return app_install.stats(db, days, now)
     except Exception:
         db.rollback()
         return {}

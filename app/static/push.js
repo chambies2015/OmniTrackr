@@ -39,6 +39,13 @@
     return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && window.navigator.maxTouchPoints > 1);
   }
 
+  // On iPhone and iPad, notifications need OmniTrackr on the Home Screen: show the steps for this browser.
+  function showInstallSteps() {
+    if (typeof window.showInstallSteps === 'function' && window.showInstallSteps('bell')) return;
+    const dialog = $('installAppDialog');
+    if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+  }
+
   async function api(path, options = {}) {
     const request = { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } };
     const response = typeof authenticatedFetch === 'function'
@@ -377,8 +384,7 @@
     if (busy) return lastState;
     if (lastState === null) await refresh();
     if (lastState === 'install') {
-      const dialog = $('installAppDialog');
-      if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+      showInstallSteps();
       return lastState;
     }
     if (lastState !== 'off') return lastState;
@@ -416,8 +422,7 @@
     event.stopPropagation();
     const state = lastState;
     if (state === 'install') {
-      const dialog = $('installAppDialog');
-      if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+      showInstallSteps();
       return;
     }
     busy = true;
