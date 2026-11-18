@@ -9,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, 
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
@@ -444,13 +445,42 @@ SIGNUP_CODE_MAX_FAILURES = 10
 CODE_DIDNT_WORK = "That code didn't work. Check the newest email from us, or send a new one."
 
 
+def _spend_code_attempt(db: Session, user_id: int) -> bool:
+    """Use up one of the account's code tries before the code is compared; False when none are left.
+
+    One conditional UPDATE, so requests sent at the same moment can't all read "9 tries
+    used" and each write 10: the database lets exactly SIGNUP_CODE_MAX_FAILURES through
+    (Nov 18 2026 sweep). A right code gives its try back.
+    """
+    table = models.SignupCodeAttempt
+    for _ in range(2):
+        spent = (db.query(table).filter(table.user_id == user_id, table.failures < SIGNUP_CODE_MAX_FAILURES)
+                 .update({table.failures: table.failures + 1}, synchronize_session=False))
+        if spent:
+            db.commit()
+            return True
+        if db.query(table.id).filter(table.user_id == user_id).first() is not None:
+            db.rollback()
+            return False
+        try:
+            db.add(table(user_id=user_id, failures=1))
+            db.commit()
+            return True
+        except IntegrityError:
+            db.rollback()  # Another request made the row first: spend from that one.
+    return False
+
+
 @router.post("/verify-code")
 def verify_code(payload: schemas.SignupCode, request: Request, db: Session = Depends(get_db)):
     """Confirm a new account with the 6-digit code from its email, and sign in on this browser.
 
-    The code proves the address the same way the link (or a password-reset link)
-    does, so it opens the account wherever it is typed: usually the tab that just
-    signed up, with the titles the visitor saved as a guest still there.
+    The code proves the address the same way the link does, and like the link it only
+    opens the account on a browser that showed it owns it: the one that signed up, or
+    one where the right password was typed (login marks it). Anywhere else the account
+    is confirmed and the card asks to log in. Otherwise someone who signed up with
+    another person's address could wait for that person to type the code into "sign up
+    again", and then log in with the password they chose (Nov 18 2026 sweep).
     """
     code = "".join(ch for ch in payload.code if ch.isdigit())
     if len(code) != 6:
@@ -459,21 +489,26 @@ def verify_code(payload: schemas.SignupCode, request: Request, db: Session = Dep
     if user is None:
         funnel.record("signup_code_wrong", request)
         raise HTTPException(status_code=400, detail=CODE_DIDNT_WORK)
-    attempts = db.query(models.SignupCodeAttempt).filter(models.SignupCodeAttempt.user_id == user.id).first()
-    if attempts is not None and attempts.failures >= SIGNUP_CODE_MAX_FAILURES:
+    user_id, token = user.id, user.verification_token
+    if not _spend_code_attempt(db, user_id):
         funnel.record("signup_code_wrong", request)
         raise HTTPException(status_code=429, detail="Too many wrong codes. Open the link in the email to confirm instead.")
-    if not hmac.compare_digest(code, email_utils.signup_code(user.verification_token)):
+    table = models.SignupCodeAttempt
+    if not hmac.compare_digest(code, email_utils.signup_code(token)):
         funnel.record("signup_code_wrong", request)
-        if attempts is None:
-            attempts = models.SignupCodeAttempt(user_id=user.id, failures=0)
-            db.add(attempts)
-        attempts.failures = (attempts.failures or 0) + 1
-        attempts.last_failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.query(table).filter(table.user_id == user_id).update(
+            {table.last_failed_at: datetime.now(timezone.utc).replace(tzinfo=None)}, synchronize_session=False)
         db.commit()
         raise HTTPException(status_code=400, detail=CODE_DIDNT_WORK)
+    # The right code: give the try back, so the count stays the number of wrong ones.
+    db.query(table).filter(table.user_id == user_id, table.failures > 0).update(
+        {table.failures: table.failures - 1}, synchronize_session=False)
+    db.commit()
+    user = db.get(models.User, user_id)
+    if user is None or user.is_verified or not user.is_active or user.verification_token != token:
+        raise HTTPException(status_code=400, detail=CODE_DIDNT_WORK)  # Changed while we checked.
     try:
-        email_utils.verify_token(user.verification_token, max_age=email_utils.VERIFICATION_MAX_AGE)
+        email_utils.verify_token(token, max_age=email_utils.VERIFICATION_MAX_AGE)
     except Exception:
         funnel.record("signup_code_wrong", request)
         raise HTTPException(status_code=400, detail="That code has expired. Send a new one and use the newest email.")
@@ -481,8 +516,10 @@ def verify_code(payload: schemas.SignupCode, request: Request, db: Session = Dep
     _confirm_account(db, user)
     funnel.record("email_confirmed_code", request)
     message = "Your email is confirmed."
-    if two_factor.enabled_for(db, user) is not None:
-        # Not reachable today (two-factor needs a confirmed account), but never skip the code step.
+    pending = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE))
+    if pending != user.id or two_factor.enabled_for(db, user) is not None:
+        # Not the browser that signed up (or logged in): confirmed, and the card asks to log in.
+        # Two-factor isn't reachable today (it needs a confirmed account), but never skip that step.
         return {"message": message, "signed_in": False, "login_hint": user.email}
     return _open_new_session(request, user, db, message)
 

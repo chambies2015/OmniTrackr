@@ -157,3 +157,80 @@ def test_hiding_one_reply_keeps_the_threads_notes(client, db_session):
     db_session.expire_all()
     assert len(_notes(db_session, "discussion_started", thread["url"])) == 2
     assert len(_notes(db_session, "discussion_mention", thread["url"])) == 1
+
+
+# ---------------------------------------------------------------- #248: the 6-digit sign-up code
+
+from app import auth as auth_module, email as email_utils  # noqa: E402
+from app.routers import auth as auth_router  # noqa: E402
+
+
+def _register(client, username, email, password):
+    return client.post("/auth/register", json={"email": email, "username": username, "password": password})
+
+
+def _code(db, email):
+    user = db.query(models.User).filter_by(email=email).one()
+    db.refresh(user)
+    return user, email_utils.signup_code(user.verification_token)
+
+
+def test_someone_elses_signup_is_not_opened_by_the_owner_typing_the_code(client, db_session):
+    """Pre-hijacking: an attacker signs up first with the victim's address and a password they know. When the
+    victim tries to sign up, the card offers a new code; typing it used to open the attacker's account in the
+    victim's browser, so the victim would fill a library the attacker can log in to. Now it only confirms the
+    address and asks them to log in, where they need a password reset, which ends the attacker's password."""
+    assert _register(client, "squatter", "victim@example.com", "attacker knows this one").status_code == 201
+    client.cookies.clear()  # the victim's own browser
+    again = _register(client, "victim", "victim@example.com", "the victims own phrase")
+    assert again.status_code == 400 and again.json()["unverified"] is True
+    assert auth_module.PENDING_SIGNUP_COOKIE not in again.headers.get("set-cookie", "")
+    client.post("/auth/resend-verification?email=victim@example.com")
+    _, code = _code(db_session, "victim@example.com")
+    response = client.post("/auth/verify-code", json={"email": "victim@example.com", "code": code})
+    assert response.status_code == 200 and response.json()["signed_in"] is False
+    assert auth_module.AUTH_COOKIE_NAME not in response.headers.get("set-cookie", "")
+    assert client.get("/account/me").status_code == 401
+
+
+def test_the_browser_that_signed_up_still_opens_the_library(client, db_session):
+    assert _register(client, "newfan", "newfan@example.com", "tea on the porch").status_code == 201
+    _, code = _code(db_session, "newfan@example.com")
+    response = client.post("/auth/verify-code", json={"email": "newfan@example.com", "code": code})
+    assert response.status_code == 200 and response.json()["signed_in"] is True
+
+
+def test_a_code_try_is_used_up_before_the_code_is_compared(client, db_session, monkeypatch):
+    """Spending first with one conditional UPDATE means requests sent at the same moment can't each read
+    "nine tries used" and write ten (a lost update that let a script keep guessing)."""
+    assert _register(client, "newfan", "newfan@example.com", "tea on the porch").status_code == 201
+    user, right = _code(db_session, "newfan@example.com")
+    seen = []
+    real = email_utils.signup_code
+
+    def watching(token):
+        db_session.expire_all()
+        row = db_session.query(models.SignupCodeAttempt).filter_by(user_id=user.id).one_or_none()
+        seen.append(row.failures if row else 0)
+        return real(token)
+
+    monkeypatch.setattr(auth_router.email_utils, "signup_code", watching)
+    wrong = f"{(int(right) + 1) % 1_000_000:06d}"
+    assert client.post("/auth/verify-code", json={"email": "newfan@example.com", "code": wrong}).status_code == 400
+    assert client.post("/auth/verify-code", json={"email": "newfan@example.com", "code": wrong}).status_code == 400
+    assert seen == [1, 2]
+    # The right code gives its try back, so the count stays the number of wrong codes.
+    assert client.post("/auth/verify-code", json={"email": "newfan@example.com", "code": right}).status_code == 200
+    db_session.expire_all()
+    assert db_session.query(models.SignupCodeAttempt).filter_by(user_id=user.id).one().failures == 2
+
+
+def test_the_try_counter_never_passes_the_limit(client, db_session):
+    assert _register(client, "newfan", "newfan@example.com", "tea on the porch").status_code == 201
+    user, _ = _code(db_session, "newfan@example.com")
+    db_session.add(models.SignupCodeAttempt(user_id=user.id, failures=auth_router.SIGNUP_CODE_MAX_FAILURES - 1))
+    db_session.commit()
+    assert auth_router._spend_code_attempt(db_session, user.id) is True
+    assert auth_router._spend_code_attempt(db_session, user.id) is False
+    db_session.expire_all()
+    assert db_session.query(models.SignupCodeAttempt).filter_by(user_id=user.id).one().failures == auth_router.SIGNUP_CODE_MAX_FAILURES
