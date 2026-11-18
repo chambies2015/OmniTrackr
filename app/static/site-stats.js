@@ -476,6 +476,9 @@
     const stay = growth.stay || {};
     const stayOn = stay.turned_on || {};
     const after = stay.after || {};
+    const weekOne = growth.week_one || {};
+    const weekCounts = weekOne.counts || {};
+    const weekLabels = weekOne.labels || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -536,6 +539,10 @@
         { label: 'Don\'t ask again', count: stay.stopped || 0 },
         { label: 'Members who said don\'t ask again (now)', count: stay.stopped_now || 0 },
       ],
+      growthWeekOne: [
+        ...Object.keys(weekLabels).map(key => ({ label: weekLabels[key], count: weekCounts[key] || 0 })),
+        { label: 'Reminder emails waiting to go out (now)', count: weekOne.pending_reminders || 0 },
+      ],
       growthSupportAsks: [
         { label: 'Notes shown on the home screen', count: support.shown || 0 },
         ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
@@ -569,6 +576,7 @@
     growthTakes: 'Ask a friend for their take',
     growthPush: 'Phone and browser notifications',
     growthStayPosted: 'Stay posted asks (card and note after saving)',
+    growthWeekOne: 'New members\' first-week card',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',
   };

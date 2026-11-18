@@ -789,6 +789,7 @@ function resetDailyDashboard() {
   window.OmniHomeHero?.reset();
   window.OmniHomeToday?.reset();
   window.OmniStayPosted?.reset();
+  window.OmniWeekOne?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1798,6 +1799,8 @@ function runDashboardLayoutBatch() {
   const newsRequest = window.OmniHomeToday?.refresh();
   // Not waited on: the "stay posted" card is optional and refreshes at most once a minute.
   window.OmniStayPosted?.refresh();
+  // Not waited on either: the first-week card only shows in an account's first seven days.
+  window.OmniWeekOne?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

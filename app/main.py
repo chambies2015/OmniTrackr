@@ -131,6 +131,10 @@ async def lifespan(application: FastAPI):
     check_in_task = None
     if check_in.enabled_for_process():
         check_in_task = asyncio.create_task(check_in.check_in_loop(application))
+    from . import week_one
+    week_one_task = None
+    if week_one.emails_enabled():
+        week_one_task = asyncio.create_task(week_one.week_one_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -148,7 +152,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task, check_in_task):
+                     episode_task, check_in_task, week_one_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -882,6 +886,15 @@ for route in stay_posted_router.router.routes:
         # The home screen asks at most once a minute per tab.
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(stay_posted_router.router)
+from .routers import week_one as week_one_router
+# The first-week card: one read per home refresh, and buttons pressed a click at a time.
+for route in week_one_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/week-one":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path and path.startswith("/api/week-one/"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(week_one_router.router)
 from .routers import check_in as check_in_router
 # The emailed check-in page works without signing in: the signed link is the key, so it is limited per address.
 for route in check_in_router.router.routes:

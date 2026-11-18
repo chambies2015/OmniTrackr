@@ -2164,3 +2164,29 @@ class StayPostedAsk(Base):
     after_save_at = Column(DateTime, nullable=True)
     after_save_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class WeekOnePlan(Base):
+    """A new member's first-week home card (Nov 2026): when they saw it, whether they came back on a later
+    day, and the one reminder email they may have asked for.
+
+    A new table only, one row per member, made the first time the card reaches their screen or a button
+    on it is pressed. Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "week_one_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    first_seen_on = Column(Date, nullable=True)
+    last_seen_on = Column(Date, nullable=True)
+    returned_at = Column(DateTime, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+    saved_count = Column(Integer, nullable=False, default=0)
+    push_at = Column(DateTime, nullable=True)
+    remind_on = Column(Date, nullable=True)
+    remind_at = Column(DateTime, nullable=True, index=True)
+    reminder_status = Column(String(12), nullable=True, index=True)  # set, sent, dropped, failed
+    reminder_set_at = Column(DateTime, nullable=True)
+    reminder_sent_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
