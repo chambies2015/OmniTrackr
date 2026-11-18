@@ -469,6 +469,7 @@ SOURCES = {
     "episode_guide": "the episode guide",
     "home_card": "the home screen card",
     "after_save": "the note after saving a show",
+    "week_one": "the first-week card",
 }
 
 
