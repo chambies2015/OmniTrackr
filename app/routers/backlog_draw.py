@@ -52,11 +52,11 @@ class Answer(Today):
 
 
 @router.get("/api/backlog-draw")
-def backlog_draw_card(request: Request, response: Response, today: Optional[str] = TODAY,
+def backlog_draw_card(request: Request, response: Response, today: Optional[str] = TODAY, hidden: bool = False,
                       user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     _no_store(response)
     try:
-        return {"card": backlog_draw.build(db, user, _today(today))}
+        return {"card": backlog_draw.build(db, user, _today(today), hidden=hidden)}
     except Exception:
         db.rollback()
         return {"card": None}  # optional card; the home screen never waits on it
@@ -69,11 +69,11 @@ def backlog_draw_deal(payload: Deal, request: Request, response: Response, user:
     local = _today(payload.today)
     if backlog_draw.active(db, user.id) is not None:
         raise HTTPException(409, "You've already kept one. Put it back to deal again.")
-    cards = backlog_draw.deal(db, user, local, payload.deal)
+    cards, total = backlog_draw.deal_hand(db, user, local, payload.deal)
     if not cards:
         raise HTTPException(404, "Nothing is waiting on your list right now.")
     backlog_draw.count("redealt" if payload.deal else "dealt")
-    return {"cards": cards, "deal": payload.deal, "total": backlog_draw.backlog_count(db, user)}
+    return {"cards": cards, "deal": payload.deal, "total": total}
 
 
 @router.post("/api/backlog-draw/pick")
