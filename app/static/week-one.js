@@ -237,6 +237,56 @@
     box.hidden = !picks.length;
   }
 
+  async function saveRelease(release, button) {
+    if (state.busy) return;
+    state.busy = true;
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    try {
+      const data = await send('POST', '/api/week-one/save-release', {
+        category: release.category, window: release.window, key: release.key, today: localToday(),
+      });
+      button.textContent = data.state === 'existing' ? 'Already saved' : 'Saved';
+      button.classList.add('is-done');
+      setStatus(data.state === 'existing'
+        ? `${release.title} is already in your library.`
+        : `Saved ${release.title}. Its release day is on your week.`);
+      const loader = window[LOADERS[release.library_category]];
+      if (typeof loader === 'function') { try { loader(); } catch (error) { /* shows up on the next visit */ } }
+      refresh(true);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Want to see';
+      setStatus(error.message);
+    } finally {
+      state.busy = false;
+    }
+  }
+
+  function renderReleases(card) {
+    const box = $('weekOneReleases');
+    const list = $('weekOneReleaseList');
+    if (!box || !list) return;
+    list.replaceChildren();
+    const releases = card.releases || [];
+    releases.forEach(release => {
+      const row = el('li', 'week-one__pick');
+      row.dataset.format = release.library_category || '';
+      row.append(cover(release.image, release.title));
+      const words = el('div', 'week-one__pick-words');
+      words.append(el('strong', 'week-one__pick-title', release.title),
+        el('span', 'week-one__pick-meta', [release.label, `Out ${whenWords(release.date, card.today)}`].filter(Boolean).join(' · ')));
+      row.append(words);
+      const button = el('button', 'week-one__btn week-one__btn--small', 'Want to see');
+      button.type = 'button';
+      button.setAttribute('aria-label', `Save ${release.title} to your library`);
+      button.addEventListener('click', () => saveRelease(release, button));
+      row.append(button);
+      list.append(row);
+    });
+    box.hidden = !releases.length;
+  }
+
   // ------------------------------------------------ the reminder
 
   function tzMinutes() {
@@ -338,8 +388,14 @@
     renderDots(card);
     renderDays(card);
     renderSuggestions(card);
+    renderReleases(card);
     renderRemind(card);
+    const wasHidden = section.hidden;
     section.hidden = false;
+    // The start page links straight here ("See my week").
+    if (wasHidden && window.location.hash === '#week-one') {
+      window.requestAnimationFrame(() => section.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    }
     watchSeen(section, card);
     if (card.pending && state.retries < MAX_PENDING_RETRIES) {
       window.clearTimeout(state.retryTimer);
@@ -400,7 +456,7 @@
     if (state.observer) state.observer.disconnect();
     const section = $('weekOne');
     if (section) section.hidden = true;
-    ['weekOneDays', 'weekOneDots', 'weekOneSuggestList'].forEach(id => $(id)?.replaceChildren());
+    ['weekOneDays', 'weekOneDots', 'weekOneSuggestList', 'weekOneReleaseList'].forEach(id => $(id)?.replaceChildren());
     setStatus('');
   }
 

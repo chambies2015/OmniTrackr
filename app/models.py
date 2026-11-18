@@ -2189,4 +2189,5 @@ class WeekOnePlan(Base):
     reminder_set_at = Column(DateTime, nullable=True)
     reminder_sent_at = Column(DateTime, nullable=True)
     back_at = Column(DateTime, nullable=True)
+    start_seen_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

@@ -41,6 +41,7 @@ WEEK_DAYS = 7                      # the card shows on days 1 to 7 of an account
 MIN_TITLES = 1                     # an empty library has the launchpad instead
 SUGGEST_BELOW = 3                  # fewer things than this in their week: offer shows airing now
 SUGGEST_LIMIT = 6
+RELEASE_LIMIT = 4                  # movies, games, premieres out this week, for members who don't watch TV
 POOL_LIMIT = 40
 POOL_SECONDS = 1800
 PER_DAY_LIMIT = 4
@@ -59,6 +60,9 @@ COUNTERS = {
     "seen": "Saw the first-week card",
     "returned": "Came back on a later day of their first week",
     "saved": "Saved a show airing this week",
+    "saved_release": "Saved a movie, game or premiere out this week",
+    "start_seen": "Saw their week on the start page's five-saved screen",
+    "start_email_set": "Asked for the reminder from the start page",
     "email_set": "Asked for a reminder email",
     "email_cancel": "Cancelled the reminder",
     "sent": "Reminder emails sent",
@@ -316,6 +320,40 @@ def suggestions(db: Session, user: models.User, today: date) -> list[dict]:
     return picks
 
 
+def releases_this_week(db: Session, user: models.User, today: date) -> list[dict]:
+    """Popular Release Radar titles out today or in the next six days that the member hasn't saved."""
+    try:
+        from .for_you import owned_titles, radar_pool, upcoming_popular
+        owned = owned_titles(db, user.id, ("movies", "tv-shows", "anime", "video-games"))
+        cards = upcoming_popular(radar_pool(today), today, owned, days=WEEK_DAYS - 1, limit=RELEASE_LIMIT * 2)
+    except Exception:
+        db.rollback()
+        return []
+    end = (today + timedelta(days=WEEK_DAYS - 1)).isoformat()
+    found = []
+    for card in cards:
+        if not (today.isoformat() <= (card.get("date") or "") <= end):
+            continue
+        found.append({key: card.get(key) for key in ("category", "library_category", "label", "title", "date",
+                                                         "image", "window", "key", "url")})
+        if len(found) >= RELEASE_LIMIT:
+            break
+    return found
+
+
+def save_release(db: Session, user: models.User, category: str, window: str, key: str) -> dict:
+    """Save a Release Radar title through the radar's own save (library + private Radar collection)."""
+    from fastapi import Response
+    from .routers.release_radar import RadarSave, radar_save
+    result = radar_save(RadarSave(category=category, window=window, key=key), Response(), user, db)
+    if result.get("state") == "created":
+        row = _row(db, user.id)
+        row.saved_count = (row.saved_count or 0) + 1
+        db.commit()
+        count("saved_release")
+    return result
+
+
 def save_suggestion(db: Session, user: models.User, key: str, today: date) -> dict:
     """Copy a show airing this week into the member's library as not finished yet ("watching")."""
     from .for_you import LIBRARY, _safe_image, _shareable_ids, normalize_title
@@ -376,7 +414,11 @@ def build(db: Session, user: models.User, today: date, now: Optional[datetime] =
     if _library_size(db, user.id) < MIN_TITLES:
         return None
     items = week_items(db, user, today)
-    picks = suggestions(db, user, today) if len(items) < SUGGEST_BELOW else []
+    thin = len(items) < SUGGEST_BELOW
+    out = releases_this_week(db, user, today) if thin else []
+    picks = suggestions(db, user, today) if thin else []
+    if out and picks:
+        picks = picks[:SUGGEST_LIMIT - 2]  # room for both lists without a wall of cards
     future_days = sorted({item["date"] for item in items if item["date"] > today.isoformat()})
     reminder = _reminder(row)
     if reminder and reminder["status"] == "sent" and row.back_at is None and row.reminder_sent_at and now > row.reminder_sent_at:
@@ -389,6 +431,7 @@ def build(db: Session, user: models.User, today: date, now: Optional[datetime] =
         "days": _days(items, today),
         "count": len(items),
         "suggestions": picks,
+        "releases": out,
         "reminder": reminder,
         "remind_day": future_days[0] if future_days else None,
         "offer": {"email": email_offer(user), "push": not _has_push(db, user.id)},
@@ -418,8 +461,20 @@ def mark_seen(db: Session, user: models.User, today: date, now: Optional[datetim
     return True
 
 
+def note_start_seen(db: Session, user: models.User, today: date) -> bool:
+    """The week showed on the start page's five-saved screen (counted once per member)."""
+    if day_number(user, today) is None:
+        return False
+    row = _row(db, user.id)
+    if row.start_seen_at is None:
+        row.start_seen_at = _now()
+        db.commit()
+        count("start_seen")
+    return True
+
+
 def set_reminder(db: Session, user: models.User, day: date, today: date, tz_minutes: int,
-                 now: Optional[datetime] = None) -> dict:
+                 now: Optional[datetime] = None, place: str = "card") -> dict:
     """One email on ``day`` at about 5 pm the member's time, naming what's out that day."""
     now = now or _now()
     if day_number(user, today) is None:
@@ -440,7 +495,7 @@ def set_reminder(db: Session, user: models.User, day: date, today: date, tz_minu
     row.reminder_set_at = now
     row.reminder_sent_at = None
     db.commit()
-    count("email_set")
+    count("start_email_set" if place == "start" else "email_set")
     return _reminder(row)
 
 

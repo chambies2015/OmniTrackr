@@ -841,6 +841,7 @@ def run_migrations():
     fold_unreadable_traffic_sources()
     fold_private_link_pages()
     split_shared_regular_badge()
+    add_week_one_start_column()
 
 
 def add_notification_link_column():
@@ -907,6 +908,22 @@ def add_poll_round_column():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (poll rounds): {e}")
+
+
+def add_week_one_start_column():
+    """Add when a new member's week showed on the start page. Existing rows keep NULL (not shown there)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("week_one_plans"):
+            return
+        if "start_seen_at" in {col["name"] for col in inspector.get_columns("week_one_plans")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE week_one_plans ADD COLUMN start_seen_at TIMESTAMP"))
+            conn.commit()
+            print("Added start_seen_at column to week_one_plans table")
+    except Exception as e:
+        print(f"Migration warning (week one start): {e}")
 
 
 def add_next_up_started_column():
