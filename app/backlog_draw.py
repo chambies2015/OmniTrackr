@@ -313,9 +313,16 @@ def _tag_hand(hand: list[dict]) -> None:
 
 def deal(db: Session, user: models.User, today: date, number: int = 0, now: Optional[datetime] = None) -> list[dict]:
     """Three cards. The same member, day and deal number always give the same three."""
+    return deal_hand(db, user, today, number, now)[0]
+
+
+def deal_hand(db: Session, user: models.User, today: date, number: int = 0,
+              now: Optional[datetime] = None) -> tuple[list[dict], int]:
+    """(three cards, how many titles are waiting), reading the member's backlog once."""
     pool = _pool(db, user, now)
     if not pool:
-        return []
+        return [], 0
+    total = len(pool)
     pool.sort()
     rng = random.Random(zlib.crc32(f"{user.id}:{today.isoformat()}:{int(number)}".encode()))
     rng.shuffle(pool)
@@ -336,7 +343,7 @@ def deal(db: Session, user: models.User, today: date, number: int = 0, now: Opti
     cards = [_card(category, row, today, lengths[(category, row.id)], (category, row.id) in queued)
              for category, row in hand]
     _tag_hand(cards)
-    return cards
+    return cards, total
 
 
 # ---------------------------------------------------------------- the kept card
@@ -382,8 +389,13 @@ def _email_offer(db: Session, user: models.User) -> bool:
     return bool(user.email and user.is_verified)
 
 
-def build(db: Session, user: models.User, today: date, now: Optional[datetime] = None) -> Optional[dict]:
-    """The card as it stands, or None when there's nothing to deal and nothing kept."""
+def build(db: Session, user: models.User, today: date, now: Optional[datetime] = None,
+          hidden: bool = False) -> Optional[dict]:
+    """The card as it stands, or None when there's nothing to deal and nothing kept.
+
+    `hidden`: this browser hid the deal card ("Hide for now"), so only a kept card can show and the
+    backlog isn't counted (about ten queries saved on every home load while it's hidden).
+    """
     now = now or _now()
     draw = active(db, user.id)
     if draw is not None:
@@ -414,6 +426,8 @@ def build(db: Session, user: models.User, today: date, now: Optional[datetime] =
                 "email_offer": _email_offer(db, user),
                 "remind_hour": REMIND_HOUR,
             }
+    if hidden:
+        return None
     total = backlog_count(db, user, now)
     if total < MIN_BACKLOG:
         return None
@@ -465,6 +479,8 @@ def plan(db: Session, user: models.User, night: Optional[date], email: bool, tz_
             remind_at = datetime.combine(night, time(REMIND_HOUR)) - timedelta(minutes=tz_minutes)
             if remind_at <= now:
                 raise ValueError("It's past 6 pm there, so there's no email tonight. Add it to your calendar instead.")
+            if _sent_for_night(db, user.id, night):
+                raise ValueError("We've already emailed you about that night. Add it to your calendar instead.")
             if draw.reminder_status != "set":
                 count("email_set")
             draw.remind_at = remind_at
@@ -669,6 +685,21 @@ def email_for(db: Session, user: models.User, draw: models.BacklogDraw) -> Optio
     return subject, html, text, unsubscribe_url
 
 
+def send_key(night: date) -> str:
+    """The claim for one evening email: one per member per night they picked (uq_email_campaign_send).
+
+    Keyed by the night rather than the kept card, so "Didn't get to it" and a new night can email
+    again, while one member can't draw an email after email for the same evening.
+    """
+    return f"{SEND_PREFIX}{night.isoformat()}"
+
+
+def _sent_for_night(db: Session, user_id: int, night: date) -> bool:
+    return db.query(models.EmailCampaignSend.id).filter(
+        models.EmailCampaignSend.user_id == user_id,
+        models.EmailCampaignSend.campaign_key == send_key(night)).first() is not None
+
+
 def allowance(db: Session, now: datetime) -> int:
     """How many may go out now: inside this email's own daily limit and the shared daily cap."""
     from .announcements import shared_cap
@@ -723,7 +754,7 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
                 _drop(db, draw, result)
                 continue
             lock_email_budget(db)
-            if allowance(db, now) <= 0:
+            if result["sent"] + result["failed"] >= PER_RUN_LIMIT or allowance(db, now) <= 0:
                 db.rollback()
                 result["limited"] = True
                 break  # still inside its window; the next run tries again
@@ -737,7 +768,7 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
                 _drop(db, draw, result)
                 continue
             # Claim first so an overlapping run can never send twice.
-            db.add(models.EmailCampaignSend(campaign_key=f"{SEND_PREFIX}{draw.id}", user_id=user.id,
+            db.add(models.EmailCampaignSend(campaign_key=send_key(draw.night), user_id=user.id,
                                             status="sent", sent_at=now))
             draw.reminder_status = "sent"
             draw.reminder_sent_at = now
@@ -745,6 +776,14 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
                 db.commit()
             except Exception:
                 db.rollback()
+                # Already claimed: an overlapping run sent it (the row now says "sent"), or this member
+                # was emailed about that night before. Never retry a clash every run until it's late.
+                try:
+                    db.refresh(draw)
+                    if draw.reminder_status == "set":
+                        _drop(db, draw, result)
+                except Exception:
+                    db.rollback()
                 continue
             subject, html, _text, unsubscribe_url = built
             try:

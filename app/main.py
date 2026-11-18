@@ -987,6 +987,9 @@ for route in pwa.router.routes:
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
     elif getattr(route, "path", None) == "/api/app/event" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/api/app/status" and "GET" in getattr(route, "methods", set()):
+        # Asked once a day per browser by pwa.js; a database read for signed-in members.
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:

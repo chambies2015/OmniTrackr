@@ -563,7 +563,9 @@
     if (!force && state.request && Date.now() - state.loadedAt < REFRESH_GAP_MS) return state.request;
     const epoch = state.epoch;
     state.loadedAt = Date.now();
-    const request = fetch(`${apiBase()}/api/backlog-draw?today=${encodeURIComponent(localToday())}`,
+    // Hidden here: only a kept card can show, so the server skips counting the backlog.
+    const hidden = hiddenUntil() > Date.now() ? '&hidden=1' : '';
+    const request = fetch(`${apiBase()}/api/backlog-draw?today=${encodeURIComponent(localToday())}${hidden}`,
       fetchOptions({ headers: { Accept: 'application/json' } }))
       .then(response => (response.ok ? response.json() : null))
       .then(data => { if (data && epoch === state.epoch && signedIn()) render(data.card); })

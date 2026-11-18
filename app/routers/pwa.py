@@ -130,7 +130,7 @@ def record_app_event(payload: AppEvent, request: Request, user=Depends(get_optio
 
 
 @router.get("/api/app/status", include_in_schema=False)
-def app_status(user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
+def app_status(request: Request, user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     """Which kinds of device the signed-in member opened the installed app on (Safari can't tell on iPhone)."""
     platforms = app_install.platforms_for(db, user) if user is not None else []
     return JSONResponse({"platforms": platforms}, headers={"Cache-Control": "private, no-store"})

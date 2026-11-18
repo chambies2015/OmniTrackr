@@ -97,3 +97,17 @@ test('a hidden card stays hidden in the deal state but a kept card always shows'
   module.render({ state: 'after', today: '2026-11-19', pick: sneaky, night: '2026-11-18', reminder: null });
   assert.ok(nodes.backlogDrawBody.find(node => node.textContent === sneaky.title && node.tagName === 'a'));
 });
+
+test('a browser that hid the deal card tells the server, so the backlog isn\'t counted for nothing', async () => {
+  const storage = { omnitrackr_backlog_draw_hidden: JSON.stringify({ me: Date.now() + 60000 }) };
+  const { module } = setup(storage);
+  const asked = [];
+  global.fetch = async url => { asked.push(url); return { ok: true, json: async () => ({ card: null }) }; };
+  await module.refresh(true);
+  assert.match(asked[0], /[?&]hidden=1(&|$)/);
+  const shown = setup({});
+  const plain = [];
+  global.fetch = async url => { plain.push(url); return { ok: true, json: async () => ({ card: null }) }; };
+  await shown.module.refresh(true);
+  assert.doesNotMatch(plain[0], /hidden=/);
+});
