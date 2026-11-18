@@ -17,6 +17,22 @@
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
   const signedIn = () => (typeof hasStoredAuth === 'function' ? hasStoredAuth() : false);
+  // Same-site paths only ("//host" is another site).
+  const localPath = url => typeof url === 'string' && url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\');
+
+  // The card is only for an account's first seven days, so established members skip the request.
+  // Two days of slack: the server trusts the browser's date within a day of UTC's.
+  function pastFirstWeek() {
+    try {
+      const user = typeof getUser === 'function' ? getUser() : null;
+      const made = user && typeof user.created_at === 'string' ? user.created_at : '';
+      if (!made) return false;
+      const time = Date.parse(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(made) ? made : `${made}Z`);
+      return Number.isFinite(time) && Date.now() - time > (WEEK_DAYS + 2) * 24 * 60 * 60 * 1000;
+    } catch (error) {
+      return false;
+    }
+  }
 
   function fetchOptions(options = {}) {
     if (typeof authFetchOptions === 'function') return authFetchOptions(options);
@@ -127,13 +143,13 @@
         { button, reasonElement: $('weekOneStatus') });
       return;
     }
-    if (typeof item.url === 'string' && item.url.startsWith('/')) window.location.assign(item.url);
+    if (localPath(item.url)) window.location.assign(item.url);
   }
 
   function itemRow(item) {
     const row = el('li', 'week-one__item');
     row.dataset.format = item.category || '';
-    const clickable = Boolean(item.item_id) || (typeof item.url === 'string' && item.url.startsWith('/'));
+    const clickable = Boolean(item.item_id) || localPath(item.url);
     const body = el(clickable ? 'button' : 'span', 'week-one__item-body');
     if (clickable) {
       body.type = 'button';
@@ -432,7 +448,7 @@
   }
 
   function refresh(force = false) {
-    if (!signedIn()) return Promise.resolve();
+    if (!signedIn() || pastFirstWeek()) return Promise.resolve();
     if (!force && state.request && Date.now() - state.loadedAt < REFRESH_GAP_MS) return state.request;
     const epoch = state.epoch;
     state.loadedAt = Date.now();
@@ -485,6 +501,6 @@
 
   window.OmniWeekOne = { refresh, reset, render };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { refresh, reset, render, localToday, dayName, daysFrom, whenWords, state };
+    module.exports = { refresh, reset, render, localToday, pastFirstWeek, localPath, dayName, daysFrom, whenWords, state };
   }
 })();
