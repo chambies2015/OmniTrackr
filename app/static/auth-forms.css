@@ -684,6 +684,41 @@ body.dark-mode :is(.auth-container, .account-settings) {
   margin-top: 10px;
 }
 
+/* "Open Gmail" under the code box is a link drawn as an outlined button. */
+.auth-card .auth-form a.auth-ghost {
+  text-decoration: none;
+}
+
+/* The 6-digit code from the confirm-your-email message, typed right on the card. */
+.auth-card .auth-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-card .auth-code__row {
+  display: flex;
+  gap: 10px;
+}
+
+.auth-card .auth-form .auth-code input#verifyCode {
+  flex: 1 1 auto;
+  font: 600 1.45rem/1 var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .32em;
+  min-height: 54px;
+  min-width: 0;
+  padding: 0 12px;
+  text-align: center;
+}
+
+.auth-card .auth-form .auth-code .auth-code__submit {
+  flex: none;
+  margin: 0;
+  min-height: 54px;
+  width: auto;
+}
+
 .auth-card .auth-panel__icon {
   align-items: center;
   background: var(--auth-tint);

@@ -449,7 +449,7 @@ function authErrorMessage(body, fallback) {
 // guest who opens sign-up on three pages is still one person starting to sign up.
 const reportedFunnelEvents = new Set();
 const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup',
-    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed']);
+    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed', 'signup_inbox_opened']);
 const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
 function funnelSentThisVisit(event) {
     if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
@@ -745,13 +745,17 @@ async function register(email, username, password) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
+        // Signed up before and never confirmed: offer a code for that account, not a dead end.
+        if (error && error.unverified === true && typeof error.email === 'string' && showInboxPanel('pending', error.email)) return;
         throw new Error(authErrorMessage(error, 'Something went wrong creating your account. Please try again.'));
     }
 
     await response.json();
     clearFriendInvite();
     document.getElementById('registerFormElement').reset();
-    showVerificationSent(email);
+    const headers = response.headers;
+    const emailFailed = Boolean(headers && typeof headers.get === 'function' && headers.get('X-Verification-Email') === 'failed');
+    showVerificationSent(email, { emailFailed });
 }
 
 // Mail services we can open for the visitor, matched on the part after "@". The
@@ -805,21 +809,31 @@ function showAuthStatus(title, text) {
 }
 
 // "Check your inbox": after sign-up ('verify') or after asking for a reset link ('reset').
+// 'pending' is an account that signed up earlier and still waits for its email to be
+// confirmed (a log-in, or signing up again with the same address).
 let inboxPanelState = null;
-function showInboxPanel(mode, email) {
+const INBOX_PANEL_TEXT = {
+    verify: { title: 'Check your inbox', context: 'One more step and your library opens.',
+        lead: ['We sent a 6-digit code to ', '. Type it here to open your library.'] },
+    pending: { title: 'Confirm your email', context: 'Your account is waiting for this one step.',
+        lead: ['Type the code we emailed to ', ". Can't find it? Send a new one below."] },
+    reset: { title: 'Check your inbox', context: 'Your reset link is on its way.',
+        lead: ['If ', ' has an account, we sent it a link to choose a new password.'] },
+};
+function showInboxPanel(mode, email, { emailFailed = false } = {}) {
     const panel = document.getElementById('verifySentPanel');
     const lead = document.getElementById('verifySentLead');
     if (!panel || !lead) return false;
     hideAuthForms();
     hideAuthPanels();
     inboxPanelState = { mode, email };
-    document.getElementById('authTitle').textContent = 'Check your inbox';
-    setAuthContext(mode === 'verify' ? 'One more step and your library opens.' : 'Your reset link is on its way.');
+    const confirming = mode === 'verify' || mode === 'pending';
+    const text = INBOX_PANEL_TEXT[mode] || INBOX_PANEL_TEXT.reset;
+    document.getElementById('authTitle').textContent = text.title;
+    setAuthContext(text.context);
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    const parts = mode === 'verify'
-        ? ['We sent a link to ', '. Open it on this device and you go straight into your library.']
-        : ['If ', ' has an account, we sent it a link to choose a new password.'];
+    const parts = text.lead;
     const before = document.getElementById('verifySentBefore');
     const address = document.getElementById('verifySentEmail');
     const after = document.getElementById('verifySentAfter');
@@ -830,32 +844,41 @@ function showInboxPanel(mode, email) {
     } else {
         lead.textContent = `${parts[0]}${email}${parts[1]}`;
     }
+    // The code box is the main way on: it keeps this tab (and a guest's saved titles).
+    const codeForm = document.getElementById('verifyCodeForm');
+    if (codeForm) codeForm.hidden = !confirming;
+    const codeField = document.getElementById('verifyCode');
+    if (codeField) codeField.value = '';
+    clearFieldError('verifyCode');
     const inbox = document.getElementById('verifySentInbox');
     const service = inboxLinkFor(email);
     if (inbox) {
         inbox.hidden = !service;
+        // For a reset the mail app is the only way on; for a code it sits under the box.
+        inbox.className = confirming ? 'auth-ghost auth-inbox' : 'auth-submit auth-inbox';
+        if (typeof inbox.setAttribute === 'function') inbox.setAttribute('target', '_blank');
         if (service) { inbox.textContent = `Open ${service.name}`; inbox.href = service.url; }
     }
     const note = document.getElementById('verifySentNote');
     if (note) {
-        const saved = mode === 'verify' ? savedGuestTitles() : 0;
+        const saved = confirming ? savedGuestTitles() : 0;
         const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be in your library when you log in.` : '';
-        note.textContent = mode === 'verify'
-            ? `The link works for 48 hours. Nothing after a few minutes? Look in spam.${keep}`
+        note.textContent = confirming
+            ? `Or open the link in that email on this device. The code and link work for 48 hours. Nothing after a few minutes? Look in spam.${keep}`
             : 'The link works for one hour. Nothing after a few minutes? Look in spam.';
     }
     const quiz = document.getElementById('verifySentQuiz');
     if (quiz) quiz.hidden = mode !== 'verify';
     const resend = document.getElementById('verifySentResend');
     if (resend) {
-        resend.hidden = mode !== 'verify';
+        resend.hidden = !confirming;
         resend.disabled = false;
-        resend.textContent = 'Send the email again';
+        resend.textContent = mode === 'pending' ? 'Send me a new code' : 'Send the email again';
     }
     const status = document.getElementById('verifySentStatus');
-    if (status) status.textContent = '';
+    if (status) status.textContent = emailFailed ? "We couldn't send the email just now. Press Send the email again in a minute." : '';
     const login = document.getElementById('verifySentLogin');
-    if (login) login.textContent = mode === 'verify' ? 'Already confirmed? Log in' : 'Back to log in';
+    if (login) login.textContent = confirming ? 'Already confirmed? Log in' : 'Back to log in';
     const restart = document.getElementById('verifySentRestart');
     if (restart) restart.textContent = mode === 'verify' ? 'Wrong address? Start again' : 'Try a different email';
     panel.style.display = 'block';
@@ -870,7 +893,8 @@ function setupInboxPanel() {
     const resend = document.getElementById('verifySentResend');
     if (resend && typeof resend.addEventListener === 'function') {
         resend.addEventListener('click', async () => {
-            if (!inboxPanelState || inboxPanelState.mode !== 'verify') return;
+            if (!inboxPanelState || (inboxPanelState.mode !== 'verify' && inboxPanelState.mode !== 'pending')) return;
+            const label = resend.textContent;
             const status = document.getElementById('verifySentStatus');
             resend.disabled = true;
             resend.textContent = 'Sending…';
@@ -879,11 +903,11 @@ function setupInboxPanel() {
             try {
                 const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(inboxPanelState.email)}`, { method: 'POST' });
                 sent = response.ok;
-                if (sent) message = 'Sent. It replaces the first link, so open the newest email.';
+                if (sent) message = 'Sent. It has a new code and replaces the first email, so use the newest one.';
                 else if (response.status === 429) message = "That's a few tries in a row. Give it some minutes, and look in your spam folder.";
             } catch (_) { /* The message above covers it. */ }
             if (status) status.textContent = message;
-            resend.textContent = 'Send the email again';
+            resend.textContent = label;
             // One click a minute is plenty; the server allows three an hour.
             if (sent && typeof setTimeout === 'function') setTimeout(() => { resend.disabled = false; }, 60000);
             else resend.disabled = false;
@@ -907,13 +931,100 @@ function setupInboxPanel() {
             else showRegisterForm(true, { report: false });
         });
     }
+    const inbox = document.getElementById('verifySentInbox');
+    if (inbox && typeof inbox.addEventListener === 'function') {
+        inbox.addEventListener('click', () => {
+            if (inboxPanelState && inboxPanelState.mode !== 'reset') reportFunnelEvent('signup_inbox_opened');
+        });
+    }
+    setupCodeForm();
+}
+
+// Digits only, however the code arrives: typed, pasted as "123 456", or filled in by
+// the phone from the email ("one-time-code").
+function signupCodeDigits(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 6);
+}
+
+let codeCheckRunning = false;
+async function submitSignupCode() {
+    const field = document.getElementById('verifyCode');
+    if (!field || !inboxPanelState || inboxPanelState.mode === 'reset' || codeCheckRunning) return;
+    const code = signupCodeDigits(field.value);
+    clearFieldError('verifyCode');
+    if (code.length !== 6) {
+        showFieldError('verifyCode', 'Enter the 6 digits from the email.');
+        return;
+    }
+    const button = document.getElementById('verifyCodeSubmit');
+    codeCheckRunning = true;
+    if (button) { button.disabled = true; button.textContent = 'Checking…'; }
+    let data = {};
+    let ok = false;
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ email: inboxPanelState.email, code }),
+        });
+        ok = response.ok;
+        data = await response.json().catch(() => ({}));
+        if (!ok) {
+            const message = response.status === 429 && !/code/i.test(String(data.detail || ''))
+                ? 'Too many tries in a row. Wait a minute, then try again.'
+                : authErrorMessage(data, "That code didn't work. Check the newest email from us.");
+            showFieldError('verifyCode', message);
+            if (typeof field.select === 'function') field.select();
+        }
+    } catch (_) {
+        showFieldError('verifyCode', "We couldn't check the code. Check your connection and try again.");
+    } finally {
+        codeCheckRunning = false;
+        if (button) { button.disabled = false; button.textContent = 'Confirm'; }
+    }
+    if (!ok) return;
+    const email = inboxPanelState.email;
+    inboxPanelState = null;
+    if (data.signed_in && data.user) {
+        // Same as the link opened in this browser: the server set the session cookie.
+        saveAuthData(null, data.user);
+        if (!showAuthStatus('Your email is confirmed', 'Opening your library…')) displayAuthSuccess('Email confirmed. Opening your library…');
+        window.location.assign(consumeDiscoverAuthReturn());
+        return;
+    }
+    showLoginForm();
+    displayAuthSuccess('Your email is confirmed. Log in to open your library.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField) loginField.value = data.login_hint || email;
+}
+
+function setupCodeForm() {
+    const form = document.getElementById('verifyCodeForm');
+    const field = document.getElementById('verifyCode');
+    if (form && typeof form.addEventListener === 'function') {
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            submitSignupCode();
+        });
+    }
+    if (field && typeof field.addEventListener === 'function') {
+        // Six digits in the box is the whole answer, so check it without a button press.
+        field.addEventListener('input', () => {
+            const digits = signupCodeDigits(field.value);
+            if (digits.length === 6) {
+                field.value = digits;
+                submitSignupCode();
+            }
+        });
+    }
 }
 
 // The confirmation link was opened in another tab of this browser, which signed the
 // member in. Say so here instead of still asking them to check their inbox.
 function inboxPanelConfirmed() {
     const panel = document.getElementById('verifySentPanel');
-    if (!panel || !inboxPanelState || inboxPanelState.mode !== 'verify' || panel.style.display !== 'block') return;
+    if (!panel || !inboxPanelState || inboxPanelState.mode === 'reset' || panel.style.display !== 'block') return;
     inboxPanelState = null;
     document.getElementById('authTitle').textContent = 'Your email is confirmed';
     setAuthContext('Your library is open in the other tab.');
@@ -922,11 +1033,12 @@ function inboxPanelConfirmed() {
     const inbox = document.getElementById('verifySentInbox');
     if (inbox) {
         inbox.hidden = false;
+        inbox.className = 'auth-submit auth-inbox';
         inbox.textContent = 'Open my library';
         inbox.href = '/';
         if (typeof inbox.removeAttribute === 'function') inbox.removeAttribute('target');
     }
-    ['verifySentNote', 'verifySentQuiz', 'verifySentResend', 'verifySentLogin', 'verifySentRestart'].forEach(id => {
+    ['verifyCodeForm', 'verifySentNote', 'verifySentQuiz', 'verifySentResend', 'verifySentLogin', 'verifySentRestart'].forEach(id => {
         const element = document.getElementById(id);
         if (element) element.hidden = true;
     });
@@ -936,10 +1048,10 @@ function inboxPanelConfirmed() {
 
 // After sign-up: the "check your inbox" step. The log-in form keeps the email, so
 // "Already confirmed? Log in" only needs the password.
-function showVerificationSent(email) {
+function showVerificationSent(email, { emailFailed = false } = {}) {
     const loginField = document.getElementById('loginUsername');
     if (loginField) loginField.value = email;
-    if (showInboxPanel('verify', email)) return;
+    if (showInboxPanel('verify', email, { emailFailed })) return;
     // Pages without the inbox step: the log-in form with the message and resend button.
     showLoginForm(false);
     document.getElementById('authTitle').textContent = 'Check your inbox';
@@ -967,6 +1079,8 @@ async function login(username, password) {
         if (response.status === 429) throw new Error(authErrorMessage(error, 'Too many attempts. Please wait a minute and try again.'));
         // Check if it's an email verification error (403)
         if (response.status === 403) {
+            // Right password, email not confirmed yet: take the emailed code right here.
+            if (error && error.unverified === true && typeof error.email === 'string' && showInboxPanel('pending', error.email)) return;
             const errorMsg = error.detail || 'Please verify your email address before logging in.';
             // Check if it's a deactivated account error
             if (errorMsg.toLowerCase().includes('deactivated') || errorMsg.toLowerCase().includes('reactivate')) {
