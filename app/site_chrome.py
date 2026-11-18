@@ -15,13 +15,13 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261114-search-1"
+SITE_CSS_VERSION = "20261118-guest-sheet-1"
 SITE_JS_VERSION = "20261028-nav-1"
 SITE_NAV_JS_VERSION = "20261114-search-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
-VISIT_JS_VERSION = "20261030-people-1"
+VISIT_JS_VERSION = "20261118-search-1"
 
 # The header groups every public section into four menus. Each entry is
 # (key, label, href, one-line description); a page passes the key of its own

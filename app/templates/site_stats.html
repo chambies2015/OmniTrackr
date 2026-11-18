@@ -11,8 +11,8 @@
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/site.css?v=20261028-simplify-1">
   <script src="/static/site.js?v=20261028-nav-1" defer></script>
-  <link rel="stylesheet" href="/static/site-stats.css?v=20261117-remove-account-1">
-  <script src="/static/site-stats.js?v=20261117-check-in-remove-account-1" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20261118-search-journey-1">
+  <script src="/static/site-stats.js?v=20261118-search-journey-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -99,6 +99,10 @@
         <div class="stats-funnel" id="signupFunnel"></div>
         <h3 class="stats-subhead stats-subhead--gap">Homepage: search, save, sign up</h3>
         <div class="stats-funnel" id="homepageFunnel"></div>
+        <h3 class="stats-subhead stats-subhead--gap">Visitors from search engines</h3>
+        <p class="stats-note">People who arrived from Google, Bing or another search engine, followed for a day in the same browser. Guides and title pages are where search sends people, so this is their sign-up path; the homepage path above misses them.</p>
+        <div class="stats-funnel" id="searchJourney"></div>
+        <div id="searchJourneySections"></div>
         <h3 class="stats-subhead stats-subhead--gap">New members: the start page</h3>
         <div class="stats-funnel" id="startFunnel"></div>
         <div class="stats-grid stats-grid--inner">

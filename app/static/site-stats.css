@@ -196,3 +196,7 @@
 .stats-remove__button:hover:not(:disabled), .stats-remove__button:focus-visible { background: #be123c; }
 .stats-remove__button:disabled { cursor: not-allowed; opacity: .45; }
 @media (max-width: 560px) { .stats-remove__confirm input { width: 100%; } .stats-remove__confirm .site-btn { flex: 1; } }
+
+/* Visitors from search engines */
+.stats-note { color: var(--site-muted); font-size: .84rem; line-height: 1.5; margin: 0 0 10px; max-width: 72ch; }
+#searchJourneySections { margin-top: 12px; }

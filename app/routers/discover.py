@@ -12,7 +12,7 @@ from .. import models
 from ..csp import strict_html_response
 from ..site_chrome import apply_site_chrome
 from ..dependencies import get_current_user, get_db
-from ..discover_catalog import TRAILS, published_editions
+from ..discover_catalog import TRAILS, guest_fields, published_editions
 from ..discover_guides import GUIDES
 from .collections import CATEGORIES
 
@@ -157,7 +157,7 @@ def discover_index():
         "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/"},
         "mainEntity": {"@type": "ItemList", "itemListElement": trail_links},
     }
-    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + season_card + challenge_card + liked_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
+    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + season_card + challenge_card + liked_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving one pick needs no account: it waits in your browser until you sign up. Saving a whole trail as a collection needs an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
 
 
 def _notes_section(notes) -> str:
@@ -186,8 +186,29 @@ def _byline(trail, published) -> str:
     return f'<p class="guide-byline">By <a href="/about">OmniTrackr</a> · {stamp}</p>'
 
 
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
+GUEST_HEAD = f'<script src="{GUEST_LIST_JS}" defer></script>'
+
+
+def _guest_save(item) -> str:
+    """A visitor's one-tap save for a pick (browser-only list, guest-list.js); hidden for members."""
+    fields = guest_fields(item)
+    if fields is None:
+        return ""
+    return (f'<button type="button" class="pick-save" data-guest-only data-guest-save aria-pressed="false" '
+            f'data-guest-kind="{escape(fields["kind"], quote=True)}" data-guest-slug="{escape(fields["slug"], quote=True)}" '
+            f'data-guest-title="{escape(fields["title"], quote=True)}">Save to my list</button>')
+
+
+# Shown under the picks once a visitor has saved one (guest-list.js shows and fills it).
+GUEST_BAR = ('<div class="dc-bar" data-guest-bar data-guest-only hidden><p class="dc-bar__count" data-guest-count role="status" aria-live="polite"></p>'
+             '<a class="button" href="/#signup">Save my list, free →</a></div>')
+GUEST_PANEL_NOTE = ('<p class="save-panel__guest" data-guest-only>No account yet? Press <strong>Save to my list</strong> on any pick above. '
+                    'Your list waits in this browser and moves into your library when you sign up.</p>')
+
+
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
-    items = "".join(f'<article class="pick"><p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></article>' for n, i in enumerate(trail["items"], 1))
+    items = "".join(f'<article class="pick"><p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><div class="pick-actions">{_guest_save(i)}<a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></div></article>' for n, i in enumerate(trail["items"], 1))
     essay_section = ""
     if essay:
         essay_section = f'<section id="essay" class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
@@ -198,7 +219,7 @@ def detail_content(trail, back_path, back_label, api_path, published, essay=None
     signin = '/?next=' + quote('/discover/' + api_path + '#save-picks', safe='') + '#landing-auth'
     checked = (f' · Updated <time datetime="{escape(trail["reviewed"], quote=True)}">{escape(_long_date(trail["reviewed"]))}</time>'
                if trail.get("reviewed") else "")
-    return f'<article class="trail-guide trail-edition"><header class="hero hero--guide"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p class="guide-deck">{escape(trail["intro"])}</p>{_byline(trail, published)}<nav class="guide-jump" aria-label="On this page">{jump}</nav></header>{essay_section}<section id="start-here" class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div id="picks" class="picks">{items}</div>{_notes_section(trail.get("notes"))}<section id="take-away" class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}{checked}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section></article>'
+    return f'<article class="trail-guide trail-edition"><header class="hero hero--guide"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p class="guide-deck">{escape(trail["intro"])}</p>{_byline(trail, published)}<nav class="guide-jump" aria-label="On this page">{jump}</nav></header>{essay_section}<section id="start-here" class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div id="picks" class="picks">{items}</div>{GUEST_BAR}{_notes_section(trail.get("notes"))}<section id="take-away" class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}{checked}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p>{GUEST_PANEL_NOTE}<button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section></article>'
 
 
 def paragraphs(values):
@@ -247,10 +268,10 @@ def guide_content(slug, trail, guide):
             f'<h3>{escape(item["title"])}</h3><p>{escape(item["why"])}</p>',
             paragraphs(guide['item_notes'][key]),
             f'<p class="caveat">{escape(item["caveat"])}</p>',
-            f'<a class="guide-source-link" href="#source-{escape(key, quote=True)}">Source: {escape(source_by_key[key]["label"])} ↓</a></article>',
+            f'<div class="pick-actions">{_guest_save(item)}<a class="guide-source-link" href="#source-{escape(key, quote=True)}">Source: {escape(source_by_key[key]["label"])} ↓</a></div></article>',
         ])
     parts.extend([
-        '</div></section><section class="editorial guide-reflection"><h2>Take something with you</h2>',
+        '</div>', GUEST_BAR, '</section><section class="editorial guide-reflection"><h2>Take something with you</h2>',
         f'<p>{escape(trail["prompt"])}</p><p>Keep a short note about what drew you in and whether it suited the time you had. You do not need to finish the whole list; the note will help more next time you pick.</p></section>',
         '<section id="related-trails" class="guide-related" aria-labelledby="related-heading"><p class="eyebrow">FOLLOW ANOTHER THREAD</p><h2 id="related-heading">Where to go next</h2><div class="guide-related-grid">',
     ])
@@ -272,6 +293,7 @@ def guide_content(slug, trail, guide):
         '</ol></section>',
         f'<section id="save-picks" class="save-panel" data-trail="{escape(slug, quote=True)}"><h2>Make this collection yours</h2>',
         '<p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p>',
+        GUEST_PANEL_NOTE,
         '<button id="preview" type="button">Preview saving</button>',
         f'<a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a>',
         '<form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form>',
@@ -289,6 +311,7 @@ def monthly_detail(slug: str):
         edition["intro"],
         "/discover/monthly/" + slug,
         detail_content(edition, "/discover", "Discover", "monthly/" + slug, edition["published"], {"title": edition["essay_title"], "body": edition["essay"]}),
+        head=GUEST_HEAD,
         structured_data={
             "@context": "https://schema.org", "@type": "Article",
             "headline": edition["name"], "description": edition["intro"],
@@ -311,6 +334,7 @@ def discover_detail(slug: str):
         return page(
             guide.get('search_title') or t['name'] + ' | Discover', guide['summary'], '/discover/' + slug,
             guide_content(slug, t, guide),
+            head=GUEST_HEAD,
             structured_data={
                 '@context': 'https://schema.org', '@type': 'Article',
                 'headline': t['name'], 'description': guide['summary'],
@@ -327,6 +351,7 @@ def discover_detail(slug: str):
         "/discover/" + slug,
         detail_content(t, "/discover", "All trails", slug, "September 8, 2026"),
         indexable=False,
+        head=GUEST_HEAD,
     )
 
 

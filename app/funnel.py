@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
+from . import search_journey
 from .site_traffic import BOT_PATTERN, RECORDER
 
 # Ordered as the Site stats page shows them: (step, label). "signup_sent" and
@@ -90,6 +91,11 @@ GUEST = (
     ("advent_door_link_opened", "Advent calendar: a shared door opened by a visitor without an account"),
     ("advent_signup_clicked", "Advent calendar: sign-up button pressed"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
+    ("guest_sheet_opened", "Keep your list sheet opened on a guide or title page"),
+    ("guest_sheet_google", "Keep your list sheet: Continue with Google pressed"),
+    ("guest_sheet_email", "Keep your list sheet: Sign up with email pressed"),
+    ("guest_sheet_login", "Keep your list sheet: Log in pressed"),
+    ("guest_return_clicked", "New library: Back to the page the list was saved from pressed"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
     ("recap_kofi_clicked", "Ko-fi link opened from Year in Review"),
@@ -214,7 +220,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_form_opened", "hero_
                  "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked",
                  "advent_guest_opened", "advent_shared", "advent_signup_clicked",
                  "home_cta_clicked", "home_tour_opened", "home_import_clicked", "home_binge_demo_used", "home_tool_opened",
-                 "title_signup_clicked", "title_trailer_played"}
+                 "title_signup_clicked", "title_trailer_played",
+                 "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked"}
 
 
 def record(event: str, request=None) -> bool:
@@ -225,8 +232,11 @@ def record(event: str, request=None) -> bool:
         if request is not None and BOT_PATTERN.search(request.headers.get("user-agent", "") or "x"):
             return False
         day = datetime.now(timezone.utc).date()
+        journey = search_journey.step_key(event, request)
         with RECORDER._lock:
             RECORDER._pending[(day, "funnel", event)] += 1
+            if journey:
+                RECORDER._pending[(day, search_journey.KIND, journey)] += 1
             RECORDER._events += 1
         if RECORDER.flush_due():
             try:
