@@ -87,7 +87,7 @@
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261115-home-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261118-week-one-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -620,6 +620,37 @@
           </div>
         </section>
         </div>
+
+        <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
+        <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
+          <div class="week-one__head">
+            <div>
+              <p id="weekOneEyebrow" class="week-one__eyebrow">Your first week</p>
+              <h2 id="weekOneTitle" class="week-one__title">Your week</h2>
+              <p id="weekOneSummary" class="week-one__summary"></p>
+            </div>
+            <ol id="weekOneDots" class="week-one__dots" aria-label="Days of your first week"></ol>
+          </div>
+          <ol id="weekOneDays" class="week-one__days" aria-label="This week, day by day" hidden></ol>
+          <div id="weekOneSuggest" class="week-one__suggest" hidden>
+            <h3 id="weekOneSuggestTitle" class="week-one__subhead">Watching something right now?</h3>
+            <p class="week-one__hint">Shows members follow that have a new episode this week. Save the ones you're watching and their episodes show up here, day by day.</p>
+            <ul id="weekOneSuggestList" class="week-one__picks" aria-labelledby="weekOneSuggestTitle"></ul>
+            <button type="button" class="week-one__link" data-action="open-quick-capture">Search for another show</button>
+          </div>
+          <div id="weekOneRemind" class="week-one__remind" hidden>
+            <p id="weekOneRemindText" class="week-one__remind-text"></p>
+            <div class="week-one__remind-actions">
+              <button type="button" id="weekOneEmail" class="week-one__btn week-one__btn--primary" hidden></button>
+              <button type="button" id="weekOnePush" class="week-one__btn" hidden>Notify me on this device</button>
+              <button type="button" id="weekOneCancel" class="week-one__quiet" hidden>Cancel the reminder</button>
+            </div>
+          </div>
+          <p id="weekOneStatus" class="week-one__status" role="status" aria-live="polite"></p>
+          <div class="week-one__foot">
+            <button type="button" id="weekOneHide" class="week-one__quiet">Hide this card</button>
+          </div>
+        </section>
 
         <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
         <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
@@ -2492,6 +2523,7 @@
   <script src="/static/follows.js?v=20261113-social-1"></script>
   <script src="/static/push.js?v=20261116-stay-1" defer></script>
   <script src="/static/stay-posted.js?v=20261116-stay-1" defer></script>
+  <script src="/static/week-one.js?v=20261118-week-one-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>

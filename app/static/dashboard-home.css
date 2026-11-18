@@ -679,3 +679,238 @@ body.app-shell .home-board__rail .year-so-far__link { justify-content: center; w
   body.app-shell .home-news__btn { min-height: 40px; }
   body.app-shell .home-hero__news-link { font-size: .8rem; }
 }
+
+/* Your first week (week-one.js): a new member's seven days, shows airing now, one reminder. */
+body.app-shell .home-board .week-one {
+  background:
+    radial-gradient(560px 220px at 0% 0%, color-mix(in srgb, var(--accent-solid, #7c3aed) 14%, transparent), transparent 70%),
+    radial-gradient(420px 200px at 100% 100%, color-mix(in srgb, var(--teal, #14b8a6) 10%, transparent), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid color-mix(in srgb, var(--accent-solid, #7c3aed) 35%, var(--border));
+  border-radius: var(--home-radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+}
+body.app-shell .week-one[hidden],
+body.app-shell .week-one [hidden] { display: none; }
+body.app-shell .week-one__head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+body.app-shell .week-one__eyebrow {
+  color: var(--accent-text, #a78bfa);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+body.app-shell .home-board__main .week-one__title {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin: 0;
+}
+body.app-shell .week-one__summary { color: var(--fg-secondary); font-size: .9rem; line-height: 1.5; margin: 4px 0 0; max-width: 62ch; }
+body.app-shell .week-one__summary:empty { display: none; }
+body.app-shell .week-one__dots { display: flex; flex-shrink: 0; gap: 5px; list-style: none; margin: 4px 0 0; padding: 0; }
+body.app-shell .week-one__dot {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  border-radius: 99px;
+  height: 8px;
+  width: 8px;
+}
+body.app-shell .week-one__dot.is-past { background: color-mix(in srgb, var(--accent-solid, #7c3aed) 60%, transparent); }
+body.app-shell .week-one__dot.is-now {
+  background: var(--accent-solid, #7c3aed);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid, #7c3aed) 30%, transparent);
+  width: 20px;
+}
+body.app-shell .week-one__days {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+body.app-shell .week-one__day {
+  background: var(--surface-muted, rgba(127, 127, 127, .07));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 104px;
+  min-width: 0;
+  padding: 8px;
+}
+body.app-shell .week-one__day.is-today {
+  background: color-mix(in srgb, var(--accent-solid, #7c3aed) 12%, var(--surface-muted, transparent));
+  border-color: color-mix(in srgb, var(--accent-solid, #7c3aed) 55%, transparent);
+}
+body.app-shell .week-one__day.is-empty { opacity: .72; }
+body.app-shell .week-one__day-head { align-items: baseline; display: flex; gap: 6px; justify-content: space-between; margin: 0; }
+body.app-shell .week-one__day-name { font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+body.app-shell .week-one__day.is-today .week-one__day-name { color: var(--accent-text, #a78bfa); }
+body.app-shell .week-one__day-date { color: var(--fg-secondary); font-size: .74rem; font-variant-numeric: tabular-nums; }
+body.app-shell .week-one__items { display: flex; flex-direction: column; gap: 6px; list-style: none; margin: 0; padding: 0; }
+body.app-shell .week-one__item-body {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--fg);
+  display: grid;
+  font: inherit;
+  gap: 6px;
+  grid-template-columns: 26px minmax(0, 1fr);
+  padding: 2px;
+  text-align: left;
+  width: 100%;
+}
+body.app-shell button.week-one__item-body { cursor: pointer; }
+body.app-shell button.week-one__item-body:hover { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+body.app-shell button.week-one__item-body:focus-visible { box-shadow: var(--ring); outline: none; }
+body.app-shell .week-one__cover {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  background: hsl(var(--fmt-hue, 262) 45% 45% / .35);
+  border-radius: 5px;
+  color: var(--fg);
+  display: flex;
+  font-size: .8rem;
+  font-weight: 700;
+  justify-content: center;
+  overflow: hidden;
+  width: 26px;
+}
+body.app-shell .week-one__cover img { display: block; height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .week-one__item-words { display: flex; flex-direction: column; min-width: 0; }
+body.app-shell .week-one__item-title {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+body.app-shell .week-one__item-what { color: var(--fg-secondary); font-size: .7rem; white-space: nowrap; }
+body.app-shell .week-one__none,
+body.app-shell .week-one__more { color: var(--fg-secondary); font-size: .74rem; }
+body.app-shell .week-one__suggest { margin-top: 16px; }
+body.app-shell .week-one__subhead {
+  color: var(--fg-secondary);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+body.app-shell .week-one__hint { color: var(--fg-secondary); font-size: .84rem; line-height: 1.5; margin: 0 0 10px; }
+body.app-shell .week-one__picks {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.app-shell .week-one__pick {
+  align-items: center;
+  background: var(--surface-muted, rgba(127, 127, 127, .07));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  padding: 8px 10px 8px 8px;
+}
+body.app-shell .week-one__pick .week-one__cover { width: 40px; border-radius: 7px; }
+body.app-shell .week-one__pick-words { display: flex; flex-direction: column; min-width: 0; }
+body.app-shell .week-one__pick-title { font-size: .9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.app-shell .week-one__pick-meta { font-size: .78rem; line-height: 1.35; overflow-wrap: anywhere; }
+body.app-shell .week-one__pick-meta--soft { color: var(--fg-secondary); }
+body.app-shell .week-one__btn {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+body.app-shell .week-one__btn:hover { border-color: var(--accent-solid, #7c3aed); }
+body.app-shell .week-one__btn:focus-visible,
+body.app-shell .week-one__quiet:focus-visible,
+body.app-shell .week-one__link:focus-visible { box-shadow: var(--ring); outline: none; }
+body.app-shell .week-one__btn:disabled { cursor: default; opacity: .7; }
+body.app-shell .week-one__btn--primary { background: var(--accent-solid, #7c3aed); border-color: transparent; color: #fff; }
+body.app-shell .week-one__btn--primary:hover { filter: brightness(1.08); }
+body.app-shell .week-one__btn--small { font-size: .78rem; min-height: 34px; padding: 0 12px; }
+body.app-shell .week-one__btn.is-done { background: color-mix(in srgb, var(--teal, #14b8a6) 18%, transparent); border-color: transparent; opacity: 1; }
+body.app-shell .week-one__link,
+body.app-shell .week-one__quiet {
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  padding: 4px 2px;
+}
+body.app-shell .week-one__link { color: var(--accent-text, var(--accent-solid, #7c3aed)); margin-top: 10px; }
+body.app-shell .week-one__quiet { color: var(--fg-secondary); }
+body.app-shell .week-one__quiet:hover { color: var(--fg); }
+body.app-shell .week-one__remind {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+body.app-shell .week-one__remind-text { font-size: .88rem; line-height: 1.5; margin: 0; max-width: 52ch; }
+body.app-shell .week-one__remind-text:empty { display: none; }
+body.app-shell .week-one__remind-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+body.app-shell .week-one__foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+body.app-shell .week-one__status { color: var(--fg-secondary); font-size: .82rem; margin: 6px 0 0; }
+body.app-shell .week-one__status:empty { display: none; }
+
+@media (max-width: 760px) {
+  body.app-shell .home-board .week-one { padding: 16px; }
+  body.app-shell .week-one__head { flex-direction: column; gap: 10px; }
+  /* Seven days scroll sideways on a phone; the page itself never gets wider. */
+  body.app-shell .week-one__days {
+    grid-auto-columns: minmax(118px, 42%);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 16px 4px;
+    position: relative;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+  }
+  body.app-shell .week-one__day { min-height: 84px; scroll-snap-align: start; }
+  /* A phone shows today and the days with something on, not a row of empty boxes. */
+  body.app-shell .week-one__day.is-empty:not(.is-today) { display: none; }
+  body.app-shell .week-one__picks { grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .week-one__pick { grid-template-columns: 40px minmax(0, 1fr); }
+  body.app-shell .week-one__pick .week-one__btn { grid-column: 2; justify-self: start; }
+  body.app-shell .week-one__remind { align-items: stretch; flex-direction: column; }
+  body.app-shell .week-one__remind-actions .week-one__btn { flex: 1 1 auto; }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  body.app-shell .week-one__days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

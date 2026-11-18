@@ -138,6 +138,15 @@ def _support_note_open(db: Session, user: models.User) -> bool:
         return False
 
 
+def _first_week_card(db: Session, user: models.User, now: datetime) -> bool:
+    try:
+        from . import week_one
+        return week_one.active(db, user, now)
+    except Exception:
+        db.rollback()
+        return False
+
+
 # ---------------------------------------------------------------- what's coming up
 
 def upcoming(db: Session, user: models.User, today: Optional[date] = None) -> list[dict]:
@@ -212,6 +221,8 @@ def current(db: Session, user: models.User, now: Optional[datetime] = None) -> O
     have = channels(db, user)
     if any(have.values()):
         return None
+    if not open_card and _first_week_card(db, user, now):
+        return None  # a new member's first-week card already offers a reminder
     titles = _library_size(db, user.id)
     if titles < MIN_TITLES:
         return None

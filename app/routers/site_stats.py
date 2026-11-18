@@ -246,7 +246,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "reviews": _review_inbox(db, days, now),
         "support": _support_asks(db, days, now),
         "stay": _stay_posted(db, days, now),
+        "week_one": _week_one(db, days, now),
     }
+
+
+def _week_one(db: Session, days: int, now: datetime) -> dict:
+    """The first-week home card: seen, came back on a later day, reminder emails asked for and sent."""
+    try:
+        from .. import week_one
+        return week_one.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _stay_posted(db: Session, days: int, now: datetime) -> dict:
