@@ -1,0 +1,43 @@
+/* /app: the "Get the app" page (app/app_install.py). Builds on site.css tokens. */
+.app-page__main { padding-block: 40px 64px; }
+.app-page__main section { margin: 0 0 48px; }
+.app-page__main h2 { font-family: var(--site-display); font-size: clamp(1.35rem, 3.4vw, 1.75rem); margin: 0 0 18px; }
+.app-page__hero {
+  background:
+    radial-gradient(circle at 85% 10%, rgb(139 92 246 / .22), transparent 55%),
+    radial-gradient(circle at 10% 100%, rgb(45 212 191 / .12), transparent 50%),
+    var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 24px;
+  padding: clamp(24px, 5vw, 48px);
+  text-align: center;
+}
+.app-page__icon { border-radius: 22px; box-shadow: 0 16px 40px rgb(0 0 0 / .45); display: block; height: 88px; margin: 0 auto 16px; width: 88px; }
+.app-page__hero h1 { font-family: var(--site-display); font-size: clamp(1.8rem, 6vw, 2.8rem); line-height: 1.12; margin: 6px 0 14px; }
+.app-page__lead { color: var(--site-soft); font-size: 1.05rem; line-height: 1.6; margin: 0 auto 22px; max-width: 58ch; }
+.app-page__actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.app-page__actions [hidden] { display: none; }
+.app-page__installed { color: var(--site-teal-soft); margin: 16px 0 0; }
+.app-page__installed[hidden] { display: none; }
+.app-page__perks { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.app-page__perks li { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; padding: 18px; }
+.app-page__perks h3 { font-size: 1rem; margin: 0 0 6px; }
+.app-page__perks p { color: var(--site-soft); font-size: .92rem; line-height: 1.55; margin: 0; }
+.app-page__devices { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.app-page__devices article { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 18px; padding: 18px; }
+.app-page__devices h3 { font-size: 1.05rem; margin: 0 0 12px; }
+.app-page__note { color: var(--site-soft); font-size: .92rem; line-height: 1.55; margin: 0 0 12px; }
+.app-page__faq details { border-bottom: 1px solid var(--site-border); padding: 4px 0; }
+.app-page__faq summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.app-page__faq p { color: var(--site-soft); line-height: 1.6; margin: 0 0 14px; max-width: 70ch; }
+.app-page__cta { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.app-page .install-app-dialog {
+  background: #16142b;
+  border: 1px solid var(--site-border-strong);
+  border-radius: 16px;
+  color: var(--site-text);
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 22px 22px 18px;
+}
+.app-page .install-app-dialog::backdrop { background: rgb(0 0 0 / .6); }
+.app-page .install-app-dialog h2 { font-size: 1.1rem; margin: 0; }
