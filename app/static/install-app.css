@@ -1,0 +1,117 @@
+/* The installed app (Nov 2026): Add to Home Screen steps in the install dialog, and the short
+   note that slides up on phones on a return visit (static/pwa.js). Colours come from the
+   app-theme tokens, so light and dark mode both work. */
+body.app-shell .install-app-dialog { max-width: min(440px, calc(100vw - 32px)); padding: 22px 22px 18px; }
+.install-app-dialog__head { align-items: center; display: flex; gap: 12px; margin: 0 0 14px; }
+.install-app-dialog__head img { border-radius: 11px; box-shadow: 0 6px 18px rgb(0 0 0 / .28); flex: none; height: 44px; width: 44px; }
+body.app-shell .install-app-dialog__head h2 { font-family: var(--font-display, 'Poppins', sans-serif); font-size: 1.12rem; line-height: 1.3; margin: 0; }
+.install-steps[hidden] { display: none !important; }
+.install-steps ol, body.app-shell .install-app-dialog .install-steps ol { counter-reset: install-step; display: grid; gap: 10px; list-style: none; margin: 0 0 14px; padding: 0; }
+.install-steps li {
+  align-items: start;
+  background: color-mix(in srgb, var(--fg, #f4f2ff) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fg, #f4f2ff) 10%, transparent);
+  border-radius: 12px;
+  counter-increment: install-step;
+  display: grid;
+  font-size: .92rem;
+  gap: 10px;
+  grid-template-columns: 26px 1fr;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+.install-steps li::before {
+  align-items: center;
+  background: color-mix(in srgb, #8b5cf6 26%, transparent);
+  border-radius: 50%;
+  color: var(--fg, #f4f2ff);
+  content: counter(install-step);
+  display: flex;
+  font-size: .8rem;
+  font-weight: 800;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+.install-glyph {
+  background: color-mix(in srgb, var(--fg, #f4f2ff) 10%, transparent);
+  border-radius: 6px;
+  box-sizing: content-box;
+  color: #a78bfa;
+  display: inline-block;
+  height: 18px;
+  margin: 0 2px;
+  padding: 2px;
+  vertical-align: -6px;
+  width: 18px;
+}
+.install-steps__copy {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--fg, #f4f2ff) 24%, transparent);
+  border-radius: 999px;
+  color: var(--fg, #f4f2ff);
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+  margin: 0 0 14px;
+  min-height: 40px;
+  overflow-wrap: anywhere;
+  padding: 6px 14px;
+}
+.install-app-dialog__why { color: var(--fg-secondary, var(--fg)); font-size: .84rem; line-height: 1.5; margin: 0 0 16px; opacity: .85; }
+.install-app-dialog__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.install-app-dialog__more { color: var(--fg, #f4f2ff); font-size: .86rem; opacity: .8; padding-block: 10px; text-underline-offset: 2px; }
+.install-app-dialog__more:hover { opacity: 1; }
+
+/* The phone note. It sits above the bottom bar when there is one, and never covers a dialog. */
+.install-sheet {
+  align-items: center;
+  animation: install-sheet-in .32s cubic-bezier(.2, .8, .2, 1);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #8b5cf6 18%, var(--card-bg, #1e1e2f)), var(--card-bg, #1e1e2f) 72%);
+  border: 1px solid color-mix(in srgb, #8b5cf6 42%, var(--border, rgb(255 255 255 / .12)));
+  border-radius: 18px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 18px 40px rgb(0 0 0 / .42);
+  box-sizing: border-box;
+  color: var(--fg, #f4f2ff);
+  display: grid;
+  gap: 10px 12px;
+  grid-template-columns: auto 1fr;
+  left: 10px;
+  max-width: 520px;
+  padding: 14px 14px 12px;
+  position: fixed;
+  right: 10px;
+  z-index: 60;
+}
+.install-sheet[hidden] { display: none !important; }
+body.has-app-dock .install-sheet { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+.install-sheet__icon { border-radius: 11px; box-shadow: 0 6px 16px rgb(0 0 0 / .3); display: block; height: 44px; width: 44px; }
+.install-sheet__copy { min-width: 0; }
+body.app-shell .install-sheet h2 { font-family: var(--font-display, 'Poppins', sans-serif); font-size: 1rem; line-height: 1.3; margin: 0; }
+.install-sheet p { font-size: .85rem; line-height: 1.45; margin: 3px 0 0; opacity: .82; }
+.install-sheet__actions { align-items: center; display: flex; gap: 6px 14px; grid-column: 1 / -1; }
+.install-sheet__actions .action-btn { flex: 1 1 auto; min-height: 44px; }
+.install-sheet__dismiss {
+  background: transparent;
+  border: 0;
+  color: var(--fg, #f4f2ff);
+  cursor: pointer;
+  font: inherit;
+  font-size: .88rem;
+  min-height: 44px;
+  opacity: .78;
+  padding: 0 8px;
+}
+.install-sheet button:focus-visible, .install-steps__copy:focus-visible { outline: 3px solid var(--teal, #14b8a6); outline-offset: 2px; }
+@media (min-width: 761px) {
+  .install-sheet { left: auto; right: 20px; width: 420px; }
+}
+@keyframes install-sheet-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .install-sheet { animation: none; }
+}

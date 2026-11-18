@@ -130,6 +130,7 @@ FOOTER_GROUPS = (
     ("OmniTrackr", (
         ("About", "/about"),
         ("What's new", "/changelog"),
+        ("Get the app", "/app"),
         ("Roadmap", "/roadmap"),
         ("Editorial standards", "/content-quality"),
         ("Site map", "/site-map"),
@@ -308,8 +309,10 @@ def app_sheet_explore() -> str:
 
 def apply_app_chrome(html: str) -> str:
     """Fill the dashboard's Explore menu and phone sheet from NAV_MENUS."""
+    from .app_install import STEPS_MARKER, steps_markup
     return (html.replace(APP_EXPLORE_MARKER, app_explore_menu(), 1)
-                .replace(APP_SHEET_EXPLORE_MARKER, app_sheet_explore(), 1))
+                .replace(APP_SHEET_EXPLORE_MARKER, app_sheet_explore(), 1)
+                .replace(STEPS_MARKER, steps_markup(), 1))
 
 
 def site_footer() -> str:

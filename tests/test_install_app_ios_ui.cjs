@@ -31,7 +31,7 @@ function setup({userAgent, touch = 0, standalone = false}) {
   };
   vm.runInContext(script, vm.createContext({window, document, navigator}));
   const click = target => docListeners.click({target: element(target), preventDefault() {}});
-  return {button, close, dialog, click, winListeners};
+  return {button, close, dialog, click, winListeners, window};
 }
 
 test('iPhone Safari shows the button and opens Add to Home Screen steps', async () => {
@@ -44,12 +44,23 @@ test('iPhone Safari shows the button and opens Add to Home Screen steps', async 
 });
 
 test('iPadOS Safari, which reports a Mac user agent, is recognised by touch support', () => {
-  assert.equal(setup({userAgent: IPAD, touch: 5}).button.hidden, false);
-  assert.equal(setup({userAgent: IPAD, touch: 0}).button.hidden, true);
+  const ipad = setup({userAgent: IPAD, touch: 5});
+  assert.equal(ipad.button.hidden, false);
+  assert.equal(ipad.window.omniInstall.route(), 'ios_safari');
+  // Without touch it is Safari on a Mac, which adds sites to the Dock (Nov 2026).
+  assert.equal(setup({userAgent: IPAD, touch: 0}).window.omniInstall.route(), 'desktop_other');
 });
 
-test('other iOS browsers, desktop browsers and installed apps get no iOS help', async () => {
-  for (const options of [{userAgent: CHROME_IOS}, {userAgent: DESKTOP}, {userAgent: IPHONE, standalone: true}]) {
+test('Chrome on iPhone gets its own Add to Home Screen steps (iOS 16.4 and later)', async () => {
+  const ui = setup({userAgent: CHROME_IOS});
+  assert.equal(ui.button.hidden, false);
+  assert.equal(ui.window.omniInstall.route(), 'ios_other');
+  await ui.click(ui.button);
+  assert.equal(ui.dialog.opened, true);
+});
+
+test('desktop browsers without an install prompt and installed apps get no help', async () => {
+  for (const options of [{userAgent: DESKTOP}, {userAgent: IPHONE, standalone: true}]) {
     const ui = setup(options);
     assert.equal(ui.button.hidden, true);
     await ui.click(ui.button);

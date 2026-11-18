@@ -954,6 +954,8 @@ app.include_router(profile_widgets_router.router)
 for route in pwa.router.routes:
     if getattr(route, "path", None) == "/share" and "GET" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/api/app/event" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:
