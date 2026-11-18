@@ -106,7 +106,7 @@
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/install-app.css?v=20261118-app-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261118-week-one-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261118-backlog-draw-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -656,6 +656,20 @@
           </div>
         </section>
         </div>
+
+        <!-- Draw from your backlog: deal three titles saved and never started, keep one, give it a night (backlog-draw.js) -->
+        <section id="backlogDraw" class="backlog-draw" aria-labelledby="backlogDrawTitle" hidden>
+          <div class="backlog-draw__head">
+            <div>
+              <p id="backlogDrawEyebrow" class="backlog-draw__eyebrow">From your backlog</p>
+              <h2 id="backlogDrawTitle" class="backlog-draw__title">Draw your next one</h2>
+              <p id="backlogDrawSummary" class="backlog-draw__summary"></p>
+            </div>
+            <button type="button" id="backlogDrawHide" class="backlog-draw__quiet" hidden>Hide for now</button>
+          </div>
+          <div id="backlogDrawBody" class="backlog-draw__body" aria-live="polite"></div>
+          <p id="backlogDrawStatus" class="backlog-draw__status" role="status" aria-live="polite"></p>
+        </section>
 
         <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
         <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
@@ -2579,6 +2593,7 @@
   <script src="/static/stay-posted.js?v=20261118-peek-1" defer></script>
   <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
+  <script src="/static/backlog-draw.js?v=20261118-backlog-draw-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261118-sheet-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>

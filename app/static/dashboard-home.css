@@ -914,3 +914,223 @@ body.app-shell .week-one__status:empty { display: none; }
 @media (min-width: 761px) and (max-width: 1100px) {
   body.app-shell .week-one__days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Draw from your backlog (backlog-draw.js): three face-down cards from titles saved and never started,
+   keep one, give it a night, and say how it went. */
+body.app-shell .home-board .backlog-draw {
+  background:
+    radial-gradient(520px 220px at 100% 0%, color-mix(in srgb, #f59e0b 12%, transparent), transparent 70%),
+    radial-gradient(520px 240px at 0% 100%, color-mix(in srgb, var(--accent-solid, #7c3aed) 14%, transparent), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, var(--border));
+  border-radius: var(--home-radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+}
+body.app-shell .backlog-draw[hidden],
+body.app-shell .backlog-draw [hidden] { display: none; }
+body.app-shell .backlog-draw__head { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+body.app-shell .backlog-draw__eyebrow {
+  color: color-mix(in srgb, #f59e0b 75%, var(--fg));
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+body.app-shell .home-board__main .backlog-draw__title {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+body.app-shell .backlog-draw__summary { color: var(--fg-secondary); font-size: .9rem; line-height: 1.5; margin: 4px 0 0; max-width: 62ch; }
+body.app-shell .backlog-draw__summary:empty { display: none; }
+body.app-shell .backlog-draw__body { margin-top: 16px; }
+
+/* The table: three cards side by side. */
+body.app-shell .backlog-draw__table {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.app-shell .backlog-draw__card { min-width: 0; perspective: 900px; }
+body.app-shell .backlog-draw__table:not(.backlog-draw__table--up) { max-width: 420px; }
+body.app-shell .backlog-draw__table--up { max-width: 660px; }
+body.app-shell .backlog-draw__table:not(.backlog-draw__table--up) .backlog-draw__card:nth-child(1) { transform: rotate(-5deg) translateY(4px); }
+body.app-shell .backlog-draw__table:not(.backlog-draw__table--up) .backlog-draw__card:nth-child(3) { transform: rotate(5deg) translateY(4px); }
+body.app-shell .backlog-draw__back {
+  aspect-ratio: 2 / 3;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .22) 0 14%, transparent 15%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .08) 0 6px, transparent 6px 12px),
+    linear-gradient(150deg, #7c3aed, #4c1d95 60%, #1e1b4b);
+  border: 3px solid rgba(255, 255, 255, .85);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(30, 27, 75, .28);
+  display: block;
+}
+body.app-shell .backlog-draw__face {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(15, 10, 40, .12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 10px 10px 12px;
+  position: relative;
+  transform-origin: 50% 50%;
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1), opacity .3s ease;
+  transition-delay: var(--deal-delay, 0ms);
+}
+body.app-shell .backlog-draw__card.is-down .backlog-draw__face { opacity: 0; transform: rotateY(80deg) translateY(10px) scale(.94); }
+body.app-shell .backlog-draw__tag {
+  background: #f59e0b;
+  border-radius: 999px;
+  color: #1c1917;
+  font-size: .68rem;
+  font-weight: 700;
+  left: 50%;
+  padding: 3px 9px;
+  position: absolute;
+  top: 2px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  z-index: 1;
+}
+body.app-shell .backlog-draw__cover {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  background: var(--surface-muted, rgba(127, 127, 127, .14));
+  border-radius: 9px;
+  color: var(--fg-secondary);
+  display: flex;
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+}
+body.app-shell .backlog-draw__cover.is-blank {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent-solid, #7c3aed) 30%, transparent), color-mix(in srgb, #f59e0b 22%, transparent));
+  color: var(--fg);
+}
+body.app-shell .backlog-draw__cover img { display: block; height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .backlog-draw__text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+body.app-shell .backlog-draw__name {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: .95rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+body.app-shell a.backlog-draw__name:hover { text-decoration: underline; }
+body.app-shell .backlog-draw__meta,
+body.app-shell .backlog-draw__waited { color: var(--fg-secondary); font-size: .8rem; line-height: 1.4; }
+body.app-shell .backlog-draw__waited { color: color-mix(in srgb, #f59e0b 60%, var(--fg-secondary)); font-weight: 600; }
+body.app-shell .backlog-draw__link { color: color-mix(in srgb, var(--accent-solid, #7c3aed) 55%, var(--fg)); font-size: .82rem; font-weight: 600; margin-top: 6px; }
+
+/* Buttons and chips. */
+body.app-shell .backlog-draw__btn {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+body.app-shell .backlog-draw__btn:hover:not(:disabled) { border-color: var(--accent-solid, #7c3aed); text-decoration: none; }
+body.app-shell .backlog-draw__btn--primary { background: linear-gradient(135deg, #8b5cf6, #a855f7); border-color: transparent; color: #fff; }
+body.app-shell .backlog-draw__btn--primary:hover:not(:disabled) { border-color: transparent; filter: brightness(1.06); }
+body.app-shell .backlog-draw__btn:disabled { cursor: progress; opacity: .6; }
+body.app-shell .backlog-draw__keep { padding: 0 10px; white-space: nowrap; width: 100%; }
+body.app-shell .backlog-draw__quiet {
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 4px 6px;
+}
+body.app-shell .backlog-draw__quiet:hover { color: var(--fg); }
+body.app-shell .backlog-draw__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 16px; }
+body.app-shell .backlog-draw__actions:empty { display: none; }
+body.app-shell .backlog-draw__actions--split { border-top: 1px solid var(--border); justify-content: space-between; padding-top: 10px; }
+body.app-shell .backlog-draw__label { color: var(--fg-secondary); font-size: .78rem; font-weight: 700; letter-spacing: .04em; margin: 0 0 8px; text-transform: uppercase; }
+body.app-shell .backlog-draw__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+body.app-shell .backlog-draw__chip {
+  background: var(--surface-muted, rgba(127, 127, 127, .1));
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0 16px;
+}
+body.app-shell .backlog-draw__chip:hover:not(:disabled) { border-color: var(--accent-solid, #7c3aed); }
+body.app-shell .backlog-draw__chip[aria-pressed="true"] { background: var(--accent-solid, #7c3aed); color: var(--on-accent, #fff); }
+body.app-shell .backlog-draw__chips--score { gap: 6px; }
+body.app-shell .backlog-draw__chip--score { min-height: 38px; min-width: 36px; padding: 0 4px; }
+
+/* A kept card: the title on the left, the night and how it went on the right. */
+body.app-shell .backlog-draw__plan { align-items: start; display: grid; gap: 18px 22px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+body.app-shell .backlog-draw__kept { align-items: start; display: grid; gap: 14px; grid-template-columns: 96px minmax(0, 1fr); }
+body.app-shell .backlog-draw__kept .backlog-draw__name { font-size: 1.05rem; }
+body.app-shell .backlog-draw__side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+body.app-shell .backlog-draw__remind { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; }
+body.app-shell .backlog-draw__note { color: var(--fg-secondary); font-size: .86rem; line-height: 1.4; }
+body.app-shell .backlog-draw__answers { display: flex; flex-wrap: wrap; gap: 8px; }
+body.app-shell .backlog-draw__score { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+body.app-shell .backlog-draw__status { color: var(--fg-secondary); font-size: .82rem; margin: 10px 0 0; }
+body.app-shell .backlog-draw__status:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .backlog-draw__face { transition: none; }
+}
+
+@media (max-width: 760px) {
+  body.app-shell .home-board .backlog-draw { padding: 16px; }
+  body.app-shell .backlog-draw__head { flex-direction: column; gap: 6px; }
+  /* Three cards held in the hand: swipe sideways; the page itself never gets wider. */
+  body.app-shell .backlog-draw__table--up {
+    grid-auto-columns: minmax(136px, 44%);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -16px;
+    max-width: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 12px 16px 6px;
+    position: relative;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+  }
+  body.app-shell .backlog-draw__table--up .backlog-draw__card { scroll-snap-align: start; }
+  body.app-shell .backlog-draw__table:not(.backlog-draw__table--up) { gap: 10px; max-width: 300px; }
+  body.app-shell .backlog-draw__plan { grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .backlog-draw__kept { grid-template-columns: 80px minmax(0, 1fr); }
+  body.app-shell .backlog-draw__actions--split { flex-direction: column; align-items: flex-start; }
+}

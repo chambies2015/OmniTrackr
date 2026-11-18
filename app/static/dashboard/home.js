@@ -790,6 +790,7 @@ function resetDailyDashboard() {
   window.OmniHomeToday?.reset();
   window.OmniStayPosted?.reset();
   window.OmniWeekOne?.reset();
+  window.OmniBacklogDraw?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -959,7 +960,8 @@ function renderTodaysPick(payload, { showEmpty = false } = {}) {
   const section = document.getElementById('todaysPick');
   const pick = payload?.pick;
   if (!section) return;
-  if (returnDeckActive) {
+  // The backlog draw card is a livelier Today's pick for the same titles; one of them is enough.
+  if (returnDeckActive || globalThis.OmniBacklogDraw?.active?.()) {
     section.setAttribute('hidden', '');
     return;
   }
@@ -1801,6 +1803,8 @@ function runDashboardLayoutBatch() {
   window.OmniStayPosted?.refresh();
   // Not waited on either: the first-week card only shows in an account's first seven days.
   window.OmniWeekOne?.refresh();
+  // Draw from your backlog: shows with three or more titles saved and never started, in place of Today's pick.
+  window.OmniBacklogDraw?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

@@ -2225,3 +2225,37 @@ class InstalledAppOpen(Base):
     first_opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_opened_on = Column(Date, nullable=True, index=True)
     open_days = Column(Integer, nullable=False, default=0)
+
+
+class BacklogDraw(Base):
+    """One title a member drew from their own backlog on the home screen and kept (Nov 2026).
+
+    A new table only. One row per kept card: which library title, the night they picked for it, the
+    one reminder email they may have asked for, and how it ended (finished, put back, not for me).
+    The library row itself is never changed here; finishing and scoring go through the library's own
+    rules (check_in.answer). A "not_for_me" row keeps that title out of later deals.
+    """
+    __tablename__ = "backlog_draws"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    # picked (the one on the card now), finished, put_back, not_for_me, replaced, gone (deleted from the library)
+    status = Column(String(12), nullable=False, default="picked", index=True)
+    deal = Column(Integer, nullable=False, default=0)  # which deal of the day it came from (0 = the first)
+    night = Column(Date, nullable=True)  # the member's own date they picked for it
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    remind_at = Column(DateTime, nullable=True, index=True)
+    reminder_status = Column(String(12), nullable=True, index=True)  # set, sent, dropped, failed
+    reminder_set_at = Column(DateTime, nullable=True)
+    reminder_sent_at = Column(DateTime, nullable=True)
+    calendar_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)  # first home screen visit after the night
+    picked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_backlog_draws_user_status", "user_id", "status"),
+    )
