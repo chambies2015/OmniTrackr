@@ -306,3 +306,60 @@ def test_site_stats_block(db_session):
     stats = week_one.stats(db_session, 30, datetime.utcnow())
     assert stats["counts"]["returned"] == 4 and stats["counts"]["seen"] == 0
     assert set(stats["labels"]) == set(week_one.COUNTERS) and stats["pending_reminders"] == 0
+
+
+RADAR_CARD = {"category": "movies", "library_category": "movies", "label": "Movie", "title": "Big New Film",
+              "date": None, "image": "https://img.example/film.jpg", "window": "2026-11", "key": "big-new-film",
+              "url": "/release-radar/movies#item-big-new-film", "reason": "", "source": "radar", "details": []}
+
+
+def test_releases_out_this_week_for_a_thin_week(client, db_session, monkeypatch):
+    from app import for_you
+    user = member(db_session)
+    db_session.add(models.Movie(title="Heat", year=1995, watched=True, user_id=user.id))
+    db_session.commit()
+    soon = {**RADAR_CARD, "date": (today() + timedelta(days=3)).isoformat()}
+    later = {**RADAR_CARD, "key": "later", "title": "Later Film", "date": (today() + timedelta(days=20)).isoformat()}
+    monkeypatch.setattr(for_you, "radar_pool", lambda today=None, client=None: [])
+    monkeypatch.setattr(for_you, "upcoming_popular", lambda pool, today, owned, days=30, limit=8, exclude_keys=None: [soon, later])
+    found = card(client, user)
+    assert [release["title"] for release in found["releases"]] == ["Big New Film"]
+    assert found["releases"][0]["window"] == "2026-11" and "reason" not in found["releases"][0]
+
+
+def test_save_release_goes_through_the_radar_save_and_counts(client, db_session, monkeypatch):
+    from app.routers import release_radar
+    user = member(db_session)
+    item = {"key": "big-new-film", "title": "Big New Film", "save": {"title": "Big New Film", "year": 2026, "director": "A"}}
+    monkeypatch.setattr(release_radar, "_window_items", lambda category, window: (None, [item]))
+    body = {"category": "movies", "window": "2026-11", "key": "big-new-film", "today": today().isoformat()}
+    response = client.post("/api/week-one/save-release", headers=headers(user), json=body)
+    assert response.status_code == 200 and response.json()["state"] == "created"
+    assert db_session.query(models.Movie).filter_by(user_id=user.id, title="Big New Film").one().watched is False
+    assert counted("saved_release") == 1
+    assert client.post("/api/week-one/save-release", headers=headers(user), json=body).json()["state"] == "existing"
+    assert counted("saved_release") == 1
+    old = member(db_session, "old", days_old=10)
+    assert client.post("/api/week-one/save-release", headers=headers(old), json=body).status_code == 403
+
+
+def test_start_page_counts_its_own_look_and_reminder(client, db_session):
+    user = member(db_session)
+    db_session.add(models.TVShow(title="Severance", year=2022, watched=False, user_id=user.id))
+    db_session.commit()
+    schedule(db_session, "tv-shows", "Severance", 2022, 2)
+    for _ in range(2):
+        assert client.post("/api/week-one/start-seen", headers=headers(user), json={"today": today().isoformat()}).json() == {"seen": True}
+    assert counted("start_seen") == 1
+    response = client.put("/api/week-one/reminder", headers=headers(user), json={
+        "day": (today() + timedelta(days=2)).isoformat(), "today": today().isoformat(), "place": "start"})
+    assert response.status_code == 200
+    assert counted("start_email_set") == 1 and counted("email_set") == 0
+    assert client.put("/api/week-one/reminder", headers=headers(user), json={
+        "day": (today() + timedelta(days=2)).isoformat(), "place": "elsewhere"}).status_code == 422
+
+
+def test_start_page_script_asks_for_the_week():
+    from pathlib import Path
+    script = Path("app/static/start.js").read_text()
+    assert "/api/week-one?today=" in script and "/api/week-one/start-seen" in script and "place: 'start'" in script

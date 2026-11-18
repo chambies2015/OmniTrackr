@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -29,6 +29,13 @@ class Today(BaseModel):
 class Remind(Today):
     day: date
     tz: int = Field(default=0, ge=-14 * 60, le=14 * 60)  # minutes east of UTC, from the browser
+    place: Literal["card", "start"] = "card"
+
+
+class SaveRelease(Today):
+    category: str = Field(..., max_length=10)
+    window: str = Field(..., max_length=20)
+    key: str = Field(..., min_length=1, max_length=80)
 
 
 class Save(Today):
@@ -78,13 +85,33 @@ def week_one_save(payload: Save, request: Request, response: Response, user: mod
     return saved
 
 
+@router.post("/api/week-one/save-release")
+def week_one_save_release(payload: SaveRelease, request: Request, response: Response,
+                          user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _no_store(response)
+    if week_one.day_number(user, week_one.local_today(week_one._now(), payload.today)) is None:
+        raise HTTPException(403, "This list is for an account's first week.")
+    return week_one.save_release(db, user, payload.category, payload.window, payload.key)
+
+
+@router.post("/api/week-one/start-seen")
+def week_one_start_seen(payload: Today, request: Request, response: Response,
+                        user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _no_store(response)
+    try:
+        return {"seen": week_one.note_start_seen(db, user, week_one.local_today(week_one._now(), payload.today))}
+    except IntegrityError:
+        db.rollback()
+        return {"seen": True}
+
+
 @router.put("/api/week-one/reminder")
 def week_one_remind(payload: Remind, request: Request, response: Response, user: models.User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     _no_store(response)
     local = week_one.local_today(week_one._now(), payload.today)
     try:
-        return {"reminder": week_one.set_reminder(db, user, payload.day, local, payload.tz)}
+        return {"reminder": week_one.set_reminder(db, user, payload.day, local, payload.tz, place=payload.place)}
     except ValueError as error:
         raise HTTPException(422, str(error))
     except IntegrityError:

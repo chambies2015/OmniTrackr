@@ -43,6 +43,8 @@
       goal: Number(initial.goal || 5),
       shelf: Array.isArray(initial.shelf) ? initial.shelf : [],
       firstWeek: initial.first_week || {},
+      week: null, // the home screen's first-week card, for the "your week" step
+      weekLoaded: false,
       screen: null,
       deck: [],
       shownCount: 0,
@@ -114,6 +116,7 @@
       if (name === 'pick' && !state.deck.length) loadDeck();
       if (name === 'done') {
         renderNext();
+        loadWeek();
         const done = find('[data-st-screen="done"]');
         window.setTimeout(() => done.focus({ preventScroll: true }), 0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -436,6 +439,95 @@
       return wrap;
     }
 
+    // ---------------------------------------------------------------- your week (the home screen's first-week card)
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function localToday(now = new Date()) {
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    }
+
+    function whenWords(iso, today) {
+      const [y, m, d] = String(iso || '').split('-').map(Number);
+      const [ty, tm, td] = String(today || '').split('-').map(Number);
+      const when = new Date(y, (m || 1) - 1, d || 1);
+      const diff = Math.round((when - new Date(ty, (tm || 1) - 1, td || 1)) / 86400000);
+      if (diff === 0) return 'today';
+      if (diff === 1) return 'tomorrow';
+      return `on ${when.toLocaleDateString(undefined, { weekday: 'long' })}`;
+    }
+
+    async function loadWeek() {
+      if (state.weekLoaded) return;
+      state.weekLoaded = true;
+      const { ok, data } = await request(`/api/week-one?today=${encodeURIComponent(localToday())}`).catch(() => ({ ok: false, data: {} }));
+      if (!ok || !data.card) return;
+      state.week = data.card;
+      if (state.screen === 'done') renderNext();
+      post('/api/week-one/start-seen', { today: localToday() }).catch(() => null);
+    }
+
+    function weekLink(label) {
+      const link = el('a', 'st-mini st-mini--seen', label);
+      link.href = '/#week-one';
+      link.addEventListener('click', () => { recordStep('next_step'); });
+      return link;
+    }
+
+    function remindAction(week) {
+      const wrap = el('div', 'st-next__action');
+      const label = whenWords(week.remind_day, week.today);
+      const button = el('button', 'st-mini st-mini--seen', label === 'tomorrow' ? 'Email me tomorrow' : `Email me ${label}`);
+      button.type = 'button';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        const minutes = -new Date().getTimezoneOffset();
+        const { ok, data } = await request('/api/week-one/reminder', {
+          method: 'PUT', body: JSON.stringify({ day: week.remind_day, today: localToday(), tz: minutes, place: 'start' }),
+        }).catch(() => ({ ok: false, data: {} }));
+        if (!ok) {
+          button.disabled = false;
+          wrap.appendChild(el('p', 'st-result__error', typeof data.detail === 'string' ? data.detail : 'Couldn\'t set it just now. Try again.'));
+          return;
+        }
+        recordStep('next_step');
+        state.week = { ...week, reminder: data.reminder };
+        renderNext();
+      });
+      wrap.appendChild(button);
+      return wrap;
+    }
+
+    function weekStep() {
+      const week = state.week;
+      if (!week) return null;
+      const items = (week.days || []).flatMap(day => day.items || []);
+      if (items.length) {
+        const first = items[0];
+        const when = whenWords(first.date, week.today);
+        const title = first.kind === 'episode' ? `${first.title} ${first.what} is out ${when}` : `${first.title} comes out ${when}`;
+        const more = items.length > 1 ? ` Your home screen lays out all ${items.length} for the week.` : '';
+        if (week.reminder && week.reminder.status === 'set') {
+          return { done: true, title: `Reminder set for ${whenWords(week.reminder.date, week.today).replace(/^on /, '')}`,
+            text: `One email that day at about 5 pm with what's out. Nothing after it.${more}` };
+        }
+        if (week.remind_day && week.offer && week.offer.email) {
+          return { title, text: `Want a nudge on the day? One email, nothing after it.${more}`, action: remindAction(week) };
+        }
+        return { title, text: `Your home screen lays out your week, day by day.${more}`, action: weekLink('See my week') };
+      }
+      const names = (week.suggestions || []).slice(0, 2).map(show => show.title);
+      if (names.length) {
+        return { title: 'Watching a show right now?',
+          text: `${names.join(' and ')} ${names.length === 1 ? 'has a' : 'have'} new episode${names.length === 1 ? '' : 's'} this week, among others. Save what you're watching and your home screen lays out your week.`,
+          action: weekLink('See this week') };
+      }
+      if ((week.releases || []).length) {
+        return { title: 'Out this week', text: `${week.releases[0].title} and more come out in the next few days. Save one and its release day goes on your week.`,
+          action: weekLink('See this week') };
+      }
+      return null;
+    }
+
     function emailAction() {
       const button = el('button', 'st-mini st-mini--seen', 'Turn it on');
       button.type = 'button';
@@ -459,6 +551,8 @@
       const list = find('[data-st-next]');
       const week = state.firstWeek || {};
       const steps = [];
+      const thisWeek = weekStep();
+      if (thisWeek) steps.push(thisWeek);
       const seen = state.shelf.find(item => item.seen);
       const any = state.shelf[0];
       if (seen) {
