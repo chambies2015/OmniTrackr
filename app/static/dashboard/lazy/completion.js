@@ -75,6 +75,7 @@ async function openCompletionMoment(category, itemId) {
     activeCompletionCategory = category;
     document.getElementById('completionRitualTitle').textContent = moment.title;
     showCompletionShare(category, itemId, moment.title);
+    showCompletionTalk(moment.talk);
     document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
     document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
     const step = document.getElementById('completionReviewStep');
@@ -114,6 +115,30 @@ function showCompletionShare(category, itemId, title) {
       }
     } catch (error) { /* counting only */ }
     recs.open({ category, item_id: itemId, title: title || 'this title' });
+  };
+}
+
+// Finishing is also when there's most to say, so point at the title's discussion board.
+function showCompletionTalk(talk) {
+  const box = document.getElementById('completionTalk');
+  const link = document.getElementById('completionTalkLink');
+  const note = document.getElementById('completionTalkNote');
+  if (!box || !link || !note) return;
+  const url = talk && typeof talk.url === 'string' ? talk.url : '';
+  box.hidden = !/^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions$/.test(url);
+  if (box.hidden) return;
+  const count = Number(talk.count) || 0;
+  note.textContent = count
+    ? `${count} discussion${count === 1 ? '' : 's'} going already. Jump in while it's fresh.`
+    : 'Nobody has started one yet. Members who track it hear when you do.';
+  link.href = count ? url : `${url}?opener=0#start`;
+  link.textContent = count ? 'Join the discussion' : 'Start the first one';
+  link.onclick = () => {
+    try {
+      if (typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'finish_talk_clicked' })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
   };
 }
 

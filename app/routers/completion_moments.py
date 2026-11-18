@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Type
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from .. import models, review_spoilers, schemas, title_pages
+from .. import discussion_hub, models, review_spoilers, schemas, title_pages
 from ..integer_bounds import PositiveDatabaseId
 from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
 from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
@@ -92,7 +92,8 @@ def create_completion_moment(
         if logged is None:
             record_completion_activity(db, current_user.id, payload.category, item)
         db.flush()
-    result = {**_serialize(moment), "has_review": bool((item.review or "").strip())}
+    result = {**_serialize(moment), "has_review": bool((item.review or "").strip()),
+              "talk": discussion_hub.talk_for_item(db, title_pages.LIBRARY_TO_KIND[payload.category], item)}
     db.commit()
     return result
 

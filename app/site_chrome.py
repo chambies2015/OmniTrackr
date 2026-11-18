@@ -53,6 +53,7 @@ NAV_MENUS = (
     )),
     ("community", "Community", (
         ("reviews", "Member reviews", "/reviews", "Thoughtful reviews written by members"),
+        ("discussions", "Discussions", "/discussions", "Talk about what you're watching, playing and reading"),
         ("collections", "Collections", "/collections/explore", "Themed lists people put together"),
         ("lists", "Shared lists & clubs", "/lists", "Plan what to watch or read with friends"),
         ("supporters", "Supporters", "/supporters", "The people who keep the site running"),
@@ -109,6 +110,7 @@ FOOTER_GROUPS = (
     )),
     ("Community", (
         ("Member reviews", "/reviews"),
+        ("Discussions", "/discussions"),
         ("Collections", "/collections/explore"),
         ("Shared lists & clubs", "/lists"),
         ("Supporters", "/supporters"),

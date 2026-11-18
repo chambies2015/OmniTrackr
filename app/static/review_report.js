@@ -115,3 +115,14 @@
 
   window.createReviewReportControls = createReviewReportControls;
 }());
+
+// Count presses of "Reply to name" under a review (Nov 2026). Counting only; the link works without it.
+document.addEventListener('click', (event) => {
+  const link = event.target.closest && event.target.closest('[data-review-talk]');
+  if (!link) return;
+  try {
+    if (typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+      navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'discussion_review_reply_clicked' })], { type: 'application/json' }));
+    }
+  } catch (error) { /* counting only */ }
+});

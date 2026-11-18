@@ -49,11 +49,11 @@
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261104-share-1" defer></script>
   <script src="/static/visit.js?v=20261118-search-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261116-invite-test-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261118-talk-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261116-invite-test-1">
+  <link rel="stylesheet" href="./styles.css?v=20261118-talk-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261113-episode-notes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261114-search-1">
@@ -76,7 +76,7 @@
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261104-gifts-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
-  <link rel="stylesheet" href="/static/friends-feed.css?v=20261113-social-1">
+  <link rel="stylesheet" href="/static/friends-feed.css?v=20261118-talk-1">
   <link rel="stylesheet" href="/static/follows.css?v=20261113-social-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261117-phone-1">
@@ -1921,6 +1921,12 @@
               <p id="bestRecommendersSummary" class="best-recs__summary"></p>
               <ol id="bestRecommendersList" class="best-recs__list"></ol>
             </section>
+            <section id="socialTalk" class="social-card social-talk" aria-labelledby="socialTalkTitle">
+              <h3 id="socialTalkTitle" class="social-card__title">Discussions</h3>
+              <p id="socialTalkSummary" class="social-talk__summary">Talk about what you're watching with every member, not just friends.</p>
+              <ul id="socialTalkList" class="social-talk__list" hidden></ul>
+              <a class="social-talk__link" href="/discussions">Open discussions <span aria-hidden="true">→</span></a>
+            </section>
             <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
               <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
               <ul id="followSuggestionsList" class="follow-people"></ul>
@@ -2524,7 +2530,7 @@
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/friends-feed.js?v=20261114-sweep-1"></script>
+  <script src="/static/friends-feed.js?v=20261118-talk-1"></script>
   <script src="/static/follows.js?v=20261113-social-1"></script>
   <script src="/static/push.js?v=20261116-stay-1" defer></script>
   <script src="/static/stay-posted.js?v=20261116-stay-1" defer></script>
@@ -3832,6 +3838,10 @@
         <div id="completionShare" class="completion-ritual-modal__share" hidden>
           <p><strong>Know someone who'd like it?</strong> Send it to a friend with a note, or share a link. They don't need an account to open it.</p>
           <button type="button" class="completion-ritual-modal__share-btn" id="completionShareBtn">Recommend it</button>
+        </div>
+        <div id="completionTalk" class="completion-ritual-modal__share completion-ritual-modal__talk" hidden>
+          <p><strong>Want to talk about it?</strong> <span id="completionTalkNote"></span></p>
+          <a class="completion-ritual-modal__share-btn" id="completionTalkLink" href="/discussions">Join the discussion</a>
         </div>
         <div class="completion-ritual-modal__actions">
           <button type="button" class="action-btn" id="completionRitualSave" data-action="save-completion-ritual">Save reflection</button>

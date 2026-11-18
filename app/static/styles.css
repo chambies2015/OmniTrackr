@@ -421,6 +421,7 @@ body.dark-mode .monthly-replay__stat { background: rgba(0, 0, 0, .12); }
 .completion-ritual-modal__share-btn { background: transparent; border: 1px solid rgba(139, 92, 246, .6); border-radius: 999px; color: var(--fg); cursor: pointer; flex: none; font: 600 .88rem/1 inherit; padding: 9px 16px; }
 .completion-ritual-modal__share-btn:hover { background: rgba(139, 92, 246, .18); }
 .completion-ritual-modal__share-btn:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+a.completion-ritual-modal__share-btn { display: inline-block; text-align: center; text-decoration: none; }
 @media (max-width: 480px) { .completion-ritual-modal__share { align-items: stretch; flex-direction: column; } }
 .completion-ritual-modal__skip { background: transparent; border: 0; color: var(--fg); cursor: pointer; opacity: .7; padding: 6px; }
 .completion-ritual-modal__skip:hover { opacity: 1; text-decoration: underline; }
