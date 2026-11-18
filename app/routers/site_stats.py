@@ -337,7 +337,17 @@ def _weekly_email(db: Session, days: int, now: datetime, start: datetime) -> dic
                                for source in digest.SOURCES if source in digest.OFF_SOURCES],
         "emailed": _counts_between(db, models.EmailDigestSubscription.last_sent_at, start),
         "emailed_7d": _counts_between(db, models.EmailDigestSubscription.last_sent_at, now - timedelta(days=7)),
+        "preview": _weekly_preview_stats(db, days, now),
     }
+
+
+def _weekly_preview_stats(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import weekly_preview
+        return weekly_preview.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return None
 
 
 def _announcement_status(db: Session) -> dict | None:

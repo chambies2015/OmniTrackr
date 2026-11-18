@@ -514,6 +514,12 @@
     };
     Object.entries(handlers).forEach(([id, handler]) => { const node = $(id); if (node) node.addEventListener('click', handler); });
     window.addEventListener('hashchange', () => { state.calendarLinkHandled = false; openCalendarFromLink(); });
+    // Turned on or off somewhere else on the page (the weekly email preview, Settings): hide or show the invites.
+    document.addEventListener('omni:weekly-email', event => {
+      if (!event.detail || typeof event.detail.enabled !== 'boolean') return;
+      state.email = { ...state.email, enabled: event.detail.enabled };
+      renderInvites();
+    });
   }
 
   window.refreshForYou = refreshForYou;

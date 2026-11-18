@@ -54,7 +54,7 @@ def offline_release_radar(monkeypatch):
 @pytest.fixture(autouse=True)
 def fresh_title_charts():
     """Member charts and the title slug index live per process; each test starts from its own database."""
-    from app import memories, picked_for_you, title_charts, title_metadata, title_pages, tonight_polls, trending
+    from app import memories, picked_for_you, title_charts, title_metadata, title_pages, tonight_polls, trending, weekly_preview
     title_metadata.clear_cooldowns()
     title_charts.clear_cache()
     tonight_polls.clear_starters_cache()
@@ -62,6 +62,7 @@ def fresh_title_charts():
     picked_for_you.clear_cache()
     title_pages.SLUG_INDEX.clear()
     memories.clear_push_marks()
+    weekly_preview.clear_cache()
     yield
     title_metadata.clear_cooldowns()
     title_charts.clear_cache()

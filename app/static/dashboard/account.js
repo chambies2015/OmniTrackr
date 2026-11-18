@@ -897,6 +897,9 @@ async function saveEmailPreference(change) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'Could not save that. Please try again.');
     showEmailPreferences(data);
+    if ('enabled' in change) {
+      try { document.dispatchEvent(new CustomEvent('omni:weekly-email', { detail: { enabled: Boolean(data.enabled), from: 'account' } })); } catch (error) { /* old browsers */ }
+    }
     if (status && 'enabled' in change) {
       status.textContent = data.enabled ? 'Weekly email on. Every one has a one-click unsubscribe.' : 'Weekly email off.';
     } else if (status) {
@@ -909,6 +912,12 @@ async function saveEmailPreference(change) {
     toggles.forEach(toggle => { if (toggle) toggle.disabled = toggle.dataset.unavailable === 'true'; });
   }
 }
+
+// Turned on from another place on the page (the weekly email preview, the home card): show it here too.
+document.addEventListener('omni:weekly-email', event => {
+  if (!event.detail || event.detail.from === 'account') return;
+  loadEmailPreferences();
+});
 
 document.addEventListener('change', event => {
   if (event.target.id === 'weeklyEmailToggle') saveEmailPreference({ enabled: event.target.checked });
