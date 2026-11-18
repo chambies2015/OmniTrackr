@@ -206,6 +206,7 @@
     try {
       await send('PUT', '/api/for-you/email', { enabled: true, source: 'home_card' });
       markOn('email', '✓ Weekly email on');
+      try { document.dispatchEvent(new CustomEvent('omni:weekly-email', { detail: { enabled: true, from: 'home_card' } })); } catch (error) { /* old browsers */ }
       answer('email');
     } catch (error) {
       button.disabled = false;
@@ -265,7 +266,16 @@
       else if (channel === 'email') turnOnEmail(button);
       else if (channel === 'calendar') turnOnCalendar(button);
     });
-    $('stayPostedSample')?.addEventListener('click', () => { answer('sample'); });
+    // "See what yours would say" opens the member's own email in place (weekly-preview.js), not a new tab.
+    $('stayPostedSample')?.addEventListener('click', event => {
+      answer('sample');
+      const peek = $('stayPostedPeek');
+      if (!peek || !window.OmniWeeklyPreview) return;
+      event.preventDefault();
+      peek.hidden = !peek.hidden;
+      event.currentTarget.setAttribute('aria-expanded', String(!peek.hidden));
+      if (!peek.hidden && !peek.dataset.weeklyPreviewState) window.OmniWeeklyPreview.fill(peek);
+    });
     $('stayPostedCopy')?.addEventListener('click', copyCalendar);
     $('stayPostedLater')?.addEventListener('click', () => {
       answer('later');

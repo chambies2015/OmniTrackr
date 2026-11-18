@@ -169,7 +169,7 @@ def _email_state(db: Session, user_id: int) -> dict:
 class EmailPreference(BaseModel):
     enabled: bool | None = None
     updates: bool | None = None  # occasional product news and come-back check-ins
-    source: Literal["start", "first_week", "dashboard", "account", "home_card", "after_save"] | None = None  # which prompt was used (counted anonymously)
+    source: Literal["start", "first_week", "dashboard", "account", "home_card", "after_save", "preview"] | None = None  # which prompt was used (counted anonymously)
 
 
 @router.get("/api/for-you/email")
@@ -232,12 +232,22 @@ def unsubscribe(token: str = Query("", max_length=64), db: Session = Depends(get
 
 # ---------------------------------------------------------------- one-click opt-in from an email
 
-def _weekly_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False):
+# Where a signed opt-in link was opened from: a link in a product email, the copy a member sent
+# themselves, or the Yes button on their own preview page. Counted under digest.SOURCES.
+LINK_SOURCES = {"copy": "copy_email", "preview": "preview"}
+
+
+def _link_source(value: str) -> str:
+    return LINK_SOURCES.get(value, "email_link")
+
+
+def _weekly_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False, came_from: str = ""):
     page = message_page(title, heading, message, eyebrow="Weekly email",
                         actions=(("Open my library", "/"), ("Open Release Radar", "/release-radar")))
     if confirm:
+        tag = f"&from={came_from}" if came_from in LINK_SOURCES else ""
         # A real button, so link scanners in mail apps can't subscribe anyone by prefetching.
-        form = (f'<form method="post" action="/email/weekly/subscribe?token={escape(token, quote=True)}" class="site-message__actions">'
+        form = (f'<form method="post" action="/email/weekly/subscribe?token={escape(token, quote=True)}{tag}" class="site-message__actions">'
                 '<button class="site-btn site-btn--primary" type="submit">Yes, email me weekly</button></form>')
         page = page.replace('<div class="site-message__actions">', form + '<div class="site-message__actions">', 1)
     response = strict_html_response(page)
@@ -255,7 +265,8 @@ def _weekly_member(db: Session, token: str):
 
 
 @router.get("/email/weekly/subscribe", include_in_schema=False)
-def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+def weekly_subscribe_confirm(token: str = Query("", max_length=300), came_from: str = Query("", alias="from", max_length=16),
+                             db: Session = Depends(get_db)):
     user = _weekly_member(db, token)
     if user is None:
         return _weekly_page("Weekly email", "This link has expired",
@@ -267,16 +278,17 @@ def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session
     return _weekly_page("Weekly email", "Get a weekly heads-up?",
                         "Once a week, a short email lists new episodes of your shows, upcoming seasons, games and releases "
                         "connected to what you track, and what your friends added. Weeks with no news are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.",
-                        token=token, confirm=True)
+                        token=token, confirm=True, came_from=came_from)
 
 
 @router.post("/email/weekly/subscribe", include_in_schema=False)
-def weekly_subscribe(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+def weekly_subscribe(token: str = Query("", max_length=300), came_from: str = Query("", alias="from", max_length=16),
+                     db: Session = Depends(get_db)):
     user = _weekly_member(db, token)
     if user is None:
         return _weekly_page("Weekly email", "This link has expired",
                             "Turn on the weekly email from the \u201cComing up for you\u201d card in your library instead.")
-    digest.subscribe(db, user.id, source="email_link")
+    digest.subscribe(db, user.id, source=_link_source(came_from))
     return _weekly_page("Weekly email", "You're subscribed",
                         "Your first weekly email arrives within a day if something you track is coming up. "
                         "You can turn it off any time from any email or from your library.")
@@ -318,6 +330,16 @@ def weekly_preview(request: Request, user=Depends(get_current_user), db: Session
         else:
             banner = PREVIEW_BANNER.format(heading="This is what your weekly email would look like.",
                                            note="Quiet weeks are skipped.", verb="on")
+            if user.is_verified and user.email and digest.mail_configured():
+                # One tap from the sample itself. A signed link and a real POST, like the emailed opt-in.
+                action = escape(f"/email/weekly/subscribe?token={digest.subscribe_link_token(user.id)}&from=preview", quote=True)
+                banner = banner.replace(
+                    '</div></div>',
+                    f'<form method="post" action="{action}" style="margin:10px 0 0">'
+                    '<button type="submit" style="background:#7c3aed;color:#fff;border:0;border-radius:999px;padding:9px 16px;'
+                    'font-weight:700;font-size:14px;cursor:pointer">Yes, email me this every week</button></form></div></div>', 1)
+        from .. import weekly_preview
+        weekly_preview.count("preview_page")
         html = html.replace("<html>", f'<html lang="en"><head><title>{escape(subject)}</title></head>', 1)
         html = html.replace('<div style="max-width:560px;margin:0 auto;padding:24px">', banner +
                             '<div style="max-width:560px;margin:0 auto;padding:24px">', 1)
