@@ -317,7 +317,9 @@ class TestPages:
         response = client.get("/release-radar/tv")
         assert response.status_code == 200
         assert "Gathering tv premieres right now" in response.text
-        assert '<meta http-equiv="refresh" content="45">' in response.text
+        # The script checks again after 45 s and offers "Stop checking"; no timed meta refresh (WCAG 2.2.1).
+        assert '<meta name="omnitrackr-recheck" content="45">' in response.text
+        assert 'http-equiv="refresh"' not in response.text
         assert "noindex" in response.headers["x-robots-tag"]
 
     def test_provider_error_message(self, client, monkeypatch):

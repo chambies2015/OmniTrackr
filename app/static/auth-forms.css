@@ -50,8 +50,9 @@ body.dark-mode :is(.auth-container, .account-settings) {
   --auth-field: rgba(11, 10, 24, .7);
   --auth-line: var(--lp-border-strong, rgba(255, 255, 255, .16));
   --auth-text: var(--lp-text, #f4f2ff);
-  --auth-accent: var(--lp-violet, #8b5cf6);
-  --auth-accent-2: var(--lp-violet-2, #a855f7);
+  /* White text on the filled button reads at 4.9:1 or better (WCAG AA). */
+  --auth-accent: var(--lp-cta, #7f4ef0);
+  --auth-accent-2: var(--lp-cta-2, #963cf0);
   --auth-on-accent: #fff;
   --auth-tint: rgba(139, 92, 246, .16);
   --auth-danger-soft: rgba(248, 113, 113, .12);
@@ -391,7 +392,7 @@ body.dark-mode :is(.auth-container, .account-settings) {
 .auth-card .auth-form .auth-submit:hover {
   background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
   box-shadow: var(--auth-glow);
-  filter: brightness(1.08);
+  filter: brightness(1.04);
   transform: none;
 }
 

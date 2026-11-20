@@ -51,5 +51,5 @@
 .collection-save-eyebrow { color: var(--site-teal); }
 .collection-save-back, .collection-save-more a { color: var(--site-violet-soft); }
 .collection-save-preview { background: rgba(11, 10, 24, .6); border-color: var(--site-border); }
-.collection-save-actions button, .collection-save-primary { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
+.collection-save-actions button, .collection-save-primary { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
 .collection-save-actions .collection-save-secondary { background: var(--site-surface); border-color: var(--site-border-strong); box-shadow: none; color: var(--site-text); }

@@ -62,7 +62,7 @@ body.site .search-hero__form input:focus-visible { outline: none; }
 .search-people a:hover { border-color: rgba(196, 181, 253, .45); }
 .search-people strong { color: var(--site-text); display: block; font-size: .94rem; }
 .search-people small { color: var(--site-muted); font-size: .78rem; }
-.search-person__mono { align-items: center; background: linear-gradient(135deg, var(--site-violet), var(--site-teal)); border-radius: 50%; color: #fff; display: flex; flex: none; font: 700 .95rem var(--site-display); height: 34px; justify-content: center; width: 34px; }
+.search-person__mono { align-items: center; background: linear-gradient(135deg, var(--site-cta, #7f4ef0), #0f766e); border-radius: 50%; color: #fff; display: flex; flex: none; font: 700 .95rem var(--site-display); height: 34px; justify-content: center; width: 34px; }
 
 /* Nothing found */
 .search-empty { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: var(--radius-xl); margin-top: 32px; max-width: 760px; padding: clamp(22px, 4vw, 36px); }
