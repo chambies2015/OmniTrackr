@@ -376,7 +376,9 @@
       const add = button('action-btn', '+ Add a friend', () => {
         if (typeof window.openFriendRequestModal === 'function') window.openFriendRequestModal();
       });
-      box.append(add);
+      // No friends yet: members with similar taste are one tap away in Find people.
+      const find = button('ffeed-empty__find', 'Or find people with your taste to follow', () => showView('people', true));
+      box.append(add, find);
     } else if (state.filter !== 'all' && state.items.length) {
       box.append(el('p', '', 'Nothing like that in the last 30 days. Try another filter.'));
     } else {

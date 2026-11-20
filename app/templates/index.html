@@ -1989,6 +1989,11 @@
               </label>
               <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
             </section>
+            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
+              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
+              <ul id="followSuggestionsList" class="follow-people"></ul>
+              <button type="button" class="social-talk__link people-rail__more" data-open-people>See more people <span aria-hidden="true">→</span></button>
+            </section>
             <section id="bestRecommenders" class="best-recs social-card" aria-labelledby="bestRecommendersTitle" hidden>
               <p class="best-recs__eyebrow">Only you see this</p>
               <h3 id="bestRecommendersTitle">Your best recommenders</h3>
@@ -2000,11 +2005,6 @@
               <p id="socialTalkSummary" class="social-talk__summary">Talk about what you're watching with every member, not just friends.</p>
               <ul id="socialTalkList" class="social-talk__list" hidden></ul>
               <a class="social-talk__link" href="/discussions">Open discussions <span aria-hidden="true">→</span></a>
-            </section>
-            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
-              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
-              <ul id="followSuggestionsList" class="follow-people"></ul>
-              <button type="button" class="social-talk__link people-rail__more" data-open-people>See more people <span aria-hidden="true">→</span></button>
             </section>
           </aside>
         </div>
@@ -2752,7 +2752,7 @@
             <label class="profile-settings__check"><input type="checkbox" id="followAllow" checked> Let people follow my profile</label>
             <label class="profile-settings__check"><input type="checkbox" id="followEmail" checked> Include people I follow in my weekly email</label>
             <label class="profile-settings__check"><input type="checkbox" id="followSuggest" checked> Suggest my profile to members with similar taste</label>
-            <p class="info-text follow-settings__hint">Find people only ever names titles your profile already shows, and never tells anyone why you came up.</p>
+            <p class="info-text follow-settings__hint">Find people only names titles your profile already shows anyone. Nobody is told you were suggested to them.</p>
             <p class="info-text follow-settings__counts" id="followCounts"></p>
             <h6>Your followers</h6>
             <p class="info-text follow-settings__hint">Removing someone also stops them following you again.</p>

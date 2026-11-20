@@ -454,15 +454,25 @@ def _shelf(db: Session, candidates: dict, mine: dict) -> list[dict]:
         except Exception:
             db.rollback()
             continue
-        titles = []
+        titles, by_kind = [], {}
         for review in reviews:
             kind = title_pages.REVIEW_TO_KIND.get(review["category"])
             matches, year = _year_from_path(review["title_url"], review["title"])
             if kind and matches and (kind, title_pages.slugify(review["title"]), year) in mine:
                 titles.append({"title": review["title"], "url": review["url"], "image": None,
-                               "label": title_pages.KINDS[kind][3]})
+                               "label": title_pages.KINDS[kind][3], "_kind": kind, "_id": review["id"]})
+                by_kind.setdefault(kind, []).append(review["id"])
         if not titles:
             continue
+        # The cover of the reviewed title, from the reviewer's own library row.
+        covers = {}
+        for kind, review_ids in by_kind.items():
+            model = title_pages.KINDS[kind][0]
+            image_column = getattr(model, title_pages.IMAGE_FIELD[kind])
+            covers.update({(kind, item_id): title_pages._safe_image(image) for item_id, image in db.query(
+                model.id, image_column).filter(model.id.in_(review_ids), model.user_id == uid)})
+        for entry in titles:
+            entry["image"] = covers.get((entry.pop("_kind"), entry.pop("_id")))
         names = [t["title"] for t in titles]
         reason = (f"Reviewed {names[0]}, which is in your library" if len(names) == 1
                   else f"Reviewed {_names(names)} from your library")

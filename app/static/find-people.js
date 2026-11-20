@@ -221,9 +221,9 @@
     head.append(avatar(person));
     const who = el('div', 'people-card__who');
     who.append(link('people-card__name', person.username, person.profile_url));
-    if (person.reason) who.append(el('p', 'people-card__reason', person.reason));
     head.append(who, dismissButton(person, node));
     node.append(head);
+    if (person.reason) node.append(el('p', 'people-card__reason', person.reason));
     if (person.bio) node.append(el('p', 'people-card__bio', person.bio));
     if (person.titles && person.titles.length) node.append(posters(person.titles));
     const actions = el('div', 'people-card__actions');
