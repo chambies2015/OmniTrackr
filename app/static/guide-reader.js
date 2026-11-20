@@ -24,7 +24,8 @@
   };
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', queue);
-  update();
+  // Measure in the next frame, after the browser's own first layout, not in a forced one while the page loads.
+  queue();
 
   const links = Array.from(article.querySelectorAll('.guide-toc a[href^="#"]'));
   if (!links.length || !('IntersectionObserver' in window)) return;

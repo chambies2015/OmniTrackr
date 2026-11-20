@@ -93,7 +93,7 @@ p { line-height: 1.75; }
 .trail .muted { color: #aeb6d2; font-size: .88rem; margin-top: auto; }
 .button, .save-panel button {
   align-self: flex-start;
-  background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2));
+  background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0));
   border: 0;
   border-radius: 999px;
   box-shadow: 0 10px 26px rgba(139, 92, 246, .32);
@@ -107,7 +107,7 @@ p { line-height: 1.75; }
   text-decoration: none;
   transition: background-color .2s ease, transform .2s ease;
 }
-.button:hover, .save-panel button:hover { color: #fff; filter: brightness(1.08); text-decoration: none; transform: translateY(-1px); }
+.button:hover, .save-panel button:hover { color: #fff; filter: brightness(1.04); text-decoration: none; transform: translateY(-1px); }
 .discover-main .button { color: #fff; }
 button:disabled { cursor: wait; opacity: .6; }
 .editorial {
