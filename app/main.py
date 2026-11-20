@@ -1088,6 +1088,10 @@ rate_limited_challenge_leave = limiter.limit("30/minute")(challenges_router.leav
 rate_limited_challenge_share = limiter.limit("20/minute")(challenges_router.share_challenge)
 rate_limited_challenge_page = limiter.limit("60/minute")(challenges_router.shared_challenge_page)
 rate_limited_challenge_card = limiter.limit("30/minute")(challenges_router.shared_challenge_card)
+# The card loads once per home screen; March 2027's "format you hardly ever finish" step adds up to 20 queries to it.
+rate_limited_challenge_state = limiter.limit("60/minute")(challenges_router.current_challenge)
+rate_limited_challenge_seen = limiter.limit("30/minute")(challenges_router.challenge_seen)
+rate_limited_challenge_unshare = limiter.limit("20/minute")(challenges_router.unshare_challenge)
 for route in challenges_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
     if path == "/api/challenge/join" and "POST" in methods:
@@ -1096,6 +1100,12 @@ for route in challenges_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_challenge_leave)
     elif path == "/api/challenge/share" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_challenge_share)
+    elif path == "/api/challenge/share" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_unshare)
+    elif path == "/api/challenge" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_state)
+    elif path == "/api/challenge/seen" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_seen)
     elif path == "/challenge/{token}":
         bind_rate_limited_endpoint(route, rate_limited_challenge_page)
     elif path == "/challenge/{token}/card.png":

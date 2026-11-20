@@ -595,6 +595,14 @@ async def get_llms_txt():
         "to 24, each with one written pick across the nine formats, how long it takes and a caveat.\n"
         if advent_calendar.current_year() else ""
     )
+    from .. import new_releases
+    release_examples = [f"{base_url}{new_releases.path(slug)}" for slug in list(new_releases.published())[:2]]
+    release_line = (
+        f"Release guides at {base_url}{new_releases.BASE_PATH} pick the new movies, TV, games, anime and books worth "
+        f"your time each month or season (for example {' and '.join(release_examples)}), with when and where each one "
+        "comes out, why it made the list, what to catch up on first and one thing to know before committing.\n"
+        if release_examples else ""
+    )
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
@@ -664,7 +672,7 @@ Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV p
 Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel. The Thanksgiving weekend guide at {base_url}/holidays/thanksgiving has twenty picks across all nine formats for the four days of the long weekend, from audiobooks for the drive to party games for after dinner. The December reading and listening guide at {base_url}/holidays/reading-and-listening has twenty books, audiobooks, podcasts, manga and albums for wrapping, travelling, the week after Christmas and late at night. The holiday gift guide at {base_url}/holidays/gifts has four gift ideas for each kind of fan (movies, TV, anime, games, music, books, manga, podcasts and audiobooks), each with what to check before buying, and members can turn their library into a gift list to share with family. The Black Friday guide at {base_url}/holidays/black-friday says, format by format, which box sets, games, manga, records, books and audiobooks tend to get cheaper on Black Friday and Cyber Monday and which rarely do, with the 2026 dates and five checks to make before buying.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
-Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
+{release_line}Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
 Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
 {new_year_line}{advent_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
