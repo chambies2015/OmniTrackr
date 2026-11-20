@@ -60,7 +60,29 @@
     if (step.target > 1) item.appendChild(el('span', 'month-challenge__count', `${step.count} of ${step.target}`));
     const status = el('span', 'visually-hidden', step.done ? ' (done)' : ' (not done yet)');
     item.appendChild(status);
+    if (step.kind === 'revisit' && !step.done) {
+      // A revisit is logged in the Journal, which members rarely open from the home screen.
+      const log = el('button', 'month-challenge__link', 'Log a revisit');
+      log.type = 'button';
+      log.dataset.challengeAction = 'log-revisit';
+      item.appendChild(log);
+    }
     return item;
+  }
+
+  // Open the Journal's "Add a moment" form with "Revisited" already chosen.
+  async function openRevisitForm() {
+    const opened = typeof navigateLibraryTab === 'function' ? await navigateLibraryTab('activity') : false;
+    if (!opened) {
+      status('Open your Journal, choose a title and pick Revisited as the moment.');
+      return;
+    }
+    const action = $('activityAction');
+    if (action) action.value = 'revisited';
+    const form = $('activityForm');
+    if (form && form.scrollIntoView) form.scrollIntoView({ block: 'center' });
+    const category = $('activityCategory');
+    if (category && category.focus) category.focus({ preventScroll: true });
   }
 
   function renderCelebration(data) {
@@ -210,6 +232,8 @@
       if (await updateCompletion('DELETE', 'share')) status('Sharing stopped. The old link no longer works.');
     } else if (action === 'seen') {
       updateCompletion('POST', 'seen');
+    } else if (action === 'log-revisit') {
+      openRevisitForm();
     }
   }
 
@@ -234,7 +258,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
