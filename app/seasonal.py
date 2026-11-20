@@ -114,6 +114,16 @@ def days_left(entry: dict, today: Optional[date] = None) -> int:
     return max(0, (_bounds(entry, today.year)[1] - today).days)
 
 
+def season_year(entry: dict, today: Optional[date] = None) -> int:
+    """The year of the season a hub is about: this year's from its start, last year's before that.
+
+    The holiday hub still belongs to 2026 on January 1, 2027, and Halloween to 2026 until October 2027.
+    """
+    today = today or datetime.utcnow().date()
+    start, _ = _bounds(entry, today.year)
+    return today.year if today >= start else today.year - 1
+
+
 def current(today: Optional[date] = None) -> Optional[str]:
     """The slug of the season running today, if any."""
     return next((slug for slug, entry in SEASONS.items() if in_window(entry, today)), None)

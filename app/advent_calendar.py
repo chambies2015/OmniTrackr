@@ -38,6 +38,8 @@ SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 DOORS = 24
 # The earliest time zone (Kiribati's Line Islands): a door is open somewhere once its date starts there.
 EARLIEST_OFFSET = timedelta(hours=14)
+# The latest time zone (UTC-12): December is over everywhere only once it ends there.
+LATEST_OFFSET = timedelta(hours=-12)
 # The dashboard card and reminders run from opening day to the end of December.
 CARD_LAST_DAY = (12, 31)
 # Morning reminders go out from this hour in the member's own time zone.
@@ -54,6 +56,11 @@ def _now() -> datetime:
 def earliest_today(now: Optional[datetime] = None) -> date:
     """The latest date anywhere on Earth right now."""
     return ((now or _now()) + EARLIEST_OFFSET).date()
+
+
+def latest_today(now: Optional[datetime] = None) -> date:
+    """The earliest date anywhere on Earth right now (the day still running furthest west)."""
+    return ((now or _now()) + LATEST_OFFSET).date()
 
 
 def opens(year: int) -> date:
@@ -317,11 +324,12 @@ def card(db: Session, user: models.User, now: Optional[datetime] = None) -> dict
     """What the dashboard card needs: the open doors with their hints, and which the member opened.
 
     {"show": False} outside the calendar's run. The card picks "today's door" in the
-    member's own time zone, so it lists every door open anywhere on Earth.
+    member's own time zone, so it lists every door open anywhere on Earth, and it stays
+    until December 31 has ended everywhere (the card itself hides in January).
     """
     now = now or _now()
     year = current_year(now)
-    if year is None or earliest_today(now) > date(year, *CARD_LAST_DAY):
+    if year is None or latest_today(now) > date(year, *CARD_LAST_DAY):
         return {"show": False}
     return {
         "show": True, "year": year, "page": BASE_PATH, "total": DOORS,

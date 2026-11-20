@@ -273,3 +273,10 @@ def test_search_links_keep_the_tag_and_a_known_store(tagged):
     assert "i=aps" in affiliate.search_links("Anything", "not-a-store")[0]["url"]
     assert affiliate.search_links("   ") == []
     assert gift_guide.ordered_sections(None) == SECTIONS
+
+
+def test_guide_keeps_its_holiday_year_in_january():
+    from datetime import date
+    assert "HOLIDAY GIFT GUIDE 2026</p>" in gift_guide.guide_content(pages={}, signed_in=False, today=date(2026, 12, 20))
+    html = gift_guide.guide_content(pages={}, signed_in=False, today=date(2027, 1, 2))
+    assert "HOLIDAY GIFT GUIDE 2026</p>" in html and "GIFT GUIDE 2027" not in html

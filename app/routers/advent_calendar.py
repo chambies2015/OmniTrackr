@@ -26,7 +26,7 @@ from .profiles import _CardCache
 router = APIRouter(tags=["advent-calendar"])
 _CARDS = _CardCache(size=64)
 CSS_VERSION = "20261114-advent-1"
-JS_VERSION = "20261114-advent-1"
+JS_VERSION = "20261120-advent-dates-1"
 SEASONAL_CSS = "/static/seasonal.css?v=20261106-holiday-guides-1"
 LIKED_CSS = "/static/if-you-liked.css?v=20261106-holiday-guides-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
@@ -183,7 +183,7 @@ def door_html(year: int, item: dict, details: dict, signed_in: bool, heading: st
     )
 
 
-def _related(today: date) -> str:
+def _related(today: date, year: Optional[int] = None) -> str:
     from .. import new_year_challenge, seasonal
     from ..discover_catalog import published_editions
     from .seasonal import EXTRA_LINKS
@@ -191,7 +191,8 @@ def _related(today: date) -> str:
     links = [(hub["path"], "Holiday picks", hub["card"])]
     links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get("holidays", [])
                  if extra["path"] != advent.BASE_PATH)
-    edition = f"december-{today.year}"
+    # The calendar's own December, which keeps its edition linked once January comes.
+    edition = f"december-{year or today.year}"
     editions = published_editions(today)
     if edition in editions:
         links.append((f"/discover/monthly/{edition}", editions[edition]["name"],
@@ -240,7 +241,7 @@ def page_content(year: int, days: list[int], details: dict, signed_in: bool, pre
         f'<h1>{_e(data["headline"])}</h1><p class="guide-deck">{_e(data["deck"])}</p>',
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
         f'<time datetime="{_e(data["reviewed"])}">{_e(_long_date(date.fromisoformat(data["reviewed"])))}</time> · '
-        f'{status}, across {_e(", ".join(FORMAT_PLURALS[kind] for kind in formats))}</p>',
+        f'<span data-advent-count>{status}</span>, across {_e(", ".join(FORMAT_PLURALS[kind] for kind in formats))}</p>',
         '<nav class="guide-jump" aria-label="On this page"><a href="#calendar">The calendar</a><a href="#doors">Behind the doors</a>'
         '<a href="#how">How it works</a><a href="#faq">Questions</a></nav>',
         '<p class="sn-companion__parent">Part of the <a href="/holidays">holiday picks</a>.</p></header>',
@@ -265,7 +266,7 @@ def page_content(year: int, days: list[int], details: dict, signed_in: bool, pre
         f'<section id="how" class="editorial sn-plan" aria-labelledby="how-heading"><p class="eyebrow">HOW IT WORKS</p>'
         f'<h2 id="how-heading">Twenty-four doors, one a day</h2><ul class="sn-nights">{how}</ul></section>',
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
-        _related(today),
+        _related(today, year),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
         _paragraphs(data["method"]),
         f'<p class="muted">First published {_e(_long_date(date.fromisoformat(data["published"])))}. '

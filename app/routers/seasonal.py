@@ -167,13 +167,14 @@ def _related(slug: str, entry: dict, today: date) -> str:
     editions = published_editions(today)
     links = []
     public = challenges.public_months(today)
+    year = seasonal.season_year(entry, today)
     for number in entry["related_months"]:
-        name = date(today.year, int(number), 1).strftime("%B").lower()
-        edition = f"{name}-{today.year}"
+        name = date(year, int(number), 1).strftime("%B").lower()
+        edition = f"{name}-{year}"
         if edition in editions:
             note = entry["edition_notes"].get(number) or "This month's Discover edition: six picks around one idea, across formats."
             links.append((f"/discover/monthly/{edition}", editions[edition]["name"], note))
-        month = f"{today.year}-{number}"
+        month = f"{year}-{number}"
         if month in public:
             links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
                           challenges.CHALLENGES[month]["tagline"]))
@@ -208,7 +209,7 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     parts = [
         f'<article class="trail-guide sn-hub" data-season-theme="{_e(entry["theme"])}">',
         '<header class="hero hero--guide sn-hero"><span class="sn-hero__moon" aria-hidden="true"></span>',
-        f'<p class="eyebrow">SEASONAL · {_e(entry["name"].upper())} {today.year}</p>',
+        f'<p class="eyebrow">SEASONAL · {_e(entry["name"].upper())} {seasonal.season_year(entry, today)}</p>',
         f'<h1>{_e(entry["headline"])}</h1><p class="guide-deck">{_e(entry["deck"])}</p>',
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time> · '
@@ -248,12 +249,13 @@ def _companion_related(slug: str, entry: dict, today: date) -> str:
                  if extra["path"] != entry["path"])
     editions = published_editions(today)
     public = challenges.public_months(today)
+    year = seasonal.season_year(parent, today)
     number = f"{today.month:02d}" if f"{today.month:02d}" in parent["related_months"] else parent["related_months"][0]
-    edition = f'{date(today.year, int(number), 1).strftime("%B").lower()}-{today.year}'
+    edition = f'{date(year, int(number), 1).strftime("%B").lower()}-{year}'
     if edition in editions:
         links.append((f"/discover/monthly/{edition}", editions[edition]["name"],
                       "This month's Discover edition: six picks around one idea, across formats."))
-    month = f"{today.year}-{number}"
+    month = f"{year}-{number}"
     if month in public:
         links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
                       challenges.CHALLENGES[month]["tagline"]))

@@ -96,9 +96,15 @@ def recap_api(year: int, response: Response, user: models.User = Depends(get_cur
 
 @router.get("/api/year-in-review-season")
 def recap_season(response: Response, user: models.User = Depends(get_current_user)):
-    """Which recap the dashboard should promote right now, if any (December and January)."""
+    """Which recap the dashboard should promote right now, if any (December and January).
+
+    Nothing for a member who joined after that year ended: in January, someone who signed up
+    on New Year's Day has no year to look back on, and their recap page would be empty."""
     response.headers["Cache-Control"] = "private, no-store"
     year = year_in_review.season_year()
+    joined = getattr(user, "created_at", None)
+    if year and joined is not None and joined.year > year:
+        year = None
     return {"year": year, "url": f"/year-in-review/{year}" if year else None}
 
 

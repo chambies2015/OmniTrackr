@@ -46,6 +46,28 @@ test('card wording', () => {
   assert.equal(advent.cardCopy(done).title, 'Every door opened');
 });
 
+test('after Christmas Eve the card stops pointing at today\'s door', () => {
+  const doors = Array.from({ length: 24 }, (_, index) => ({ day: index + 1, date: `2026-12-${String(index + 1).padStart(2, '0')}`, hint: `Hint ${index + 1}` }));
+  const eve = advent.cardView({ total: 24, doors, opened_days: [1, 2] }, '2026-12-24');
+  assert.equal(eve.finished, false);
+  assert.equal(advent.cardCopy(eve).title, 'Door 24 is open');
+  const boxing = advent.cardView({ total: 24, doors, opened_days: [1, 2] }, '2026-12-26');
+  assert.equal(boxing.finished, true);
+  assert.deepEqual(advent.cardCopy(boxing), {
+    title: 'All 24 doors are open',
+    summary: '2 of 24 opened. Every door stays open, so there\'s still time to catch up.',
+    action: 'Catch up',
+  });
+  const opened = advent.cardView({ total: 24, doors, opened_days: doors.map(door => door.day) }, '2026-12-26');
+  assert.equal(advent.cardCopy(opened).title, 'Every door opened');
+});
+
+test('the byline counts the doors open where the reader is', () => {
+  assert.equal(advent.countText(0), '0 of 24 doors open');
+  assert.equal(advent.countText(1), '1 of 24 doors open');
+  assert.equal(advent.countText(24), 'All 24 doors are open');
+});
+
 test('the card only asks the server in November and December', () => {
   assert.equal(advent.cardSeason(new Date(2026, 11, 3)), true);
   assert.equal(advent.cardSeason(new Date(2026, 10, 20)), true);

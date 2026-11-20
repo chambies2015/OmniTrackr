@@ -154,6 +154,25 @@ def test_calendar_marks_the_current_day():
     assert now(date(2026, 11, 29)) == "Small Business Saturday"
     assert now(date(2026, 12, 3)) is None
     assert now(date(2026, 12, 20)) == "Steam Winter Sale"
+    assert now(date(2027, 1, 4)) == "Steam Winter Sale"
+    assert now(date(2027, 1, 5)) is None  # the winter sale has ended; nothing is "on" after it
+
+
+def test_days_turn_over_at_midnight_eastern(monkeypatch):
+    from datetime import datetime, timezone
+
+    class Clock(datetime):
+        moment = datetime(2026, 11, 27, 3, 0, tzinfo=timezone.utc)  # 10pm on Thanksgiving in New York
+
+        @classmethod
+        def now(cls, tz=None):
+            return cls.moment.astimezone(tz)
+
+    monkeypatch.setattr(deals_guide, "datetime", Clock)
+    assert deals_guide._today() == date(2026, 11, 26)
+    assert deals_guide.countdown(deals_guide._today()) == "1 day to Black Friday"
+    Clock.moment = datetime(2026, 11, 27, 5, 0, tzinfo=timezone.utc)  # just after midnight Eastern
+    assert deals_guide.countdown(deals_guide._today()) == "It's Black Friday today"
 
 
 def test_the_guide_is_linked_from_the_hub_sitemap_index_and_loader(client):
