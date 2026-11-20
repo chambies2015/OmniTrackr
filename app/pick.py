@@ -31,7 +31,9 @@ from .editorial_collections import COLLECTIONS, EDITOR_USERNAME
 # Display order of the format chips and the pool list.
 KIND_ORDER = ("movie", "tv", "anime", "game", "book", "album")
 FORMAT_LABELS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "book": "Books", "album": "Music"}
-CREATOR_FIELD = {"movie": "director", "album": "artist", "book": "author"}
+CREATOR_FIELD = {"movie": "director", "album": "artist", "book": "author",
+                 # Not in Pick for me, but a monthly edition's guest save lands here too (discover_catalog.find_guest_pick).
+                 "manga": "author", "podcast": "host", "audiobook": "author"}
 CREATOR_META = ("director", "author", "artist")
 
 _pool: Optional[list[dict]] = None
@@ -75,6 +77,9 @@ def _build() -> list[dict]:
                         item["why"], item.get("caveat"), trail["name"], f"/discover/{slug}"))
     for slug, edition in published_editions().items():
         for item in edition["items"]:
+            if title_pages.LIBRARY_TO_KIND[item["category"]] not in KIND_ORDER:
+                # Pick for me has six formats; an edition's manga, podcast or audiobook pick is saved from its own page.
+                continue
             creator = next((item["meta"][k] for k in CREATOR_META if item["meta"].get(k)), None)
             keep(_entry(title_pages.LIBRARY_TO_KIND[item["category"]], item["title"], item["meta"].get("year"), creator,
                         item["why"], item.get("caveat"), edition["name"], f"/discover/monthly/{slug}"))

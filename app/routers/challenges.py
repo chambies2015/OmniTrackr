@@ -115,7 +115,11 @@ def _counts_line(counts: dict) -> str:
     return f'<p class="challenge-count">{_e(line)}.</p>'
 
 
-def _edition_section(step: dict) -> str:
+STEP_WORDS = {1: "one", 2: "two", 3: "three", 4: "four"}
+PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
+
+
+def _edition_section(step: dict, number: int = 1) -> str:
     slug = step.get("edition")
     edition = published_editions().get(slug)
     if not edition:
@@ -124,7 +128,9 @@ def _edition_section(step: dict) -> str:
         f'<li><strong>{_e(item["title"])}</strong> <span class="muted">{_e(CATEGORIES[item["category"]][1])}</span></li>'
         for item in edition["items"]
     )
-    return (f'<section class="editorial challenge-edition"><h2>The six picks that count for step one</h2>'
+    picks = PICK_WORDS.get(len(edition["items"]), str(len(edition["items"])))
+    return (f'<section class="editorial challenge-edition"><h2>The {picks} picks that count for step '
+            f'{STEP_WORDS.get(number, number)}</h2>'
             f'<p>{_e(edition["guide"])}</p><ul>{items}</ul>'
             f'<p><a href="/discover/monthly/{_e(slug)}">Read the full {_e(edition["name"])} edition →</a></p></section>')
 
@@ -299,7 +305,8 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         f'<p>{_e(step["detail"])}</p></article>'
         for index, step in enumerate(challenge["steps"], 1)
     )
-    edition = "".join(_edition_section(step) for step in challenge["steps"] if step["kind"] == "edition") + _companion_section(challenge)
+    edition = "".join(_edition_section(step, index) for index, step in enumerate(challenge["steps"], 1)
+                      if step["kind"] == "edition") + _companion_section(challenge)
     reflection = (f'<section class="editorial"><h2>Something to think about</h2><p>{_e(challenge["reflection"])}</p></section>'
                   if challenge.get("reflection") else "")
     content = (
