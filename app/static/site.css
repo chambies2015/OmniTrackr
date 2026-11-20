@@ -296,6 +296,12 @@ body.site .site-finder__field input:focus-visible { outline: none; }
 }
 @media (max-width: 360px) {
   .site-brand img { display: none; }
+  /* A guest's row (name, search, "Start tracking", menu) ran 20px wider than a 320px phone,
+     so every public page scrolled sideways there. */
+  .site-header .site-nav { gap: 6px; padding: 0 10px; }
+  .site-header .site-nav__links { flex-shrink: 0; gap: 6px; }
+  .site-header .site-nav__links > .site-btn { font-size: .8rem; padding: 0 10px; }
+  .site-header .site-brand { font-size: .95rem; min-width: 0; }
 }
 @media (pointer: coarse) {
   .site-footer__base a { align-items: center; display: inline-flex; min-height: 44px; }

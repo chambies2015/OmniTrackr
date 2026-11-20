@@ -25,7 +25,7 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["in-order"])
-CSS_VERSION = "20261114-order-3"
+CSS_VERSION = "20261120-order-narrow-1"
 JS_VERSION = "20261017-order-2"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SITE = "https://omnitrackr.xyz"

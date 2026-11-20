@@ -321,6 +321,10 @@
     if (rest) rest.hidden = !card.can_rest || state.showPaces;
     const unrest = $('yourWeekUnrest');
     if (unrest) unrest.hidden = card.status !== 'rest';
+    // "Hide this card" stays pressed (disabled) once it has hidden the card; a card brought
+    // back from /#your-week or the Steady badge without a reload needs it working again.
+    const hide = $('yourWeekHide');
+    if (hide) hide.disabled = false;
     const wasHidden = section.hidden;
     section.hidden = false;
     if (wasHidden && window.location.hash === '#your-week') {
