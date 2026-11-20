@@ -12,7 +12,8 @@ from .. import models
 from ..csp import strict_html_response
 from ..site_chrome import apply_site_chrome
 from ..dependencies import get_current_user, get_db
-from ..discover_catalog import TRAILS, guest_fields, published_editions
+from .. import explore_art
+from ..discover_catalog import CATEGORY_KIND, TRAILS, guest_fields, published_editions
 from ..discover_guides import GUIDES
 from .collections import CATEGORIES
 
@@ -43,8 +44,13 @@ DEFAULT_SHARE_IMAGE = ('<meta property="og:image" content="https://omnitrackr.xy
 
 
 def page(title, description, path, content, *, indexable=True, structured_data=None, head='', member=False,
-         share_image=None):
+         share_image=None, body_class=''):
     template = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
+    if body_class:
+        # Discover's own pages share covers, format colours and the save dock with trending and the shelves.
+        template = template.replace('<body class="dark-mode discover-page site">',
+                                    f'<body class="dark-mode discover-page site explore {escape(body_class, quote=True)}">', 1)
+        head = explore_art.STYLESHEET + head
     nav = next((key for prefix, key in NAV_SECTIONS if path == prefix or path.startswith(prefix + "/")), "discover")
     # Pages only signed-in members see point the header at their library, not at signing up.
     html = apply_site_chrome(template.replace("<!--SITE_NAV:discover-->", f"<!--SITE_NAV:{nav}-->", 1), member=member)
@@ -76,72 +82,112 @@ DISCOVER_DESCRIPTION = (
 )
 
 
+def _covers(db, items) -> dict:
+    """(category, title) -> cached poster for Discover picks; picks without one get a drawn cover."""
+    wanted = {}
+    for item in items:
+        kind = CATEGORY_KIND.get(item["category"])
+        if kind:
+            wanted[(item["category"], item["title"])] = (kind, item["title"], item.get("meta", {}).get("year"))
+    if db is None or not wanted:
+        return {}
+    try:
+        found = explore_art.cached_posters(db, wanted.values())
+    except Exception:  # Art is decoration: a cache problem must never take the page down.
+        return {}
+    return {key: found[value] for key, value in wanted.items() if value in found}
+
+
+def _pick_cover(item, covers, **options) -> str:
+    kind = CATEGORY_KIND.get(item["category"], "")
+    return explore_art.cover(item["title"], kind, covers.get((item["category"], item["title"])), **options)
+
+
+def _trail_card(slug, trail, covers) -> str:
+    guide_label = '<span class="trail-guide-label">In-depth guide</span>' if slug in GUIDES else ''
+    categories = " ".join(item["category"] for item in trail["items"])
+    titles = " · ".join(item["title"] for item in trail["items"])
+    creators = " ".join(str(value) for item in trail["items"] for value in item["meta"].values())
+    search = " ".join((trail["name"], trail["tag"], trail["intro"], titles, creators))
+    href = f'/discover/{escape(slug, quote=True)}'
+    fan = "".join(_pick_cover(item, covers, width=100) for item in trail["items"])
+    picks = "".join(f'<li data-kind="{CATEGORY_KIND.get(item["category"], "")}"><span class="x-kind" data-kind="{CATEGORY_KIND.get(item["category"], "")}">'
+                    f'{escape(CATEGORIES[item["category"]][1])}</span>{escape(item["title"])}</li>' for item in trail["items"])
+    return (f'<article class="trail" data-formats="{escape(categories, quote=True)}" data-search="{escape(search, quote=True)}">'
+            f'<a class="trail__fan" href="{href}" tabindex="-1" aria-hidden="true">{fan}</a>'
+            f'<div class="trail__body"><div class="trail__top"><p class="eyebrow">{escape(trail["tag"])}</p>{guide_label}</div>'
+            f'<h3><a href="{href}">{escape(trail["name"])}</a></h3><p class="trail__intro">{escape(trail["intro"])}</p>'
+            f'<ul class="trail__picks" aria-label="Inside this trail">{picks}</ul>'
+            f'<a class="trail__go" href="{href}">Explore this trail <span aria-hidden="true">→</span></a></div></article>')
+
+
 @router.get("/discover")
-def discover_index():
-    cards = []
-    for slug, trail in TRAILS.items():
-        guide_label = '<span class="trail-guide-label">In-depth guide</span>' if slug in GUIDES else ''
-        categories = " ".join(item["category"] for item in trail["items"])
-        titles = " · ".join(item["title"] for item in trail["items"])
-        creators = " ".join(str(value) for item in trail["items"] for value in item["meta"].values())
-        search = " ".join((trail["name"], trail["tag"], trail["intro"], titles, creators))
-        formats = " · ".join(CATEGORIES[item["category"]][1] for item in trail["items"])
-        cards.append(
-            f'<article class="trail" data-formats="{escape(categories, quote=True)}" data-search="{escape(search, quote=True)}">'
-            f'<p class="eyebrow">{escape(trail["tag"])}</p>{guide_label}<h2><a href="/discover/{slug}">{escape(trail["name"])}</a></h2>'
-            f'<p>{escape(trail["intro"])}</p><p class="trail-titles"><strong>Inside this trail</strong>{escape(titles)}</p>'
-            f'<p class="muted">{escape(formats)}</p><a class="button" href="/discover/{slug}">Explore this trail →</a></article>'
-        )
+def discover_index(db: Session = Depends(get_db)):
+    editions = published_editions()
+    edition_slug, edition = next(reversed(editions.items()))
+    covers = _covers(db, [item for trail in TRAILS.values() for item in trail["items"]] + list(edition["items"]))
+    cards = [_trail_card(slug, trail, covers) for slug, trail in TRAILS.items()]
+    used = {item["category"] for trail in TRAILS.values() for item in trail["items"]}
     options = ''.join(f'<option value="{category}">{label}</option>' for category, (_, label) in CATEGORIES.items())
+    chips = '<button type="button" class="dx-chip" data-format="" aria-pressed="true">Any format</button>' + ''.join(
+        f'<button type="button" class="dx-chip" data-format="{category}" data-kind="{CATEGORY_KIND[category]}" aria-pressed="false">{escape(label)}</button>'
+        for category, (_, label) in CATEGORIES.items() if category in used)
     filters = (
         '<section id="trail-filters" class="trail-filters" aria-label="Find a trail" hidden>'
-        '<div class="trail-filter-fields"><div><label for="trail-search">What are you curious about?</label>'
-        '<input id="trail-search" type="search" maxlength="100" placeholder="Try a title, creator, or theme" aria-controls="trail-list"></div>'
-        f'<div><label for="trail-format">Include a format</label><select id="trail-format" aria-controls="trail-list"><option value="">Any format</option>{options}</select></div>'
+        '<div class="trail-filter-fields"><div class="dx-search"><label for="trail-search" class="dx-sr">What are you curious about?</label>'
+        '<input id="trail-search" type="search" maxlength="100" placeholder="Search by title, creator or theme" aria-controls="trail-list"></div>'
+        f'<div class="dx-chips" role="group" aria-label="Include a format">{chips}</div>'
+        f'<div class="dx-format"><label for="trail-format">Include a format</label><select id="trail-format" aria-controls="trail-list"><option value="">Any format</option>{options}</select></div>'
         '<button id="trail-reset" type="button" class="filter-reset">Clear filters</button></div>'
         '<p id="trail-results" class="muted" role="status" aria-live="polite" aria-atomic="true"></p></section>'
     )
-    editions = published_editions()
-    edition_slug, edition = next(reversed(editions.items()))
-    edition_card = f'<section class="monthly-feature"><div><p class="eyebrow">{escape(edition["tag"])}</p><h2>{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p><p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p></div><a class="button" href="/discover/monthly/{edition_slug}">Read this edition →</a></section>'
+    edition_href = f'/discover/monthly/{escape(edition_slug, quote=True)}'
+    edition_picks = "".join(
+        f'<li><a href="{edition_href}#picks">{_pick_cover(item, covers)}'
+        f'<span class="dx-edition__label"><span class="x-kind" data-kind="{CATEGORY_KIND.get(item["category"], "")}">{escape(CATEGORIES[item["category"]][1])}</span>'
+        f'<b>{escape(item["title"])}</b></span></a></li>' for item in edition["items"])
+    edition_card = (
+        f'<section class="monthly-feature dx-edition" aria-labelledby="edition-heading"><div class="dx-edition__copy">'
+        f'<p class="eyebrow">{escape(edition["tag"])}</p><h2 id="edition-heading">{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p>'
+        f'<p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p>'
+        f'<a class="button" href="{edition_href}">Read this edition →</a></div>'
+        f'<ol class="dx-edition__picks" aria-label="In this edition">{edition_picks}</ol></section>')
     archive_items = ''.join(
         f'<li><a href="/discover/monthly/{escape(slug, quote=True)}">{escape(item["name"])}</a>'
         f'<span>{escape(item["intro"])}</span></li>'
         for slug, item in reversed(list(editions.items()))
         if slug != edition_slug
     )
+    tiles = []
+    from .. import seasonal
+    season_slug = seasonal.current()
+    if season_slug:
+        season = seasonal.season(season_slug)
+        tiles.append(
+            f'<article class="dx-tile" data-tone="season"><p class="eyebrow">SEASONAL · {escape(season["name"].upper())}</p>'
+            f'<h3>{escape(season["headline"])}</h3><p>{escape(season["deck"])}</p>'
+            f'<a class="dx-tile__go" href="{escape(season["path"], quote=True)}">See the {escape(season["name"])} picks →</a></article>')
     from .. import challenges
     challenge_months = challenges.public_months()
-    challenge_card = ''
     if challenge_months and challenge_months[0] == challenges.month_key():
         month = challenge_months[0]
         challenge = challenges.CHALLENGES[month]
-        challenge_card = (
-            f'<section class="editorial challenge-promo"><p class="eyebrow">MONTHLY CHALLENGE · {escape(challenges.month_label(month).upper())}</p>'
-            f'<h2>{escape(challenge["name"])}</h2><p>{escape(challenge["tagline"])}</p>'
-            f'<a class="button" href="/challenges/{challenges.slug_for(month)}">See this month\'s challenge →</a></section>'
-        )
-    from .. import seasonal
-    season_slug = seasonal.current()
-    season_card = ''
-    if season_slug:
-        season = seasonal.season(season_slug)
-        season_card = (
-            f'<section class="editorial challenge-promo"><p class="eyebrow">SEASONAL · {escape(season["name"].upper())}</p>'
-            f'<h2>{escape(season["headline"])}</h2><p>{escape(season["deck"])}</p>'
-            f'<a class="button" href="{escape(season["path"], quote=True)}">See the {escape(season["name"])} picks →</a></section>'
-        )
+        tiles.append(
+            f'<article class="dx-tile" data-tone="challenge"><p class="eyebrow">MONTHLY CHALLENGE · {escape(challenges.month_label(month).upper())}</p>'
+            f'<h3>{escape(challenge["name"])}</h3><p>{escape(challenge["tagline"])}</p>'
+            f'<a class="dx-tile__go" href="/challenges/{challenges.slug_for(month)}">See this month\'s challenge →</a></article>')
     from ..if_you_liked_guides import GUIDES as LIKED_GUIDES
-    liked_links = " · ".join(
-        f'<a href="/if-you-liked/{escape(slug, quote=True)}">{escape(guide["anchor"]["title"])}</a>'
+    liked_links = "".join(
+        f'<li><a href="/if-you-liked/{escape(slug, quote=True)}">{escape(guide["anchor"]["title"])}</a></li>'
         for slug, guide in LIKED_GUIDES.items()
     )
-    liked_card = (
-        '<section class="editorial challenge-promo"><p class="eyebrow">IF YOU LIKED</p>'
-        '<h2>Just finished something you loved?</h2>'
-        f'<p>Guides to what to try next, across formats: {liked_links}.</p>'
-        '<a class="button" href="/if-you-liked">See every guide →</a></section>'
-    )
+    tiles.append(
+        '<article class="dx-tile dx-tile--wide" data-tone="liked"><p class="eyebrow">IF YOU LIKED</p>'
+        '<h3>Just finished something you loved?</h3>'
+        f'<p>Guides to what to try next, across formats:</p><ul class="dx-tile__links">{liked_links}</ul>'
+        '<a class="dx-tile__go" href="/if-you-liked">See every guide →</a></article>')
+    more = ('<section class="dx-more" aria-labelledby="more-heading"><h2 id="more-heading" class="dx-heading">More ways in</h2>'
+            f'<div class="dx-tiles">{"".join(tiles)}</div></section>')
     archive = (
         '<section class="editorial monthly-archive"><h2>Past monthly editions</h2>'
         f'<ul>{archive_items}</ul></section>' if archive_items else ''
@@ -157,7 +203,27 @@ def discover_index():
         "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/"},
         "mainEntity": {"@type": "ItemList", "itemListElement": trail_links},
     }
-    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + season_card + challenge_card + liked_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving one pick needs no account: it waits in your browser until you sign up. Saving a whole trail as a collection needs an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
+    # The hero wall: picks that already have art first, so the first screen is mostly real covers.
+    wall_items = sorted((item for trail in TRAILS.values() for item in trail["items"]),
+                        key=lambda item: (item["category"], item["title"]) not in covers)[:9]
+    wall = "".join(_pick_cover(item, covers, eager=index < 3) for index, item in enumerate(wall_items))
+    hero = ('<header class="hero dx-hero"><div class="dx-hero__copy"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p>'
+            '<h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. '
+            'Explore freely, then save the picks that feel like you.</p>'
+            f'<div class="dx-hero__actions"><a class="button" href="#trails">Browse {len(TRAILS)} trails</a>'
+            f'<a class="dx-hero__link" href="{edition_href}">Read the {escape(edition["published"])} edition →</a></div></div>'
+            f'<div class="dx-hero__wall" aria-hidden="true">{wall}</div></header>')
+    trails = (f'<section id="trails" class="dx-trails" aria-labelledby="trails-heading"><div class="dx-trails__head">'
+              f'<h2 id="trails-heading" class="dx-heading">Trails to follow</h2>'
+              '<p>Each trail links four picks in four formats through one idea.</p></div>'
+              + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p>'
+              '<div id="trail-list" class="trails">' + ''.join(cards) + '</div></section>')
+    how = ('<section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. '
+           'Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p>'
+           '<p>Saving one pick needs no account: it waits in your browser until you sign up. Saving a whole trail as a collection needs an account. '
+           'You choose which titles to add, and can review existing matches before confirming.</p></section>')
+    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover",
+                hero + edition_card + trails + more + archive + how, structured_data=structured, body_class="discover-hub")
 
 
 def _notes_section(notes) -> str:
@@ -195,20 +261,20 @@ def _guest_save(item) -> str:
     fields = guest_fields(item)
     if fields is None:
         return ""
-    return (f'<button type="button" class="pick-save" data-guest-only data-guest-save aria-pressed="false" '
+    return (f'<button type="button" class="pick-save x-save" data-guest-only data-guest-save aria-pressed="false" '
             f'data-guest-kind="{escape(fields["kind"], quote=True)}" data-guest-slug="{escape(fields["slug"], quote=True)}" '
             f'data-guest-title="{escape(fields["title"], quote=True)}">Save to my list</button>')
 
 
-# Shown under the picks once a visitor has saved one (guest-list.js shows and fills it).
-GUEST_BAR = ('<div class="dc-bar" data-guest-bar data-guest-only hidden><p class="dc-bar__count" data-guest-count role="status" aria-live="polite"></p>'
-             '<a class="button" href="/#signup">Save my list, free →</a></div>')
+# Rises from the bottom of the screen once a visitor has saved a pick (guest-list.js shows and fills it).
+GUEST_BAR = explore_art.dock("Keep my list")
 GUEST_PANEL_NOTE = ('<p class="save-panel__guest" data-guest-only>No account yet? Press <strong>Save to my list</strong> on any pick above. '
                     'Your list waits in this browser and moves into your library when you sign up.</p>')
 
 
-def detail_content(trail, back_path, back_label, api_path, published, essay=None):
-    items = "".join(f'<article class="pick"><p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><div class="pick-actions">{_guest_save(i)}<a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></div></article>' for n, i in enumerate(trail["items"], 1))
+def detail_content(trail, back_path, back_label, api_path, published, essay=None, covers=None):
+    covers = covers or {}
+    items = "".join(f'<article class="pick dx-pick" data-kind="{CATEGORY_KIND.get(i["category"], "")}">{_pick_cover(i, covers)}<p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><div class="pick-actions">{_guest_save(i)}<a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></div></article>' for n, i in enumerate(trail["items"], 1))
     essay_section = ""
     if essay:
         essay_section = f'<section id="essay" class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
@@ -226,8 +292,9 @@ def paragraphs(values):
     return ''.join(f'<p>{escape(value)}</p>' for value in values)
 
 
-def guide_content(slug, trail, guide):
+def guide_content(slug, trail, guide, covers=None):
     """Render the curated guides without requiring scripts, accounts, or private data."""
+    covers = covers or {}
     reviewed = date.fromisoformat(guide['reviewed']).strftime('%B %d, %Y')
     parts = [
         '<article class="trail-guide">',
@@ -264,7 +331,8 @@ def guide_content(slug, trail, guide):
     for index, item in enumerate(trail['items'], 1):
         key = item['key']
         parts.extend([
-            f'<article id="pick-{escape(key, quote=True)}" class="pick"><p class="eyebrow">{index:02d} / {escape(CATEGORIES[item["category"]][1])}</p>',
+            f'<article id="pick-{escape(key, quote=True)}" class="pick dx-pick" data-kind="{CATEGORY_KIND.get(item["category"], "")}">'
+            f'{_pick_cover(item, covers)}<p class="eyebrow">{index:02d} / {escape(CATEGORIES[item["category"]][1])}</p>',
             f'<h3>{escape(item["title"])}</h3><p>{escape(item["why"])}</p>',
             paragraphs(guide['item_notes'][key]),
             f'<p class="caveat">{escape(item["caveat"])}</p>',
@@ -303,15 +371,16 @@ def guide_content(slug, trail, guide):
 
 
 @router.get("/discover/monthly/{slug}")
-def monthly_detail(slug: str):
+def monthly_detail(slug: str, db: Session = Depends(get_db)):
     edition = monthly_for(slug)
     canonical = "https://omnitrackr.xyz/discover/monthly/" + slug
     return page(
         edition["name"] + " | Discover",
         edition["intro"],
         "/discover/monthly/" + slug,
-        detail_content(edition, "/discover", "Discover", "monthly/" + slug, edition["published"], {"title": edition["essay_title"], "body": edition["essay"]}),
-        head=GUEST_HEAD,
+        detail_content(edition, "/discover", "Discover", "monthly/" + slug, edition["published"], {"title": edition["essay_title"], "body": edition["essay"]},
+                       covers=_covers(db, edition["items"])),
+        head=GUEST_HEAD, body_class="discover-trail",
         structured_data={
             "@context": "https://schema.org", "@type": "Article",
             "headline": edition["name"], "description": edition["intro"],
@@ -326,15 +395,16 @@ def monthly_detail(slug: str):
 
 
 @router.get("/discover/{slug}")
-def discover_detail(slug: str):
+def discover_detail(slug: str, db: Session = Depends(get_db)):
     t = trail_for(slug)
+    covers = _covers(db, t["items"])
     if slug in GUIDES:
         guide = GUIDES[slug]
         canonical = 'https://omnitrackr.xyz/discover/' + slug
         return page(
             guide.get('search_title') or t['name'] + ' | Discover', guide['summary'], '/discover/' + slug,
-            guide_content(slug, t, guide),
-            head=GUEST_HEAD,
+            guide_content(slug, t, guide, covers),
+            head=GUEST_HEAD, body_class="discover-trail",
             structured_data={
                 '@context': 'https://schema.org', '@type': 'Article',
                 'headline': t['name'], 'description': guide['summary'],
@@ -349,9 +419,9 @@ def discover_detail(slug: str):
         t["name"] + " | Discover",
         t["intro"],
         "/discover/" + slug,
-        detail_content(t, "/discover", "All trails", slug, "September 8, 2026"),
+        detail_content(t, "/discover", "All trails", slug, "September 8, 2026", covers=covers),
         indexable=False,
-        head=GUEST_HEAD,
+        head=GUEST_HEAD, body_class="discover-trail",
     )
 
 

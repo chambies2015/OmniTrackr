@@ -14,7 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import title_pages
+from .. import explore_art, title_pages
 from .. import trending
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
@@ -25,7 +25,8 @@ from .titles import KIND_PLURALS
 
 router = APIRouter(tags=["trending"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261030-trending-1"
+CSS_VERSION = "20261120-explore-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SINGULAR = {kind: noun for kind, (noun, _) in trending.NOUNS.items()}
 PLURAL = {kind: plural for kind, (_, plural) in trending.NOUNS.items()}
 
@@ -34,10 +35,17 @@ def _e(value) -> str:
     return escape(str(value if value is not None else ""), quote=True)
 
 
-def _art(entry: dict, width: int = 64) -> str:
-    if entry.get("image"):
-        return f'<img src="{_e(entry["image"])}" alt="" loading="lazy" width="{width}" height="{width * 3 // 2}">'
-    return f'<span>{_e(entry["title"][:1].upper())}</span>'
+def _art(entry: dict, label: bool = True, width: Optional[int] = None) -> str:
+    """The poster, or the title drawn as a cover in its format's colour (explore.css)."""
+    return explore_art.cover(entry["title"], entry["kind"], entry.get("image"), label=label, width=width)
+
+
+def _save(entry: dict) -> str:
+    """Visitors keep a title in the browser-only list that moves into a new account (guest-list.js)."""
+    slug = entry["url"].rstrip("/").rsplit("/", 1)[-1]
+    return (f'<button type="button" class="x-save" data-guest-only data-guest-save aria-pressed="false" '
+            f'data-guest-kind="{_e(entry["kind"])}" data-guest-slug="{_e(slug)}" data-guest-title="{_e(entry["title"])}">'
+            'Save to my list</button>')
 
 
 def _movement(entry: dict, window: str) -> str:
@@ -64,25 +72,28 @@ def _counts(entry: dict) -> str:
     return " · ".join(parts)
 
 
-def _entry_html(entry: dict, window: str, show_kind: bool) -> str:
-    meta = " · ".join(filter(None, [title_pages.KINDS[entry["kind"]][3] if show_kind else None,
-                                    str(entry["year"]) if entry.get("year") else None, entry.get("creator")]))
+def _entry_html(entry: dict, window: str, show_kind: bool, signed_in: bool = True) -> str:
+    meta = " · ".join(filter(None, [str(entry["year"]) if entry.get("year") else None, entry.get("creator")]))
+    kind = (f'<p class="trend-entry__kind">{explore_art.kind_tag(entry["kind"], title_pages.KINDS[entry["kind"]][3])}</p>'
+            if show_kind else "")
     score = (f'<span class="title-chart__score"><strong>{_e(entry["average"])}</strong><small>/10 from {entry["rated"]}</small></span>'
              if entry["average"] is not None else
-             f'<span class="title-chart__score trend-score"><strong>{entry["members"]}</strong><small>members</small></span>')
-    return (f'<li class="title-chart__entry trend-entry" id="rank-{entry["rank"]}">'
+             f'<span class="title-chart__score trend-score"><strong>{entry["members"]}</strong> <small>members</small></span>')
+    save = "" if signed_in else _save(entry)
+    return (f'<li class="title-chart__entry trend-entry" id="rank-{entry["rank"]}" data-kind="{_e(entry["kind"])}">'
             f'<span class="title-chart__rank trend-rank"><span aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>{_movement(entry, window)}</span>'
-            f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{_art(entry, 72)}</a>'
-            f'<div class="title-chart__body"><h3><a href="{_e(entry["url"])}">{_e(entry["title"])}</a></h3>'
+            f'<a class="title-chart__art trend-art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{_art(entry, width=None if entry["rank"] <= 3 else 64)}</a>'
+            f'<div class="title-chart__body">{kind}<h3><a href="{_e(entry["url"])}">{_e(entry["title"])}</a></h3>'
             f'{f"<p class=title-chart__meta>{_e(meta)}</p>" if meta else ""}'
-            f'<p class="title-chart__counts">{_e(_counts(entry))}</p></div>{score}</li>')
+            f'<p class="title-chart__counts">{_e(_counts(entry))}</p></div>'
+            f'<div class="trend-entry__side">{score}{save}</div></li>')
 
 
 def _mini_list(heading: str, anchor: str, intro: str, entries: list[dict], value) -> str:
     if not entries:
         return ""
     items = "".join(
-        f'<li><a href="{_e(e["url"])}"><span class="trend-mini__art">{_art(e, 40)}</span>'
+        f'<li data-kind="{_e(e["kind"])}"><a href="{_e(e["url"])}"><span class="trend-mini__art">{_art(e, label=False, width=40)}</span>'
         f'<span class="trend-mini__text"><strong>{_e(e["title"])}</strong><small>{_e(value(e))}</small></span></a></li>'
         for e in entries)
     return (f'<section class="title-section trend-panel" aria-labelledby="{anchor}"><h2 id="{anchor}">{_e(heading)}</h2>'
@@ -95,9 +106,10 @@ def _leaders_html(found: dict) -> str:
         leaders = found["leaders"].get(kind)
         if not leaders:
             continue
-        rows = "".join(f'<li><a href="{_e(e["url"])}">{_e(e["title"])}</a> <small>{e["members"]} members</small></li>'
+        rows = "".join(f'<li><span class="trend-leader__art">{_art(e, label=False, width=34)}</span><span class="trend-leader__text">'
+                       f'<a href="{_e(e["url"])}">{_e(e["title"])}</a> <small>{e["members"]} members</small></span></li>'
                        for e in leaders)
-        cards += (f'<div class="trend-leader"><h3><a href="{_e(trending.path(kind, found["window"]))}">{_e(KIND_PLURALS[kind])}</a></h3>'
+        cards += (f'<div class="trend-leader" data-kind="{_e(kind)}"><h3><a href="{_e(trending.path(kind, found["window"]))}">{_e(KIND_PLURALS[kind])}</a></h3>'
                   f'<ol>{rows}</ol><a class="trend-leader__more" href="{_e(trending.path(kind, found["window"]))}">'
                   f'Full {_e(SINGULAR[kind])} chart <span aria-hidden="true">→</span></a></div>')
     if not cards:
@@ -114,6 +126,7 @@ def _pills(kind: Optional[str], window: str) -> str:
     kinds = [(None, "Everything")] + [(other, KIND_PLURALS[other]) for other in title_pages.KINDS]
     formats = "".join(
         f'<a class="site-chip{" title-chart__pill--on" if other == kind else ""}" href="{_e(trending.path(other, window))}"'
+        f'{f" data-kind={other}" if other else ""}'
         f'{" aria-current=page" if other == kind else ""}>{_e(label)}</a>' for other, label in kinds)
     return (f'<nav class="title-chart__pills trend-windows" aria-label="Time period">{windows}</nav>'
             f'<nav class="title-chart__pills" aria-label="Trending by type">{formats}</nav>')
@@ -164,20 +177,29 @@ def _cta_html(signed_in: bool, kind: Optional[str]) -> str:
             '<a class="site-btn site-btn--ghost" href="/titles">Browse popular titles</a></div></section>')
 
 
-def _empty_html(kind: Optional[str], window: str) -> str:
+def _empty_html(kind: Optional[str], window: str, fallback: Optional[list] = None, signed_in: bool = True) -> str:
     now_words = trending.WINDOW_WORDS[window][0]
     noun = PLURAL[kind] if kind else "titles"
+    chart_kind = kind or "movie"
+    if fallback:
+        # A quiet week still has a month behind it: show its top few instead of an empty page.
+        rows = "".join(_entry_html(entry, "month", kind is None, signed_in) for entry in fallback[:5])
+        return (f'<section class="title-section trend-empty" aria-labelledby="chart-heading"><h2 id="chart-heading">Nothing is trending {_e(now_words)} yet</h2>'
+                f'<p class="title-empty">A title shows up here once at least {trending.MIN_MEMBERS} members have added, started '
+                f'or finished it in the same stretch. Not enough {_e(noun)} have reached that this week, so here is what led '
+                f'the last 30 days.</p><ol class="title-chart">{rows}</ol>'
+                f'<p class="trend-empty__more"><a class="site-btn site-btn--ghost site-btn--sm" href="{_e(trending.path(kind, "month"))}">'
+                'See the full 30-day chart <span aria-hidden="true">→</span></a></p></section>')
     other = ("" if window == "month" else
              f' The <a href="{_e(trending.path(kind, "month"))}">last 30 days</a> may have more to show.')
-    chart_kind = kind or "movie"
-    return (f'<section class="title-section"><h2>Nothing is trending {_e(now_words)} yet</h2>'
+    return (f'<section class="title-section trend-empty"><h2>Nothing is trending {_e(now_words)} yet</h2>'
             f'<p class="title-empty">A title shows up here once at least {trending.MIN_MEMBERS} members have added, started '
             f'or finished it in the same stretch. Not enough {_e(noun)} have reached that yet.{other} Meanwhile, the '
             f'<a href="/titles/{chart_kind}">all-time member chart</a> and the <a href="/titles">most tracked titles</a> '
             'have plenty to browse.</p></section>')
 
 
-def render(found: dict, kind: Optional[str], signed_in: bool) -> tuple[str, bool]:
+def render(found: dict, kind: Optional[str], signed_in: bool, fallback: Optional[list] = None) -> tuple[str, bool]:
     window = found["window"]
     now_words = trending.WINDOW_WORDS[window][0]
     if kind:
@@ -209,9 +231,9 @@ def render(found: dict, kind: Optional[str], signed_in: bool) -> tuple[str, bool
     if chart:
         chart_html = (f'<section class="title-section" aria-labelledby="chart-heading"><h2 id="chart-heading">'
                       f'Top {len(chart)} {_e(now_words)}</h2>'
-                      f'<ol class="title-chart">{"".join(_entry_html(entry, window, show_kind) for entry in chart)}</ol></section>')
+                      f'<ol class="title-chart">{"".join(_entry_html(entry, window, show_kind, signed_in) for entry in chart)}</ol></section>')
     else:
-        chart_html = _empty_html(kind, window)
+        chart_html = _empty_html(kind, window, fallback, signed_in)
     finish_word = trending.FINISH_VERBS
     panels = (
         _mini_list("Finished most", "finished-heading",
@@ -262,9 +284,10 @@ def render(found: dict, kind: Optional[str], signed_in: bool) -> tuple[str, bool
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/trending.css?v={CSS_VERSION}">
+  {explore_art.STYLESHEET}
   {structured}
 </head>
-<body class="site title-page trending-page">
+<body class="site title-page trending-page explore"{f' data-kind="{_e(kind)}"' if kind else ""}>
   <!--SITE_NAV:trending-->
   <main>
     <section class="site-hero"><div class="site-wrap">
@@ -281,7 +304,9 @@ def render(found: dict, kind: Optional[str], signed_in: bool) -> tuple[str, bool
       {chart_html}{panels_html}{leaders}{_cta_html(signed_in, kind)}{_related_html(kind)}{_method_html(window)}
     </div>
   </main>
+  {"" if signed_in else explore_art.dock()}
   <!--SITE_FOOTER-->
+  {"" if signed_in else f'<script src="{GUEST_LIST_JS}" defer></script>'}
 </body>
 </html>"""
     return apply_site_chrome(page), indexable
@@ -297,7 +322,11 @@ def _respond(request: Request, db: Session, kind: Optional[str], window: str):
         raise HTTPException(404, "Unknown title type")
     found = trending.data(db, window)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    html, indexable = render(found, kind, signed_in)
+    fallback = None
+    if window == "week" and not (found["kinds"][kind]["chart"] if kind else found["overall"]):
+        month = trending.data(db, "month")
+        fallback = month["kinds"][kind]["chart"] if kind else month["overall"]
+    html, indexable = render(found, kind, signed_in, fallback)
     response = strict_html_response(html)
     response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=600"
     response.headers["Vary"] = "Cookie"

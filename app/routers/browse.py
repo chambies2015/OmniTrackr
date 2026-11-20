@@ -13,7 +13,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import browse, title_pages
+from .. import browse, explore_art, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..browse_catalog import CATALOG
 from ..csp import strict_html_response
@@ -25,8 +25,8 @@ from .titles import _script_json
 
 router = APIRouter()
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261120-speed-1"
-JS_VERSION = "20261031-browse-1"
+CSS_VERSION = "20261120-explore-1"
+JS_VERSION = "20261120-explore-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 PAGE_CACHE_SECONDS = 600
 TRACKER_GUIDES = {"manga": "/manga-tracker", "podcasts": "/podcast-tracker", "audiobooks": "/audiobook-tracker"}
@@ -74,14 +74,14 @@ def _head(title: str, description: str, canonical_path: str, structured: str, ro
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/browse.css?v={CSS_VERSION}">
+  {explore_art.STYLESHEET}
   {structured}
 </head>"""
 
 
-def _art(image: Optional[str], title: str, kind: str) -> str:
-    if image:
-        return f'<img src="{_e(image)}" alt="" loading="lazy" decoding="async">'
-    return f'<span aria-hidden="true">{_e(title[:1].upper())}</span>'
+def _art(image: Optional[str], title: str, kind: str, label: bool = True, width: Optional[int] = None) -> str:
+    """The cover, or the title drawn as one in the format's colour (explore.css)."""
+    return explore_art.cover(title, browse.KINDS[kind]["title_kind"], image, square=kind == "podcasts", label=label, width=width)
 
 
 def _save_button(kind: str, item_key: str, item: dict, signed_in: bool) -> str:
@@ -90,7 +90,7 @@ def _save_button(kind: str, item_key: str, item: dict, signed_in: bool) -> str:
     if signed_in:
         return (f'<button type="button" class="site-btn site-btn--primary site-btn--sm browse-add" data-browse-add '
                 f'data-browse-kind="{_e(kind)}" data-browse-key="{_e(item_key)}">{_e(config["add_label"])}</button>')
-    return (f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-guest-save aria-pressed="false" '
+    return (f'<button type="button" class="x-save" data-guest-save aria-pressed="false" '
             f'data-guest-kind="{_e(config["title_kind"])}" data-guest-slug="{_e(browse.guest_slug(item))}" '
             f'data-guest-title="{_e(item["title"])}">Save to my list</button>')
 
@@ -138,11 +138,11 @@ def _shelf_card(kind: str, item: dict, cover: Optional[str], page_link: Optional
                                      (item.get("extra") or {}).get("narrator")]))
     return (f'<article class="browse-card" id="{_e(item["key"])}" data-browse-item data-search="{_e(search.lower())}">'
             f'<div class="browse-card__art">{_art(cover, title, kind)}</div>'
-            f'<div class="browse-card__body"><p class="browse-card__facts">{_facts(kind, item)}</p>'
-            f'<h3 class="browse-card__title">{heading}</h3>{_creator_line(kind, item)}'
+            f'<div class="browse-card__head"><p class="browse-card__facts">{_facts(kind, item)}</p>'
+            f'<h3 class="browse-card__title">{heading}</h3>{_creator_line(kind, item)}</div>'
             f'<p class="browse-card__why">{_e(item["why"])}</p><p class="browse-card__fit">{_e(item["fit"])}</p>'
             f'<div class="browse-card__actions">{_save_button(kind, item["key"], item, signed_in)}'
-            f'<span class="browse-card__status" role="status" aria-live="polite"></span></div></div></article>')
+            f'<span class="browse-card__status" role="status" aria-live="polite"></span></div></article>')
 
 
 def _chart_entry(kind: str, position: int, item: dict, signed_in: bool) -> str:
@@ -151,7 +151,7 @@ def _chart_entry(kind: str, position: int, item: dict, signed_in: bool) -> str:
             if item.get("url") else "")
     return (f'<li class="browse-chart__entry" data-browse-item data-search="{_e(" ".join(filter(None, [item["title"], item.get("creator"), item.get("genre")])).lower())}">'
             f'<span class="browse-chart__rank" aria-hidden="true">{position}</span>'
-            f'<span class="browse-chart__art">{_art(item.get("image"), item["title"], kind)}</span>'
+            f'<span class="browse-chart__art">{_art(item.get("image"), item["title"], kind, label=False, width=56)}</span>'
             f'<span class="browse-chart__body"><strong>{_e(item["title"])}</strong><small>{facts}</small>{link}</span>'
             f'<span class="browse-chart__actions">{_save_button(kind, item["id"], item, signed_in)}'
             f'<span class="browse-card__status" role="status" aria-live="polite"></span></span></li>')
@@ -205,9 +205,10 @@ def _method(kind: str) -> str:
 
 
 def _jump_links(kind: str, has_chart: bool) -> str:
+    """The shelves as chips in a bar that sticks under the header (browse.js marks the one in view)."""
     links = [f'<a href="#popular">{_e(browse.KINDS[kind]["chart_name"])}</a>'] if has_chart else []
     links += [f'<a href="#{_e(shelf["slug"])}">{_e(shelf["name"])}</a>' for shelf in CATALOG[kind]["shelves"]]
-    return f'<nav class="browse-jump" aria-label="On this page">{"".join(links)}</nav>'
+    return f'<nav class="x-jump browse-jump" aria-label="On this page"><div class="x-jump__inner">{"".join(links)}</div></nav>'
 
 
 def _structured(kind: str, items: list[dict], links: dict[str, str]) -> str:
@@ -256,19 +257,26 @@ def render_kind(db: Session, kind: str, chart: Optional[dict], signed_in: bool) 
                    '<label for="browse-search">Looking for something in particular?</label>'
                    '<input id="browse-search" type="search" class="site-field" maxlength="100" placeholder="Title, creator or genre" autocomplete="off">'
                    '<p id="browse-filter-status" class="muted" role="status" aria-live="polite"></p></section>')
+    # The hero's cover stack: the first covers the shelves have found, drawn ones if none yet.
+    stack_items = sorted(items, key=lambda item: item["key"] not in covers)[:5]
+    stack = "".join(_art(covers.get(item["key"]), item["title"], kind) for item in stack_items)
+    title_kind = browse.KINDS[kind]["title_kind"]
     body = f"""
-<body class="site title-page browse-page" data-browse-kind="{_e(kind)}">
+<body class="site title-page browse-page explore" data-browse-kind="{_e(kind)}" data-kind="{_e(title_kind)}">
   <!--SITE_NAV:browse-->
   <main>
-    <section class="site-hero"><div class="site-wrap">
+    <section class="site-hero browse-hero"><div class="site-wrap browse-hero__wrap">
+      <div class="browse-hero__copy">
       {crumbs}
       <p class="site-eyebrow">Browse · {_e(page["label"])} · {len(items)} picks</p>
       <h1>{_e(page["heading"])}</h1>
       <p class="browse-deck">{_e(page["lead"])}</p>
       <p class="browse-byline">By <a href="/about">OmniTrackr</a> · <a href="#method">How this page is put together</a></p>
       <p class="title-hero__status browse-hero__status" role="status" aria-live="polite"></p>
-      {_jump_links(kind, bool(browse.chart_items(chart)))}
+      </div>
+      <div class="browse-hero__stack" aria-hidden="true">{stack}</div>
     </div></section>
+    {_jump_links(kind, bool(browse.chart_items(chart)))}
     <div class="site-wrap title-body browse-body">
       <section class="title-section browse-intro" aria-label="About these shelves">{intro}</section>
       {chart_html}
@@ -279,6 +287,7 @@ def render_kind(db: Session, kind: str, chart: Optional[dict], signed_in: bool) 
       {_method(kind)}
     </div>
   </main>
+  {"" if signed_in else explore_art.dock()}
   <!--SITE_FOOTER-->
   <script src="/static/browse.js?v={JS_VERSION}" defer></script>
   {'' if signed_in else f'<script src="{GUEST_LIST_JS}" defer></script>'}
@@ -315,13 +324,24 @@ INDEX_NOTES = """
       </section>"""
 
 
-def render_index(signed_in: bool) -> str:
+def render_index(signed_in: bool, db: Optional[Session] = None) -> str:
     cards = ""
     for kind, page in CATALOG.items():
-        shelves = " · ".join(shelf["name"] for shelf in page["shelves"])
-        cards += (f'<a class="browse-hub__card" href="{browse.path(kind)}"><p class="site-eyebrow">{_e(page["label"])} · {len(browse.shelf_items(kind))} picks</p>'
-                  f'<h2>{_e(page["heading"])}</h2><p>{_e(page["lead"])}</p><p class="browse-hub__shelves">{_e(shelves)}</p>'
-                  f'<span class="browse-hub__go">Open the shelves <span aria-hidden="true">→</span></span></a>')
+        items = browse.shelf_items(kind)
+        covers: dict[str, str] = {}
+        if db is not None:
+            try:
+                covers, _ = browse.cached_covers(db, kind, items)
+            except Exception:  # Covers are decoration; the hub reads fine without them.
+                covers = {}
+        fan_items = sorted(items, key=lambda item: item["key"] not in covers)[:4]
+        fan = "".join(_art(covers.get(item["key"]), item["title"], kind, width=76) for item in fan_items)
+        shelves = "".join(f'<li>{_e(shelf["name"])}</li>' for shelf in page["shelves"])
+        cards += (f'<a class="browse-hub__card" href="{browse.path(kind)}" data-kind="{_e(browse.KINDS[kind]["title_kind"])}">'
+                  f'<span class="browse-hub__fan" aria-hidden="true">{fan}</span><div class="browse-hub__text">'
+                  f'<p class="site-eyebrow">{_e(page["label"])} · {len(items)} picks</p>'
+                  f'<h2>{_e(page["heading"])}</h2><p>{_e(page["lead"])}</p><ul class="browse-hub__shelves">{shelves}</ul>'
+                  f'<span class="browse-hub__go">Open the shelves <span aria-hidden="true">→</span></span></div></a>')
     structured = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Browse: manga, podcasts and audiobooks to start with",
                   "url": SITE_URL + browse.path(), "description": INDEX_DESCRIPTION, "inLanguage": "en-US",
                   "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": SITE_URL + "/"},
@@ -329,7 +349,7 @@ def render_index(signed_in: bool) -> str:
                       {"@type": "ListItem", "position": position, "name": page["heading"], "url": SITE_URL + browse.path(kind)}
                       for position, (kind, page) in enumerate(CATALOG.items(), start=1)]}}
     body = f"""
-<body class="site title-page browse-page browse-hub">
+<body class="site title-page browse-page browse-hub explore">
   <!--SITE_NAV:browse-->
   <main>
     <section class="site-hero"><div class="site-wrap">
@@ -381,9 +401,9 @@ def _respond(html: str, signed_in: bool) -> Response:
 
 
 @router.get("/browse", include_in_schema=False)
-def browse_index(request: Request):
+def browse_index(request: Request, db: Session = Depends(get_db)):
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    return _respond(_cached_page(("index", signed_in), lambda: render_index(signed_in)), signed_in)
+    return _respond(_cached_page(("index", signed_in), lambda: render_index(signed_in, db)), signed_in)
 
 
 @router.get("/browse/{kind}", include_in_schema=False)
