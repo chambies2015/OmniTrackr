@@ -357,6 +357,11 @@ body.app-shell .home-board__rail .season-card__open { font-size: .88rem; }
 body.app-shell .home-board__rail .month-challenge__step { border-radius: 12px; padding: 8px 10px; }
 body.app-shell .home-board__rail .month-challenge__label { font-size: .86rem; line-height: 1.35; }
 body.app-shell .home-board__rail .month-challenge__mark { flex-basis: 22px; height: 22px; width: 22px; }
+/* A step's button ("Log a revisit") drops under its label on narrow cards instead of squeezing
+   the label to a word a line (320 px phones); on the wide rail it stays beside it. */
+body.app-shell .month-challenge__step { flex-wrap: wrap; row-gap: 4px; }
+body.app-shell .month-challenge__step > .month-challenge__label { flex: 1 1 9rem; min-width: 0; }
+body.app-shell .month-challenge__step > .month-challenge__link { margin-left: auto; }
 body.app-shell .home-board__rail .year-goals__list { grid-template-columns: minmax(0, 1fr); }
 body.app-shell .home-board__rail :is(.year-goals__celebration, .month-challenge__celebration) { border-radius: 14px; }
 

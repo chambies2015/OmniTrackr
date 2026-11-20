@@ -71,9 +71,10 @@ def test_chip_counts_come_from_the_shelf_summary():
 
 
 def test_quick_marks_refresh_the_counts():
-    assert "window.OmniHomeHero?.refresh?.();" in QUICK
-    assert '<script src="/static/library-quick.js?v=20261120-library-1"></script>' in INDEX
-    assert '<script src="/static/home-hero.js?v=20261120-library-1"></script>' in INDEX
+    # Since the Nov 20 evening sweep a quick save asks once, after a short pause (test_sweep_nov20c).
+    assert "(hero?.refreshSoon || hero?.refresh)?.();" in QUICK
+    assert '<script src="/static/library-quick.js?v=20261120-sweep-1"></script>' in INDEX
+    assert '<script src="/static/home-hero.js?v=20261120-sweep-1"></script>' in INDEX
 
 
 def test_filter_checkboxes_stay_in_the_page_for_keyboards():

@@ -12,7 +12,7 @@
     'September', 'October', 'November', 'December'];
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const COVER_LIMIT = 5;
-  const state = { request: null, epoch: 0, timer: null, data: null, loadedAt: 0 };
+  const state = { request: null, epoch: 0, timer: null, data: null, loadedAt: 0, seq: 0, shown: 0 };
   // Coming back to the tab only refetches when the numbers are this old; edits refetch straight away.
   const STALE_MS = 60 * 1000;
 
@@ -206,10 +206,16 @@
   function refresh() {
     if (!signedIn()) return Promise.resolve();
     const epoch = state.epoch;
+    // Requests can overlap (a quick save while the first load is out): an older answer never replaces a newer one.
+    const seq = ++state.seq;
     const options = typeof authFetchOptions === 'function' ? authFetchOptions({}) : { credentials: 'same-origin' };
     const request = fetch(`${apiBase()}/statistics/home/`, options)
       .then(response => (response.ok ? response.json() : null))
-      .then(data => { if (data && epoch === state.epoch && signedIn()) render(data); })
+      .then(data => {
+        if (!data || epoch !== state.epoch || !signedIn() || seq < state.shown) return;
+        state.shown = seq;
+        render(data);
+      })
       .catch(() => { /* The strip is optional; the dashboard works without it. */ });
     state.request = request;
     return request;
@@ -255,9 +261,9 @@
     });
   }
 
-  window.OmniHomeHero = { refresh, reset, render };
+  window.OmniHomeHero = { refresh, refreshSoon, reset, render };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { greeting, summaryText, headingLine, render, refresh, reset, state };
+    module.exports = { greeting, summaryText, headingLine, render, refresh, refreshSoon, reset, state };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
