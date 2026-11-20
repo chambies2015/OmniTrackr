@@ -29,7 +29,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from html import escape
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, literal, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -178,27 +178,26 @@ def _library() -> dict:
 
 
 def _stamps(db: Session, user_id: int, start: datetime, end: datetime) -> list[datetime]:
-    """Every time the member logged something between ``start`` and ``end`` (UTC). Reads only."""
-    found: list[datetime] = []
+    """Every time the member logged something between ``start`` and ``end`` (UTC). Reads only.
 
-    def take(query) -> None:
-        found.extend(value for (value,) in query if value is not None)
+    One round trip: the sixteen places a day can come from are read as one UNION ALL
+    (it was sixteen queries on every home screen load).
+    """
+    def between(model, column, *extra):
+        return select(column.label("at")).where(model.user_id == user_id, column >= start, column < end, *extra)
 
-    entry = models.ActivityEntry
-    take(db.query(entry.occurred_at).filter(entry.user_id == user_id, entry.occurred_at >= start, entry.occurred_at < end))
-    feed = models.FriendFeedEvent
-    take(db.query(feed.created_at).filter(feed.user_id == user_id, feed.created_at >= start, feed.created_at < end))
-    mark = models.ProgressMark
-    take(db.query(mark.at).filter(mark.user_id == user_id, mark.at >= start, mark.at < end))
-    point = models.ProgressCheckpoint
-    take(db.query(point.updated_at).filter(point.user_id == user_id, point.unit.isnot(None),
-                                           point.updated_at >= start, point.updated_at < end))
-    note = models.EpisodeNote
-    take(db.query(note.created_at).filter(note.user_id == user_id, note.created_at >= start, note.created_at < end))
-    take(db.query(note.updated_at).filter(note.user_id == user_id, note.updated_at >= start, note.updated_at < end))
-    for model in _library().values():
-        take(db.query(model.added_at).filter(model.user_id == user_id, model.added_at >= start, model.added_at < end))
-    return found
+    entry, feed, mark = models.ActivityEntry, models.FriendFeedEvent, models.ProgressMark
+    point, note = models.ProgressCheckpoint, models.EpisodeNote
+    parts = [
+        between(entry, entry.occurred_at),
+        between(feed, feed.created_at),
+        between(mark, mark.at),
+        between(point, point.updated_at, point.unit.isnot(None)),
+        between(note, note.created_at),
+        between(note, note.updated_at),
+    ]
+    parts += [between(model, model.added_at) for model in _library().values()]
+    return [value for (value,) in db.execute(union_all(*parts)) if value is not None]
 
 
 def _finished(db: Session, user_id: int, start: datetime, end: datetime) -> list[models.ActivityEntry]:
@@ -265,12 +264,25 @@ def _titles(db: Session, user_id: int, refs: list[tuple[str, int, str]], limit: 
     from .check_in import CATEGORIES
     found, seen = [], set()
     library = _library()
+    # The library rows come in one query per format, not one per title.
+    wanted: dict[str, set[int]] = {}
+    unique: list[tuple[str, int, str]] = []
     for category, item_id, fallback in refs:
         if category not in library or (category, item_id or fallback) in seen:
             continue
         seen.add((category, item_id or fallback))
+        unique.append((category, item_id, fallback))
+    unique = unique[:limit * 4]  # enough to fill the list when a few have no title left
+    for category, item_id, _fallback in unique:
+        if item_id:
+            wanted.setdefault(category, set()).add(item_id)
+    rows: dict[tuple[str, int], object] = {}
+    for category, ids in wanted.items():
         model = library[category]
-        row = db.query(model).filter(model.id == item_id, model.user_id == user_id).first() if item_id else None
+        for row in db.query(model).filter(model.user_id == user_id, model.id.in_(sorted(ids))):
+            rows[(category, row.id)] = row
+    for category, item_id, fallback in unique:
+        row = rows.get((category, item_id)) if item_id else None
         title = " ".join(((row.title if row is not None else None) or fallback or "").split())[:200]
         if not title:
             continue
@@ -292,11 +304,15 @@ def touched(db: Session, user_id: int, start: datetime, end: datetime, limit: in
     for row in db.query(point.updated_at, point.category, point.item_id).filter(
             point.user_id == user_id, point.unit.isnot(None), point.updated_at >= start, point.updated_at < end).limit(40):
         refs.append((row[0], row[1], row[2], ""))
-    for category, model in _library().items():
-        for row in db.query(model.added_at, model.id, model.title).filter(
-                model.user_id == user_id, model.added_at >= start, model.added_at < end) \
-                .order_by(model.added_at.desc()).limit(limit):
-            refs.append((row[0], category, row[1], row[2] or ""))
+    # The newest adds across all nine libraries in one query (it was one per library).
+    adds = union_all(*[
+        select(model.added_at.label("at"), literal(category).label("category"), model.id.label("item_id"),
+               model.title.label("title"))
+        .where(model.user_id == user_id, model.added_at >= start, model.added_at < end, model.title.isnot(None))
+        for category, model in _library().items()
+    ]).subquery()
+    for row in db.execute(select(adds).order_by(adds.c.at.desc()).limit(limit * 2)):
+        refs.append((row[0], row[1], row[2], row[3] or ""))
     refs.sort(key=lambda ref: ref[0], reverse=True)
     return _titles(db, user_id, [(category, item_id, title) for _at, category, item_id, title in refs], limit)
 
@@ -328,10 +344,18 @@ def _weeks(db: Session, user_id: int, since: Optional[date] = None) -> dict[date
 
 
 def _apply(row: models.YourWeekWeek, mask: int, finishes: int, now: datetime) -> bool:
-    """Grow a saved week with what was measured. True when this made it kept."""
-    row.day_mask = int(row.day_mask or 0) | int(mask or 0)
-    row.finishes = max(int(row.finishes or 0), int(finishes or 0))
-    row.updated_at = now
+    """Grow a saved week with what was measured. True when this made it kept.
+
+    Only a week that actually grew is written: the card is built on every home screen
+    load, and rewriting an unchanged week's time each time was a write (and a commit,
+    and a reload of every saved week after it) on each visit.
+    """
+    grown_mask = int(row.day_mask or 0) | int(mask or 0)
+    grown_finishes = max(int(row.finishes or 0), int(finishes or 0))
+    if grown_mask != (row.day_mask or 0) or grown_finishes != (row.finishes or 0) or row.updated_at is None:
+        row.day_mask = grown_mask
+        row.finishes = grown_finishes
+        row.updated_at = now
     if row.kept_at is None and is_kept(row.goal, row.day_mask, row.finishes):
         row.kept_at = now
         return True
@@ -374,12 +398,14 @@ def sync(db: Session, user: models.User, plan: models.YourWeekPlan, this_monday:
             row = models.YourWeekWeek(user_id=user.id, week_start=week, goal=plan.goal, day_mask=0, finishes=0)
             db.add(row)
             rows[week] = row
-        elif week == this_monday:
+        elif week == this_monday and row.goal != plan.goal:
             row.goal = plan.goal  # the week in progress follows the latest pace
         if _apply(row, mask, finishes, now):
             kept_now.append(row)
-        if week < this_monday:
+        if week < this_monday and not row.final:
             row.final = True
+    if not db.new and not db.dirty:
+        return rows  # nothing grew since the last look: no write, no commit
     try:
         db.commit()
     except IntegrityError:
@@ -429,9 +455,21 @@ def _has_push(db: Session, user_id: int) -> bool:
     return db.query(models.PushSubscription.id).filter(models.PushSubscription.user_id == user_id).first() is not None
 
 
-def email_offer(user: models.User) -> bool:
+def email_offer(user: models.User, db: Optional[Session] = None) -> bool:
+    """The Sunday email can be offered: a confirmed address, mail set up, and (given ``db``) product emails on.
+
+    The email's footer link is the product-updates unsubscribe. For a member who had already
+    unsubscribed, that link only says "you're already unsubscribed", so a weekly email sent to
+    them could never be stopped from the email itself. Those members get the device nudge only.
+    """
     from . import digest
-    return bool(user.is_verified and digest.mail_configured())
+    if not (user.is_verified and digest.mail_configured()):
+        return False
+    return db is None or not _opted_out(db, user.id)
+
+
+def _opted_out(db: Session, user_id: int) -> bool:
+    return db.query(models.EmailOptOut.id).filter(models.EmailOptOut.user_id == user_id).first() is not None
 
 
 def _goal_payload(key: Optional[str]) -> Optional[dict]:
@@ -528,6 +566,7 @@ def build(db: Session, user: models.User, tz: int, now: Optional[datetime] = Non
     start, end = week_bounds(this_monday, tz)
     status = "setup" if goal is None else ("kept" if kept else "rest" if rest else "open")
     days_left = 7 - today.weekday()
+    offer_email = email_offer(user, db)
     kept_total = 0
     if plan is not None:
         kept_total = db.query(func.count(models.YourWeekWeek.id)).filter(
@@ -552,8 +591,10 @@ def build(db: Session, user: models.User, tz: int, now: Optional[datetime] = Non
         # A week off only makes sense with a run to protect.
         "can_rest": bool(goal) and not kept and not rest and run_before >= 1 and can_rest(rows, this_monday),
         "remind": {
-            "email": bool(plan and plan.remind_email), "push": bool(plan and plan.remind_push),
-            "offer_email": email_offer(user), "has_push": _has_push(db, user.id), "hour": REMIND_HOUR,
+            # After an unsubscribe from the email itself the switch reads off straight away
+            # (the next Sunday check turns the saved one off too).
+            "email": bool(plan and plan.remind_email and offer_email), "push": bool(plan and plan.remind_push),
+            "offer_email": offer_email, "has_push": _has_push(db, user.id), "hour": REMIND_HOUR,
         },
         "hidden": bool(plan and plan.hidden_at),
     }
@@ -617,6 +658,9 @@ def set_reminder(db: Session, user: models.User, email: Optional[bool], push: Op
     if email is True and not plan.remind_email:
         if not email_offer(user):
             raise ValueError("Confirm your email address first, then try again.")
+        if _opted_out(db, user.id):
+            raise ValueError("You turned off OmniTrackr emails. Turn product emails back on in Settings, "
+                             "or use the nudge on this device instead.")
         plan.remind_email = True
         plan.remind_set_at = now
         count("remind_email")
@@ -842,9 +886,13 @@ def due(db: Session, now: datetime) -> list[models.YourWeekPlan]:
 
 
 def _opted_out_since(db: Session, plan: models.YourWeekPlan) -> bool:
-    """Unsubscribed from product updates after turning the email on: the email stops (the footer link is that unsubscribe)."""
-    opted = db.query(models.EmailOptOut.created_at).filter(models.EmailOptOut.user_id == plan.user_id).scalar()
-    return opted is not None and (plan.remind_set_at is None or opted >= plan.remind_set_at)
+    """Unsubscribed from product updates: the Sunday email stops (its footer link is that unsubscribe).
+
+    Unlike the one-off reminders (first week, backlog draw), this email comes every week, so an
+    opt-out from any time stops it. Counting only opt-outs made after the email was turned on
+    left the footer link powerless for anyone who had unsubscribed before.
+    """
+    return _opted_out(db, plan.user_id)
 
 
 def push_message(goal: str, mask: int, finishes: int, run: int) -> str:
@@ -878,6 +926,11 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
     try:
         from .email_quota import lock_email_budget
         for plan in due(db, now):
+            if result["sent"] + result["failed"] >= PER_RUN_LIMIT:
+                # allowance() counts this run's own sends, so the per-run limit is kept here;
+                # the rest are still due and go out on the next check, 15 minutes on.
+                result["limited"] = True
+                break
             user = db.get(models.User, plan.user_id)
             tz = plan.tz_minutes or 0
             scheduled = plan.next_remind_at
@@ -917,8 +970,9 @@ async def send_due(session_factory, now: Optional[datetime] = None, sender=_send
                     print(f"Your week notification for user {user.id} failed: {error}")
             if not plan.remind_email:
                 continue
-            if not mail_ok or not user.is_verified or _opted_out_since(db, plan):
-                if _opted_out_since(db, plan):
+            opted_out = _opted_out_since(db, plan)
+            if not mail_ok or not user.is_verified or opted_out:
+                if opted_out:
                     plan.remind_email = False
                     db.commit()
                 count("dropped")
