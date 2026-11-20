@@ -842,6 +842,24 @@ def run_migrations():
     fold_private_link_pages()
     split_shared_regular_badge()
     add_week_one_start_column()
+    add_follow_suggest_column()
+
+
+def add_follow_suggest_column():
+    """Add the "suggest my profile" switch to follower settings. Existing rows get TRUE, the same
+    as members with no row: a profile that is public and taking followers can be suggested."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("follow_settings"):
+            return
+        if "suggest_me" in {col["name"] for col in inspector.get_columns("follow_settings")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE follow_settings ADD COLUMN suggest_me BOOLEAN NOT NULL DEFAULT TRUE"))
+            conn.commit()
+            print("Added suggest_me column to follow_settings table")
+    except Exception as e:
+        print(f"Migration warning (follow suggest): {e}")
 
 
 def add_notification_link_column():

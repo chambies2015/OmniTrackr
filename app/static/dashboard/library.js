@@ -53,6 +53,7 @@ function switchTab(tabName) {
     window.OmniFriendFeed?.load();
     window.OmniTitleOrigins?.loadRecommenders();
     window.OmniFollowing?.load();
+    window.OmniPeople?.open();
   } else if (tabName === 'activity') {
     loadActivityJournal();
   } else if (tabName === 'for-you') {

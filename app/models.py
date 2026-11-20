@@ -1893,6 +1893,9 @@ class FollowSetting(Base):
     allow_followers = Column(Boolean, nullable=False, default=True)
     # The "From people you follow" section of the weekly email.
     email_following = Column(Boolean, nullable=False, default=True)
+    # Whether Find people may suggest this profile to members with similar taste (Nov 2026).
+    # Only ever matters while the public profile is on and followers are allowed.
+    suggest_me = Column(Boolean, nullable=False, default=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -1907,6 +1910,24 @@ class FollowBar(Base):
 
     __table_args__ = (
         UniqueConstraint("owner_id", "barred_id", name="uq_follow_bar"),
+    )
+
+
+class PeopleSuggestionDismissal(Base):
+    """Someone a member pressed "Not for me" on in Find people (Nov 2026). Private to the member.
+
+    A new table only. It hides that person from the member's suggestions and nothing else:
+    the other member is never told, and following them from their profile still works.
+    """
+    __tablename__ = "people_suggestion_dismissals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    dismissed_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "dismissed_id", name="uq_people_suggestion_dismissal"),
     )
 
 
