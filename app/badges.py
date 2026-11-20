@@ -81,6 +81,9 @@ TRACKS = (
     {"key": "challenger", "name": "Challenger", "emoji": "🏆", "metric": "challenges", "targets": (1, 3, 6),
      "counts": "monthly challenges completed", "one": "monthly challenge completed", "next": "Complete {n} more {noun}",
      "noun": ("challenge", "challenges"), "shelf": None},
+    {"key": "steady", "name": "Steady", "emoji": "🗓️", "metric": "weeks_kept", "targets": (4, 12, 26),
+     "counts": "weeks kept on Your week", "one": "week kept on Your week", "next": "Keep {n} more {noun}",
+     "noun": ("week", "weeks"), "shelf": None},
     {"key": "advent", "name": "Door Opener", "emoji": "🚪", "metric": "advent_doors", "targets": (6, 12, 24),
      "counts": "advent calendar doors opened in one December", "one": "advent calendar door opened",
      "next": "Open {n} more advent {noun}", "noun": ("door", "doors"), "shelf": None},
@@ -92,7 +95,7 @@ TOTAL_LEVELS = len(TRACKS) * len(TIERS)
 # Where on the dashboard each badge's next step happens.
 LINKS = {
     "goals": "/#goals", "challenger": "/#challenge", "recruiter": "/#invite-friends", "company": "/#invite-friends",
-    "advent": "/holidays/advent-calendar",
+    "advent": "/holidays/advent-calendar", "steady": "/#your-week",
 }
 NEXT_COUNT = 3
 
@@ -127,6 +130,8 @@ def counts(db: Session, user: models.User) -> dict:
     result["goals"] = db.query(models.GoalAchievement.id).filter(models.GoalAchievement.user_id == user.id).count()
     result["challenges"] = db.query(models.MonthlyChallengeEntry.id).filter(
         models.MonthlyChallengeEntry.user_id == user.id, models.MonthlyChallengeEntry.completed_at.isnot(None)).count()
+    result["weeks_kept"] = db.query(models.YourWeekWeek.id).filter(
+        models.YourWeekWeek.user_id == user.id, models.YourWeekWeek.kept_at.isnot(None)).count()
     from .advent_calendar import most_doors
     result["advent_doors"] = most_doors(db, user.id)
     return result
