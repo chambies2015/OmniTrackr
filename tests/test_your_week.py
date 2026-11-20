@@ -257,7 +257,10 @@ SUNDAY_EVENING = datetime(2026, 11, 22, 23, 5)
 
 def test_sunday_email_goes_once_when_one_more_day_keeps_the_week(db_session):
     user = member(db_session)
-    show = models.TVShow(title="Severance", year=2022, watched=False, user_id=user.id, poster_url="https://img.example/s.jpg")
+    # Added well before this week: a title added "now" would light up today's tile whenever the suite runs
+    # between Tuesday and Sunday of the test week, and three days would keep the week before the nudge.
+    show = models.TVShow(title="Severance", year=2022, watched=False, user_id=user.id, poster_url="https://img.example/s.jpg",
+                         added_at=WEDNESDAY - timedelta(days=60))
     db_session.add(show)
     db_session.commit()
     db_session.add(models.ProgressCheckpoint(user_id=user.id, category="tv-shows", item_id=show.id, unit="episode",
