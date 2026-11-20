@@ -36,7 +36,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import Headers
 from starlette.requests import Request
 
 from . import search_journey
@@ -348,22 +348,37 @@ RECORDER = TrafficRecorder()
 _background_flushes: set = set()
 
 
-class SiteTrafficMiddleware(BaseHTTPMiddleware):
-    """Count human page views after the response is ready; never affects the response."""
+class SiteTrafficMiddleware:
+    """Count human page views once the response starts; never affects the response.
+
+    Plain ASGI rather than BaseHTTPMiddleware, which ran the rest of the app in a
+    separate task on every request just to read the status code.
+    """
 
     def __init__(self, app, recorder: TrafficRecorder | None = None):
-        super().__init__(app)
+        self.app = app
         self.recorder = recorder
 
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_and_count(message):
+            if message["type"] == "http.response.start":
+                self.count(Request(scope), message)
+            await send(message)
+
+        await self.app(scope, receive, send_and_count)
+
+    def count(self, request: Request, start: dict) -> None:
         recorder = self.recorder or RECORDER
         try:
-            counted = recorder.record(request, response.status_code, response.headers.get("content-type", ""))
+            content_type = Headers(raw=start.get("headers", [])).get("content-type", "")
+            counted = recorder.record(request, start["status"], content_type)
             if counted and recorder.flush_due():
                 task = asyncio.create_task(asyncio.to_thread(recorder.flush))
                 _background_flushes.add(task)
                 task.add_done_callback(_background_flushes.discard)
         except Exception:
             pass  # Analytics must never break a page.
-        return response

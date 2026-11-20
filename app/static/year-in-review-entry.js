@@ -7,7 +7,10 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const NOVEMBER = 10;
-  const state = { request: 0, pending: null };
+  // loadedAt: the script asks once as it loads and auth.js asks again when it shows the
+  // dashboard; an answer this fresh is reused instead of fetched twice.
+  const state = { request: 0, pending: null, loadedAt: 0 };
+  const REUSE_MS = 20000;
 
   function showRecapBanner() {
     const banner = $('yearInReviewBanner');
@@ -116,10 +119,15 @@
   function refreshYearSoFar() {
     if (!$('yearSoFar')) return Promise.resolve();
     if (state.pending) return state.pending;
+    if (state.loadedAt && Date.now() - state.loadedAt < REUSE_MS) return Promise.resolve();
     const request = ++state.request;
     state.pending = fetch('/api/year-in-review-so-far', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(response => (response.ok ? response.json() : null))
-      .then(data => { if (request === state.request) render(data); })
+      .then(data => {
+        if (request !== state.request) return;
+        render(data);
+        if (data) state.loadedAt = Date.now();
+      })
       .catch(() => { /* the card is optional */ })
       .finally(() => { state.pending = null; });
     return state.pending;
@@ -128,6 +136,7 @@
   function resetYearSoFar() {
     state.request += 1;
     state.pending = null;
+    state.loadedAt = 0;
     const card = $('yearSoFar');
     if (card) card.hidden = true;
   }
