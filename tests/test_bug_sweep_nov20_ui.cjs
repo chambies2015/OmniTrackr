@@ -157,3 +157,13 @@ test('the narrowest phones get a tighter guest header', () => {
   assert.match(rules, /\.site-header \.site-nav \{ gap: 6px; padding: 0 10px; \}/);
   assert.match(rules, /\.site-header \.site-nav__links > \.site-btn \{ font-size: \.8rem; padding: 0 10px; \}/);
 });
+
+test('long one-word titles and written-out links wrap instead of widening a 320px page', () => {
+  const order = fs.readFileSync(path.join(STATIC, 'in-order.css'), 'utf8');
+  assert.match(order, /\.io-entries \{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(order, /\.io-entry h3 \{[^}]*overflow-wrap: anywhere/);
+  const narrow = order.slice(order.indexOf('@media (max-width: 760px)'));
+  assert.match(narrow.slice(0, narrow.indexOf('\n}')), /\.io-rows, \.io-cards \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+  const reader = fs.readFileSync(path.join(STATIC, 'public-reader.css'), 'utf8');
+  assert.match(reader, /:is\(p, li\) a \{ overflow-wrap: break-word; \}/);
+});
