@@ -8,10 +8,11 @@ instead, added up from the listed running time of each episode.
 """
 
 REVIEWED = "2026-11-10"
+UPDATED = "2026-11-20"  # guides that gained a third section
 
 GUIDES = {
     "breaking-bad": {
-        "name": "Breaking Bad", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Breaking Bad", "kind": "tv", "reviewed": UPDATED,
         "summary": "Breaking Bad is 62 episodes over five seasons, about 49 hours without ads. Season lengths, a pace planner and what the total leaves out.",
         "titles": [{"kind": "tv", "title": "Breaking Bad", "year": 2008}],
         "see_also": ["better-call-saul", "the-sopranos", "the-wire"],
@@ -45,6 +46,15 @@ GUIDES = {
                 "Better Call Saul is a separate 63-episode series and has its own page here. The short online "
                 "\"minisodes\" from the early seasons are not counted either. They are jokes, and the story does not need them.",
             ]),
+            ("breaks", "Where to stop for a break", [
+                "Most seasons end on a cliffhanger. Seasons 1 and 3 stop in the middle of a crisis, and the first half of "
+                "season 5 closes on a discovery that the second half picks up straight away. The season 2 finale pays off the "
+                "black-and-white flash-forwards that open four of its episodes, so it is not a resting point either.",
+                "The cleanest break is after season 4. Its finale, \"Face Off\", settles the conflict that has run since early "
+                "in season 3. That is 46 episodes and about 36 hours in, leaving 16 episodes and twelve and a half hours. "
+                "Viewers at the time waited eleven months between the two halves of season 5, from September 2012 to August "
+                "2013. You don't have to.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Breaking Bad are there?",
@@ -57,7 +67,7 @@ GUIDES = {
         ],
     },
     "better-call-saul": {
-        "name": "Better Call Saul", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Better Call Saul", "kind": "tv", "reviewed": UPDATED,
         "summary": "Better Call Saul runs 63 episodes over six seasons, about 50 hours. See each season's length and plan the watch around Breaking Bad.",
         "titles": [{"kind": "tv", "title": "Better Call Saul", "year": 2015}],
         "see_also": ["breaking-bad", "mad-men", "succession"],
@@ -90,6 +100,15 @@ GUIDES = {
                 "Both shows back to back come to about 98 hours across 125 episodes. El Camino, the Breaking Bad "
                 "film, is not needed for Saul and can go anywhere after the Breaking Bad finale.",
             ]),
+            ("breaks", "Where to stop for a break", [
+                "Season 3 ends a storyline that has run since the first episode, and season 4 ends with Jimmy taking a new "
+                "name. Both are good places to pause for a week or two. Season 5 and the first half of season 6 end on turns "
+                "that the next episode picks up at once.",
+                "Season 6 first aired in two parts in 2022: seven episodes in April and May, then the last six from July to "
+                "August. The seventh, \"Plan and Execution\", was the mid-season break. If season 1 has not caught you by its "
+                "sixth episode, \"Five-O\", watch that one before deciding. It is mostly about Mike and works almost as a short "
+                "film on its own.",
+            ]),
         ],
         "faq": [
             ("How many seasons of Better Call Saul are there?",
@@ -102,7 +121,7 @@ GUIDES = {
         ],
     },
     "the-sopranos": {
-        "name": "The Sopranos", "kind": "tv", "reviewed": REVIEWED,
+        "name": "The Sopranos", "kind": "tv", "reviewed": UPDATED,
         "summary": "The Sopranos is 86 episodes over six seasons, about 79 hours. Season-by-season lengths and how long it takes at one or two episodes a night.",
         "titles": [{"kind": "tv", "title": "The Sopranos", "year": 1999}],
         "see_also": ["the-wire", "mad-men", "breaking-bad"],
@@ -134,6 +153,14 @@ GUIDES = {
                 "1960s and 70s but leans on what you know about the characters as adults, so save it for after the series.",
                 "Season 6 is sometimes sold as two seasons, 6A and 6B. Either way it is the same 21 episodes.",
             ]),
+            ("episodes", "Two episodes to know about", [
+                "\"College\", the fifth episode of season 1, is the first to put Tony's two lives side by side for a whole "
+                "hour. He takes his daughter to look at colleges in Maine and spots a man from his past on the way. If the "
+                "first four episodes leave you unsure, give it that one before deciding.",
+                "\"Pine Barrens\", the eleventh episode of season 3, sends two of Tony's men into snowy woods after a "
+                "collection goes wrong. It was directed by Steve Buscemi, who joins the cast as Tony's cousin in season 5. It "
+                "sits a little apart from the main plot, but watch it in order like everything else.",
+            ]),
         ],
         "faq": [
             ("How many episodes of The Sopranos are there?",
@@ -146,7 +173,7 @@ GUIDES = {
         ],
     },
     "the-wire": {
-        "name": "The Wire", "kind": "tv", "reviewed": REVIEWED,
+        "name": "The Wire", "kind": "tv", "reviewed": UPDATED,
         "summary": "The Wire is 60 episodes over five seasons, about 59 hours. How long each season takes, and why it is best watched a season at a time.",
         "titles": [{"kind": "tv", "title": "The Wire", "year": 2002}],
         "see_also": ["the-sopranos", "breaking-bad", "succession"],
@@ -178,6 +205,15 @@ GUIDES = {
                 "port with a new cast.",
                 "Subtitles help with the slang. They do not add time, and they save you from rewinding.",
             ]),
+            ("background", "Why each season feels different", [
+                "David Simon, who created the show, spent more than a decade as a police reporter at The Baltimore Sun. Ed "
+                "Burns, his main co-writer, was a Baltimore homicide detective who later taught in the city's public schools. "
+                "Season 4's classrooms and season 5's newsroom come from those two jobs, and each season brings in a new "
+                "group of characters to go with its new setting.",
+                "The show was made in the squarer 4:3 picture of early-2000s television. In 2014 HBO released a "
+                "high-definition version reframed for widescreen, and Simon wrote at length about what was gained and lost. "
+                "Both versions run the same length, so the totals here hold for either.",
+            ]),
         ],
         "faq": [
             ("How many episodes are in each season of The Wire?",
@@ -190,7 +226,7 @@ GUIDES = {
         ],
     },
     "game-of-thrones": {
-        "name": "Game of Thrones", "kind": "tv", "reviewed": REVIEWED, "in_order": "game-of-thrones",
+        "name": "Game of Thrones", "kind": "tv", "reviewed": UPDATED, "in_order": "game-of-thrones",
         "summary": "Game of Thrones is 73 episodes over eight seasons, about 71 hours. Season lengths, the long final episodes, and a finish-date planner.",
         "titles": [{"kind": "tv", "title": "Game of Thrones", "year": 2011}],
         "see_also": ["a-song-of-ice-and-fire", "the-sopranos", "succession"],
@@ -225,6 +261,15 @@ GUIDES = {
                 "The books tell the same story as far as roughly season 5, then the show goes past them. Reading the "
                 "five published novels takes about twice as long as watching the whole series; there is a page for that too.",
             ]),
+            ("first-season", "Giving it a fair try", [
+                "Season 1 is ten episodes and about nine and a half hours, the cheapest test of whether the show is for you. "
+                "Watch all of it. The ninth episode, \"Baelor\", is where most first-time viewers find out what kind of story "
+                "this is, and the finale sets up the rest of the series.",
+                "Season 8 is the most criticised part of the show, mainly for rushing after years of slow build, and a "
+                "petition asking HBO to remake it gathered well over a million signatures. It is still the only ending there "
+                "is. A Knight of the Seven Kingdoms, which began in January 2026, is another separate series, set about "
+                "ninety years before Game of Thrones, and it is not counted either.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Game of Thrones are there?",
@@ -237,7 +282,7 @@ GUIDES = {
         ],
     },
     "mad-men": {
-        "name": "Mad Men", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Mad Men", "kind": "tv", "reviewed": UPDATED,
         "summary": "Mad Men is 92 episodes over seven seasons, about 72 hours without ads. Season lengths and a planner for finishing by a date you pick.",
         "titles": [{"kind": "tv", "title": "Mad Men", "year": 2007}],
         "see_also": ["the-sopranos", "succession", "better-call-saul"],
@@ -271,6 +316,14 @@ GUIDES = {
                 "episodes, which is how they are counted here, and how the total reaches 92.",
                 "There are no specials, films or spin-offs to add. When the last episode ends, you are done.",
             ]),
+            ("episodes", "Episodes to know about", [
+                "Season 1's finale, \"The Wheel\", has the Kodak Carousel pitch, the scene people know the show by even if they "
+                "have never watched it. Season 3 ends with \"Shut the Door. Have a Seat.\", which resets the office for the "
+                "seasons after it and makes a good place to take a break.",
+                "\"The Suitcase\", the seventh episode of season 4, takes place almost entirely over one night in the office, "
+                "with Don and Peggy and very little else. If you are deciding whether to keep going after the first few "
+                "seasons, that is the episode to judge it by.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Mad Men are there?",
@@ -283,7 +336,7 @@ GUIDES = {
         ],
     },
     "lost": {
-        "name": "Lost", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Lost", "kind": "tv", "reviewed": UPDATED,
         "summary": "Lost is 121 episodes over six seasons, about 87 hours without ads. Season lengths, where the short seasons fall, and a pace planner.",
         "titles": [{"kind": "tv", "title": "Lost", "year": 2004}],
         "see_also": ["supernatural", "stranger-things", "game-of-thrones"],
@@ -317,6 +370,15 @@ GUIDES = {
                 "Counts differ between services because the double-length premieres and finales are sometimes listed "
                 "as one episode and sometimes as two. The running time is the same either way.",
             ]),
+            ("structure", "One character an episode", [
+                "Most episodes follow one character, cutting between the island and scenes from that person's life before the "
+                "crash. It is how the show fills in a cast of more than a dozen people, and it is why an episode can drag if "
+                "its character is not one you care about yet.",
+                "The season 3 finale, \"Through the Looking Glass\", changes that device, and season 6 changes it again. "
+                "Neither is a mistake in the episode order. Not counted here: the 13 short \"Missing Pieces\" clips made for "
+                "phones in 2007 and 2008, and \"The New Man in Charge\", a 12-minute epilogue on the season 6 and "
+                "complete-series discs.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Lost are there?",
@@ -329,7 +391,7 @@ GUIDES = {
         ],
     },
     "friends": {
-        "name": "Friends", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Friends", "kind": "tv", "reviewed": UPDATED,
         "summary": "Friends is 236 episodes over ten seasons, about 87 hours at 22 minutes each. Season counts and how long a full rewatch takes at your pace.",
         "titles": [{"kind": "tv", "title": "Friends", "year": 1994}],
         "see_also": ["the-office", "supernatural", "lost"], "skip_minutes": 1,
@@ -367,6 +429,15 @@ GUIDES = {
                 "skip. The 2021 reunion special (1 hour 44 minutes) is not counted. Some DVD sets carry extended "
                 "cuts a few minutes longer than the broadcast versions that streaming services use.",
             ]),
+            ("thanksgiving", "The Thanksgiving episodes", [
+                "Friends has a Thanksgiving episode in every season except the second, nine in all. Watched together they "
+                "come to about three and a quarter hours, which fits into one holiday afternoon. The one with the turkey on "
+                "Monica's head is \"The One with All the Thanksgivings\" in season 5, a run of flashbacks to the group's worst "
+                "ones.",
+                "Three stories are told in two parts: the episode after the Super Bowl in season 2, Ross's wedding at the end "
+                "of season 4, and the finale, \"The Last One\". Each part counts as its own episode, the way streaming services "
+                "number them, so the 236 includes both halves of all three.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Friends are there?",
@@ -378,7 +449,7 @@ GUIDES = {
         ],
     },
     "the-office": {
-        "name": "The Office (US)", "kind": "tv", "reviewed": REVIEWED,
+        "name": "The Office (US)", "kind": "tv", "reviewed": UPDATED,
         "summary": "The Office (US) is 201 episodes over nine seasons, about 74 hours. Season-by-season counts, the Superfan cuts, and a rewatch planner.",
         "titles": [{"kind": "tv", "title": "The Office", "year": 2005, "aka": ["The Office (US)"]}],
         "see_also": ["friends", "mad-men", "succession"], "skip_minutes": 1,
@@ -416,6 +487,14 @@ GUIDES = {
                 "If you are new and season 1 feels stiff, keep going. It is only six episodes, and the show finds its "
                 "tone early in season 2.",
             ]),
+            ("later-seasons", "After Michael leaves", [
+                "From the end of season 7 to the finale is 53 episodes, about 19 hours, without Steve Carell. Season 8 puts "
+                "Andy in charge of the office. Season 9 was announced as the last before it began and is written toward an "
+                "ending, so if you carry on past season 7, go all the way rather than stopping partway through season 8.",
+                "If you want the Michael Scott years and nothing more, stop at \"Goodbye, Michael\". Will Ferrell's "
+                "four-episode guest run falls either side of it. The pilot is a close remake of the British pilot, nearly "
+                "line for line, which is one reason season 1 feels stiffer than what follows.",
+            ]),
         ],
         "faq": [
             ("How many episodes of The Office are there?",
@@ -427,7 +506,7 @@ GUIDES = {
         ],
     },
     "supernatural": {
-        "name": "Supernatural", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Supernatural", "kind": "tv", "reviewed": UPDATED,
         "summary": "Supernatural is 327 episodes over fifteen seasons, about 229 hours. Season counts, the original five-season story, and a long-haul planner.",
         "titles": [{"kind": "tv", "title": "Supernatural", "year": 2005}],
         "see_also": ["lost", "friends", "one-piece"],
@@ -470,6 +549,14 @@ GUIDES = {
                 "ones the main plot needs, and skipping the rest can take a third off the total, though some of the "
                 "best-loved comedy episodes are in that pile.",
             ]),
+            ("stand-alones", "Stand-alone episodes to keep", [
+                "If you take the shortcut and skip the monster-of-the-week episodes, keep these four. \"Mystery Spot\" (season "
+                "3, episode 11) traps Sam in a Tuesday that keeps repeating. \"Changing Channels\" (season 5, episode 8) drops "
+                "the brothers into parodies of other TV shows. \"The French Mistake\" (season 6, episode 15) sends them into a "
+                "world where they are actors on a show called Supernatural.",
+                "\"Baby\" (season 11, episode 4) is filmed entirely from inside the brothers' car. None of the four needs the "
+                "episodes around it, and together they are under three hours.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Supernatural are there?",
@@ -481,7 +568,7 @@ GUIDES = {
         ],
     },
     "stranger-things": {
-        "name": "Stranger Things", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Stranger Things", "kind": "tv", "reviewed": UPDATED,
         "summary": "Stranger Things is 42 episodes over five seasons, about 45 hours, and the episodes keep getting longer. Season totals and a planner.",
         "titles": [{"kind": "tv", "title": "Stranger Things", "year": 2016}],
         "see_also": ["lost", "game-of-thrones", "breaking-bad"],
@@ -513,6 +600,13 @@ GUIDES = {
                 "the running times listed for each episode, credits included.",
                 "The animated spin-off and the stage play are not counted. Neither is needed to follow the series.",
             ]),
+            ("release", "How the last two seasons came out", [
+                "Season 4 was released in two volumes in 2022: seven episodes on May 27 and the last two on July 1. Volume 2 "
+                "is only those two episodes, so treat it as one long evening or a Saturday afternoon.",
+                "Season 5 came out in three batches at the end of 2025: four episodes on November 26, three on Christmas Day "
+                "and the finale on New Year's Eve, when it also played in cinemas in the US and Canada. Watching now there is "
+                "nothing to wait for, but the three batches still make sensible stopping points.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Stranger Things are there?",
@@ -524,7 +618,7 @@ GUIDES = {
         ],
     },
     "succession": {
-        "name": "Succession", "kind": "tv", "reviewed": REVIEWED,
+        "name": "Succession", "kind": "tv", "reviewed": UPDATED,
         "summary": "Succession is 39 episodes over four seasons, about 41 hours. Season lengths, the 88-minute finale, and a plan for finishing it in a month.",
         "titles": [{"kind": "tv", "title": "Succession", "year": 2018}],
         "see_also": ["mad-men", "the-sopranos", "better-call-saul"],
@@ -553,6 +647,13 @@ GUIDES = {
                 "show has not yet found the comedy in that. It turns at about the midpoint of the season, which is "
                 "roughly five hours in.",
                 "There are no spin-offs, specials or films to add. The 39 episodes are the whole thing.",
+            ]),
+            ("before-you-start", "Two things to know before you start", [
+                "Season 3 opens minutes after the season 2 finale ends, so watch those two close together. The third episode "
+                "of season 4, \"Connor's Wedding\", is the one to protect from spoilers. Its title gives nothing away, but "
+                "video thumbnails and search suggestions do, so be careful what you look up until you are past it.",
+                "The show was created by Jesse Armstrong, who co-created Peep Show, and he led the writers' room for all four "
+                "seasons. It ended because he decided the story was finished. HBO had not cancelled it.",
             ]),
         ],
         "faq": [

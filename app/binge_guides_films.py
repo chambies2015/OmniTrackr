@@ -6,6 +6,7 @@ the guide's switch names (the extended editions of the Middle-earth films).
 """
 
 REVIEWED = "2026-11-10"
+UPDATED = "2026-11-20"  # guides that gained a third section
 
 
 def _film(name, year, minutes, **extra):
@@ -14,7 +15,7 @@ def _film(name, year, minutes, **extra):
 
 GUIDES = {
     "marvel-infinity-saga": {
-        "name": "the Marvel Infinity Saga", "kind": "film", "reviewed": REVIEWED, "in_order": "marvel-cinematic-universe",
+        "name": "the Marvel Infinity Saga", "kind": "film", "reviewed": UPDATED, "in_order": "marvel-cinematic-universe",
         "card": "Marvel: the Infinity Saga",
         "heading": "How long does it take to watch every Marvel film in the Infinity Saga?",
         "summary": "The 23 Marvel films from Iron Man to Spider-Man: Far From Home run 49 hours 58 minutes. Every running time, and a marathon planner.",
@@ -68,6 +69,13 @@ GUIDES = {
                 "the saga, but you miss the scenes that set up the next film. Tick off the films you have already "
                 "seen in the list below and the planner counts only the rest.",
             ]),
+            ("credits", "The scenes after the credits", [
+                "Iron Man's scene after the credits introduces Nick Fury and the idea of the Avengers, and from then on most "
+                "films end with one or two short scenes. They are usually a minute or two long and set up a later film, "
+                "sometimes one several years away.",
+                "Two are worth knowing about. The Avengers has a mid-credits scene and then a short, nearly silent one at the "
+                "very end. Avengers: Endgame has nothing after its credits but a sound, so there is no reason to wait.",
+            ]),
         ],
         "faq": [
             ("How many films are in the Infinity Saga?",
@@ -79,7 +87,7 @@ GUIDES = {
         ],
     },
     "star-wars-films": {
-        "name": "the Star Wars films", "kind": "film", "reviewed": REVIEWED, "in_order": "star-wars",
+        "name": "the Star Wars films", "kind": "film", "reviewed": UPDATED, "in_order": "star-wars",
         "card": "Star Wars: the films",
         "heading": "How long does it take to watch all the Star Wars films?",
         "summary": "The nine Star Wars saga films run 20 hours 24 minutes, or just under 25 hours with Rogue One and Solo. Trilogy totals and a planner.",
@@ -122,6 +130,13 @@ GUIDES = {
                 "Andor fit, see the Star Wars in order guide. The animated Clone Wars film from 2008 and The "
                 "Mandalorian and Grogu from 2026 follow the TV series and are not counted here.",
             ]),
+            ("machete", "A shorter way through", [
+                "Machete order watches the first two films, then Episodes II and III as one long flashback, then Return of "
+                "the Jedi: IV, V, II, III, VI. It leaves out The Phantom Menace and the sequel trilogy. That is five films "
+                "and 10 hours 59 minutes, one long Saturday.",
+                "It keeps the twist in The Empire Strikes Back intact for a first-time viewer, which is the main reason "
+                "people use it, and it is one of the orders the Star Wars in order guide walks through.",
+            ]),
         ],
         "faq": [
             ("How long are all nine Star Wars films?",
@@ -133,7 +148,7 @@ GUIDES = {
         ],
     },
     "middle-earth-films": {
-        "name": "The Lord of the Rings films", "kind": "film", "reviewed": REVIEWED, "in_order": "lord-of-the-rings",
+        "name": "The Lord of the Rings films", "kind": "film", "reviewed": UPDATED, "in_order": "lord-of-the-rings",
         "card": "The Lord of the Rings films",
         "heading": "How long does it take to watch The Lord of the Rings films?",
         "summary": "The Lord of the Rings trilogy runs 9 hours 18 minutes in cinemas and 12 hours 6 minutes extended. Add The Hobbit and plan a marathon.",
@@ -174,6 +189,13 @@ GUIDES = {
                 "For The Hobbit the difference is smaller, 58 minutes over three films. The 2024 animated film The "
                 "War of the Rohirrim and the Rings of Power series are not counted.",
             ]),
+            ("hobbit", "Adding The Hobbit", [
+                "The Hobbit films come first in the story but were made a decade later, from 2012 to 2014, and they add links "
+                "to The Lord of the Rings that only land if you have seen it. For a first watch, start with The Lord of the "
+                "Rings.",
+                "Peter Jackson directed all six. The Hobbit was planned as two films and became three during production, "
+                "which is how one short book came to run nearly eight hours on screen.",
+            ]),
         ],
         "faq": [
             ("How long are the Lord of the Rings extended editions?",
@@ -185,7 +207,7 @@ GUIDES = {
         ],
     },
     "harry-potter-films": {
-        "name": "the Harry Potter films", "kind": "film", "reviewed": REVIEWED, "in_order": "harry-potter",
+        "name": "the Harry Potter films", "kind": "film", "reviewed": UPDATED, "in_order": "harry-potter",
         "card": "Harry Potter: the films",
         "heading": "How long does it take to watch all the Harry Potter films?",
         "summary": "The eight Harry Potter films run 19 hours 38 minutes in total. Every running time, how to split a marathon, and a finish-date planner.",
@@ -225,6 +247,14 @@ GUIDES = {
                 "The three Fantastic Beasts films are a prequel series and are not counted, and neither is the "
                 "new television adaptation of the books. Reading the seven novels takes about 90 hours, more than "
                 "four times as long as watching the films.",
+            ]),
+            ("directors", "Four directors", [
+                "The eight films had four directors: Chris Columbus made the first two, Alfonso Cuarón the third, Mike Newell "
+                "the fourth and David Yates the last four. The change after Chamber of Secrets is the biggest. Prisoner of "
+                "Azkaban looks and moves differently, and it is a natural place to pause if you are spreading the films over "
+                "a few weekends.",
+                "The two parts of Deathly Hallows were shot together, and Yates's four films run 9 hours 27 minutes in all. "
+                "They work as one block, from Order of the Phoenix to the end.",
             ]),
         ],
         "faq": [

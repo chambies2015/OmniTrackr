@@ -56,9 +56,12 @@ USER_AGENT = "OmniTrackr/1.0 (https://omnitrackr.xyz; omnitrackr@gmail.com) Rele
 MIN_INDEXABLE_ITEMS = 8
 # Release lists are mostly data from Wikidata, TVmaze, AniList and RAWG with the same
 # explanatory text on every page. Useful to visitors, but thin for search and ads
-# (AdSense "low value content", Oct 2026): only the overview is indexed, and no
-# Release Radar page carries ads.
+# (AdSense "low value content", Oct 2026): no Release Radar page carries ads.
 INDEX_CATEGORY_PAGES = False
+# The overview is the same kind of page: live lists from those sources and a few lines of
+# fixed text. Taken out of search on Nov 20 2026 ahead of the December AdSense review; it
+# stays in the menu and keeps working. Set True to list it in search and the sitemap again.
+INDEX_OVERVIEW = False
 RADAR_ADS = False
 MAX_ITEMS = {"movies": 80, "tv": 120, "anime": 100, "games": 60}
 ALLOWED_IMAGE_HOSTS = (

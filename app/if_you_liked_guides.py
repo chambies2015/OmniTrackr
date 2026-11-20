@@ -18,7 +18,7 @@ GUIDES = {
     "interstellar": {
         "anchor": {"kind": "movie", "title": "Interstellar", "year": 2014, "creator": "Christopher Nolan"},
         "search_title": "Movies like Interstellar: 7 to watch, play, read and hear next",
-        "summary": "Seven picks for after Interstellar, from Arrival and Contact to Outer Wilds, Project Hail Mary and Brian Eno's Apollo, with why each fits and what to know first.",
+        "summary": "What to watch, play, read and hear after Interstellar: Arrival and Contact, the anime Planetes, the game Outer Wilds, Project Hail Mary and Brian Eno's Apollo.",
         "reviewed": "2026-10-16",
         "lead": [
             "Interstellar is a film about physics that makes you cry. Its best scene is Cooper, back from one hour on Miller's planet, watching twenty-three years of video messages from home. Christopher Nolan worked with the physicist Kip Thorne so the science holds up even where it stretches, and the cost of every relativistic minute falls on a father who is running out of time with his daughter.",
@@ -82,11 +82,11 @@ GUIDES = {
     "dune": {
         "anchor": {"kind": "movie", "title": "Dune", "year": 2021, "creator": "Denis Villeneuve"},
         "search_title": "Movies like Dune: 7 epics to watch, play and read next",
-        "summary": "Seven picks for after Dune, from Lawrence of Arabia and Andor to Journey, Nausicaä and Hyperion, with why each fits and what to know first.",
+        "summary": "Dune borrows from Lawrence of Arabia and lent a lot to Andor. Seven picks that share its scale, its politics or its desert, with Journey, Nausicaä and Hyperion.",
         "reviewed": "2026-10-16",
         "lead": [
             "Watching Denis Villeneuve's Dune is like standing at the foot of something enormous: brutalist ships, a sound you feel in your chest, a desert that wants you dead. Under the scale is Frank Herbert's real subject, the politics of empires, resources and the people who live on top of them, and a hero whose rise is meant to worry you as much as thrill you.",
-            "The picks below follow those three threads. Some are older films Dune itself borrows from, some are newer stories about empire and rebellion, and one is a game that makes crossing a desert feel holy.",
+            "So there are three ways in: the spectacle, the politics and the desert itself. Some are older films Dune itself borrows from, some are newer stories about empire and rebellion, and one is a game that makes crossing a desert feel holy.",
         ],
         "threads": [
             ("Monumental scale", "Huge landscapes, slow camera work and sound design that make people look small."),
@@ -145,7 +145,7 @@ GUIDES = {
     "the-dark-knight": {
         "anchor": {"kind": "movie", "title": "The Dark Knight", "year": 2008, "creator": "Christopher Nolan"},
         "search_title": "Movies like The Dark Knight: 7 crime stories to watch, play and read next",
-        "summary": "Seven picks for after The Dark Knight, from Heat and Zodiac to Monster, Batman: Arkham Asylum and The Long Halloween, with why each fits and what to know first.",
+        "summary": "The Dark Knight is a crime film first. Seven picks follow that lead, from Heat, The Departed and Zodiac to the Batman comic and game Nolan drew on.",
         "reviewed": "2026-10-16",
         "lead": [
             "The Dark Knight works because it is a crime epic that happens to have Batman in it. It opens with a heist, its plot runs on mob money and police corruption, and its villain is an argument with a face: the Joker wants to prove that anyone will become as ugly as he is, given a little push.",
@@ -209,11 +209,11 @@ GUIDES = {
     "stranger-things": {
         "anchor": {"kind": "tv", "title": "Stranger Things", "year": 2016, "creator": None},
         "search_title": "Shows like Stranger Things: 8 to watch, play, read and hear next",
-        "summary": "Eight picks for after Stranger Things, from Dark, Super 8 and The Goonies to Oxenfree, Stephen King's It and Kate Bush, with why each fits and what to know first.",
+        "summary": "The 1980s shelf Stranger Things borrows from, such as The Goonies, Stephen King's It and Kate Bush, and the newer stories it inspired, like Dark and Oxenfree.",
         "reviewed": "2026-10-16",
         "lead": [
-            "Stranger Things is a love letter to a specific shelf of the 1980s: Spielberg adventures, Stephen King novels, John Carpenter synths and Dungeons & Dragons in someone's basement. Underneath the nostalgia is a simple, strong engine. A group of kids who would do anything for each other, a small town hiding something, and a monster that threatens the people they love.",
-            "The picks below come from the shelf Stranger Things borrows from and from the newer stories it inspired, across film, TV, anime, games, books and one very famous album.",
+            "Stranger Things is built from a specific shelf of the 1980s: Spielberg adventures, Stephen King novels, John Carpenter synths and Dungeons & Dragons in someone's basement. Underneath the nostalgia is a simple, strong engine. A group of kids who would do anything for each other, a small town hiding something, and a monster that threatens the people they love.",
+            "Some of these picks come from that shelf and the rest from newer stories it inspired, across film, TV, anime, games, books and one very famous album.",
         ],
         "threads": [
             ("Kids on bikes", "A gang of friends who would do anything for each other, with adults who rarely understand."),
@@ -276,11 +276,11 @@ GUIDES = {
     "breaking-bad": {
         "anchor": {"kind": "tv", "title": "Breaking Bad", "year": 2008, "creator": None},
         "search_title": "Shows like Breaking Bad: 7 to watch and read next",
-        "summary": "Seven picks for after Breaking Bad, from Better Call Saul, Ozark and Fargo to No Country for Old Men, Death Note and The Talented Mr. Ripley, with why each fits.",
+        "summary": "Stories about a clever person going wrong, for after Breaking Bad: Better Call Saul, Fargo, No Country for Old Men, Death Note and The Talented Mr. Ripley.",
         "reviewed": "2026-10-16",
         "lead": [
             "Vince Gilligan famously described Breaking Bad as turning Mr. Chips into Scarface. Its genius is that every step of Walter White's change makes sense when he takes it, so you keep rooting for him long after you should stop. Around that transformation are other pleasures: tension built from silence, consequences that never go away, and the empty landscapes of the American Southwest.",
-            "The picks below each have one of those three things. Some are shows with the same structure, some are films with the same desert, and two come from anime and a 1955 novel, both about a clever person becoming a monster.",
+            "Every pick here has at least one of them. Some are shows with the same structure, some are films with the same desert, and two come from anime and a 1955 novel, both about a clever person becoming a monster.",
         ],
         "threads": [
             ("An ordinary person turning bad", "Watching someone make one reasonable compromise after another until there is nothing left."),
@@ -338,11 +338,11 @@ GUIDES = {
     "severance": {
         "anchor": {"kind": "tv", "title": "Severance", "year": 2022, "creator": None},
         "search_title": "Shows like Severance: 7 to watch, play and read next",
-        "summary": "Seven picks for after Severance, from Eternal Sunshine of the Spotless Mind, Brazil and The Prisoner to Control, The Stanley Parable and Never Let Me Go.",
+        "summary": "For the mystery, the office satire or the split self: Eternal Sunshine, Brazil, The Prisoner, two games set in strange offices, and Never Let Me Go.",
         "reviewed": "2026-10-16",
         "lead": [
             "Severance takes a familiar joke, that you are a different person at work, and makes it literal. Its employees have had their memories surgically split, so their office selves have never seen daylight. The show is a mystery, a corporate satire and a story about identity at once, and its clean, eerie office is one of the most memorable sets on television.",
-            "The picks below each share one of those three layers. A few are classics Severance clearly loves, and two are games, because few things capture the feeling of a strange office better than walking around one.",
+            "Each pick shares at least one of those layers. A few are classics Severance clearly loves, and two are games, because few things capture the feeling of a strange office better than walking around one.",
         ],
         "threads": [
             ("Memory and identity", "What makes you the same person if your memories are edited, split or taken?"),
@@ -401,7 +401,7 @@ GUIDES = {
     "the-last-of-us": {
         "anchor": {"kind": "tv", "title": "The Last of Us", "year": 2023, "creator": None},
         "search_title": "Shows like The Last of Us: 7 to watch, play and read next",
-        "summary": "Seven picks for after The Last of Us, from the original game and The Walking Dead game to Children of Men, Logan, The Road and Station Eleven.",
+        "summary": "Start with the game the show came from. Then six stories about who you protect at the end of the world, including Children of Men, Logan and The Road.",
         "reviewed": "2026-10-16",
         "lead": [
             "The Last of Us is an apocalypse story where the infected are rarely the point. The point is Joel and Ellie, a grieving man and a girl he never wanted to care about, and the people they meet who are trying to keep something human going. Its most celebrated episode, about Bill and Frank, has barely any infected in it at all.",
@@ -463,11 +463,11 @@ GUIDES = {
     "arcane": {
         "anchor": {"kind": "tv", "title": "Arcane", "year": 2021, "creator": None},
         "search_title": "Shows like Arcane: 7 to watch, play and read next",
-        "summary": "Seven picks for after Arcane, from Spider-Verse and Cyberpunk: Edgerunners to Fullmetal Alchemist: Brotherhood, Castlevania, Dishonored and Mistborn.",
+        "summary": "Animation that breaks the rules and cities split by class, for after Arcane: Spider-Verse, Cyberpunk: Edgerunners, Castlevania, Dishonored and Mistborn.",
         "reviewed": "2026-10-16",
         "lead": [
             "Arcane proved that a show based on a video game could be one of the best animated series ever made. Its painterly style, half hand-painted and half 3D, looks like nothing else, and its story of two sisters on opposite sides of a divided city lands with real tragedy.",
-            "The picks below follow its three strengths: animation that breaks the rules, siblings caught in a conflict bigger than them, and cities split between the rich above and the poor below.",
+            "Seven picks follow from that: animation that breaks the rules, siblings caught in a conflict bigger than them, and cities split between the rich above and the poor below.",
         ],
         "threads": [
             ("Animation that breaks the rules", "Bold styles, painted-looking frames and action you could not get from live action."),
@@ -525,11 +525,11 @@ GUIDES = {
     "jujutsu-kaisen": {
         "anchor": {"kind": "anime", "title": "Jujutsu Kaisen", "year": 2020, "creator": None},
         "search_title": "Anime like Jujutsu Kaisen: 8 to watch and play next",
-        "summary": "Eight picks for after Jujutsu Kaisen, from Jujutsu Kaisen 0 and Chainsaw Man to Hunter x Hunter, Dorohedoro, Everything Everywhere All at Once and Devil May Cry 5.",
+        "summary": "Begin with Jujutsu Kaisen 0, then rule-bound fights and dark worlds in Chainsaw Man, Hunter x Hunter and Dorohedoro, plus one film and one game.",
         "reviewed": "2026-10-16",
         "lead": [
             "Jujutsu Kaisen became one of the biggest anime of the decade with a simple formula done extremely well. Fights where powers follow clear rules and the smartest use of a technique wins, a dark world where curses come from human fear and heroes die, and characters like Gojo who are impossible not to love.",
-            "Whether you want more of the same, the older series JJK grew from, or something to play while you wait for the next season, these picks start with its own prequel.",
+            "The list starts with its own prequel, then the older series JJK grew from, newer ones in the same vein, a film and a game to play while you wait for the next season.",
         ],
         "threads": [
             ("Clever power systems", "Abilities with rules, costs and loopholes, and fights won by thinking."),
@@ -590,11 +590,11 @@ GUIDES = {
     "attack-on-titan": {
         "anchor": {"kind": "anime", "title": "Attack on Titan", "year": 2013, "creator": None},
         "search_title": "Anime like Attack on Titan: 7 to watch, play and read next",
-        "summary": "Seven picks for after Attack on Titan, from Vinland Saga, Code Geass and 86 to Neon Genesis Evangelion, Shadow of the Colossus and The Poppy War.",
+        "summary": "War stories whose reveals change everything, for after Attack on Titan: Vinland Saga, Code Geass, 86, Evangelion, Shadow of the Colossus and The Poppy War.",
         "reviewed": "2026-10-16",
         "lead": [
             "Attack on Titan starts as a survival horror story, humanity hiding behind walls from giants that eat people, and ends as one of the most ambitious stories about war ever told in animation. Each reveal changes everything that came before, and by the end the question has moved from how to kill the Titans to whether the cycle of hatred can ever be broken.",
-            "The picks below each match one of the things Attack on Titan does best: shocking reveals, morally complicated war, and the despair and courage of young people thrown into it.",
+            "Each pick matches one of the things it does best: shocking reveals, morally complicated war, and the despair and courage of young people thrown into it.",
         ],
         "threads": [
             ("Reveals that change everything", "Mysteries that turn the story you thought you were watching upside down."),
@@ -652,11 +652,11 @@ GUIDES = {
     "one-piece": {
         "anchor": {"kind": "anime", "title": "One Piece", "year": 1999, "creator": None},
         "search_title": "Anime like One Piece: 7 adventures to watch, play and read next",
-        "summary": "Seven picks for after One Piece, from the live-action series and Hunter x Hunter to Avatar: The Last Airbender, The Wind Waker and Treasure Island.",
+        "summary": "Shorter adventures to fit around catching up on One Piece, from Hunter x Hunter and Avatar: The Last Airbender to The Wind Waker and Treasure Island.",
         "reviewed": "2026-10-16",
         "lead": [
             "One Piece has been running since 1999 and it still makes people cry over a ship. What keeps it going is an earnest belief in adventure and friendship: Luffy collects a crew of outcasts, each with a dream, and the world gets bigger and more connected the longer you sail.",
-            "The picks below are adventures with the same heart, whether you want something shorter while you catch up, or something to fill the weeks between new episodes.",
+            "These are adventures with the same heart. Some are short enough to finish while you catch up, and some will fill the weeks between new episodes.",
         ],
         "threads": [
             ("Crew as family", "Misfits who become a family, each chasing a dream."),
@@ -714,11 +714,11 @@ GUIDES = {
     "frieren": {
         "anchor": {"kind": "anime", "title": "Frieren: Beyond Journey's End", "year": 2023, "creator": None},
         "search_title": "Anime like Frieren: 7 gentle stories to watch, play and read next",
-        "summary": "Seven picks for after Frieren, from Mushishi, Violet Evergarden and Natsume's Book of Friends to Spiritfarer, A Wizard of Earthsea and The Remains of the Day.",
+        "summary": "Gentle stories about time and memory for after Frieren: Mushishi, Violet Evergarden, the game Spiritfarer, A Wizard of Earthsea and The Remains of the Day.",
         "reviewed": "2026-10-16",
         "lead": [
             "Frieren begins where most fantasy stories end. The demon king is dead, the party goes home, and the elf mage who will outlive them all realizes, too late, that she never really got to know them. Its magic is mostly small: kindnesses, flowers, memories, and a slow understanding of what those ten years meant to her.",
-            "The picks below are the gentle, melancholy stories that share Frieren's sense of time, from anime about spirits and letters to a cozy game about saying goodbye and two novels about looking back on a life.",
+            "These share Frieren's sense of time: two anime about spirits and one about letters, a Ghibli film, a game about saying goodbye, and two novels, one of them about looking back on a life.",
         ],
         "threads": [
             ("Time and memory", "Looking back, understanding too late, and learning to treasure people while they are here."),

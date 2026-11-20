@@ -7,11 +7,12 @@ many of a part's episodes fan filler lists mark as anime-only, for the guide's
 """
 
 REVIEWED = "2026-11-10"
+UPDATED = "2026-11-20"  # guides that gained a third section
 ONE_PIECE_EPISODES = 1180  # aired by 2026-11-10; the anime was between batches that week
 
 GUIDES = {
     "fullmetal-alchemist-brotherhood": {
-        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": REVIEWED, "in_order": "fullmetal-alchemist",
+        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": UPDATED, "in_order": "fullmetal-alchemist",
         "summary": "Fullmetal Alchemist: Brotherhood is 64 episodes, about 26 hours. How long each part takes and how it differs from the 2003 series.",
         "titles": [{"kind": "anime", "title": "Fullmetal Alchemist: Brotherhood", "year": 2009,
                     "aka": ["Fullmetal Alchemist Brotherhood"]}],
@@ -46,6 +47,14 @@ GUIDES = {
                 "Not counted here: four short bonus episodes released on disc, and the 2011 film The Sacred Star of "
                 "Milos, a stand-alone side story of about 110 minutes.",
             ]),
+            ("first-episode", "The first episode is not in the manga", [
+                "Episode 1 is a stand-alone story written for the anime, with a villain who never appears in the manga. It "
+                "shows the Elric brothers at work before the series goes back to explain how they got there. If it feels "
+                "disconnected, that is why. From episode 2 the anime follows the manga.",
+                "The anime and the manga finished within weeks of each other. Hiromu Arakawa's last chapter came out in June "
+                "2010 and the final episode aired on July 4, 2010, so the ending on screen is the one she wrote. The 2003 "
+                "series had to invent its own.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Fullmetal Alchemist: Brotherhood are there?",
@@ -57,7 +66,7 @@ GUIDES = {
         ],
     },
     "death-note": {
-        "name": "Death Note", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Death Note", "kind": "anime", "reviewed": UPDATED,
         "summary": "Death Note is 37 episodes, about 14 hours: short enough for a long weekend. See how its two halves split and plan your own pace.",
         "titles": [{"kind": "anime", "title": "Death Note", "year": 2006}],
         "see_also": ["cowboy-bebop", "fullmetal-alchemist-brotherhood", "attack-on-titan"],
@@ -85,6 +94,13 @@ GUIDES = {
                 "The Japanese live-action films, the 2015 drama and the 2017 Netflix film are separate adaptations of "
                 "the same manga and are not counted.",
             ]),
+            ("one-shots", "Two short sequels", [
+                "Tsugumi Ohba and Takeshi Obata, who made the manga, came back to it twice with one-shot chapters set after "
+                "the ending. The first, from 2008, follows a new Kira some years after the series. The second, from 2020, has "
+                "a schoolboy who finds a Death Note and tries to sell it instead of using it.",
+                "Neither has been animated and neither changes the ending. Each is a single sitting, and both are collected "
+                "in Death Note: Short Stories.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Death Note are there?",
@@ -96,7 +112,7 @@ GUIDES = {
         ],
     },
     "cowboy-bebop": {
-        "name": "Cowboy Bebop", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Cowboy Bebop", "kind": "anime", "reviewed": UPDATED,
         "summary": "Cowboy Bebop is 26 episodes, about 10 and a half hours, plus an optional two-hour film. Where the film fits and how to pace the series.",
         "titles": [{"kind": "anime", "title": "Cowboy Bebop", "year": 1998}],
         "see_also": ["death-note", "fullmetal-alchemist-brotherhood", "hunter-x-hunter-2011"],
@@ -126,6 +142,13 @@ GUIDES = {
                 "It is left out of the default total and you can tick it in the planner.",
                 "The 2021 Netflix live-action series is a separate ten-episode remake and is not counted.",
             ]),
+            ("first-broadcast", "How it first aired", [
+                "Bebop's first broadcast was cut short. TV Tokyo showed only twelve sessions in the spring of 1998, plus a "
+                "recap special, because of concerns about violence on early-evening television. The full series aired later "
+                "that year on the satellite channel WOWOW, finishing in April 1999.",
+                "The recap special, \"Session XX: Mish-Mash Blues\", is not counted here. In the US, Cowboy Bebop was the first "
+                "anime shown on Adult Swim, on the block's opening night in September 2001.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Cowboy Bebop are there?",
@@ -138,7 +161,7 @@ GUIDES = {
         ],
     },
     "hunter-x-hunter-2011": {
-        "name": "Hunter x Hunter (2011)", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Hunter x Hunter (2011)", "kind": "anime", "reviewed": UPDATED,
         "summary": "Hunter x Hunter (2011) is 148 episodes, about 57 hours. Arc-by-arc lengths, including the 61-episode Chimera Ant arc, and a planner.",
         "titles": [{"kind": "anime", "title": "Hunter x Hunter", "year": 2011, "aka": ["Hunter x Hunter (2011)", "Hunter × Hunter"]}],
         "see_also": ["fullmetal-alchemist-brotherhood", "naruto-and-shippuden", "one-piece"],
@@ -172,6 +195,13 @@ GUIDES = {
                 "The 1999 series is an older adaptation of the first few arcs and is not counted. The two 2013 films, "
                 "Phantom Rouge and The Last Mission, are side stories outside the manga. Episodes 13 and 26 are "
                 "recaps and can be skipped.",
+            ]),
+            ("break", "Where to take a break", [
+                "The best place to stop for a while is after Greed Island, at episode 75. It closes the run of shorter arcs, "
+                "and the Chimera Ant arc that follows works best with a clear run at it. At four episodes a night that arc is "
+                "about two weeks on its own.",
+                "The Election arc that ends the series is twelve episodes, under five hours, and ties back to characters and "
+                "promises from the very first arc. Leave enough time to watch it soon after Chimera Ant.",
             ]),
         ],
         "faq": [
@@ -236,7 +266,7 @@ GUIDES = {
         ],
     },
     "naruto-and-shippuden": {
-        "name": "Naruto and Naruto Shippuden", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Naruto and Naruto Shippuden", "kind": "anime", "reviewed": UPDATED,
         "summary": "Naruto and Naruto Shippuden are 720 episodes, about 276 hours, or about 163 hours without filler. Plan either version at your own pace.",
         "titles": [{"kind": "anime", "title": "Naruto", "year": 2002},
                    {"kind": "anime", "title": "Naruto Shippuden", "year": 2007,
@@ -275,6 +305,13 @@ GUIDES = {
                 "The Last: Naruto the Movie is canon and worth adding near the end. Boruto, the sequel series about "
                 "the next generation, is not counted.",
             ]),
+            ("after-war", "The last episodes, The Last and Boruto", [
+                "Once the war that fills most of Shippuden's second half is over, the remaining episodes mostly adapt "
+                "spin-off novels. Episodes 494 to 500 are an arc about a wedding, set after The Last: Naruto the Movie, so "
+                "watch the film before episode 494.",
+                "Boruto: Naruto Next Generations is another 293 episodes, from 2017 to 2023, about 112 hours more, and its "
+                "story carries on in the manga. Neither the film nor Boruto is in the totals above.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Naruto are there in total?",
@@ -287,7 +324,7 @@ GUIDES = {
         ],
     },
     "attack-on-titan": {
-        "name": "Attack on Titan", "kind": "anime", "reviewed": REVIEWED,
+        "name": "Attack on Titan", "kind": "anime", "reviewed": UPDATED,
         "summary": "Attack on Titan is 87 episodes and two feature-length finale specials, about 37 hours. Season lengths and how the Final Season is split.",
         "titles": [{"kind": "anime", "title": "Attack on Titan", "year": 2013, "aka": ["Shingeki no Kyojin"]}],
         "see_also": ["fullmetal-alchemist-brotherhood", "death-note", "hunter-x-hunter-2011"],
@@ -322,6 +359,14 @@ GUIDES = {
                 "footage.",
                 "Not counted: the eight bonus episodes released with manga volumes, the recap films, and the parody "
                 "series Attack on Titan: Junior High. None of them are needed for the story.",
+            ]),
+            ("studios", "Two studios, one story", [
+                "Wit Studio animated seasons 1 to 3. MAPPA took over for The Final Season, and the look changes with it: new "
+                "character designs and many more computer-animated Titans. The Japanese and English voice casts stay the "
+                "same.",
+                "There was a four-year wait between seasons 1 and 2, from 2013 to 2017, but season 2 picks up where season 1 "
+                "left off, so there is no reason to leave a gap now. The 2024 cinema release Attack on Titan: The Last Attack "
+                "is a re-edit of the two Final Chapters specials and adds nothing you need.",
             ]),
         ],
         "faq": [

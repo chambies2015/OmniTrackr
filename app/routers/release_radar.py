@@ -478,7 +478,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         + _guide_note()
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
-    indexable = total >= MIN_INDEXABLE_ITEMS
+    indexable = radar.INDEX_OVERVIEW and total >= MIN_INDEXABLE_ITEMS
     title = f"{windows['movies'].label} releases: movies, TV, anime and games"
     description = "Upcoming movie releases, TV premieres, this season's anime and new video games in one calendar, with one-click tracking."
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])
