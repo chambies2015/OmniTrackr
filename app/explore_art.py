@@ -14,7 +14,7 @@ from typing import Iterable, Optional
 
 from sqlalchemy.orm import Session
 
-CSS_VERSION = "20261120-explore-1"
+CSS_VERSION = "20261120-explore-3"
 STYLESHEET = f'<link rel="stylesheet" href="/static/explore.css?v={CSS_VERSION}">'
 
 # Short labels for the corner of a drawn cover and the coloured format tags.
@@ -31,6 +31,27 @@ def hue(name: str) -> int:
     return sum(ord(ch) * (index + 1) for index, ch in enumerate((name or "").casefold())) % 360
 
 
+# How wide letters set in the cover face (Poppins 800) are next to an average lowercase one.
+_NARROW = set("ijlrtfI.,'!:;|")
+_WIDE = set("MWmw")
+
+
+def word_width(title: str) -> float:
+    """The longest word in ``title`` in average-letter widths, so explore.css can size the type to fit it.
+
+    Without this a long single word ("Neuromancer", "Koyomimonogatari") was broken mid-word
+    to fit the cover. Capitals count a bit wider and thin letters narrower.
+    """
+    def letter(ch: str) -> float:
+        if ch in _NARROW:
+            return 0.55
+        if ch in _WIDE:
+            return 1.45
+        return 1.3 if ch.isupper() else 1.0
+
+    return round(max((sum(letter(ch) for ch in word) for word in (title or "").split()), default=1.0), 1)
+
+
 def cover(title: str, kind: str, image: Optional[str] = None, *, square: bool = False, label: bool = True,
           eager: bool = False, width: Optional[int] = None) -> str:
     """A poster box: the real art when there is some, otherwise the title drawn as a cover in the format's colour.
@@ -41,7 +62,8 @@ def cover(title: str, kind: str, image: Optional[str] = None, *, square: bool = 
     shape = " x-art--square" if square else ""
     corner = f'<span class="x-cover__kind">{_e(KIND_LABELS.get(kind, ""))}</span>' if label else ""
     # The drawn cover sits under the art too: it shows while the image loads, and if the image never does.
-    inner = f'<span class="x-cover" style="--cover-hue:{hue(title)}">{corner}<b>{_e(title)}</b></span>'
+    inner = (f'<span class="x-cover" style="--cover-hue:{hue(title)};--cover-word:{word_width(title)}">'
+             f'{corner}<b>{_e(title)}</b></span>')
     if image:
         loading = "" if eager else ' loading="lazy"'
         size = f' width="{width}" height="{width if square else width * 3 // 2}"' if width else ""

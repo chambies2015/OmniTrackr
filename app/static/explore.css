@@ -42,8 +42,11 @@
   color: color-mix(in srgb, var(--kind) 40%, #fff); font: 800 .6rem/1 var(--site-font); font-size: clamp(.45rem, 8cqi, .72rem);
   left: 9cqi; letter-spacing: .14em; position: absolute; text-transform: uppercase; top: 10cqi;
 }
+/* --cover-word is the title's longest word in letter widths (explore_art.word_width): a long word
+   ("Neuromancer") gets smaller type so it fits on one line instead of breaking mid-word. */
 .x-cover b {
-  display: -webkit-box; font: 800 .9rem/1.08 var(--site-display); font-size: clamp(.5rem, 12.5cqi, 1.8rem); hyphens: auto; letter-spacing: -.02em;
+  display: -webkit-box; font: 800 .9rem/1.08 var(--site-display); hyphens: auto; letter-spacing: -.02em;
+  font-size: clamp(.4rem, min(max(.5rem, 12.5cqi), calc(118cqi / var(--cover-word, 1))), 1.8rem);
   overflow: hidden; overflow-wrap: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 5; text-wrap: balance;
 }
 .x-art--square .x-cover b { -webkit-line-clamp: 3; }

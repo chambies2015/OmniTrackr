@@ -123,3 +123,17 @@ def test_a_profile_with_both_sections_off_skips_the_shelf_check(db_session):
     with Queries() as queries:
         assert people_to_follow._build_shown(db_session, user, profile) == {}
     assert not any("AS shelf" in statement for statement in queries.seen)
+
+
+# ---------------------------------------------------------------- follow-ups from the January edition
+
+def test_drawn_covers_size_their_type_to_the_longest_word():
+    from app import explore_art
+    assert explore_art.word_width("Neuromancer") > explore_art.word_width("Metroid Dread")
+    assert explore_art.word_width("Koyomimonogatari") > explore_art.word_width("Neuromancer")
+    assert explore_art.word_width("") == 1.0
+    drawn = explore_art.cover("Neuromancer", "book")
+    assert f"--cover-word:{explore_art.word_width('Neuromancer')}" in drawn
+    css = open("app/static/explore.css", encoding="utf-8").read()
+    assert "var(--cover-word" in css
+
