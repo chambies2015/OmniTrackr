@@ -164,6 +164,15 @@ def test_open_ballot_for_a_visitor(client, demo):
     assert "% of ballots" not in html
 
 
+def test_ads_wait_for_the_nominees(client, demo, monkeypatch):
+    # A show with nominees loads the ad script for visitors; one still waiting for them doesn't.
+    assert "/static/ad-loader.js" in client.get(f"/awards/{SHOW}").text
+    monkeypatch.setitem(awards_data.SHOWS, "oscars-2027", dict(awards_data.SHOWS["oscars-2027"], categories=[]))
+    html = client.get("/awards/oscars-2027").text
+    assert "The ballot opens when the nominees are announced" in html
+    assert "/static/ad-loader.js" not in html and 'content="index, follow' in html
+
+
 def test_guides_index_and_sitemap_list_the_pages(client, db_session):
     sitemap = client.get("/sitemap.xml").text
     assert "<loc>https://omnitrackr.xyz/awards</loc>" in sitemap

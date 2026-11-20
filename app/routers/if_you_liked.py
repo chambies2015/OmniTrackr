@@ -151,7 +151,7 @@ def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: 
         '<a href="#method">How we chose</a></nav></header>',
         f'<div class="guide-intro">{_paragraphs(entry["lead"])}</div>',
         '<section id="what-it-did" class="yl-threads" aria-labelledby="threads-heading">',
-        f'<p class="eyebrow">WHAT WE MATCHED ON</p><h2 id="threads-heading">Three things {_e(anchor["title"])} does well</h2><ol>',
+        f'<p class="eyebrow">WHAT WE MATCHED ON</p><h2 id="threads-heading">What {_e(anchor["title"])} does well</h2><ol>',
     ]
     for name, text in threads:
         parts.append(f'<li><strong>{_e(name)}</strong><span>{_e(text)}</span></li>')

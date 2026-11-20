@@ -23,7 +23,7 @@ GUIDES = {
         "format": "movies", "kind": "movie", "year": 2026,
         "name": "The best movies of 2026",
         "search_title": "Best movies of 2026: 9 films worth your evening",
-        "summary": "Nine films from 2026 worth seeking out, from Project Hail Mary and The Odyssey to Blue Heron and Wildwood, with where they came out and what to know first.",
+        "summary": "Project Hail Mary and The Odyssey lead nine 2026 films to plan an evening around, from big releases to Blue Heron and Wildwood, with where each came out.",
         "reviewed": "2026-11-09",
         "lead": [
             "2026 has been a year of very big films and very small ones, and the gap between them made both look better. Spider-Man: Brand New Day had the biggest domestic opening ever recorded. A horror film made for about $750,000 became Focus Features' biggest hit. A first feature from a Canadian director topped Metacritic's midyear list. And a big-budget adaptation of a science-fiction novel became the crowd-pleaser of the spring, the kind of film people went back to see with family.",
@@ -106,7 +106,7 @@ GUIDES = {
         "format": "tv", "kind": "tv", "year": 2026,
         "name": "The best TV shows of 2026",
         "search_title": "Best TV shows of 2026: 8 series worth watching",
-        "summary": "Eight series from 2026 worth your time, from The Pitt and A Knight of the Seven Kingdoms to Widow's Bay and Lanterns, with what each needs from you first.",
+        "summary": "The Pitt, A Knight of the Seven Kingdoms, Widow's Bay and Lanterns are among eight 2026 series picked here, with what each needs from you before you start.",
         "reviewed": "2026-10-22",
         "lead": [
             "The best television of 2026 has mostly been smaller than it looks. The Game of Thrones spin-off that won people over has six half-hour-ish episodes and no dragons. The year's most praised drama takes place over a single hospital shift. Marvel's best show in years is a comedy about an actor at auditions. Even the DC superhero series plays like a murder mystery in rural Nebraska.",
@@ -179,7 +179,7 @@ GUIDES = {
         "format": "anime", "kind": "anime", "year": 2026,
         "name": "The best anime of 2026",
         "search_title": "Best anime of 2026: 8 series from winter to summer",
-        "summary": "Eight anime from 2026 worth watching, from Frieren season 2 and Witch Hat Atelier to Steel Ball Run and The World Is Dancing, with where each streams.",
+        "summary": "Frieren's second season, Witch Hat Atelier and Steel Ball Run head eight anime from 2026, alongside The World Is Dancing, with where each one streams.",
         "reviewed": "2026-11-09",
         "lead": [
             "Anime in 2026 started with a pile-up of returning favorites in January and then, in spring, delivered the adaptations fans had been asking for since the 2010s. Witch Hat Atelier finally arrived. Hiromu Arakawa, who wrote Fullmetal Alchemist, got a new series at Bones. And Steel Ball Run, the part of JoJo's Bizarre Adventure many readers call the best, came to Netflix.",
@@ -255,7 +255,7 @@ GUIDES = {
         "format": "games", "kind": "game", "year": 2026,
         "name": "The best video games of 2026",
         "search_title": "Best games of 2026: 9 to play, from Mina the Hollower to Forza Horizon 6",
-        "summary": "Nine games from 2026 worth your time, from Mina the Hollower and Forza Horizon 6 to Pokémon Pokopia and Mewgenics, with platforms, length and a fair caveat.",
+        "summary": "Nine 2026 games, from Mina the Hollower and Forza Horizon 6 to Pokémon Pokopia and Mewgenics. Each comes with its platforms, its length and one caveat.",
         "reviewed": "2026-11-09",
         "lead": [
             "It has been an unusually good year for games, and it is not finished: Grand Theft Auto VI is still dated for November. Before that, 2026 gave us the best-reviewed Pokémon game ever, the best-reviewed Resident Evil since 2005, a racing game set in Japan that topped Metacritic's midyear chart, and a small studio's \"make or break\" project that turned out to be one of the most acclaimed games of the year.",
@@ -335,7 +335,7 @@ GUIDES = {
         "format": "books", "kind": "book", "year": 2026,
         "name": "The best books of 2026",
         "search_title": "Best books of 2026: 8 novels and true stories worth reading",
-        "summary": "Eight books from 2026 worth reading, from Kin and John of John to London Falling and the new Murderbot, with who each one suits and what to expect.",
+        "summary": "Eight new books from 2026, among them Kin, John of John, London Falling and the latest Murderbot, with who each one suits and what to expect.",
         "reviewed": "2026-11-09",
         "lead": [
             "The books people talked about most in 2026 were mostly about family: two motherless girls growing up in Louisiana, a gay art student hiding from his deacon father in the Hebrides, parents trying to understand why their son died in a fall from a London balcony. Alongside them came a sharp satire of tradwife influencers, a sweeping love story set in Hollywood, and the eighth Murderbot book, which is as funny as the first.",
@@ -411,7 +411,7 @@ GUIDES = {
         "format": "music", "kind": "album", "year": 2026, "published": "2026-11-09",
         "name": "The best albums of 2026",
         "search_title": "Best albums of 2026: 8 records worth a full listen",
-        "summary": "Eight albums from 2026 worth hearing start to finish, from Olivia Rodrigo and Mitski to Boards of Canada's return, with what each sounds like and who it suits.",
+        "summary": "Olivia Rodrigo, Mitski and the return of Boards of Canada: eight albums from 2026 to hear from start to finish, with what each sounds like.",
         "reviewed": "2026-11-09",
         "lead": [
             "The albums that stuck in 2026 mostly came from artists who had been away a while. Boards of Canada put out their first record in 13 years. Robyn came back after eight with a 29-minute dance album. Kacey Musgraves made her most country record in years, and Olivia Rodrigo had the biggest sales week of her career with an album whose title tells you most of what it is about. The year's most talked-about debuts were singles and clips. The records people kept playing were from familiar names doing something a little different.",
@@ -493,7 +493,7 @@ GUIDES = {
         "format": "podcasts", "kind": "podcast", "year": 2026, "published": "2026-11-09",
         "name": "The best new podcasts of 2026",
         "search_title": "Best new podcasts of 2026: 8 shows and series worth subscribing to",
-        "summary": "Eight podcasts that started in 2026, from Serial's The Idiot and Blood Memory to Roman Mars on America in 100 objects, with what each is and how long it lasts.",
+        "summary": "Shows that launched in 2026, including Serial's The Idiot, Blood Memory and Roman Mars on America in 100 objects, with how long each one runs.",
         "reviewed": "2026-11-09",
         "lead": [
             "Most podcasts people listen to started years ago, which makes a list of new ones harder than it sounds. The shows below all began in 2026, or are 2026 seasons that tell a complete story on their own, so you can start at episode one without catching up on anything. Several are limited series you can finish in a weekend. A few are ongoing shows that found their voice quickly.",
@@ -576,7 +576,7 @@ GUIDES = {
         "format": "manga", "kind": "manga", "year": 2026, "published": "2026-11-09",
         "name": "The best new manga of 2026",
         "search_title": "Best new manga of 2026: 8 series that started in English this year",
-        "summary": "Eight manga that reached English readers in 2026, from Ichi the Witch and Half Is More to Shūzō Oshimi's Sound of a Blink, with publisher, age rating and what to expect.",
+        "summary": "Eight manga published in English for the first time in 2026, such as Ichi the Witch and Shūzō Oshimi's Sound of a Blink, with publisher and age rating.",
         "reviewed": "2026-11-09",
         "lead": [
             "\"New manga\" means two things in English, and this list uses the more useful one: series whose first official English volume came out in 2026. Some of them have been running in Japan for years, which is good news for you, because more volumes are already on the way. A few are finished stories you can read in one or two books.",
@@ -660,7 +660,7 @@ GUIDES = {
         "format": "audiobooks", "kind": "audiobook", "year": 2026, "published": "2026-11-09",
         "name": "The best audiobooks of 2026",
         "search_title": "Best audiobooks of 2026: 8 listens where the narration makes the book",
-        "summary": "Eight audiobooks from 2026 chosen for the listen, from George Saunders's full-cast Vigil to Alfred Molina reading Louise Penny, with narrators and running times.",
+        "summary": "Eight 2026 audiobooks chosen for the performance, like George Saunders's full-cast Vigil and Alfred Molina reading Louise Penny, with running times.",
         "reviewed": "2026-11-09",
         "lead": [
             "A great book can be a dull audiobook, and a good narrator can carry a book you would never have finished in print. So this list is chosen for the listen. Every pick names who reads it and how long it runs, and the reason it made the list is usually about the performance: a cast that turns a novel into something close to radio drama, an actor who changes how you hear a familiar detective, an author who is the only possible reader of her own story.",

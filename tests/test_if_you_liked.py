@@ -63,7 +63,7 @@ def test_guide_page_reads_completely_without_an_account(client):
     assert '<link rel="canonical" href="https://omnitrackr.xyz/if-you-liked/interstellar">' in html
     assert "<title>Movies like Interstellar" in html
     assert "<h1>If you liked Interstellar</h1>" in html
-    assert "Three things Interstellar does well" in html and "Where to start" in html and "How we chose" in html
+    assert "What Interstellar does well" in html and "Where to start" in html and "How we chose" in html
     for item in GUIDES["interstellar"]["picks"]:
         assert f'id="pick-{title_pages.slugify(item["title"])}"' in html
     assert html.count("Save to my list") == len(GUIDES["interstellar"]["picks"])

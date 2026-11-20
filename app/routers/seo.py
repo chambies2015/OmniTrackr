@@ -473,7 +473,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
                     f"  <url><loc>{base_url}{path}</loc><lastmod>{today}</lastmod>"
                     f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
                 )
-    if featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
+    if release_radar.INDEX_OVERVIEW and featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
         sitemap_parts.append(f"  <url><loc>{base_url}/release-radar</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>0.85</priority></url>")
     sitemap_parts.extend(radar_parts)
 
