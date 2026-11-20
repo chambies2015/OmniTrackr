@@ -37,6 +37,8 @@ NOTIFY_AGAIN_AFTER = timedelta(days=7)
 EMAIL_WINDOW = timedelta(days=7)
 EMAIL_SHOWN = 5
 SETTINGS_LINK = "/#followers"
+# New-follower notices open Find people, where "Followed you" offers a follow-back (Nov 2026).
+NOTICE_LINK = "/#find-people"
 NOTIFICATION_TYPE = "new_follower"
 
 
@@ -59,13 +61,14 @@ def settings_payload(db: Session, user_id: int) -> dict:
     return {
         "allow_followers": row.allow_followers if row else True,
         "email_following": row.email_following if row else True,
+        "suggest_me": row.suggest_me is not False if row else True,
         "profile_enabled": bool(profile and profile.enabled),
         "counts": counts(db, user_id),
     }
 
 
 def save_settings(db: Session, user_id: int, allow_followers: Optional[bool] = None,
-                  email_following: Optional[bool] = None) -> models.FollowSetting:
+                  email_following: Optional[bool] = None, suggest_me: Optional[bool] = None) -> models.FollowSetting:
     row = get_setting(db, user_id)
     if row is None:
         row = models.FollowSetting(user_id=user_id)
@@ -77,6 +80,8 @@ def save_settings(db: Session, user_id: int, allow_followers: Optional[bool] = N
                 synchronize_session=False)
     if email_following is not None:
         row.email_following = bool(email_following)
+    if suggest_me is not None:
+        row.suggest_me = bool(suggest_me)
     db.commit()
     db.refresh(row)
     return row
@@ -148,7 +153,7 @@ def _notify(db: Session, follower: models.User, target: models.User) -> None:
         models.Notification.message == message,
         models.Notification.created_at > datetime.utcnow() - NOTIFY_AGAIN_AFTER).first()
     if recent is None:
-        db.add(models.Notification(user_id=target.id, type=NOTIFICATION_TYPE, message=message, link=SETTINGS_LINK))
+        db.add(models.Notification(user_id=target.id, type=NOTIFICATION_TYPE, message=message, link=NOTICE_LINK))
 
 
 def unfollow(db: Session, follower_id: int, followed_id: int) -> bool:
@@ -207,8 +212,22 @@ def followers_list(db: Session, owner_id: int) -> list[dict]:
         models.MemberFollow, models.MemberFollow.follower_id == models.User.id,
     ).filter(models.MemberFollow.followed_id == owner_id, models.User.is_active == True).order_by(
         models.MemberFollow.created_at.desc()).limit(MAX_FOLLOWING).all()
-    paths = public_profiles.enabled_profile_paths(db, [user.id for user, _ in rows])
-    return [_person(user, paths.get(user.id), since) for user, since in rows]
+    ids = [user.id for user, _ in rows]
+    paths = public_profiles.enabled_profile_paths(db, ids)
+    # Whether each follower can be followed back from the list: their profile is open to
+    # followers, the member doesn't follow them yet, and they never removed the member.
+    already = {uid for uid, in db.query(models.MemberFollow.followed_id).filter(
+        models.MemberFollow.follower_id == owner_id, models.MemberFollow.followed_id.in_(ids))} if ids else set()
+    barred_by = {uid for uid, in db.query(models.FollowBar.owner_id).filter(
+        models.FollowBar.barred_id == owner_id, models.FollowBar.owner_id.in_(ids))} if ids else set()
+    open_ids = accepting(db, ids)
+    people = []
+    for user, since in rows:
+        person = _person(user, paths.get(user.id), since)
+        person["followed_back"] = user.id in already
+        person["can_follow_back"] = user.id in open_ids and user.id not in already and user.id not in barred_by
+        people.append(person)
+    return people
 
 
 def following_list(db: Session, follower_id: int) -> list[dict]:
@@ -349,9 +368,9 @@ def serialize(item: dict) -> dict:
 
 # ---------------------------------------------------------------- suggestions
 
-def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str]) -> list[dict]:
-    """People worth following: writers of reviews this browser marked helpful, and curators of
-    collections the member saved. Only members who can be followed and aren't already."""
+def signal_reasons(db: Session, viewer: models.User, visitor_hash: Optional[str]) -> dict[int, str]:
+    """{member id: reason} for writers of reviews this browser marked helpful and curators of
+    collections the member saved. Nobody is filtered out yet: see suggestions() and people_to_follow."""
     reasons: dict[int, str] = {}
     if visitor_hash:
         marks = db.query(models.ReviewReaction.category, models.ReviewReaction.item_id).filter(
@@ -373,6 +392,13 @@ def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str]) -
                 models.Collection.id.in_(sources), models.Collection.is_public == True).distinct():
             reasons.setdefault(uid, "You saved one of their collections")
     reasons.pop(viewer.id, None)
+    return reasons
+
+
+def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str]) -> list[dict]:
+    """People worth following: writers of reviews this browser marked helpful, and curators of
+    collections the member saved. Only members who can be followed and aren't already."""
+    reasons = signal_reasons(db, viewer, visitor_hash)
     if not reasons:
         return []
     already = set(_following_ids(db, viewer.id))

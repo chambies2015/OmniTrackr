@@ -117,40 +117,36 @@
     if (data.items && data.items.length) status.textContent = '';
     else if (data.following) status.textContent = 'Nothing new from the people you follow in the last two months.';
     else status.textContent = 'Follow members from their public profile to see their new reviews, collections and diary here.';
+    const find = $('followingFindPeople');
+    if (find) find.hidden = Boolean(data.items && data.items.length);
   }
 
   function person(personData, action) {
     const row = el('li', 'follow-person');
     row.append(link('follow-person__name', personData.username, personData.profile_url));
     if (personData.reason) row.append(el('span', 'follow-person__why', personData.reason));
-    if (action) row.append(action);
+    (Array.isArray(action) ? action : [action]).forEach(node => { if (node) row.append(node); });
     return row;
   }
 
-  function followButton(personData, onDone) {
-    const button = el('button', 'action-btn follow-person__btn', 'Follow');
+  // "Follow back" beside a follower in Settings → Followers.
+  function followBackButton(personData) {
+    const button = el('button', 'follow-person__btn follow-person__btn--quiet follow-person__btn--back', 'Follow back');
     button.type = 'button';
+    button.setAttribute('aria-label', `Follow ${personData.username} back`);
     button.addEventListener('click', async () => {
       button.disabled = true;
+      message('followError', '');
       try {
-        await api(`/api/follows/${encodeURIComponent(personData.id)}`, { method: 'POST' });
+        await api(`/api/follows/${encodeURIComponent(personData.id)}?source=list`, { method: 'POST' });
         button.textContent = 'Following';
-        onDone?.();
+        stale();
       } catch (error) {
         button.disabled = false;
-        const status = $('followingStatus');
-        if (status) status.textContent = error.message;
+        message('followError', error.message);
       }
     });
     return button;
-  }
-
-  function renderSuggestions(people) {
-    const host = $('followSuggestions');
-    const list = $('followSuggestionsList');
-    if (!host || !list) return;
-    list.replaceChildren(...people.map(entryData => person(entryData, followButton(entryData, () => refresh()))));
-    host.hidden = !people.length;
   }
 
   async function load(force = false) {
@@ -160,13 +156,10 @@
     const status = $('followingStatus');
     if (status && !state.loaded) status.textContent = 'Loading…';
     try {
-      const [feedData, suggestData] = await Promise.all([
-        api('/api/follows/feed'),
-        api('/api/follows/suggestions').catch(() => ({ people: [] })),
-      ]);
+      // People to follow live in find-people.js (the rail card and the Find people view).
+      const feedData = await api('/api/follows/feed');
       if (request !== state.request) return;
       renderFeed(feedData);
-      renderSuggestions(suggestData.people || []);
       state.loaded = true;
     } catch (error) {
       if (request === state.request && status) status.textContent = error.message;
@@ -181,15 +174,21 @@
     return load(true);
   }
 
+  // Someone was followed or unfollowed elsewhere (Find people, Settings): fetch again now if
+  // the Following view is on screen, otherwise the next time it opens.
+  function stale() {
+    const feed = $('followingFeed');
+    if (feed && !feed.hidden && state.loaded) return refresh();
+    state.loaded = false;
+    return null;
+  }
+
   function reset() {
     state.request++;
     state.loaded = false;
     state.loading = false;
     state.settings = null;
     $('followingList')?.replaceChildren();
-    $('followSuggestionsList')?.replaceChildren();
-    const host = $('followSuggestions');
-    if (host) host.hidden = true;
   }
 
   // ---------------------------------------------------------------- settings
@@ -231,8 +230,13 @@
     state.settings = data;
     const allow = $('followAllow');
     const email = $('followEmail');
+    const suggest = $('followSuggest');
     if (allow) allow.checked = data.allow_followers !== false;
     if (email) email.checked = data.email_following !== false;
+    if (suggest) {
+      suggest.checked = data.suggest_me !== false;
+      suggest.disabled = !data.profile_enabled || data.allow_followers === false;
+    }
     const counts = $('followCounts');
     if (counts) {
       const followers = data.counts?.followers || 0;
@@ -240,8 +244,11 @@
       counts.textContent = `${followers} follower${followers === 1 ? '' : 's'} · following ${following}`
         + (data.profile_enabled ? '' : '. Switch your public profile on so people can follow you.');
     }
-    fillList('followFollowers', data.followers || [], entryData => settingsButton('Remove', () =>
-      api(`/api/follows/followers/${encodeURIComponent(entryData.id)}`, { method: 'DELETE' })), 'Nobody follows you yet.');
+    fillList('followFollowers', data.followers || [], entryData => [
+      entryData.can_follow_back ? followBackButton(entryData) : null,
+      settingsButton('Remove', () =>
+        api(`/api/follows/followers/${encodeURIComponent(entryData.id)}`, { method: 'DELETE' })),
+    ], 'Nobody follows you yet.');
     fillList('followFollowing', data.following || [], entryData => settingsButton('Unfollow', async () => {
       await api(`/api/follows/${encodeURIComponent(entryData.id)}`, { method: 'DELETE' });
       state.loaded = false;
@@ -276,14 +283,19 @@
     message('followSuccess', '');
     try {
       applySettings(await api('/api/follows/settings', { json: { [field]: wanted } }));
-      message('followSuccess', field === 'allow_followers'
-        ? (wanted ? 'People can follow your profile.' : 'Nobody can follow your profile now.')
-        : (wanted ? 'Your weekly email includes people you follow.' : 'Your weekly email leaves out people you follow.'));
+      const done = {
+        allow_followers: wanted ? 'People can follow your profile.' : 'Nobody can follow your profile now.',
+        email_following: wanted ? 'Your weekly email includes people you follow.' : 'Your weekly email leaves out people you follow.',
+        suggest_me: wanted ? 'Members with similar taste can find your profile in Find people.'
+          : "Your profile won't be suggested to anyone. People can still follow you from it.",
+      };
+      message('followSuccess', done[field] || '');
     } catch (error) {
       input.checked = !wanted;
       message('followError', error.message);
     } finally {
-      input.disabled = false;
+      const settings = state.settings || {};
+      input.disabled = field === 'suggest_me' && (!settings.profile_enabled || settings.allow_followers === false);
     }
   }
 
@@ -333,13 +345,14 @@
     wrapFeedReset();
     $('followAllow')?.addEventListener('change', event => saveSwitch(event.target, 'allow_followers'));
     $('followEmail')?.addEventListener('change', event => saveSwitch(event.target, 'email_following'));
+    $('followSuggest')?.addEventListener('change', event => saveSwitch(event.target, 'suggest_me'));
     $('followingRefresh')?.addEventListener('click', () => refresh());
     wrapAccountLoader();
     setTimeout(openFromHash, 600);
     window.addEventListener('hashchange', () => openFromHash());
   }
 
-  window.OmniFollowing = { load, refresh, reset, loadSettings, applySettings, renderFeed };
+  window.OmniFollowing = { load, refresh, reset, stale, loadSettings, applySettings, renderFeed };
   if (typeof module !== 'undefined' && module.exports) module.exports = { ...window.OmniFollowing, verb, safePath, rating };
   if (typeof document === 'undefined') return;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

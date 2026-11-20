@@ -527,15 +527,15 @@
     else if (typeof switchTab === 'function') switchTab(TAB);
   }
 
-  // Friends / Following switch at the top of the tab. Remembers the last choice.
-  // `load` is false while the page starts: the Following list is fetched when the tab opens
-  // (library.js), not on every dashboard visit by someone who last left it on Following.
+  // Friends / Following / Find people switch at the top of the tab. Remembers the last choice.
+  // `load` is false while the page starts: the Following list and Find people are fetched when
+  // the tab opens (library.js), not on every dashboard visit by someone who last left them open.
   function showView(view, focus, load = true) {
     const root = document.querySelector('.social[data-social-view]');
     if (!root) return;
-    const wanted = view === 'following' ? 'following' : 'friends';
+    const wanted = view === 'following' || view === 'people' ? view : 'friends';
     root.dataset.socialView = wanted;
-    const panels = { friends: $('friendsFeedPanel'), following: $('followingFeed') };
+    const panels = { friends: $('friendsFeedPanel'), following: $('followingFeed'), people: $('peoplePanel') };
     Object.entries(panels).forEach(([key, panel]) => { if (panel) panel.hidden = key !== wanted; });
     const filters = $('friendsFeedFilters');
     if (filters) filters.hidden = wanted !== 'friends';
@@ -547,6 +547,7 @@
     });
     try { localStorage.setItem(VIEW_KEY, wanted); } catch (error) { /* storage off */ }
     if (load && wanted === 'following' && window.OmniFollowing && typeof window.OmniFollowing.load === 'function') window.OmniFollowing.load();
+    if (load && wanted === 'people' && window.OmniPeople && typeof window.OmniPeople.load === 'function') window.OmniPeople.load();
   }
 
   function initSwitch() {
@@ -585,7 +586,7 @@
     window.addEventListener('hashchange', openFromHash);
   }
 
-  window.OmniFriendFeed = { load, refresh, reset };
+  window.OmniFriendFeed = { load, refresh, reset, showView };
   window.loadFriendFeed = load;
   window.refreshFriendFeed = refresh;
   window.resetFriendFeed = reset;

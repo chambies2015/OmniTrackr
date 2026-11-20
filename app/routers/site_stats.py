@@ -251,6 +251,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "asked": _counts_between(db, models.TakeRequest.created_at, start),
             "answered": _counts_between(db, models.TakeResponse.created_at, start),
         },
+        "people": _people_to_follow(db, days, now),
         "push": _push(db, days, now, start),
         "reviews": _review_inbox(db, days, now),
         "support": _support_asks(db, days, now),
@@ -259,6 +260,16 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "app": _installed_app(db, days, now),
         "backlog_draw": _backlog_draw(db, days, now),
     }
+
+
+def _people_to_follow(db: Session, days: int, now: datetime) -> dict:
+    """Find people: follows made, where they came from, follow-backs and opt-outs."""
+    try:
+        from .. import people_to_follow
+        return people_to_follow.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _backlog_draw(db: Session, days: int, now: datetime) -> dict:
