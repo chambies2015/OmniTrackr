@@ -47,6 +47,8 @@ FORMAT_NOUNS = {
 #   category    finish ``count`` titles of one format (``category``)
 #   waiting     finish ``count`` titles that were already in the library before the month began
 #   revisit     revisit ``count`` titles: a journal "Revisited" entry, or another finish of a title finished before
+#   stretch     finish ``count`` titles in a format the member had finished fewer than ``under`` titles in before
+#               the month began; if every format already has that many, their least-finished format counts
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -163,6 +165,29 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Rate one of this month's finishes or revisits, or add a line about it. A takeaway on the finish screen counts, and so does a private note when you log a revisit. Most libraries are full of scores with nothing to say what earned them, and next February the sentence is the part you will want to read again. Notes and takeaways stay private unless you publish a review."},
         ],
         "reflection": "Which of this month's love stories would you not have called a love story before you finished it?",
+    },
+    "2027-03": {
+        "name": "Nine ways in",
+        "tagline": "Finish one of March's nine ways in, try a format you hardly ever finish and say whether you'd go back.",
+        "published": "2027-03-01",
+        # The March edition (out March 1) has nine picks, one per format, each an easy first one for a newcomer.
+        "edition": "march-2027",
+        "intro": [
+            "Most libraries lean on one or two formats. Plenty of members log a film every week and have never finished a podcast, and plenty of readers have not played a game since school. It is rarely a decision. Usually nobody suggested where to start, and the famous titles in a format are often the long, demanding ones its fans love most. This challenge, and the March edition it pairs with, offer nine places to start: one pick in each format OmniTrackr tracks, each chosen because it asks almost nothing of someone new. The shortest is a 38-minute album and the longest an audiobook of under nine hours.",
+            "The clocks go forward on March 14 in most of North America and on March 28 in the UK and Europe, and lighter evenings are a good time to try something unfamiliar. The middle step asks you to finish something in a format you hardly ever finish, and the challenge card on your home screen lists the formats that count for you. Anything you finish in March counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "march-2027",
+             "label": "Finish one pick from the March edition",
+             "detail": "The March edition has nine picks, one in each format, and each is the one we would hand to someone trying that format for the first time: a phone game you can finish in an evening, a podcast that got millions of people listening to podcasts, an audiobook read by the man who lived it. Sherlock Jr. is 45 minutes and Glenn Gould's Goldberg Variations under 40. Finish any one of the nine in March and this step is done."},
+            {"kind": "stretch", "count": 1, "under": 3,
+             "label": "Finish something in a format you hardly ever finish",
+             "detail": "Any format in which you had finished fewer than three titles before March 1 counts, so if you have never finished a manga, a podcast season or a game, this is the step for it. The challenge card lists the formats that count for you. If you have already finished three or more in every format, your least-finished format counts instead. It doesn't have to be one of the edition's picks, but if one of them is in a format that counts for you, finishing it does this step and the first one at once."},
+            {"kind": "reflect", "count": 1,
+             "label": "Say whether you'd go back",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. If it was your first in a format, the useful thing to write down is whether you would try another, and what would make you: something shorter, a different genre, a friend's suggestion. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which format would you go back to after this month, and what would you hand to a friend trying it for the first time?",
     },
 }
 
@@ -346,9 +371,75 @@ def _revisit_count(db: Session, user_id: int, month: str) -> int:
                 if diary.is_repeat(entry, visits.get(entry.id, 1))})
 
 
+# Words for each format in the card's "Counts for you" line.
+STRETCH_LABELS = {
+    "movies": "movies", "tv-shows": "TV", "anime": "anime", "video-games": "games", "music": "albums",
+    "books": "books", "manga": "manga", "podcasts": "podcasts", "audiobooks": "audiobooks",
+}
+
+
+def _earlier_finishes(db: Session, user_id: int, month: str, finishes: list[dict], cap: Optional[int]) -> dict[str, int]:
+    """Titles of each format the member had finished before the month, counted up to ``cap`` (None: no cap).
+
+    A library row marked finished counts unless its finish is one of this month's; journal and
+    completion-moment finishes from before the month count too, which keeps titles since removed
+    from the library. Each title counts once. Capped counts read at most ``cap`` rows per format,
+    so a large library costs nine short queries.
+    """
+    start, _ = month_bounds(month)
+    this_month: dict[str, set[int]] = {}
+    for finish in finishes:
+        if finish["item_id"] is not None:
+            this_month.setdefault(finish["category"], set()).add(finish["item_id"])
+    counts: dict[str, int] = {}
+    seen: dict[str, set] = {}
+    for kind, (model, _, library, _, _) in title_pages.KINDS.items():
+        query = db.query(model.id).filter(model.user_id == user_id,
+                                          getattr(model, title_pages.COMPLETE_FIELD[kind]).is_(True))
+        if this_month.get(library):
+            query = query.filter(~model.id.in_(sorted(this_month[library])))
+        if cap is None:
+            counts[library] = query.count()
+        else:
+            seen[library] = {row_id for (row_id,) in query.limit(cap)}
+    if cap is None:
+        return counts
+    quiet = [category for category, keys in seen.items() if len(keys) < cap]
+    if quiet:
+        logged = db.query(models.ActivityEntry.category, models.ActivityEntry.item_id, models.ActivityEntry.title).filter(
+            models.ActivityEntry.user_id == user_id,
+            models.ActivityEntry.action.in_(diary.DIARY_ACTIONS),
+            models.ActivityEntry.category.in_(quiet),
+            models.ActivityEntry.occurred_at < start,
+        ).distinct().limit(500).all()
+        moments = db.query(models.CompletionMoment.category, models.CompletionMoment.item_id, models.CompletionMoment.title).filter(
+            models.CompletionMoment.user_id == user_id,
+            models.CompletionMoment.category.in_(quiet),
+            models.CompletionMoment.completed_at < start,
+        ).distinct().limit(500).all()
+        for category, item_id, title in (*logged, *moments):
+            # A removed title loses its item_id (journal) or gets a negative one (moments): key it by name.
+            seen[category].add(item_id if item_id is not None and item_id > 0 else year_in_review._plain_title(title))
+    return {category: min(len(keys), cap) for category, keys in seen.items()}
+
+
+def stretch_formats(db: Session, user_id: int, month: str, finishes: list[dict], under: int) -> list[str]:
+    """Formats that count for a stretch step, in library order: fewer than ``under`` earlier finishes,
+    or, when every format has that many, the least-finished ones."""
+    counts = _earlier_finishes(db, user_id, month, finishes, cap=under)
+    quiet = [category for category in FORMAT_NOUNS if counts.get(category, 0) < under]
+    if quiet:
+        return quiet
+    counts = _earlier_finishes(db, user_id, month, finishes, cap=None)
+    fewest = min(counts.values())
+    return [category for category in FORMAT_NOUNS if counts.get(category) == fewest]
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
+    """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
-    return {(item["category"], title_pages.normalize(item["title"])) for item in edition.get("items", [])}
+    return {(item["category"], title_pages.normalize(name)) for item in edition.get("items", [])
+            for name in (item["title"], *item.get("aliases", ()))}
 
 
 def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict], month: str) -> tuple[int, int]:
@@ -383,9 +474,16 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
     finishes = _finishes(db, user_id, month)
     steps = []
     for index, step in enumerate(challenge_for(month)["steps"]):
-        count, target = _step_count(db, user_id, step, finishes, month)
+        extra = {}
+        if step["kind"] == "stretch":
+            formats = stretch_formats(db, user_id, month, finishes, step.get("under", 3))
+            count, target = sum(1 for finish in finishes if finish["category"] in formats), step.get("count", 1)
+            # Private to the member: shown on their own card, never on a shared page.
+            extra = {"formats": [STRETCH_LABELS[category] for category in formats]}
+        else:
+            count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],
-                      "count": min(count, target), "target": target, "done": count >= target})
+                      "count": min(count, target), "target": target, "done": count >= target, **extra})
     return steps
 
 
