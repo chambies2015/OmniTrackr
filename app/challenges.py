@@ -45,6 +45,7 @@ FORMAT_NOUNS = {
 #   edition     finish one pick from the Discover monthly edition ``edition``
 #   before      finish one title released before ``year``
 #   category    finish ``count`` titles of one format (``category``)
+#   waiting     finish ``count`` titles that were already in the library before the month began
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
         "name": "Stay with the strange",
@@ -112,6 +113,29 @@ CHALLENGES: dict[str, dict] = {
              "detail": "A rating and a takeaway are the details you will forget first. Add them now and your recap will say why you liked something, and your next recommendations will be better for it."},
         ],
         "reflection": "Which finish this month would you hand to a friend in January, and what would you tell them about it?",
+    },
+    "2027-01": {
+        "name": "First things first",
+        "tagline": "Start the year with the first part of something that continues this winter, one title from your backlog and the year's first note.",
+        "published": "2027-01-01",
+        # The January edition (out January 1) has nine picks, one per format, each the start of a January release.
+        "edition": "january-2027",
+        "intro": [
+            "January is when the new seasons start. In the next few weeks Neuromancer arrives on Apple TV, Children of Blood and Bone opens in cinemas, CHVRCHES release their first album in more than five years and Samus Aran gets a new 2D Metroid game. This challenge, like the January edition it pairs with, asks you to go back to where one of those things started before the new one arrives. It also asks you to finish one title that has been sitting in your library, and to write down what you thought of something, so that the year's record starts with a sentence as well as a number.",
+            "If you made a pledge in the 2027 New Year challenge, every finish here counts toward it too. The pledge is the target for the whole year; this is its first month, at a size you can finish by the 31st. Anything you mark finished in January counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "january-2027",
+             "label": "Finish one pick from the January edition",
+             "detail": "The January edition has nine picks, one in each format OmniTrackr tracks, and each is the start of something that continues this winter: Neuromancer before the Apple TV series on January 22, Metroid Dread before Metroid Ravenous on January 28, the first CHVRCHES album before their fifth on January 22. The shortest is an album of under an hour and the longest an audiobook of almost eighteen. Finish any one of them in January and this step is done."},
+            {"kind": "waiting", "count": 1,
+             "label": "Finish one title that was already in your library",
+             "detail": "Anything that was in your library before January 1 counts, whether you saved it last week or three years ago. Most libraries have a few titles that were saved and never started, or started and left at episode four. Pick the one you feel worst about and finish it. A title you add and finish in January still counts toward the other two steps, just not this one. If one of the edition's picks has been waiting in your library, it can do both."},
+            {"kind": "reflect", "count": 1,
+             "label": "Leave the year's first rating or takeaway",
+             "detail": "Rate a January finish or write a line about it when you mark it finished. Next December your Year in Review will be built from what you record now, and a note written the week you finished something says more than a score added from memory eleven months later. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "If you went back to an original this month, did knowing a new version was coming change how you read, watched or played it?",
     },
 }
 
@@ -248,12 +272,36 @@ def _release_years(db: Session, finishes: list[dict]) -> dict[tuple[str, int], O
     return years
 
 
+def _waiting_count(db: Session, user_id: int, month: str, finishes: list[dict]) -> int:
+    """Finishes of titles that were in the library before the month began: one query per format.
+
+    A row without ``added_at`` predates the column, so it was waiting too. A title added and
+    finished in the same month does not count, and neither does a finish whose row was deleted.
+    """
+    start, _ = month_bounds(month)
+    wanted: dict[str, set[int]] = {}
+    for finish in finishes:
+        kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
+        if kind is not None and finish["item_id"] is not None:
+            wanted.setdefault(kind, set()).add(finish["item_id"])
+    count = 0
+    for kind, ids in wanted.items():
+        model = title_pages.KINDS[kind][0]
+        ordered = sorted(ids)
+        for first in range(0, len(ordered), 500):
+            count += db.query(func.count(model.id)).filter(
+                model.user_id == user_id, model.id.in_(ordered[first:first + 500]),
+                (model.added_at.is_(None)) | (model.added_at < start),
+            ).scalar() or 0
+    return count
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     edition = MONTHLY_EDITIONS.get(slug) or {}
     return {(item["category"], title_pages.normalize(item["title"])) for item in edition.get("items", [])}
 
 
-def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict]) -> tuple[int, int]:
+def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict], month: str) -> tuple[int, int]:
     kind = step["kind"]
     if kind == "total":
         return len(finishes), step["count"]
@@ -274,6 +322,8 @@ def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict]) -> 
             if year and year < step["year"]:
                 count += 1
         return count, 1
+    if kind == "waiting":
+        return _waiting_count(db, user_id, month, finishes), step.get("count", 1)
     return 0, 1
 
 
@@ -281,7 +331,7 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
     finishes = _finishes(db, user_id, month)
     steps = []
     for index, step in enumerate(challenge_for(month)["steps"]):
-        count, target = _step_count(db, user_id, step, finishes)
+        count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],
                       "count": min(count, target), "target": target, "done": count >= target})
     return steps
