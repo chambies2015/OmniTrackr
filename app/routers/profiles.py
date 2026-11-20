@@ -267,7 +267,7 @@ def _owner_note_html(view, is_owner: bool) -> str:
         return ""
     note = ('This is your public profile. Change what it shows and pin titles to your showcase from '
             '<a href="/#public-profile">Account → Public profile</a>. '
-            f'<a href="{_e(view.path)}/widgets">Get widgets</a> to show it on your blog, forum or GitHub.')
+            f'<a href="{_e(view.path)}/widgets">Get widgets</a> to show it in a forum signature, on your blog or on GitHub.')
     if view.showcase and not any(item.get("note") for item in view.showcase):
         note += ' Add a line to each pin there to say why it made the cut.'
     extras = [part for part, shown in (("your diary of recent finishes", view.profile.show_diary),

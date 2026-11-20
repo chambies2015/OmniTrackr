@@ -98,7 +98,7 @@
   <link rel="stylesheet" href="/static/find-people.css?v=20261120-find-people-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261118-email-code-1">
-  <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261120-widgets-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
@@ -2644,7 +2644,7 @@
   <script src="/static/for-you.js?v=20261118-peek-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
-  <script src="/static/public-profile.js?v=20261114-profile-1"></script>
+  <script src="/static/public-profile.js?v=20261120-widgets-1"></script>
   <script src="/static/supporter.js?v=20261112-settings-1"></script>
   <script src="/static/support-ask.js?v=20261116-support-1" defer></script>
   <script src="/static/account-settings.js?v=20261112-settings-1" defer></script>
@@ -2762,8 +2762,6 @@
             </div>
             <p class="profile-settings__link" id="profileLinkRow" hidden>Your page: <a id="profileLink" href="#" target="_blank" rel="noopener"></a>
               <button type="button" class="profile-settings__copy" id="profileCopyLink">Copy link</button></p>
-            <p class="profile-settings__link" id="profileWidgetsRow" hidden>Put it on your blog, forum or GitHub:
-              <a id="profileWidgetsLink" href="#" target="_blank" rel="noopener">Get profile widgets</a></p>
             <p class="profile-settings__link" id="profileMatchRow" hidden>Your compare-tastes link:
               <a id="profileMatchLink" href="#" target="_blank" rel="noopener">Open and share it</a></p>
             <div class="form-group">
@@ -2785,6 +2783,19 @@
             <div id="profileError" class="error-message" role="alert"></div>
             <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
+          <div class="profile-widgets-settings" id="profileWidgetsRow" hidden>
+            <h5>Widgets for your forum, blog or README</h5>
+            <p class="info-text">A banner for forum signatures, plus cards for what you're on right now, recent finishes, favorites
+              and library counts. They follow the boxes you tick above and update as you track.</p>
+            <a class="profile-widgets-settings__preview" id="profileWidgetsPreviewLink" href="#" target="_blank" rel="noopener" hidden>
+              <img id="profileWidgetsPreview" alt="Your forum signature widget" width="540" height="136" loading="lazy"></a>
+            <p class="info-text profile-widgets-settings__loads" id="profileWidgetsLoads" hidden></p>
+            <div class="account-actions">
+              <a class="action-btn" id="profileWidgetsLink" href="#" target="_blank" rel="noopener">Get profile widgets</a>
+              <button type="button" class="action-btn" id="profileWidgetsCopy" hidden>Copy forum signature code</button>
+            </div>
+            <p class="success-message" id="profileWidgetsCopied" role="status"></p>
+          </div>
           <div class="profile-showcase-settings" id="profileShowcase">
             <h5>Showcase</h5>
             <p class="info-text" id="profileShowcaseHint">Pin up to 3 titles from your library to the top of your profile.</p>

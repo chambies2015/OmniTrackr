@@ -59,6 +59,7 @@
     if (widgetsRow && widgetsLink) {
       widgetsRow.hidden = row.hidden;
       if (path) widgetsLink.href = `${path}/widgets`;
+      if (!row.hidden) loadWidgets();
     }
     const matchRow = $('profileMatchRow');
     const matchLink = $('profileMatchLink');
@@ -67,6 +68,80 @@
       matchRow.hidden = !(matchPath && settings.enabled && settings.show_taste_match);
       if (matchPath) matchLink.href = matchPath;
     }
+  }
+
+  // The widget panel: a preview of the forum signature, its code, and how often the widgets were loaded.
+  let widgets = null;
+  let widgetsLoading = null;
+
+  function samePath(value) {
+    return typeof value === 'string' && value.startsWith('/u/') && !value.startsWith('//') ? value : null;
+  }
+
+  function showWidgets(data) {
+    widgets = data && data.enabled ? data : null;
+    const preview = $('profileWidgetsPreview');
+    const previewLink = $('profileWidgetsPreviewLink');
+    const loads = $('profileWidgetsLoads');
+    const copy = $('profileWidgetsCopy');
+    const page = widgets && samePath(widgets.page);
+    // The app is in light mode when the body has no dark-mode class.
+    const light = !!(document.body && document.body.classList && !document.body.classList.contains('dark-mode'));
+    const image = widgets && samePath(light && widgets.preview_light ? widgets.preview_light : widgets.preview);
+    if (preview && previewLink) {
+      previewLink.hidden = !(image && page);
+      if (image && page) {
+        // A fresh address after each save, so the preview shows the boxes just ticked.
+        preview.src = `${image}${image.includes('?') ? '&' : '?'}v=${Date.now()}`;
+        previewLink.href = page;
+      }
+    }
+    if (loads) {
+      loads.textContent = widgets && typeof widgets.summary === 'string' ? widgets.summary : '';
+      loads.hidden = !loads.textContent;
+    }
+    if (copy) copy.hidden = !(widgets && typeof widgets.forum_code === 'string' && widgets.forum_code);
+  }
+
+  async function loadWidgets() {
+    if (!$('profileWidgetsRow')) return null;
+    if (widgetsLoading) return widgetsLoading;
+    widgetsLoading = (async () => {
+      try {
+        const response = await fetch(`${apiBase()}/api/profile/widgets`, fetchOptions());
+        if (!response.ok) throw new Error('load failed');
+        showWidgets(await response.json());
+      } catch (error) {
+        showWidgets(null);
+      } finally {
+        widgetsLoading = null;
+      }
+      return widgets;
+    })();
+    return widgetsLoading;
+  }
+
+  function countWidgetEvent(key) {
+    try {
+      fetch(`${apiBase()}/api/widgets/event`, fetchOptions({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+        keepalive: true,
+      })).catch(() => {});
+    } catch (error) { /* counting never gets in the way */ }
+  }
+
+  async function copyForumCode() {
+    if (!widgets || !widgets.forum_code) return;
+    const done = $('profileWidgetsCopied');
+    try {
+      await navigator.clipboard.writeText(widgets.forum_code);
+      if (done) { done.textContent = 'Copied. Paste it into your forum signature box.'; done.style.display = 'block'; }
+    } catch (error) {
+      if (done) { done.textContent = widgets.forum_code; done.style.display = 'block'; }
+    }
+    countWidgetEvent('settings_copy');
   }
 
   function apply(settings) {
@@ -186,6 +261,7 @@
     form.addEventListener('submit', save);
     $('profileBio').addEventListener('input', updateCount);
     $('profileCopyLink').addEventListener('click', copyLink);
+    if ($('profileWidgetsCopy')) $('profileWidgetsCopy').addEventListener('click', copyForumCode);
     wrapAccountLoader();
     updateCount();
     setTimeout(openFromHash, 600);
@@ -193,7 +269,7 @@
   }
 
   window.PublicProfileSettings = { load, apply };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, save };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, save, loadWidgets, showWidgets, copyForumCode };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

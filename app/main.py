@@ -987,11 +987,22 @@ from .routers import profile_widgets as profile_widgets_router
 # Widgets are embedded on other sites and fetched through their image proxies, so allow more.
 rate_limited_widget = limiter.limit("120/minute")(profile_widgets_router.widget)
 rate_limited_widget_by_id = limiter.limit("120/minute")(profile_widgets_router.widget_by_id)
+rate_limited_widget_svg = limiter.limit("120/minute")(profile_widgets_router.widget_svg)
+rate_limited_widget_svg_by_id = limiter.limit("120/minute")(profile_widgets_router.widget_svg_by_id)
+# Copy-button counts and the Settings panel: a person presses these a few times, never hundreds.
+rate_limited_widget_event = limiter.limit("30/minute")(profile_widgets_router.widget_event)
+rate_limited_my_widgets = limiter.limit("30/minute")(profile_widgets_router.my_widgets)
+WIDGET_ROUTE_LIMITS = {
+    "/u/{handle}/widget/{kind}.png": rate_limited_widget,
+    "/u/id/{user_id:database_id}/widget/{kind}.png": rate_limited_widget_by_id,
+    "/u/{handle}/widget/{kind}.svg": rate_limited_widget_svg,
+    "/u/id/{user_id:database_id}/widget/{kind}.svg": rate_limited_widget_svg_by_id,
+    "/api/widgets/event": rate_limited_widget_event,
+    "/api/profile/widgets": rate_limited_my_widgets,
+}
 for route in profile_widgets_router.router.routes:
-    if getattr(route, "path", None) == "/u/{handle}/widget/{kind}.png":
-        bind_rate_limited_endpoint(route, rate_limited_widget)
-    elif getattr(route, "path", None) == "/u/id/{user_id:database_id}/widget/{kind}.png":
-        bind_rate_limited_endpoint(route, rate_limited_widget_by_id)
+    if getattr(route, "path", None) in WIDGET_ROUTE_LIMITS:
+        bind_rate_limited_endpoint(route, WIDGET_ROUTE_LIMITS[route.path])
 app.include_router(profile_widgets_router.router)
 # Each share can ask Spotify, YouTube or OMDb for a title, so it gets the same limit as the metadata search.
 for route in pwa.router.routes:
