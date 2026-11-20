@@ -69,7 +69,40 @@
     }
     const hint = stretchHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
+    if (step.kind === 'recommended' && !step.done) {
+      copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
+    }
     return item;
+  }
+
+  // Under a step about recommendations: this month's finishes that don't say where they came
+  // from yet, each a button that opens the title's "Why I added it" editor.
+  function creditRow(step) {
+    const titles = (Array.isArray(step.unsaid) ? step.unsaid : [])
+      .filter(title => title && Number.isInteger(title.id) && title.id > 0 && typeof title.category === 'string')
+      .slice(0, 3);
+    if (!titles.length) return null;
+    const row = el('span', 'month-challenge__credits');
+    row.appendChild(el('span', 'month-challenge__hint', titles.length === 1 ? 'Did someone recommend it?' : 'Did someone recommend one of these?'));
+    for (const title of titles) {
+      const name = String(title.title || 'Untitled');
+      const button = el('button', 'month-challenge__link', name);
+      button.type = 'button';
+      button.dataset.challengeAction = 'credit';
+      button.dataset.category = title.category;
+      button.dataset.itemId = String(title.id);
+      button.dataset.title = name;
+      button.setAttribute('aria-label', `Say who recommended ${name}`);
+      row.appendChild(button);
+    }
+    return row;
+  }
+
+  function creditTitle(button) {
+    const origins = typeof window !== 'undefined' ? window.OmniTitleOrigins : null;
+    const opened = origins && typeof origins.open === 'function'
+      && origins.open(button.dataset.category, Number(button.dataset.itemId), button.dataset.title, button);
+    if (!opened) status('Open the title in your library and choose Why I added it.');
   }
 
   // "Counts for you: manga, podcasts or audiobooks" under a step about a format you rarely finish.
@@ -245,6 +278,8 @@
       updateCompletion('POST', 'seen');
     } else if (action === 'log-revisit') {
       openRevisitForm();
+    } else if (action === 'credit') {
+      creditTitle(target);
     }
   }
 
@@ -262,6 +297,8 @@
   function init() {
     document.addEventListener('click', handleClick);
     window.addEventListener('hashchange', openFromHash);
+    // Saying who recommended a title can finish a step, wherever it was said.
+    window.addEventListener('omnitrackr:title-origin-saved', () => { if (state.data) refreshMonthlyChallenge(); });
   }
 
   if (typeof window !== 'undefined') {
@@ -269,7 +306,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

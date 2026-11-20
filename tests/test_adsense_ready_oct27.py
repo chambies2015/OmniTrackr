@@ -11,15 +11,12 @@ NOVEMBER = MONTHLY_EDITIONS["november-2026"]
 def test_editions_publish_on_their_date():
     assert "november-2026" not in published_editions(date(2026, 10, 31))
     assert "november-2026" in published_editions(date(2026, 11, 1))
-    assert list(published_editions(date(2026, 11, 1))) == [slug for slug in MONTHLY_EDITIONS
-                                                          if slug not in ("december-2026", "january-2027", "february-2027",
-                                                                          "march-2027")]
-    assert list(published_editions(date(2026, 12, 1))) == [slug for slug in MONTHLY_EDITIONS
-                                                          if slug not in ("january-2027", "february-2027", "march-2027")]
-    assert list(published_editions(date(2027, 1, 1))) == [slug for slug in MONTHLY_EDITIONS
-                                                          if slug not in ("february-2027", "march-2027")]
-    assert list(published_editions(date(2027, 2, 1))) == [slug for slug in MONTHLY_EDITIONS if slug != "march-2027"]
-    assert list(published_editions(date(2027, 3, 1))) == list(MONTHLY_EDITIONS)
+    # Each later edition stays unpublished until its own first day.
+    later = ("december-2026", "january-2027", "february-2027", "march-2027", "april-2027")
+    for opened, day in enumerate((date(2026, 11, 1), date(2026, 12, 1), date(2027, 1, 1), date(2027, 2, 1),
+                                  date(2027, 3, 1), date(2027, 4, 1))):
+        assert list(published_editions(day)) == [slug for slug in MONTHLY_EDITIONS if slug not in later[opened:]]
+    assert list(published_editions(date(2027, 4, 1))) == list(MONTHLY_EDITIONS)
 
 
 def test_an_edition_before_its_date_has_no_page_or_links(client, monkeypatch):
