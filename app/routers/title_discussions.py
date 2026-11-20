@@ -23,7 +23,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["discussions"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261118-talk-1"
+ASSET_VERSION = "20261120-a11y-1"
 KIND_LABELS = {"movie": "Movie", "tv": "TV show", "anime": "Anime", "game": "Game", "album": "Album", "book": "Book",
                "manga": "Manga", "podcast": "Podcast", "audiobook": "Audiobook"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",

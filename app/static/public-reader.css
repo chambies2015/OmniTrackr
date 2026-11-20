@@ -80,8 +80,8 @@ body.public-reader {
 .public-reader .reader-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 14px; }
 .public-reader .reader-actions a { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: 999px; color: var(--site-text); display: inline-flex; font-size: .92rem; font-weight: 600; min-height: 44px; padding: 0 20px; text-decoration: none; }
 .public-reader .reader-actions a:hover { background: var(--site-surface-2); color: var(--reader-strong); }
-.public-reader .reader-actions a:first-child { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border-color: transparent; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
-.public-reader .reader-actions a:first-child:hover { filter: brightness(1.08); }
+.public-reader .reader-actions a:first-child { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); border-color: transparent; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
+.public-reader .reader-actions a:first-child:hover { filter: brightness(1.04); }
 
 /* Callouts and examples */
 .public-reader .reader-note,
@@ -94,7 +94,7 @@ body.public-reader {
 .public-reader .guide-paths { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 26px 0 36px; }
 .public-reader .guide-path { align-items: flex-start; background: var(--reader-card); border: 1px solid var(--site-border); border-radius: var(--site-radius); color: var(--site-text); display: flex; flex-direction: column; min-width: 0; padding: 22px; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
 .public-reader .guide-path:hover { border-color: var(--reader-hover-line); color: var(--site-text); transform: translateY(-2px); }
-.public-reader .guide-path__number { align-items: center; background: linear-gradient(135deg, var(--site-violet), var(--site-teal)); border-radius: 11px; color: #fff; display: inline-flex; font: 700 .8rem var(--site-display); height: 32px; justify-content: center; margin-bottom: 18px; width: 42px; }
+.public-reader .guide-path__number { align-items: center; background: linear-gradient(135deg, var(--site-cta, #7f4ef0), #0f766e); border-radius: 11px; color: #fff; display: inline-flex; font: 700 .8rem var(--site-display); height: 32px; justify-content: center; margin-bottom: 18px; width: 42px; }
 .public-reader .guide-path :is(h2, h3) { color: var(--site-text); font-size: 1.05rem; line-height: 1.4; margin: 0 0 8px; }
 .public-reader .guide-path p { color: var(--site-muted); font-size: .88rem; line-height: 1.65; margin: 0; }
 

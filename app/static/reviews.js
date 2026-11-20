@@ -239,12 +239,12 @@ function createReviewCard(review) {
   const save = reviewText('a', 'review-save-link', 'Save to my library');
   save.rel = 'nofollow';
   save.href = `/reviews/${encodeURIComponent(review.id)}/save?category=${encodeURIComponent(review.category)}`;
-  save.setAttribute('aria-label', `Save ${review.title} to my library`);
+  save.setAttribute('aria-label', `Save to my library: ${review.title}`);
   actions.appendChild(save);
   if (isStandalone) {
     const read = reviewText('a', 'review-detail-link', 'Read full review');
     read.href = reviewUrl;
-    read.setAttribute('aria-label', `Read the full review of ${review.title}`);
+    read.setAttribute('aria-label', `Read full review of ${review.title}`);
     actions.appendChild(read);
   }
   card.appendChild(actions);

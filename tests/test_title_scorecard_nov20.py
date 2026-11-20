@@ -121,8 +121,14 @@ def test_genre_chips_drop_the_format_and_shelf_marks():
 
 def test_hero_chips_use_the_short_labels(client, db_session):
     html = page(client, db_session, data={**SAMPLE, "genres": ["heist film", "science fiction action film"]})
-    chips = between(html, 'class="title-hero__chips">', "</div>")
+    # Phones scroll the row sideways, so it is a named, focusable group (keyboard users can scroll it).
+    chips = between(html, 'class="title-hero__chips" role="group" aria-label="Genres" tabindex="0">', "</div>")
     assert chips == '<span class="site-chip">Heist</span><span class="site-chip">Science fiction action</span>'
+
+
+def test_hero_without_genres_adds_no_empty_tab_stop(client, db_session):
+    html = page(client, db_session, data={**SAMPLE, "genres": []})
+    assert '<div class="title-hero__chips"></div>' in html
 
 
 # ---------------------------------------------------------------- where to watch

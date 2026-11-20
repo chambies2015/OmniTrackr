@@ -29,7 +29,7 @@ router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261103-where-1"
 JS_VERSION = "20261120-title-scorecard-1"
-DETAIL_CSS_VERSION = "20261120-title-scorecard-1"
+DETAIL_CSS_VERSION = "20261120-a11y-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
@@ -1433,7 +1433,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
-  <link rel="stylesheet" href="/static/discussions.css?v=20261118-talk-1">
+  <link rel="stylesheet" href="/static/discussions.css?v=20261120-a11y-1">
   <script src="/static/share.js?v=20261120-share-menu-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261118-sheet-1" defer></script>'}
@@ -1456,7 +1456,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         <div class="title-hero__copy">
           {_rank_html(group, summary)}
           {f'<p class="title-hero__lead">{_e(hero_lead[:1].upper() + hero_lead[1:])}</p>' if hero_lead else ''}
-          <div class="title-hero__chips">{genres}</div>
+          <div class="title-hero__chips"{' role="group" aria-label="Genres" tabindex="0"' if genres else ''}>{genres}</div>
           {_scores_html(summary, metadata)}
           {_where_teaser_html(group, summary)}
           <div class="title-hero__actions">{track}{reviews_link}{trailer_button}{_share_actions(share_button, recommend, ask)}</div>

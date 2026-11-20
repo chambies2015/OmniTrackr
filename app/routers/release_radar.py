@@ -77,7 +77,9 @@ def _render(title: str, description: str, canonical: str, content: str, *, index
                              .replace("<!--SITE_NAV:release-radar-->", f"<!--SITE_NAV:{nav}-->", 1))
     extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' + head
     if refresh:
-        extra_head += '<meta http-equiv="refresh" content="45">'
+        # Not <meta http-equiv="refresh">: a timed reload nobody can stop fails WCAG 2.2.1.
+        # release-radar.js checks again after 45 s and puts a "Stop checking" button beside the status.
+        extra_head += '<meta name="omnitrackr-recheck" content="45">'
     structured_html = ""
     if structured:
         payload = json.dumps(structured, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
@@ -256,7 +258,7 @@ def _status_message(entry: Optional[dict], category: str) -> str:
     label = radar.CATEGORY_LABELS[category].lower()
     if entry is None:
         return (f'<div class="radar-status" role="status"><strong>Gathering {escape(label)} right now.</strong> '
-                'This page refreshes itself in under a minute, or reload whenever you like.</div>')
+                'This page checks again in under a minute, or reload whenever you like.</div>')
     if entry.get("error") == "unavailable":
         return f'<div class="radar-status" role="status">{escape(radar.CATEGORY_LABELS[category])} listings are not available right now.</div>'
     if entry.get("error") and not entry.get("items"):

@@ -15,6 +15,9 @@ body.lp {
   --lp-violet: #8b5cf6;
   --lp-violet-2: #a855f7;
   --lp-violet-soft: #c4b5fd;
+  /* Filled buttons: white text reads at 4.9:1 or better across the whole gradient (WCAG AA). */
+  --lp-cta: #7f4ef0;
+  --lp-cta-2: #963cf0;
   --lp-teal: #2dd4bf;
   --lp-radius: 18px;
   --lp-wrap: 1180px;
@@ -42,7 +45,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 /* ---------- Buttons ---------- */
 .lp-btn { align-items: center; border: 1px solid transparent; border-radius: 999px; cursor: pointer; display: inline-flex; font: 600 1rem/1 Inter, sans-serif; gap: 10px; justify-content: center; min-height: 52px; padding: 0 26px; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease; }
 .lp-btn:hover { transform: translateY(-1px); }
-.lp-btn--primary { background: linear-gradient(135deg, var(--lp-violet), var(--lp-violet-2)); box-shadow: 0 10px 30px rgba(139, 92, 246, .38), inset 0 1px 0 rgba(255, 255, 255, .2); color: #fff; }
+.lp-btn--primary { background: linear-gradient(135deg, var(--lp-cta), var(--lp-cta-2)); box-shadow: 0 10px 30px rgba(139, 92, 246, .38), inset 0 1px 0 rgba(255, 255, 255, .2); color: #fff; }
 .lp-btn--primary:hover { box-shadow: 0 14px 38px rgba(139, 92, 246, .5), inset 0 1px 0 rgba(255, 255, 255, .2); }
 .lp-btn--ghost { background: var(--lp-surface); border-color: var(--lp-border-strong); color: var(--lp-text); }
 .lp-btn--ghost:hover { background: var(--lp-surface-2); border-color: rgba(255, 255, 255, .28); }
@@ -97,6 +100,12 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 
 /* ---------- Sections ---------- */
 .lp-section { padding: clamp(64px, 8vw, 104px) 0; position: relative; }
+/* Sections below the hero skip layout and paint until they come near the screen: a phone's first
+   layout of this page drops from about 200 ms to 80 ms (4x CPU throttle). "auto" keeps each section's
+   real height once it has been drawn, so nothing moves while scrolling. The sign-up section (not an
+   .lp-section) always renders, so jumping to it never waits. */
+.lp-section { content-visibility: auto; contain-intrinsic-size: auto 900px; }
+@media (max-width: 760px) { .lp-section { contain-intrinsic-size: auto 1500px; } }
 .lp-section-head { margin: 0 auto 44px; max-width: 720px; text-align: center; }
 .lp-section-head p:not(.lp-eyebrow) { color: var(--lp-muted); font-size: 1.05rem; margin: 0; }
 .lp-section-head--left { margin: 0; text-align: left; }
@@ -150,6 +159,8 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp .faq-answer { color: var(--lp-muted); padding: 0 20px; }
 .lp .faq-item.active .faq-answer { padding-bottom: 16px; }
 .lp .faq-answer p { margin: 0; }
+/* The legacy #667eea link colour read at 3.9:1 inside the faded answer text; underlined so it is not colour alone. */
+.lp .faq-answer a { color: var(--lp-violet-soft); text-decoration: underline; text-underline-offset: 2px; }
 
 /* Auth */
 .lp .lp-auth { background: radial-gradient(700px 420px at 20% 30%, rgba(124, 58, 237, .22), transparent 70%), var(--lp-bg-2); border-top: 1px solid var(--lp-border); display: block; min-height: 0; padding: clamp(64px, 8vw, 104px) 0; }
@@ -349,7 +360,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 
 .lp-vg-match { align-items: center; flex-direction: row; justify-content: center; gap: 0; }
 .lp-vg-match__face { align-items: center; background: linear-gradient(140deg, #7c3aed, #4c1d95); border: 3px solid #14112a; border-radius: 50%; display: flex; font-size: .8rem; font-weight: 700; height: 64px; justify-content: center; width: 64px; z-index: 1; }
-.lp-vg-match__face.is-friend { background: linear-gradient(140deg, #14b8a6, #115e59); }
+.lp-vg-match__face.is-friend { background: linear-gradient(140deg, #0f766e, #115e59); }
 .lp-vg-match__score { align-items: center; background: rgba(255, 255, 255, .06); border: 1px solid var(--lp-border-strong); border-radius: 16px; display: flex; flex-direction: column; margin: 0 -10px; padding: 10px 24px; }
 .lp-vg-match__score strong { font: 800 1.7rem/1.1 Poppins, sans-serif; }
 .lp-vg-match__score small { color: var(--lp-muted); font-size: .72rem; }
@@ -393,7 +404,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 
 /* ---------- Hero search as the one main action (search, save, then sign up) ---------- */
 .lp .lp-search--hero .lp-search__input { min-height: 60px; padding-right: 116px; }
-.lp-search__go { background: linear-gradient(135deg, var(--lp-violet), var(--lp-violet-2)); border: 0; border-radius: 999px; box-shadow: 0 8px 22px rgba(139, 92, 246, .38); color: #fff; cursor: pointer; font: 700 .95rem Inter, sans-serif; min-height: 46px; padding: 0 22px; position: absolute; right: 7px; top: 50%; transform: translateY(-50%); }
+.lp-search__go { background: linear-gradient(135deg, var(--lp-cta), var(--lp-cta-2)); border: 0; border-radius: 999px; box-shadow: 0 8px 22px rgba(139, 92, 246, .38); color: #fff; cursor: pointer; font: 700 .95rem Inter, sans-serif; min-height: 46px; padding: 0 22px; position: absolute; right: 7px; top: 50%; transform: translateY(-50%); }
 .lp-search__go:hover { box-shadow: 0 10px 28px rgba(139, 92, 246, .5); }
 .lp-search__go:focus-visible { box-shadow: 0 0 0 3px rgba(196, 181, 253, .6); outline: none; }
 .lp-quick { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 14px 0 0; }

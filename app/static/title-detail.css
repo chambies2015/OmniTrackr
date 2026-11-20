@@ -520,6 +520,7 @@ a.title-person:hover .title-person__text strong::after { opacity: 1; }
   .title-detail .title-hero__chips { flex-wrap: nowrap; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
   .title-detail .title-hero__chips::-webkit-scrollbar { display: none; }
+  .title-detail .title-hero__chips:focus-visible { outline: 3px solid var(--site-violet-soft); outline-offset: 3px; }
   .title-detail .title-hero__chips .site-chip { flex: none; }
   .title-scorecard, .title-scorecard--spread { grid-template-columns: minmax(0, 1fr); }
   .title-scorecard > * { padding: 18px; }

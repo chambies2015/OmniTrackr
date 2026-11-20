@@ -196,8 +196,8 @@
 .demo-practice { border-left-color: rgba(167, 139, 250, .4); }
 .demo-practice-icon { color: var(--site-violet-soft); }
 .demo-button { border-radius: 999px; }
-.demo-button-primary { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff !important; }
-.demo-button-primary:hover { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); filter: brightness(1.08); }
+.demo-button-primary { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff !important; }
+.demo-button-primary:hover { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); filter: brightness(1.04); }
 .demo-button-quiet { background: var(--site-surface); border-color: var(--site-border-strong); color: var(--site-text); }
 .demo-button:disabled { background: var(--site-surface); border-color: var(--site-border); color: var(--site-muted) !important; box-shadow: none; }
 .demo-stats { background: linear-gradient(110deg, rgba(139, 92, 246, .14), rgba(45, 212, 191, .06)); border-color: var(--site-border); border-radius: 18px; }

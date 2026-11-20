@@ -389,7 +389,7 @@ def _review_card_html(review: dict) -> str:
     if standalone:
         title = f'<a class="review-title-link" href="{_escape(review_url)}">{title}</a>'
     report_html = "" if standalone else _review_report_html(review)
-    detail_link = f'<a class="review-detail-link" href="{_escape(review_url)}" aria-label="Read the full review of {_escape(review.get("title"))}">Read full review</a>' if standalone else ""
+    detail_link = f'<a class="review-detail-link" href="{_escape(review_url)}" aria-label="Read full review of {_escape(review.get("title"))}">Read full review</a>' if standalone else ""
     expanded_text = (
         f'<details class="review-full-text"><summary>Read full review</summary><p>{_escape(full_text)}</p></details>'
         if not standalone and len(full_text) > 420 else ""
@@ -410,7 +410,7 @@ def _review_card_html(review: dict) -> str:
           {rating_html}
         </div>
         <div class="review-card-actions">
-          <a class="review-save-link" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save {_escape(review.get('title'))} to my library">Save to my library</a>
+          <a class="review-save-link" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save to my library: {_escape(review.get('title'))}">Save to my library</a>
           {detail_link}
         </div>
         {report_html}
@@ -774,7 +774,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
-  <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
+  <link rel="stylesheet" href="/static/reviews.css?v=20261120-a11y-1">
   <link rel="stylesheet" href="/static/review-detail.css?v=20261118-talk-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>

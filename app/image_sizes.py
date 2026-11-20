@@ -94,6 +94,8 @@ def _rewrite_tag(match: re.Match) -> str:
     # width="200" height="300" on the release lists is an aspect-ratio hint, so
     # only the small review thumbnails (64 px) count as a display width.
     display = int(declared.group(1)) if declared and int(declared.group(1)) <= MAL_SMALL_MAX else None
+    if display is not None:
+        width = RAWG_WIDTHS[0]  # a 200-pixel copy still covers a 112-pixel tile on a 2x screen
     tag = _SRC.sub(lambda m: m.group(1) + (sized(m.group(2), width, display_width=display) or m.group(2)) + m.group(3), tag, count=1)
 
     def srcset(m: re.Match) -> str:
