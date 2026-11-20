@@ -99,7 +99,7 @@ def test_follow_creates_one_row_and_one_notice(client, db_session, pair):
     assert again.json()["created"] is False
     assert db_session.query(models.MemberFollow).count() == 1
     notices = db_session.query(models.Notification).filter_by(user_id=target.id, type="new_follower").all()
-    assert len(notices) == 1 and notices[0].link == "/#followers" and "fan" in notices[0].message
+    assert len(notices) == 1 and notices[0].link == "/#find-people" and "fan" in notices[0].message
     # Unfollowing and following again within a week doesn't ring the bell twice.
     assert client.delete(f"/api/follows/{target.id}", headers=headers(fan)).json()["removed"] is True
     follow(client, fan, target)

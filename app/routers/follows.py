@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -28,10 +28,12 @@ def _private(response: Response) -> None:
 class FollowSettingsBody(BaseModel):
     allow_followers: Optional[bool] = None
     email_following: Optional[bool] = None
+    suggest_me: Optional[bool] = None
 
 
 @router.post("/api/follows/{user_id:database_id}")
 def follow(user_id: PositiveDatabaseId, request: Request, response: Response,
+           source: Optional[str] = Query(None, max_length=20),
            user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     target = public_profiles.find_user_by_id(db, user_id)
@@ -40,6 +42,10 @@ def follow(user_id: PositiveDatabaseId, request: Request, response: Response,
     except follows.FollowError as error:
         db.rollback()
         raise HTTPException(error.status, error.detail)
+    if created and source:
+        # Which Find people card (or follow-back button) the follow came from, for Site stats.
+        from .. import people_to_follow
+        people_to_follow.count_follow(source)
     return {"following": True, "created": created, "followers": follows.counts(db, user_id)["followers"]}
 
 
@@ -78,7 +84,10 @@ def settings(response: Response, user: models.User = Depends(get_current_user), 
 def update_settings(body: FollowSettingsBody, response: Response, user: models.User = Depends(get_current_user),
                     db: Session = Depends(get_db)):
     _private(response)
-    follows.save_settings(db, user.id, body.allow_followers, body.email_following)
+    if body.suggest_me is not None and body.suggest_me != follows.settings_payload(db, user.id)["suggest_me"]:
+        from .. import people_to_follow
+        people_to_follow.count("suggest_on" if body.suggest_me else "suggest_off")
+    follows.save_settings(db, user.id, body.allow_followers, body.email_following, body.suggest_me)
     return settings(response, user, db)
 
 

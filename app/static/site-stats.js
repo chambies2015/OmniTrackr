@@ -500,6 +500,9 @@
 
   function growthRows(growth) {
     const { invites, supporters, weekly_email: email, takes } = growth;
+    const people = growth.people || {};
+    const peopleCounts = people.counts || {};
+    const peopleLabels = people.labels || {};
     const calendar = growth.calendar || {};
     const push = growth.push || {};
     const reviews = growth.reviews || {};
@@ -554,6 +557,16 @@
       growthTakes: [
         { label: 'Links shared', count: takes.asked },
         { label: 'Friends who answered', count: takes.answered },
+      ],
+      growthPeople: [
+        { label: 'Follows between active members (now)', count: people.follows_now || 0 },
+        { label: 'New follows', count: people.new_follows || 0 },
+        { label: 'Members following someone (now)', count: people.members_following || 0 },
+        { label: 'Members with a follower (now)', count: people.members_followed || 0 },
+        { label: 'Pairs who follow each other (now)', count: people.mutual_pairs || 0 },
+        { label: 'Profiles that can be suggested (now)', count: people.suggestable || 0 },
+        { label: 'Profiles with Suggest my profile off (now)', count: people.suggest_off || 0 },
+        ...Object.keys(peopleLabels).filter(key => peopleCounts[key]).map(key => ({ label: peopleLabels[key], count: peopleCounts[key] })),
       ],
       growthPush: [
         { label: 'Members with notifications on (now)', count: push.members || 0 },
@@ -643,6 +656,7 @@
     growthEmail: 'Weekly email',
     growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
+    growthPeople: 'Find people to follow',
     growthPush: 'Phone and browser notifications',
     growthApp: 'The app on home screens',
     growthStayPosted: 'Stay posted asks (card and note after saving)',

@@ -95,6 +95,7 @@
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261118-talk-1">
   <link rel="stylesheet" href="/static/follows.css?v=20261113-social-1">
+  <link rel="stylesheet" href="/static/find-people.css?v=20261120-find-people-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261118-email-code-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261112-settings-1">
@@ -1989,6 +1990,7 @@
               <div class="social-switch" role="tablist" aria-label="Whose updates">
                 <button type="button" class="social-switch__btn" role="tab" id="socialTabFriends" aria-controls="friendsFeedPanel" aria-selected="true" data-social-tab="friends">Friends</button>
                 <button type="button" class="social-switch__btn" role="tab" id="socialTabFollowing" aria-controls="followingFeed" aria-selected="false" tabindex="-1" data-social-tab="following">Following<span id="followingCount" class="social-switch__count" hidden></span></button>
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabPeople" aria-controls="peoplePanel" aria-selected="false" tabindex="-1" data-social-tab="people">Find people</button>
               </div>
               <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
             </div>
@@ -2006,7 +2008,27 @@
                 <button id="followingRefresh" type="button" class="ffeed-btn ffollow__refresh">Refresh</button>
               </header>
               <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <button id="followingFindPeople" type="button" class="action-btn people-find-btn" data-open-people hidden>Find people to follow</button>
               <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
+            </section>
+            <section id="peoplePanel" class="people" role="tabpanel" aria-labelledby="socialTabPeople" hidden>
+              <header class="ffollow__head people__head">
+                <div>
+                  <h3 id="peopleTitle">People worth following</h3>
+                  <p class="ffollow__lede">Members whose taste lines up with yours, people who followed you, and profiles with something new on them. Following someone shows you what their public profile shows everyone, and nothing more.</p>
+                </div>
+                <button id="peopleRefresh" type="button" class="ffeed-btn ffollow__refresh">Refresh</button>
+              </header>
+              <div id="peopleYou" class="people-you" hidden></div>
+              <section id="peopleBack" class="people-back" aria-labelledby="peopleBackTitle" hidden>
+                <h4 id="peopleBackTitle" class="people-group__title">Followed you</h4>
+                <ul id="peopleBackList" class="people-back__list"></ul>
+              </section>
+              <div id="peopleGroups" class="people-groups" aria-live="polite"></div>
+              <p id="peopleStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <p id="peopleTasteHint" class="people-hint" hidden></p>
+              <p class="people-note">Suggestions only name titles a member's profile already shows anyone, and only members who made their profile public are suggested. Nobody is told you saw them, and "Not for me" stays between you and this page.</p>
+              <div id="peopleUndo" class="people-undo" role="status" hidden></div>
             </section>
           </div>
           <aside class="social-rail" aria-label="Feed settings and people">
@@ -2017,6 +2039,11 @@
                 <span>Share my updates with friends</span>
               </label>
               <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
+            </section>
+            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
+              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
+              <ul id="followSuggestionsList" class="follow-people"></ul>
+              <button type="button" class="social-talk__link people-rail__more" data-open-people>See more people <span aria-hidden="true">→</span></button>
             </section>
             <section id="bestRecommenders" class="best-recs social-card" aria-labelledby="bestRecommendersTitle" hidden>
               <p class="best-recs__eyebrow">Only you see this</p>
@@ -2029,10 +2056,6 @@
               <p id="socialTalkSummary" class="social-talk__summary">Talk about what you're watching with every member, not just friends.</p>
               <ul id="socialTalkList" class="social-talk__list" hidden></ul>
               <a class="social-talk__link" href="/discussions">Open discussions <span aria-hidden="true">→</span></a>
-            </section>
-            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
-              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
-              <ul id="followSuggestionsList" class="follow-people"></ul>
             </section>
           </aside>
         </div>
@@ -2638,8 +2661,9 @@
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/friends-feed.js?v=20261118-talk-1"></script>
-  <script src="/static/follows.js?v=20261113-social-1"></script>
+  <script src="/static/friends-feed.js?v=20261120-find-people-1"></script>
+  <script src="/static/follows.js?v=20261120-find-people-1"></script>
+  <script src="/static/find-people.js?v=20261120-find-people-1"></script>
   <script src="/static/push.js?v=20261118-app-1" defer></script>
   <script src="/static/stay-posted.js?v=20261118-peek-1" defer></script>
   <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
@@ -2779,6 +2803,8 @@
             <p class="info-text">Members can follow your public profile without being friends. Followers see only what your profile already shows everyone: never private categories, notes, progress or anything you share only with friends.</p>
             <label class="profile-settings__check"><input type="checkbox" id="followAllow" checked> Let people follow my profile</label>
             <label class="profile-settings__check"><input type="checkbox" id="followEmail" checked> Include people I follow in my weekly email</label>
+            <label class="profile-settings__check"><input type="checkbox" id="followSuggest" checked> Suggest my profile to members with similar taste</label>
+            <p class="info-text follow-settings__hint">Find people only names titles your profile already shows anyone. Nobody is told you were suggested to them.</p>
             <p class="info-text follow-settings__counts" id="followCounts"></p>
             <h6>Your followers</h6>
             <p class="info-text follow-settings__hint">Removing someone also stops them following you again.</p>
