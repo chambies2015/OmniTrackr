@@ -1465,6 +1465,22 @@ for route in follows_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_remove_follower)
 app.include_router(follows_router.router)
 
+from .routers import find_people as find_people_router
+# Each suggestions request reads the member's whole library and builds a few profiles.
+rate_limited_find_people = {
+    ("/api/people/suggestions", "GET"): limiter.limit("30/minute")(find_people_router.people_suggestions),
+    ("/api/people/rail", "GET"): limiter.limit("30/minute")(find_people_router.people_rail),
+    ("/api/people/dismiss/{user_id:database_id}", "POST"): limiter.limit("60/minute")(find_people_router.dismiss),
+    ("/api/people/dismiss/{user_id:database_id}", "DELETE"): limiter.limit("60/minute")(find_people_router.undismiss),
+    ("/api/people/event", "POST"): limiter.limit("30/minute")(find_people_router.people_event),
+}
+for route in find_people_router.router.routes:
+    for method in getattr(route, "methods", set()):
+        limited = rate_limited_find_people.get((getattr(route, "path", None), method))
+        if limited is not None:
+            bind_rate_limited_endpoint(route, limited)
+app.include_router(find_people_router.router)
+
 from .routers import binge_calculator as binge_calculator_router
 rate_limited_binge = {
     "/api/binge-calculator/length": limiter.limit("60/minute")(binge_calculator_router.binge_length),
