@@ -22,6 +22,9 @@ from .release_guides import GUIDES
 BASE_PATH = "/new-releases"
 FORMAT_ORDER = ("movies", "tv", "games", "anime", "books")
 FORMAT_LABELS = {"movies": "Movies", "tv": "TV", "games": "Games", "anime": "Anime", "books": "Books"}
+# How a one-format guide counts its picks: ("14 anime picks in 3 groups", "14 anime, including ...").
+FOCUS_WORDS = {"anime": ("anime", "anime"), "tv": ("TV", "series"), "movies": ("film", "films"),
+               "games": ("game", "games"), "books": ("book", "books")}
 
 
 def _today(today: Optional[date] = None) -> date:
@@ -66,6 +69,12 @@ def section_id(section: dict) -> str:
 def section_label(section: dict) -> str:
     """What the jump links and the eyebrow call the section."""
     return section.get("label") or FORMAT_LABELS[section["format"]]
+
+
+def focus_words(entry: dict) -> tuple[str, str]:
+    """For a one-format guide: the word before "picks" and the plural noun on its hub card."""
+    focus = entry.get("focus")
+    return FOCUS_WORDS.get(focus, (focus, focus)) if focus else ("", "releases")
 
 
 def anchor_id(item: dict) -> str:

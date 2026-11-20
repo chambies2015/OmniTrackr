@@ -127,7 +127,7 @@ def _method(entry: dict) -> str:
 def _count_line(entry: dict, total: int) -> str:
     sections = len(entry["sections"])
     if entry.get("focus"):
-        return f"{total} {entry['focus']} picks in {sections} groups."
+        return f"{total} {new_releases.focus_words(entry)[0]} picks in {sections} groups."
     return f"{total} releases across {sections} formats."
 
 
@@ -287,7 +287,7 @@ def release_guides_index():
     for slug, entry in ordered:
         titles = " · ".join(item["title"] for item in new_releases.picks(entry)[:4])
         label = "This month" if slug == current else entry.get("hub_label", entry["period"])
-        noun = entry.get("focus") or "releases"
+        noun = new_releases.focus_words(entry)[1]
         cards.append(
             f'<li><a class="yl-card bo-card" href="{_e(new_releases.path(slug))}">'
             f'<span class="yl-card__art"><span class="yl-card__initial" aria-hidden="true">{_e(entry.get("hub_label", entry["period"])[:1])}</span></span>'
