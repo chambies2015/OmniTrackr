@@ -1,0 +1,118 @@
+/* Discover, trending and the browse shelves (Nov 20 2026 refresh).
+   Shared pieces for pages with <body class="explore">: one colour per format (the set the
+   title pages and Best of 2026 use), poster boxes with a drawn cover when there is no art,
+   coloured format tags, guest save buttons and the save dock. See app/explore_art.py. */
+
+.explore { --kind: var(--site-violet-soft); --x-header: 64px; }
+.explore[data-kind="movie"], .explore [data-kind="movie"] { --kind: #f472b6; }
+.explore[data-kind="tv"], .explore [data-kind="tv"] { --kind: #60a5fa; }
+.explore[data-kind="anime"], .explore [data-kind="anime"] { --kind: #f87171; }
+.explore[data-kind="game"], .explore [data-kind="game"] { --kind: #34d399; }
+.explore[data-kind="album"], .explore [data-kind="album"] { --kind: #a78bfa; }
+.explore[data-kind="book"], .explore [data-kind="book"] { --kind: #fbbf24; }
+.explore[data-kind="manga"], .explore [data-kind="manga"] { --kind: #fb923c; }
+.explore[data-kind="podcast"], .explore [data-kind="podcast"] { --kind: #2dd4bf; }
+.explore[data-kind="audiobook"], .explore [data-kind="audiobook"] { --kind: #e879f9; }
+
+/* ---------- Poster boxes ---------- */
+.x-art {
+  aspect-ratio: 2 / 3; background: #17142e; border-radius: var(--poster-radius, 10px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .38), inset 0 0 0 1px var(--poster-edge, rgba(255, 255, 255, .09));
+  container-type: inline-size; display: block; flex: none; overflow: hidden; position: relative;
+}
+.x-art--square { aspect-ratio: 1; }
+.x-art img { display: block; height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+/* A broken image shows the drawn cover under it instead of the browser's broken-image mark. */
+.x-art img { color: transparent; font-size: 0; }
+/* A thin edge on top of the art so light covers keep their shape on the dark page. */
+.x-art::after { border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); content: ""; inset: 0; pointer-events: none; position: absolute; }
+
+/* The drawn cover: the title set like a cover, in the format's colour. */
+.x-cover {
+  background:
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--kind) 55%, transparent), transparent 62%),
+    radial-gradient(100% 70% at 100% 100%, hsl(var(--cover-hue, 260) 72% 52% / .42), transparent 65%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 14px),
+    linear-gradient(165deg, #241c4c, #0e0c20);
+  color: #fff; display: flex; flex-direction: column; inset: 0; justify-content: flex-end; overflow: hidden;
+  padding: 10cqi 9cqi 11cqi; position: absolute; text-align: left;
+}
+.x-cover::before { background: var(--kind); border-radius: 2px; content: ""; height: 2px; left: 9cqi; position: absolute; top: 23cqi; width: 18cqi; }
+.x-cover__kind {
+  color: color-mix(in srgb, var(--kind) 40%, #fff); font: 800 .6rem/1 var(--site-font); font-size: clamp(.45rem, 8cqi, .72rem);
+  left: 9cqi; letter-spacing: .14em; position: absolute; text-transform: uppercase; top: 10cqi;
+}
+.x-cover b {
+  display: -webkit-box; font: 800 .9rem/1.08 var(--site-display); font-size: clamp(.5rem, 12.5cqi, 1.8rem); hyphens: auto; letter-spacing: -.02em;
+  overflow: hidden; overflow-wrap: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 5; text-wrap: balance;
+}
+.x-art--square .x-cover b { -webkit-line-clamp: 3; }
+
+/* ---------- Format tag ---------- */
+.x-kind {
+  align-items: center; color: color-mix(in srgb, var(--kind) 45%, #fff); display: inline-flex; font-size: .72rem; font-weight: 700;
+  gap: 7px; letter-spacing: .08em; line-height: 1.2; text-transform: uppercase; white-space: nowrap;
+}
+.x-kind::before { background: var(--kind); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--kind) 22%, transparent); content: ""; flex: none; height: 7px; width: 7px; }
+
+/* ---------- Save to my list (guests) ---------- */
+.x-save {
+  align-items: center; background: rgba(255, 255, 255, .06); border: 1px solid var(--site-border-strong); border-radius: var(--radius-pill);
+  color: var(--site-text); cursor: pointer; display: inline-flex; font: 700 .86rem/1 var(--site-font); gap: 7px; justify-content: center;
+  min-height: 40px; padding: 0 16px; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+.x-save:not([aria-pressed="true"])::before { content: "+"; font-size: 1.15em; font-weight: 600; line-height: 1; margin-top: -1px; }
+.x-save:hover { background: rgba(255, 255, 255, .1); border-color: color-mix(in srgb, var(--kind) 60%, #fff); }
+.x-save:active { transform: scale(.97); }
+.x-save[aria-pressed="true"] { background: rgba(45, 212, 191, .16); border-color: rgba(45, 212, 191, .55); color: var(--site-teal-soft); }
+.x-save:focus-visible { box-shadow: var(--ring); outline: none; }
+
+/* ---------- The save dock ---------- */
+.x-dock {
+  align-items: center; backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+  background: rgba(20, 17, 42, .9); border: 1px solid rgba(196, 181, 253, .28); border-radius: 20px;
+  bottom: max(16px, env(safe-area-inset-bottom)); box-shadow: 0 18px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .3);
+  display: flex; gap: 12px; left: 50%; margin: 0; max-width: calc(100% - 24px); padding: 10px 10px 10px 14px; position: fixed;
+  transform: translateX(-50%); width: 560px; z-index: 50; animation: x-dock-in .35s var(--ease) both;
+}
+.x-dock[hidden] { display: none; }
+.x-dock__icon {
+  align-items: center; background: rgba(45, 212, 191, .16); border-radius: 50%; color: var(--site-teal-soft); display: inline-flex;
+  flex: none; height: 34px; justify-content: center; width: 34px;
+}
+.x-dock__icon::before { content: "✓"; font-weight: 800; }
+.x-dock__count { color: var(--site-soft); flex: 1; font-size: .88rem; line-height: 1.35; margin: 0; min-width: 0; }
+.x-dock__go { flex: none; white-space: nowrap; }
+@keyframes x-dock-in { from { opacity: 0; transform: translate(-50%, 24px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* Room under the footer so the dock never covers its last links. */
+.explore:has(.x-dock:not([hidden])) .site-footer { padding-bottom: 96px; }
+
+/* ---------- Sticky "on this page" chips ---------- */
+.x-jump {
+  backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(11, 10, 24, .82); border-bottom: 1px solid var(--site-border); position: sticky; top: var(--x-header); z-index: 30;
+}
+.x-jump__inner {
+  display: flex; gap: 8px; margin: 0 auto; max-width: var(--site-wrap); overflow-x: auto; padding: 10px 24px; scrollbar-width: none;
+}
+.x-jump__inner::-webkit-scrollbar { display: none; }
+.x-jump a {
+  background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: var(--radius-pill); color: var(--site-soft);
+  flex: none; font-size: .84rem; font-weight: 600; padding: 7px 14px; text-decoration: none; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  white-space: nowrap;
+}
+.x-jump a:hover { background: var(--site-surface-2); color: var(--site-text); }
+.x-jump a[aria-current="true"] { background: color-mix(in srgb, var(--kind) 20%, transparent); border-color: color-mix(in srgb, var(--kind) 60%, transparent); color: var(--site-text); }
+
+@media (max-width: 760px) {
+  .explore { --x-header: 60px; }
+  .x-jump__inner { padding: 8px 16px; }
+  .x-dock { border-radius: 18px; bottom: max(12px, env(safe-area-inset-bottom)); gap: 10px; padding: 8px 8px 8px 10px; }
+  .x-dock__icon { height: 30px; width: 30px; }
+  .x-dock__count { font-size: .8rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .x-dock { animation: none; }
+  .x-save, .x-jump a { transition: none; }
+}

@@ -108,8 +108,32 @@
     box.hidden = false;
   }
 
+  // The shelf chips stick under the header; the one for the shelf in view is marked.
+  function setupJump() {
+    const links = Array.from(document.querySelectorAll('.browse-jump a[href^="#"]'));
+    if (!links.length || typeof IntersectionObserver !== 'function') return;
+    const strip = links[0].parentElement;
+    const inView = new Set();
+    let current = null;
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) inView.add(entry.target.id); else inView.delete(entry.target.id); });
+      const next = links.find(link => inView.has(link.getAttribute('href').slice(1))) || null;
+      if (next === current) return;
+      current = next;
+      links.forEach(link => { if (link === next) link.setAttribute('aria-current', 'true'); else link.removeAttribute('aria-current'); });
+      if (next && strip && strip.scrollWidth > strip.clientWidth && typeof strip.scrollTo === 'function') {
+        strip.scrollTo({left: Math.max(0, next.offsetLeft - 16), behavior: 'smooth'});
+      }
+    }, {rootMargin: '-150px 0px -55% 0px'});
+    links.forEach(link => {
+      const section = document.getElementById(link.getAttribute('href').slice(1));
+      if (section) observer.observe(section);
+    });
+  }
+
   function init() {
     setupFilter();
+    setupJump();
     markMine();
     // Back from sign-in: the hash names the card the visitor wanted.
     if (window.location.hash) {
