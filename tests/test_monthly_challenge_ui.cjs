@@ -30,3 +30,27 @@ test('dismissing hides only this month for this member', () => {
     delete global.getUser;
   }
 });
+
+test('a revisit step that is not done offers to log one in the Journal', () => {
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const open = challenge.stepItem({ kind: 'revisit', label: 'Go back to something you love', done: false, count: 0, target: 1 });
+    const button = open.children.find(node => node.tag === 'button');
+    assert.ok(button);
+    assert.equal(button.textContent, 'Log a revisit');
+    assert.equal(button.type, 'button');
+    assert.equal(button.dataset.challengeAction, 'log-revisit');
+    const done = challenge.stepItem({ kind: 'revisit', label: 'Go back to something you love', done: true, count: 1, target: 1 });
+    assert.equal(done.children.some(node => node.tag === 'button'), false);
+    const other = challenge.stepItem({ kind: 'reflect', label: 'Write down what you love about one', done: false, count: 0, target: 1 });
+    assert.equal(other.children.some(node => node.tag === 'button'), false);
+  } finally {
+    delete global.document;
+  }
+});
