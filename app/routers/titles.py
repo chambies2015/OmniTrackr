@@ -1434,7 +1434,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
   <link rel="stylesheet" href="/static/discussions.css?v=20261118-talk-1">
-  <script src="/static/share.js?v=20261004-share-1" defer></script>
+  <script src="/static/share.js?v=20261120-share-menu-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261118-sheet-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
