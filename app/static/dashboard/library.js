@@ -3397,6 +3397,7 @@ function enhanceLibraryCards(tableId) {
         let hash = 0;
         for (const char of name) hash = (hash * 31 + char.codePointAt(0)) % 997;
         cell.style.setProperty('--cover-shift', String((hash % 61) - 30));
+        drawLibraryCover(cell, row.cells[1]?.firstChild?.textContent.trim() || name);
       }
       cell.querySelectorAll('input, textarea, select').forEach(input => {
         if (!input.hasAttribute('aria-label')) input.setAttribute('aria-label', cell.dataset.label);
@@ -3432,6 +3433,29 @@ function enhanceLibraryCards(tableId) {
     syncNextUpButtons(actions);
     groupRowActions(actions);
   });
+}
+
+// A title without art gets a drawn cover in Shelf (library-view.css): its name set in
+// the format's colour, with the hue and type size Discover and the title pages use
+// for the same title (app/explore_art.py hue and word_width). Attributes and custom
+// properties only: the cell stays empty, so a poster that loads later replaces it.
+const DRAWN_COVER_NARROW = new Set("ijlrtfI.,'!:;|");
+const DRAWN_COVER_WIDE = new Set('MWmw');
+function drawLibraryCover(cell, title) {
+  const name = String(title || '').trim();
+  if (!cell || !name) return;
+  let hue = 0;
+  Array.from(name.toLowerCase()).forEach((char, index) => { hue = (hue + char.codePointAt(0) * (index + 1)) % 360; });
+  // Letter widths in twentieths, so the sum is exact and rounds like Python's.
+  const letter = char => (DRAWN_COVER_NARROW.has(char) ? 11 : DRAWN_COVER_WIDE.has(char) ? 29
+    : char !== char.toLowerCase() ? 26 : 20);
+  const longest = Math.max(1, ...name.split(/\s+/).map(word => Number((Array.from(word).reduce((sum, char) => sum + letter(char), 0) / 20).toFixed(1))));
+  const length = Array.from(name).length;
+  // Long words get smaller type so they fit on one line; long titles shrink so they fit the cover.
+  const size = Math.min(12.5, 118 / longest, length > 30 ? 12.5 * Math.sqrt(30 / length) : 12.5);
+  cell.dataset.coverTitle = name.length > 120 ? `${name.slice(0, 117)}…` : name;
+  cell.style.setProperty('--x-hue', String(hue));
+  cell.style.setProperty('--cover-fs', `${size.toFixed(2)}cqi`);
 }
 
 // Keep Edit visible and tuck the other row actions into a small "More" menu.
