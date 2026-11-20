@@ -1,4 +1,4 @@
-"""Guides beside the holiday hub: the Thanksgiving weekend and December reading and listening (Nov 2026)."""
+"""Guides beside the holiday hub: Christmas 2026, the Thanksgiving weekend and December reading and listening (Nov 2026)."""
 import re
 from datetime import date
 from pathlib import Path
@@ -12,6 +12,7 @@ from app.gift_guides import GUIDE as GIFT_GUIDE
 from app.holiday_guides import GUIDES
 from app.seasonal_guides import SEASONS
 
+CHRISTMAS = GUIDES["christmas"]
 THANKSGIVING = GUIDES["thanksgiving"]
 LISTENING = GUIDES["reading-and-listening"]
 HUB = SEASONS["holidays"]
@@ -64,7 +65,10 @@ def test_thanksgiving_covers_all_nine_formats_and_reading_sticks_to_ears_and_pag
 def test_no_pick_repeats_the_hub_the_gift_guide_or_each_other():
     gifts = {(item["kind"], title_pages.slugify(item["title"])) for section in GIFT_GUIDE["sections"] for item in section["gifts"]
              if item.get("title")}
-    assert not keys(THANKSGIVING) & keys(LISTENING)
+    slugs = list(GUIDES)
+    for index, slug in enumerate(slugs):
+        for other in slugs[index + 1:]:
+            assert not keys(GUIDES[slug]) & keys(GUIDES[other]), (slug, other)
     for entry in GUIDES.values():
         assert not keys(entry) & keys(HUB)
         assert not keys(entry) & gifts
@@ -78,6 +82,9 @@ def test_hub_picks_named_in_the_plans_are_on_the_hub():
     for title in ("A Christmas Carol", "Vespertine"):
         assert title in hub_titles
         assert any(title in night["plan"] for night in LISTENING["nights"])
+    for title in ("The Polar Express", "The Muppet Christmas Carol"):
+        assert title in hub_titles
+        assert any(title in night["plan"] for night in CHRISTMAS["nights"])
 
 
 def test_every_pick_can_be_saved():
@@ -162,9 +169,10 @@ def test_guides_are_linked_from_the_hub_card_sitemap_and_loader(authenticated_cl
         assert f'href="{entry["path"]}"' in client.get("/site-map").text
     monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
     paths = [link["path"] for link in authenticated_client.get("/api/seasonal/current").json()["links"]]
-    assert paths == ["/holidays/gifts", "/holidays/black-friday", "/holidays/thanksgiving", "/holidays/reading-and-listening"]
+    assert paths == ["/holidays/gifts", "/holidays/black-friday", "/holidays/christmas", "/holidays/thanksgiving",
+                     "/holidays/reading-and-listening"]
     loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
-    assert "thanksgiving|reading-and-listening" in loader
+    assert "christmas|thanksgiving|reading-and-listening" in loader
 
 
 def test_related_cards_link_back_and_follow_the_month():
@@ -186,3 +194,72 @@ def test_december_edition_goes_live_on_the_first():
     others = {title_pages.slugify(item["title"]) for slug, other in MONTHLY_EDITIONS.items() if slug != "december-2026"
               for item in other["items"]}
     assert not others & {title_pages.slugify(item["title"]) for item in edition["items"]}
+
+
+# ---------------------------------------------------------------- the Christmas guide
+
+def _christmas_picks():
+    return seasonal.picks(CHRISTMAS)
+
+
+def test_christmas_new_releases_are_dated_and_on_the_calendar():
+    calendar = CHRISTMAS["calendar"]
+    assert calendar["after"] in {shelf["key"] for shelf in CHRISTMAS["shelves"]}
+    rows = {row["title"]: row for row in calendar["items"]}
+    assert len(rows) == len(calendar["items"]) >= 15
+    for row in calendar["items"]:
+        assert "2026-11-01" <= row["date"] <= "2026-12-31", row["title"]
+        date.fromisoformat(row["date"])
+        assert row["format"] and row["where"] and row["note"]
+    dated = [item for item in _christmas_picks() if "release" in item]
+    assert len(dated) == 5 and all(item["year"] == 2026 for item in dated)
+    for item in dated:
+        assert rows[item["title"]]["date"] == item["release"]["date"], item["title"]
+        assert item["release"]["where"]
+    # The older picks are older, and the plans and FAQ only name films that are on the calendar or the page.
+    assert all(item["year"] < 2026 for item in _christmas_picks() if "release" not in item)
+    assert CHRISTMAS["sources"] and all(url.startswith("https://") for _, url in CHRISTMAS["sources"])
+
+
+def test_christmas_covers_six_formats_and_repeats_no_other_holiday_page():
+    from app.advent_calendar_data import EDITIONS
+    from app.deal_guides import GUIDE as DEALS_GUIDE
+    assert {item["kind"] for item in _christmas_picks()} == {"movie", "tv", "book", "audiobook", "album", "game"}
+    taken = {(door["kind"], title_pages.slugify(door["title"])) for door in EDITIONS[2026]["doors"]}
+    taken |= {(item["kind"], title_pages.slugify(item["title"])) for section in DEALS_GUIDE["sections"]
+              for item in section.get("picks", []) if item.get("title")}
+    taken |= {(title_pages.LIBRARY_TO_KIND[item["category"]], title_pages.slugify(item["title"]))
+              for item in MONTHLY_EDITIONS["december-2026"]["items"]}
+    assert not keys(CHRISTMAS) & taken
+
+
+def test_unreleased_christmas_films_are_saved_but_not_suggested_early():
+    violent_night = pick.find("movie", "violent-night-2-2026")
+    assert violent_night["source_url"] == "/holidays/christmas#new-this-year"
+    assert violent_night["out"] == "2026-12-04"
+    assert not pick.is_available(violent_night, date(2026, 12, 3))
+    assert pick.is_available(violent_night, date(2026, 12, 4))
+    assert pick.find("movie", "home-alone-1990")["out"] is None
+
+
+def test_christmas_page_shows_the_calendar_dates_and_sources(client):
+    html = client.get("/holidays/christmas").text
+    assert 'id="release-calendar"' in html and 'href="#release-calendar"' in html
+    assert html.count('class="sn-calendar__row') == len(CHRISTMAS["calendar"]["items"])
+    assert html.count('class="sn-pick__release"') == 5
+    # A calendar row for a pick on the page links down to it.
+    assert '<a href="#pick-violent-night-2">Violent Night 2</a>' in html
+    assert html.index('id="new-this-year"') < html.index('id="release-calendar"') < html.index('id="christmas-episodes"')
+    assert "Sources we checked" in html and "https://www.avclub.com/doctor-who-christmas-special-2026-cancelled" in html
+    assert "<span>New in 2026</span>" in html and "<span>December 24</span>" in html
+
+
+def test_christmas_release_lines_follow_the_date():
+    from app.routers.seasonal import _calendar_html, _release_line
+    ebenezer = next(item for item in _christmas_picks() if item["title"] == "Ebenezer")
+    assert ">Out November 13</time>" in _release_line(ebenezer, date(2026, 11, 12))
+    assert ">Released November 13</time>" in _release_line(ebenezer, date(2026, 11, 20))
+    early = _calendar_html(CHRISTMAS, date(2026, 10, 1))
+    late = _calendar_html(CHRISTMAS, date(2027, 1, 1))
+    assert "Out now" not in early and late.count("Out now") == len(CHRISTMAS["calendar"]["items"])
+    assert early.index("November 2026") < early.index("December 2026")

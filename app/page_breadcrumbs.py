@@ -42,6 +42,7 @@ HUBS = {
     "/holidays": "Holiday picks",
     "/holidays/gifts": "Gift guide",
     "/holidays/black-friday": "Black Friday",
+    "/holidays/christmas": "Christmas 2026",
     "/holidays/thanksgiving": "Thanksgiving weekend",
     "/holidays/reading-and-listening": "Reading and listening",
     "/holidays/advent-calendar": "Advent calendar",

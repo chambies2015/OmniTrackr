@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 from html import escape
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -23,7 +24,7 @@ from ..seasonal_guides import SEASONS
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
-CSS_VERSION = "20261106-holiday-guides-1"
+CSS_VERSION = "20261120-christmas-1"
 JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 SITE = "https://omnitrackr.xyz"
@@ -67,6 +68,21 @@ def _long_date(value: str) -> str:
     return date.fromisoformat(value).strftime("%B %d, %Y").replace(" 0", " ")
 
 
+def _day_month(day: date) -> str:
+    return f"{day:%B} {day.day}"
+
+
+def _release_line(item: dict, today: date) -> str:
+    """"Out December 4 · Netflix" on a pick with a release date (new titles in the Christmas guide)."""
+    release = item.get("release")
+    if not release:
+        return ""
+    day = date.fromisoformat(release["date"])
+    label = f'{"Released" if day <= today else "Out"} {_day_month(day)}'
+    return (f'<p class="sn-pick__release"><time datetime="{_e(release["date"])}">{_e(label)}</time>'
+            f' · {_e(release["where"])}</p>')
+
+
 def _details(db: Session) -> dict:
     """{pool id: {"url", "image"}} for picks with a public title page (never raises)."""
     try:
@@ -99,7 +115,7 @@ def _save_button(entry: dict, signed_in: bool) -> str:
             '<span class="sn-when-off">Save to my list</span><span class="sn-when-on">Saved to your list ✓</span></button>')
 
 
-def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
+def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool, today: date) -> str:
     pooled = seasonal.pool_entry(item)
     detail = details.get(pooled["id"], {}) if pooled else {}
     image = title_pages._safe_image(detail.get("image"))
@@ -114,7 +130,7 @@ def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
         f'<article class="pick sn-pick" id="{_e(seasonal.anchor_id(item))}" data-season-pick="{pick_id}">'
         f'<div class="sn-pick__head">{art}<div><p class="eyebrow">{_e(_meta_line(item))}</p>'
         f'<h3>{_e(item["title"])}</h3>{_level(entry, item["level"]) if "level" in item else ""}'
-        f'<p class="sn-pick__time">{_e(item["time"])}</p></div></div>'
+        f'{_release_line(item, today)}<p class="sn-pick__time">{_e(item["time"])}</p></div></div>'
         f'<p class="sn-pick__why">{_e(item["why"])}</p><p>{_e(item["note"])}</p>'
         f'<p class="caveat"><strong>Before you start:</strong> {_e(item["caveat"])}</p>'
         f'<div class="sn-pick__actions">{save}{title_link}'
@@ -123,7 +139,7 @@ def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
     )
 
 
-def _shelf_html(entry: dict, shelf: dict, details: dict, signed_in: bool) -> str:
+def _shelf_html(entry: dict, shelf: dict, details: dict, signed_in: bool, today: date) -> str:
     ids = [pooled["id"] for pooled in (seasonal.pool_entry(item) for item in shelf["picks"]) if pooled]
     shelf_action = (f'<button type="button" class="button button--ghost sn-shelf__all" data-season-add-shelf="{_e(" ".join(ids))}">'
                     f'Add all {len(ids)} to my library</button>' if signed_in else "")
@@ -140,7 +156,7 @@ def _shelf_html(entry: dict, shelf: dict, details: dict, signed_in: bool) -> str
         '<p class="sn-shelf__status" data-season-shelf-status role="status" aria-live="polite"></p></header>',
         '<div class="sn-picks">',
     ]
-    parts.extend(_pick_html(entry, item, details, signed_in) for item in shelf["picks"])
+    parts.extend(_pick_html(entry, item, details, signed_in, today) for item in shelf["picks"])
     parts.append('</div></section>')
     return "".join(parts)
 
@@ -223,7 +239,7 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     if not signed_in:
         parts.append('<p class="yl-section-intro sn-guest-note">Save any pick to a list as you go, no account needed. '
                      'Your list moves into a free library when you sign up.</p>')
-    parts.extend(_shelf_html(entry, shelf, details, signed_in) for shelf in entry["shelves"])
+    parts.extend(_shelf_html(entry, shelf, details, signed_in, today) for shelf in entry["shelves"])
     parts.extend([
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
@@ -266,12 +282,53 @@ def _companion_related(slug: str, entry: dict, today: date) -> str:
             f'<h2 id="related-heading">{_e(entry["related_heading"])}</h2><div class="guide-related-grid">{cards}</div></section>')
 
 
+def _calendar_html(entry: dict, today: date) -> str:
+    """A guide's dated list of new releases (the Christmas guide), grouped by month, linking to picks on the page."""
+    calendar = entry["calendar"]
+    anchors = {item["title"]: seasonal.anchor_id(item) for item in seasonal.picks(entry)}
+    months: dict[str, list[dict]] = {}
+    for row in sorted(calendar["items"], key=lambda row: row["date"]):
+        months.setdefault(row["date"][:7], []).append(row)
+    groups = []
+    for month, rows in months.items():
+        items = []
+        for row in rows:
+            day = date.fromisoformat(row["date"])
+            out = day <= today
+            out_tag = ' <span class="sn-calendar__out">Out now</span>' if out else ""
+            title = (f'<a href="#{_e(anchors[row["title"]])}">{_e(row["title"])}</a>' if row["title"] in anchors
+                     else _e(row["title"]))
+            items.append(
+                f'<li class="sn-calendar__row{" sn-calendar__row--out" if out else ""}">'
+                f'<time class="sn-calendar__date" datetime="{_e(row["date"])}"><span>{day:%a}</span>'
+                f'<strong>{day:%b} {day.day}</strong></time><div class="sn-calendar__body">'
+                f'<p class="sn-calendar__title"><strong>{title}</strong> <span class="sn-calendar__format">{_e(row["format"])}</span>'
+                f'{out_tag}</p>'
+                f'<p class="sn-calendar__where">{_e(row["where"])}</p><p class="sn-calendar__note">{_e(row["note"])}</p></div></li>')
+        name = date.fromisoformat(month + "-01").strftime("%B %Y")
+        groups.append(f'<h3 class="sn-calendar__month">{_e(name)}</h3><ol class="sn-calendar__list">{"".join(items)}</ol>')
+    return (f'<section id="{_e(calendar["key"])}" class="editorial sn-calendar" aria-labelledby="{_e(calendar["key"])}-heading">'
+            f'<p class="eyebrow">{_e(calendar["eyebrow"])}</p><h2 id="{_e(calendar["key"])}-heading">{_e(calendar["heading"])}</h2>'
+            f'<div class="sn-calendar__intro">{_paragraphs(calendar["intro"])}</div>{"".join(groups)}</section>')
+
+
+def _source_link(label: str, url: str) -> str:
+    host = urlsplit(url).hostname or ""
+    return (f'<li><a href="{_e(url)}" rel="noopener" target="_blank">{_e(label)}</a>'
+            f' <span class="muted">({_e(host.removeprefix("www."))})</span></li>')
+
+
 def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     """A guide beside a hub: the hub's shelves, plans and questions, without the festive scale."""
     items = seasonal.picks(entry)
     formats = sorted({item["kind"] for item in items}, key=list(title_pages.KINDS).index)
     parent = SEASONS[entry["parent"]]
-    jump = "".join(f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>' for shelf in entry["shelves"])
+    calendar = entry.get("calendar")
+    jump = ""
+    for shelf in entry["shelves"]:
+        jump += f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>'
+        if calendar and calendar["after"] == shelf["key"]:
+            jump += f'<a href="#{_e(calendar["key"])}">{_e(calendar["label"])}</a>'
     progress = ('<section class="sn-progress" data-season-progress="' + _e(slug) + '" data-season-name="' + _e(entry["short"]) + '" aria-labelledby="sn-progress-title" hidden>'
                 f'<p class="eyebrow">YOUR {_e(entry["short"].upper())} LIST</p><h2 id="sn-progress-title" data-season-progress-title>Your progress</h2>'
                 f'<div class="sn-meter" role="progressbar" aria-valuemin="0" aria-valuemax="{len(items)}" aria-valuenow="0" '
@@ -280,7 +337,7 @@ def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, to
     nights = "".join(f'<li><h3>{_e(night["name"])}</h3><p>{_e(night["plan"])}</p></li>' for night in entry["nights"])
     faq = "".join(f'<details class="sn-faq__item"><summary>{_e(question)}</summary><p>{_e(answer)}</p></details>'
                   for question, answer in entry["faq"])
-    days = "".join(f'<li><a href="#{_e(shelf["key"])}"><span>{_e(shelf["when"].title())}</span>'
+    days = "".join(f'<li><a href="#{_e(shelf["key"])}"><span>{_e(shelf.get("day") or shelf["when"].title())}</span>'
                    f'<strong>{_e(shelf["name"])}</strong></a></li>' for shelf in entry["shelves"])
     reviewed = entry["reviewed"]
     parts = [
@@ -300,7 +357,11 @@ def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, to
     if not signed_in:
         parts.append('<p class="yl-section-intro sn-guest-note">Save any pick to a list as you go, no account needed. '
                      'Your list moves into a free library when you sign up.</p>')
-    parts.extend(_shelf_html(entry, shelf, details, signed_in) for shelf in entry["shelves"])
+    for shelf in entry["shelves"]:
+        parts.append(_shelf_html(entry, shelf, details, signed_in, today))
+        if calendar and calendar["after"] == shelf["key"]:
+            parts.append(_calendar_html(entry, today))
+    sources = "".join(_source_link(label, url) for label, url in entry.get("sources", ()))
     parts.extend([
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
@@ -309,6 +370,7 @@ def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, to
         _companion_related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
         _paragraphs(entry["method"]),
+        f'<h3>Sources we checked</h3><ul class="sn-sources">{sources}</ul>' if sources else "",
         f'<p class="muted">First published {_e(_long_date(entry["published"]))}. Checked {_e(_long_date(reviewed))}. '
         '<a href="/contact">Suggest a pick or send a correction</a> · <a href="/content-quality">Editorial standards</a></p>'
         '</section></article>',
