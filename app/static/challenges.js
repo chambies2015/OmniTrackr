@@ -67,7 +67,18 @@
       log.dataset.challengeAction = 'log-revisit';
       item.appendChild(log);
     }
+    const hint = stretchHint(step);
+    if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
     return item;
+  }
+
+  // "Counts for you: manga, podcasts or audiobooks" under a step about a format you rarely finish.
+  function stretchHint(step) {
+    if (step.kind !== 'stretch' || step.done || !Array.isArray(step.formats) || !step.formats.length) return '';
+    if (step.formats.length >= 9) return 'Any format counts for you';
+    const names = step.formats.map(String);
+    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
+    return `Counts for you: ${list}`;
   }
 
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
@@ -258,7 +269,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

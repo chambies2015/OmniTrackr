@@ -54,3 +54,14 @@ test('a revisit step that is not done offers to log one in the Journal', () => {
     delete global.document;
   }
 });
+
+test('a stretch step lists the formats that count for this member until it is done', () => {
+  assert.equal(challenge.stretchHint({ kind: 'stretch', done: false, formats: ['manga', 'podcasts', 'audiobooks'] }),
+    'Counts for you: manga, podcasts or audiobooks');
+  assert.equal(challenge.stretchHint({ kind: 'stretch', done: false, formats: ['audiobooks'] }), 'Counts for you: audiobooks');
+  const all = ['movies', 'TV', 'anime', 'games', 'albums', 'books', 'manga', 'podcasts', 'audiobooks'];
+  assert.equal(challenge.stretchHint({ kind: 'stretch', done: false, formats: all }), 'Any format counts for you');
+  assert.equal(challenge.stretchHint({ kind: 'stretch', done: true, formats: ['manga'] }), '');
+  assert.equal(challenge.stretchHint({ kind: 'stretch', done: false }), '');
+  assert.equal(challenge.stretchHint({ kind: 'reflect', done: false, formats: ['manga'] }), '');
+});
