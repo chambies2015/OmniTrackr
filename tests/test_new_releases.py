@@ -70,6 +70,8 @@ def test_guides_publish_on_their_date():
     assert "winter-2027-anime" in new_releases.published(date(2026, 11, 4))
     assert "winter-2027-tv" not in new_releases.published(date(2026, 11, 19))
     assert "winter-2027-tv" in new_releases.published(date(2026, 11, 20))
+    assert "winter-2027-games" not in new_releases.published(date(2026, 11, 19))
+    assert "winter-2027-games" in new_releases.published(date(2026, 11, 20))
     assert new_releases.current(date(2026, 11, 15)) == "november-2026"
     # The anime season guide is newer and covers January too, but Release Radar keeps pointing at the all-format guide.
     assert new_releases.current(date(2027, 1, 20)) == "winter-2026-27"
@@ -208,3 +210,29 @@ def test_tv_season_guide_groups_its_picks(client):
     hub = client.get("/new-releases").text
     assert f"{total} series, including The Pitt" in hub
     assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 TV premieres<')
+
+
+def test_games_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-games"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-games").text
+    assert f"<h1>{entry['name']}</h1>" in html and "GAMES RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} game picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Two picks only have a month so far.
+    assert html.count("Out March 2027") == 2 and "Out March 1<" not in html
+    # Games already written up in the broad winter guide are only listed here, not repeated as picks.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "game"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("Fable") for title, _ in entry["also"])
+    # A delayed game is named in the list but is not a pick.
+    assert not any("Laufey" in item["title"] for item in new_releases.picks(entry))
+    assert 'href="/new-releases/winter-2027-games"' in client.get("/game-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-games"
+    hub = client.get("/new-releases").text
+    assert f"{total} games, including Stranger Than Heaven" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 games<')
