@@ -885,3 +885,42 @@ body.app-shell .account-settings .toggle-switch:not(:checked) {
 body.app-shell.dark-mode .account-settings .toggle-switch:not(:checked) {
   background: color-mix(in srgb, var(--fg-secondary) 55%, var(--card-bg));
 }
+
+/* Public profile → widgets panel: a preview of the forum signature banner and its code. */
+.profile-widgets-settings {
+  border-top: 1px solid rgba(127, 127, 127, .25);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.profile-widgets-settings h5 {
+  margin: 0 0 6px;
+}
+
+.profile-widgets-settings__preview {
+  border-radius: 14px;
+  display: block;
+  margin: 10px 0 8px;
+  max-width: 540px;
+}
+
+.profile-widgets-settings__preview img {
+  aspect-ratio: 540 / 136;
+  border-radius: 14px;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.profile-widgets-settings__preview:focus-visible {
+  outline: 2px solid var(--accent, #8b5cf6);
+  outline-offset: 3px;
+}
+
+.profile-widgets-settings .account-actions {
+  flex-wrap: wrap;
+}
+
+.profile-widgets-settings .success-message {
+  overflow-wrap: anywhere;
+}

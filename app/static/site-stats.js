@@ -520,6 +520,9 @@
     const week = growth.your_week || {};
     const yourWeekCounts = week.counts || {};
     const yourWeekLabels = week.labels || {};
+    const widgets = growth.widgets || {};
+    const widgetCounts = widgets.counts || {};
+    const widgetLabels = widgets.labels || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -625,6 +628,17 @@
         ...Object.keys(yourWeekLabels).map(key => ({ label: yourWeekLabels[key], count: yourWeekCounts[key] || 0 })),
         { label: 'Weeks kept, all time', count: week.kept_all_time || 0 },
       ],
+      growthWidgets: [
+        { label: 'Times members\' widgets loaded on other sites', count: widgets.loads || 0 },
+        { label: 'Members whose widgets loaded', count: widgets.members || 0 },
+        { label: 'Members whose widgets loaded in the last 7 days (now)', count: widgets.members_7d || 0 },
+        ...(widgets.by_kind || []).filter(item => item.count).map(item => ({ label: `Loads: ${item.label}`, count: item.count })),
+        ...(widgets.hosts || []).map(item => ({ label: `Shown on ${item.host} (${number(item.members)} member${item.members === 1 ? '' : 's'})`, count: item.count })),
+        { label: 'Visits from a widget link', count: widgets.visits || 0 },
+        { label: 'Likely people from a widget link', count: widgets.people || 0 },
+        { label: 'Profiles with Right now on (now)', count: widgets.now_on || 0 },
+        ...Object.keys(widgetLabels).filter(key => widgetCounts[key]).map(key => ({ label: widgetLabels[key], count: widgetCounts[key] })),
+      ],
       growthSupportAsks: [
         { label: 'Notes shown on the home screen', count: support.shown || 0 },
         ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
@@ -663,6 +677,7 @@
     growthWeekOne: 'New members\' first-week card',
     growthBacklogDraw: 'Draw from your backlog',
     growthYourWeek: 'Your week (weekly pace, kept weeks, Sunday nudge)',
+    growthWidgets: 'Profile widgets on other sites',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',
   };

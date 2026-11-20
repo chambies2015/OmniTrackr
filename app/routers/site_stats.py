@@ -260,6 +260,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "app": _installed_app(db, days, now),
         "backlog_draw": _backlog_draw(db, days, now),
         "your_week": _your_week(db, days, now),
+        "widgets": _profile_widgets(db, days, now),
     }
 
 
@@ -278,6 +279,16 @@ def _your_week(db: Session, days: int, now: datetime) -> dict:
     try:
         from .. import your_week
         return your_week.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _profile_widgets(db: Session, days: int, now: datetime) -> dict:
+    """Profile widgets: how often they loaded on other sites, which sites, and the visits they sent back."""
+    try:
+        from .. import profile_widgets
+        return profile_widgets.stats(db, days, now)
     except Exception:
         db.rollback()
         return {}

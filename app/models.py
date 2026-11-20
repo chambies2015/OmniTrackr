@@ -1012,6 +1012,24 @@ class PublicProfile(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class ProfileWidgetLoad(Base):
+    """How many times a member's embedded widgets were loaded on a day, per widget and site (Nov 2026).
+
+    ``host`` is only the host name of the page showing the widget ("myanimelist.net"),
+    a known image proxy ("github.com" for GitHub's image cache), "" when the request
+    named no page, or "other". No page address, IP address or browser is stored.
+    """
+    __tablename__ = "profile_widget_loads"
+    __table_args__ = (UniqueConstraint("user_id", "day", "kind", "host", name="uq_profile_widget_load"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = Column(Date, nullable=False, index=True)
+    kind = Column(String(16), nullable=False)
+    host = Column(String(64), nullable=False, default="")
+    loads = Column(Integer, nullable=False, default=0)
+
+
 class EmailCampaign(Base):
     """A one-time product update email (e.g. "What's new"), started by the site owner."""
     __tablename__ = "email_campaigns"
