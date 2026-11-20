@@ -48,6 +48,11 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   }
 
+  // The byline's count, from the doors open where the reader is (the server counts every time zone).
+  function countText(unlocked) {
+    return unlocked >= TOTAL ? `All ${TOTAL} doors are open` : `${unlocked} of ${TOTAL} doors open`;
+  }
+
   function progressText(opened, unlocked) {
     if (!unlocked) return 'The first door opens on December 1.';
     if (opened >= TOTAL) return `All ${TOTAL} doors opened. That's the whole calendar.`;
@@ -114,6 +119,8 @@
         ready.push(day);
       }
     });
+    const count = root.querySelector('[data-advent-count]');
+    if (count && !single) count.textContent = countText(ready.length);
 
     function render() {
       doors.forEach(link => {
@@ -310,10 +317,13 @@
     if (!doors.length) return null;
     const opened = cleanDays(data.opened_days);
     const newest = doors[doors.length - 1];
+    const total = Number(data.total) || TOTAL;
     return {
-      newest: Number(newest.day), hint: String(newest.hint || ''), total: Number(data.total) || TOTAL,
+      newest: Number(newest.day), hint: String(newest.hint || ''), total,
       unlocked: doors.length, opened, newestOpened: opened.includes(Number(newest.day)),
       missed: doors.filter(door => !opened.includes(Number(door.day))).length,
+      // After Christmas Eve there is no "today's door", only ones left to catch up on.
+      finished: Number(newest.day) >= total && (newest.date || '') < today,
     };
   }
 
@@ -323,6 +333,9 @@
     const count = view.opened.length;
     if (count >= view.total) {
       return { title: 'Every door opened', summary: 'You opened the whole calendar. Merry Christmas.', action: 'See the calendar' };
+    }
+    if (view.finished) {
+      return { title: `All ${view.total} doors are open`, summary: `${count} of ${view.total} opened. Every door stays open, so there's still time to catch up.`, action: 'Catch up' };
     }
     if (view.newestOpened) {
       const others = view.missed;
@@ -345,7 +358,7 @@
     $('adventCardSummary').textContent = copy.summary;
     const link = $('adventCardLink');
     link.textContent = copy.action;
-    link.href = view.newestOpened ? '/holidays/advent-calendar#calendar' : `/holidays/advent-calendar#door-${view.newest}`;
+    link.href = view.newestOpened || view.finished ? '/holidays/advent-calendar#calendar' : `/holidays/advent-calendar#door-${view.newest}`;
     const strip = $('adventCardDoors');
     if (strip) {
       strip.replaceChildren();
@@ -353,7 +366,7 @@
         const cell = document.createElement('li');
         if (day <= view.unlocked) cell.classList.add('is-ready');
         if (view.opened.includes(day)) cell.classList.add('is-opened');
-        if (day === view.newest) cell.classList.add('is-today');
+        if (day === view.newest && !view.finished) cell.classList.add('is-today');
         strip.appendChild(cell);
       }
     }
@@ -410,7 +423,7 @@
     window.resetAdventCard = resetAdventCard;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { cleanDays, localDate, progressText, cardView, cardCopy, cardSeason };
+    module.exports = { cleanDays, localDate, countText, progressText, cardView, cardCopy, cardSeason };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

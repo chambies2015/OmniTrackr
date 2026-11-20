@@ -234,6 +234,30 @@ def test_dashboard_card(authenticated_client, at):
     assert authenticated_client.get("/api/advent-calendar").json() == {"show": False}
 
 
+def test_dashboard_card_lasts_until_december_ends_everywhere(authenticated_client, at):
+    # 15:00 UTC on December 31 is still mid-morning in New York, though it's January 1 in UTC+14.
+    at(datetime(2026, 12, 31, 15, 0))
+    assert authenticated_client.get("/api/advent-calendar").json()["show"] is True
+    # Noon UTC on January 1 is the first moment it's January everywhere (UTC-12).
+    at(datetime(2027, 1, 1, 11, 59))
+    assert authenticated_client.get("/api/advent-calendar").json()["show"] is True
+    at(datetime(2027, 1, 1, 12, 0))
+    assert authenticated_client.get("/api/advent-calendar").json() == {"show": False}
+
+
+def test_page_byline_count_can_be_corrected_for_the_reader(client, at):
+    html = client.get("/holidays/advent-calendar").text
+    # The server counts doors open anywhere; advent-calendar.js rewrites this for the reader's own day.
+    assert '<span data-advent-count>6 of 24 doors open</span>' in html
+
+
+def test_december_edition_stays_linked_in_january(client, at, monkeypatch):
+    from app.routers import advent_calendar as page
+    related = page._related(date(2027, 1, 2), 2026)
+    assert "/discover/monthly/december-2026" in related
+    assert "/discover/monthly/december-2027" not in related
+
+
 # ---------------------------------------------------------------- reminders
 
 def _device(db_session, user, time_zone="America/New_York"):

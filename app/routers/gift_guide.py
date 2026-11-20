@@ -17,12 +17,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import affiliate, funnel, gift_lists, models, title_pages, title_search
+from .. import affiliate, funnel, gift_lists, models, seasonal, title_pages, title_search
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..gift_guides import GIFTS, GUIDE, SECTIONS, SIZE_LABELS
 from ..integer_bounds import PositiveDatabaseId
 from ..progress import lock_progress_owner
+from ..seasonal_guides import SEASONS
 from ..site_chrome import message_page
 from .discover import page
 
@@ -257,7 +258,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     parts = [
         '<article class="trail-guide sn-hub gg-guide" data-season-theme="holiday">',
         '<header class="hero hero--guide sn-hero"><span class="sn-hero__moon" aria-hidden="true"></span>',
-        f'<p class="eyebrow">HOLIDAY GIFT GUIDE {today.year}</p>',
+        f'<p class="eyebrow">HOLIDAY GIFT GUIDE {seasonal.season_year(SEASONS["holidays"], today)}</p>',
         f'<h1>{_e(GUIDE["headline"])}</h1><p class="guide-deck">{_e(GUIDE["deck"])}</p>',
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time> · {total} gift ideas for nine kinds of fan</p>',

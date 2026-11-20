@@ -94,6 +94,8 @@ CHALLENGES: dict[str, dict] = {
         "name": "Close the year kindly",
         "tagline": "Finish a few things across formats and leave notes your January self will thank you for.",
         "published": "2026-10-10",
+        # The December edition (out December 1) is written around this challenge's four titles in three formats.
+        "edition": "december-2026",
         "intro": [
             "December is when Year in Review fills in, and it is tempting to treat the last month as a sprint to pad the numbers. This challenge is designed for the opposite mood. It asks you to finish a handful of things across more than one format and to leave a short note on a couple of them, so that the year ends with a record you will actually want to reread.",
             "Holiday breaks are good for long games and box sets, and short gaps between plans are good for albums and films. Mix them however suits your month. Anything you mark finished in December counts, whenever you joined.",

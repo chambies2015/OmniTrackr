@@ -67,7 +67,7 @@ GUIDE = {
          "name": "Cyber Monday",
          "text": "Online only. Prices from the weekend mostly hold, and subscriptions and digital storefronts tend to "
                  "push their offers today."},
-        {"date": "2026-12-17", "day": "From Dec 17", "label": "to Jan 4", "tone": "",
+        {"date": "2026-12-17", "ends": "2027-01-04", "day": "From Dec 17", "label": "to Jan 4", "tone": "",
          "name": "Steam Winter Sale",
          "text": "Valve moved its Autumn Sale to the start of October this year, so the next site-wide Steam sale is "
                  "the winter one, from December 17 to January 4."},

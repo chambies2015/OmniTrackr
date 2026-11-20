@@ -277,3 +277,13 @@ def test_every_curated_challenge_is_well_formed():
                 assert step["edition"] in MONTHLY_EDITIONS
             if step["kind"] == "category":
                 assert step["category"] in challenges.FORMAT_NOUNS
+
+
+def test_december_challenge_reads_alongside_the_december_edition(client, monkeypatch):
+    from app import discover_catalog
+    from app.routers import challenges as challenges_router
+    monkeypatch.setattr(challenges, "month_key", lambda today=None: "2026-12")
+    monkeypatch.setattr(challenges_router, "published_editions", lambda today=None: discover_catalog.MONTHLY_EDITIONS)
+    assert challenges.CHALLENGES["2026-12"]["edition"] in discover_catalog.MONTHLY_EDITIONS
+    html = client.get("/challenges/december-2026").text
+    assert "Reading for the month" in html and 'href="/discover/monthly/december-2026"' in html

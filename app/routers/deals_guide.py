@@ -8,10 +8,11 @@ the library each time the page loads.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from html import escape
 from typing import Optional
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -31,6 +32,13 @@ MEMBER_WAITING = 8
 MEMBER_FAVOURITES = 4
 BLACK_FRIDAY = "2026-11-27"
 CYBER_MONDAY = "2026-11-30"
+# The sales are American and start at midnight Eastern, so the page counts days there,
+# not in UTC (which would call it Black Friday from 7pm on Thanksgiving).
+SALES_ZONE = ZoneInfo("America/New_York")
+
+
+def _today() -> date:
+    return datetime.now(SALES_ZONE).date()
 
 
 def _e(value) -> str:
@@ -81,6 +89,8 @@ def _calendar(today: date) -> str:
             now = index
     if now is not None and today > date.fromisoformat(CYBER_MONDAY) and now < len(entries) - 1:
         now = None  # between Cyber Monday and the Steam sale nothing is "on"
+    if now is not None and entries[now].get("ends") and today > date.fromisoformat(entries[now]["ends"]):
+        now = None  # the last sale is over too
     days = []
     for index, entry in enumerate(entries):
         classes = "bf-day" + (" bf-day--big" if entry["tone"] == "big" else "") + (" bf-day--now" if index == now else "")
@@ -243,7 +253,7 @@ def _related(today: date) -> str:
 
 def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None,
                   suggestions: Optional[dict] = None, today: Optional[date] = None) -> str:
-    today = today or date.today()
+    today = today or _today()
     sections = ordered_sections(counts if signed_in else None)
     jump = "".join(f'<a href="#{_e(section["key"])}">{_e(section["name"])}</a>' for section in sections)
     faq = "".join(f'<details class="sn-faq__item"><summary>{_e(question)}</summary><p>{_e(answer)}</p></details>'

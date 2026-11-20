@@ -31,6 +31,18 @@ def test_season_year():
     assert year_in_review.season_year(date(2026, 10, 8)) is None
 
 
+def test_dashboard_banner_skips_members_who_joined_after_the_year(authenticated_client, db_session, monkeypatch):
+    monkeypatch.setattr(year_in_review, "season_year", lambda today=None: 2026)
+    user = _user(db_session)
+    user.created_at = datetime(2026, 6, 1)
+    db_session.commit()
+    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": 2026, "url": "/year-in-review/2026"}
+    # Signed up on New Year's Day: there is no 2026 to look back on.
+    user.created_at = datetime(2027, 1, 1, 9, 0)
+    db_session.commit()
+    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": None, "url": None}
+
+
 def test_private_recap_counts_finishes_once(authenticated_client, db_session):
     year = _seed(authenticated_client, db_session)
     data = authenticated_client.get(f"/api/year-in-review/{year}").json()
