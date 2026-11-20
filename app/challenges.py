@@ -22,7 +22,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import models, title_pages, year_in_review
+from . import diary, models, title_pages, year_in_review
 from .discover_catalog import MONTHLY_EDITIONS, published_editions
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -46,6 +46,8 @@ FORMAT_NOUNS = {
 #   before      finish one title released before ``year``
 #   category    finish ``count`` titles of one format (``category``)
 #   waiting     finish ``count`` titles that were already in the library before the month began
+#   revisit     revisit ``count`` titles: a journal "Revisited" entry, or another finish of a title finished before
+# A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
         "name": "Stay with the strange",
@@ -137,6 +139,31 @@ CHALLENGES: dict[str, dict] = {
         ],
         "reflection": "If you went back to an original this month, did knowing a new version was coming change how you read, watched or played it?",
     },
+    "2027-02": {
+        "name": "Love in every form",
+        "tagline": "Finish one of February's nine love stories, go back to something you already love and write down why.",
+        "published": "2027-02-01",
+        # The February edition (out February 1) has nine love stories, one per format, no two of the same kind.
+        "edition": "february-2027",
+        # A rewatch or reread logged in the journal counts as a finish for every step this month.
+        "revisits_count": True,
+        "intro": [
+            "February has Valentine's Day in the middle of it, and for two weeks every service recommends the same handful of romantic comedies. This challenge, and the February edition it pairs with, take a wider view of what a love story can be. The edition's nine picks include a first love that never happened, a couple who decide to have a baby after six days, two young women who share a name and an apartment, and marriages talked through in a therapist's office. The challenge asks you to finish one of them, to go back to something you have loved for years, and to write a line about why you love something, which is the part most of us skip.",
+            "February is also the shortest month, so the steps are small. A rewatch, reread or replay that you log in your Journal counts as a finish for every step this month, so one evening with an old favourite and a sentence afterwards can cover two of the three. Anything you finish or revisit in February counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "february-2027",
+             "label": "Finish one pick from the February edition",
+             "detail": "The February edition has nine love stories, one in each format OmniTrackr tracks. Past Lives is a single evening at 106 minutes, and To the Moon takes most players about four hours. Nana runs to twenty-one volumes and 69 Love Songs to almost three hours, so start those in the first week. If you have seen or read one of the nine before, a rewatch or reread you log this month counts too."},
+            {"kind": "revisit", "count": 1,
+             "label": "Go back to something you love",
+             "detail": "Rewatch a film you know by heart, reread a book you keep lending out, replay a game or put an old album on from the first track. Then log it in your Journal as Revisited: the Log a revisit button on the challenge card opens the Journal with that already chosen. Logging a second finish of something you finished before counts as well, the same way your diary marks it as a rewatch or reread. If the title isn't in your library yet, add it first."},
+            {"kind": "reflect", "count": 1,
+             "label": "Write down what you love about one",
+             "detail": "Rate one of this month's finishes or revisits, or add a line about it. A takeaway on the finish screen counts, and so does a private note when you log a revisit. Most libraries are full of scores with nothing to say what earned them, and next February the sentence is the part you will want to read again. Notes and takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which of this month's love stories would you not have called a love story before you finished it?",
+    },
 }
 
 # Used for any month without a curated challenge, so the dashboard card never breaks.
@@ -218,9 +245,10 @@ def public_months(today: Optional[date] = None) -> list[str]:
 def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
     """Titles finished in the month; each title counts once, however many times it was logged."""
     start, end = month_bounds(month)
+    actions = diary.DIARY_ACTIONS if challenge_for(month).get("revisits_count") else ("completed",)
     entries = db.query(models.ActivityEntry).filter(
         models.ActivityEntry.user_id == user_id,
-        models.ActivityEntry.action == "completed",
+        models.ActivityEntry.action.in_(actions),
         models.ActivityEntry.occurred_at >= start,
         models.ActivityEntry.occurred_at < end,
     ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).all()
@@ -296,6 +324,28 @@ def _waiting_count(db: Session, user_id: int, month: str, finishes: list[dict]) 
     return count
 
 
+def _revisit_count(db: Session, user_id: int, month: str) -> int:
+    """Titles revisited in the month, counted the way the diary labels a rewatch, reread, replay or relisten.
+
+    A journal "Revisited" entry counts, and so does a logged finish of a title that already had
+    an earlier finish or revisit (diary.visit_numbers). Each title counts once however often it
+    was revisited.
+    """
+    start, end = month_bounds(month)
+    entries = db.query(models.ActivityEntry).filter(
+        models.ActivityEntry.user_id == user_id,
+        models.ActivityEntry.action.in_(diary.DIARY_ACTIONS),
+        models.ActivityEntry.category.in_(tuple(FORMAT_NOUNS)),
+        models.ActivityEntry.occurred_at >= start,
+        models.ActivityEntry.occurred_at < end,
+    ).all()
+    if not entries:
+        return 0
+    visits = diary.visit_numbers(db, user_id, entries)
+    return len({diary._key(entry.category, entry.title) for entry in entries
+                if diary.is_repeat(entry, visits.get(entry.id, 1))})
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     edition = MONTHLY_EDITIONS.get(slug) or {}
     return {(item["category"], title_pages.normalize(item["title"])) for item in edition.get("items", [])}
@@ -324,6 +374,8 @@ def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict], mon
         return count, 1
     if kind == "waiting":
         return _waiting_count(db, user_id, month, finishes), step.get("count", 1)
+    if kind == "revisit":
+        return _revisit_count(db, user_id, month), step.get("count", 1)
     return 0, 1
 
 
