@@ -206,7 +206,8 @@ def check_in_page(token: str, request: Request, pick: Optional[int] = None, a: s
         settled = sorted(settled + [pick])
     if not r and _person(request):  # our own redirects after a button press carry r=1
         check_in.count(f"opened_{data['source']}")
-        if picked == "still" and pick is not None:
+        if picked == "still" and pick is not None and data["source"] != "week":
+            # Only where the link itself answers; from the Sunday nudge the press counts it.
             check_in.count(f"still_{data['source']}")
     suggestions = check_in.picks(db, user.id)
     signed_in = viewer is not None and viewer.id == user.id
