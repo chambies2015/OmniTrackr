@@ -56,6 +56,8 @@ body.public-reader {
 .public-reader :is(.privacy-section, .content-section, .public-section) h3 { color: var(--site-text); font-size: 1.1rem; line-height: 1.45; margin: 28px 0 10px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) h4 { color: var(--site-text); font-size: 1rem; margin: 20px 0 8px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) :is(p, li) { color: var(--site-soft); font-size: 1.0625rem; }
+/* A long address written out as a link (the GitHub one on /contact) wraps on a 320px phone instead of widening the page. */
+.public-reader :is(.privacy-section, .content-section, .public-section) :is(p, li) a { overflow-wrap: break-word; }
 .public-reader :is(.privacy-section, .content-section, .public-section) p { margin: 0 0 16px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) strong { color: var(--site-text); }
 .public-reader :is(.privacy-section, .content-section, .public-section) :is(ul, ol) { margin: 14px 0 22px; padding-left: 24px; }
