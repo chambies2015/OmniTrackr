@@ -334,7 +334,11 @@ def test_embed_page_offers_every_pairing(client, db_session, counters):
     assert codes["now"]["auto-svg"]["markdown"] == ("[![What pagefan is into right now on OmniTrackr]"
                                                      "(https://omnitrackr.xyz/u/pagefan/widget/now.svg?theme=auto)]"
                                                      "(https://omnitrackr.xyz/u/pagefan?utm_source=profile-widget)")
-    assert codes["badge"]["dark-png"]["preview"] == "/u/pagefan/widget/badge.png?scale=2"
+    assert all("preview" not in found for pairs in codes.values() for found in pairs.values())
+    # Each pairing's preview is an image already on the page; only dark PNG shows until a button is pressed.
+    assert '<img src="/u/pagefan/widget/badge.png?scale=2" data-widget-variant="dark-png"' in html
+    assert ('<img src="/u/pagefan/widget/now.svg?theme=auto" data-widget-variant="auto-svg" '
+            'alt="Right now widget preview" width="720" height="280" loading="lazy" hidden>') in html
     assert 'height="20"' in codes["badge"]["dark-svg"]["html"] and "width=" not in codes["badge"]["dark-svg"]["html"]
 
 

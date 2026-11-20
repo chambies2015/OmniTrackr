@@ -19,7 +19,7 @@ from ..site_chrome import apply_site_chrome
 from .profiles import TITLE_CSS_VERSION, _e, _viewer_id
 
 router = APIRouter(tags=["profiles"])
-CSS_VERSION = "20261120-badges-1"
+CSS_VERSION = "20261120-badges-2"
 FORMATS = (
     ("html", "HTML", "Blogs, personal sites and GitHub READMEs"),
     ("markdown", "Markdown", "GitHub, Obsidian and most wikis"),
@@ -150,21 +150,25 @@ def _format_html(kind: str, codes: dict) -> str:
     return rows
 
 
-def _widget_card(user: models.User, kind: str, codes: dict, first: bool) -> str:
+def _widget_card(user: models.User, kind: str, variants: dict, first: bool) -> str:
     title, blurb = profile_widgets.LABELS[kind]
     width = profile_widgets.WIDTHS.get(kind)
     height = profile_widgets.HEIGHTS[kind]
     size = f' width="{width}" height="{height}"' if width else f' height="{height}"'
-    # Relative addresses for the previews, so they load from whichever host serves the page.
-    preview = codes["preview"]
-    lazy = "" if first else ' loading="lazy"'
+    # One preview per colors and file pairing; the page script only shows and hides them. Lazy images
+    # that stay hidden are never fetched. Relative addresses, so they load from whichever host serves the page.
+    previews = ""
+    for key, codes in variants.items():
+        shown = key == "dark-png"
+        lazy = "" if first and shown else ' loading="lazy"'
+        previews += (f'<img src="{_e(codes["preview"])}" data-widget-variant="{_e(key)}" '
+                     f'alt="{_e(title)} widget preview"{size}{lazy}{"" if shown else " hidden"}>')
     return (f'<section class="title-section widget-card widget-card--{kind}" data-widget-kind="{kind}" '
             f'aria-labelledby="widget-{kind}">'
             f'<h2 id="widget-{kind}">{_e(title)}</h2><p class="widget-card__blurb">{_e(blurb)}</p>'
-            f'<div class="widget-preview widget-preview--{kind}"><img src="{_e(preview)}" '
-            f'alt="{_e(title)} widget preview"{size}{lazy}></div>'
+            f'<div class="widget-preview widget-preview--{kind}">{previews}</div>'
             f'<details class="widget-codes"{" open" if first else ""}><summary>Get the code</summary>'
-            f'{_format_html(kind, codes)}</details>'
+            f'{_format_html(kind, variants["dark-png"])}</details>'
             f'</section>')
 
 
@@ -205,7 +209,7 @@ def render_page(db: Session, user: models.User, profile: models.PublicProfile, *
     kinds = profile_widgets.available(db, user, profile)
     ordered = [kind for kind in PAGE_ORDER if kind in kinds]
     codes = {kind: profile_widgets.variants(user, kind) for kind in ordered}
-    cards = "".join(_widget_card(user, kind, codes[kind]["dark-png"], index == 0) for index, kind in enumerate(ordered))
+    cards = "".join(_widget_card(user, kind, codes[kind], index == 0) for index, kind in enumerate(ordered))
     intro = (f"Put your OmniTrackr profile in your forum signature, blog, GitHub README or AniList bio. "
              f"Widgets update by themselves as you track, and only show what your public profile already shows."
              if is_owner else
@@ -226,7 +230,10 @@ def render_page(db: Session, user: models.User, profile: models.PublicProfile, *
         summary = profile_widgets.owner_summary(db, user.id)
         owner = (f'<p class="widget-loads" id="widgetLoads">{_e(profile_widgets.summary_sentence(summary))}</p>'
                  + _missing_note(kinds))
-    # Every theme and file pairing, for the Colors and File buttons. Text only: the page script reads it.
+    # Every theme and file pairing's embed code, for the Colors and File buttons. Text only: the page
+    # script copies it into the code boxes. The previews are already on the page as images.
+    codes = {kind: {key: {field: value for field, value in found.items() if field != "preview"}
+                    for key, found in pairs.items()} for kind, pairs in codes.items()}
     data = json.dumps(codes, separators=(",", ":")).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     page = f"""<!DOCTYPE html>
 <html lang="en">

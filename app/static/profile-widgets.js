@@ -1,6 +1,6 @@
 // Profile widgets page: colors (dark, light, auto) and file (PNG, SVG) for every preview and
-// embed code, plus the copy buttons. The codes for each pairing come from the page itself
-// (#widgetCodes); nothing here builds an address.
+// embed code, plus the copy buttons. Each pairing's preview is already an image on the page and
+// its codes come from the page itself (#widgetCodes); nothing here builds or sets an address.
 (function () {
   'use strict';
 
@@ -51,12 +51,11 @@
     document.body.classList.toggle('is-auto', state.theme === 'auto');
     const key = `${state.theme}-${state.format}`;
     document.querySelectorAll('[data-widget-kind]').forEach(card => {
+      card.querySelectorAll('img[data-widget-variant]').forEach(img => {
+        img.hidden = img.getAttribute('data-widget-variant') !== key;
+      });
       const set = (codes[card.getAttribute('data-widget-kind')] || {})[key];
       if (!set) return;
-      const img = card.querySelector('.widget-preview img');
-      if (img && typeof set.preview === 'string' && set.preview.startsWith('/u/') && img.getAttribute('src') !== set.preview) {
-        img.setAttribute('src', set.preview);
-      }
       card.querySelectorAll('textarea[data-widget-field]').forEach(field => {
         const value = set[field.getAttribute('data-widget-field')];
         if (typeof value === 'string') field.value = value;

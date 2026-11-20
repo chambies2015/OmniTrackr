@@ -21,7 +21,7 @@ class Node {
   addEventListener(name, handler) { this.listeners[name] = handler; }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
   querySelectorAll(selector) {
-    if (selector === '.widget-preview img') return this.children.filter(child => child.attrs.tag === 'img');
+    if (selector === 'img[data-widget-variant]') return this.children.filter(child => child.attrs.tag === 'img');
     if (selector === 'textarea[data-widget-field]') return this.children.filter(child => child.attrs['data-widget-field']);
     return [];
   }
@@ -41,12 +41,15 @@ function setupPage() {
   const buttons = ['dark', 'light', 'auto'].map(theme => new Node({ 'data-widget-theme': theme }))
     .concat(['png', 'svg'].map(format => new Node({ 'data-widget-format': format })));
   const card = new Node({ 'data-widget-kind': 'signature' });
-  const img = new Node({ tag: 'img', src: CODES.signature['dark-png'].preview });
+  const imgs = Object.fromEntries(['dark-png', 'light-png', 'dark-svg', 'light-svg', 'auto-svg']
+    .map(key => [key, new Node({ tag: 'img', 'data-widget-variant': key })]));
+  Object.entries(imgs).forEach(([key, node]) => { node.hidden = key !== 'dark-png'; });
+  const img = { getAttribute: () => (Object.entries(imgs).find(([, node]) => !node.hidden) || [null])[0] };
   const html = new Node({ 'data-widget-field': 'html' });
   const markdown = new Node({ 'data-widget-field': 'markdown' });
-  card.children.push(img, html, markdown);
+  card.children.push(...Object.values(imgs), html, markdown);
   const badge = new Node({ 'data-widget-kind': 'badge' });
-  const badgeImg = new Node({ tag: 'img', src: '/u/dan/widget/badge.png?scale=2' });
+  const badgeImg = new Node({ tag: 'img', 'data-widget-variant': 'dark-png' });
   badge.children.push(badgeImg);
   const hint = new Node();
   const codes = new Node();
@@ -76,7 +79,7 @@ test('picking colors and file swaps every code and preview', () => {
   module.readCodes();
   module.pickTheme('light');
   assert.equal(html.value, 'light png html');
-  assert.equal(img.getAttribute('src'), CODES.signature['light-png'].preview);
+  assert.equal(img.getAttribute('src'), 'light-png');  // the one preview still showing
   assert.equal(body.classes.has('is-light'), true);
   assert.equal(buttons[1].getAttribute('aria-pressed'), 'true');
   module.pickTheme('dark');
@@ -101,11 +104,15 @@ test('auto needs SVG, and PNG takes auto back to dark', () => {
   assert.equal(module.state.theme, 'dark');
 });
 
-test('a preview address that is not a profile path is never used', () => {
+test('only the preview for the picked pairing shows', () => {
   const { module, badgeImg } = setupPage();
   module.readCodes();
   module.pickTheme('auto');
-  assert.equal(badgeImg.getAttribute('src'), '/u/dan/widget/badge.png?scale=2');
+  // The badge card has no auto SVG image in this page, so its dark PNG hides rather than showing the wrong one.
+  assert.equal(badgeImg.hidden, true);
+  module.pickTheme('dark');
+  module.pickFormat('png');
+  assert.equal(badgeImg.hidden, false);
 });
 
 // ---------------------------------------------------------------- Settings panel

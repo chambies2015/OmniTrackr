@@ -11,6 +11,7 @@
 .widget-card__blurb { color: var(--site-muted); margin: -4px 0 14px; }
 .widget-preview { min-width: 0; background: repeating-conic-gradient(rgba(255, 255, 255, .03) 0 25%, transparent 0 50%) 0 0 / 20px 20px; border: 1px dashed var(--site-border-strong); border-radius: 16px; padding: 16px; }
 .widget-preview img { display: block; height: auto; max-width: 720px; width: 100%; }
+.widget-preview img[hidden] { display: none; }
 .widget-preview--signature img { max-width: 540px; }
 .widget-preview--badge img { height: 40px; max-width: 100%; width: auto; }
 .widgets-page.is-light .widget-preview { background-color: #f4f2ff; }
