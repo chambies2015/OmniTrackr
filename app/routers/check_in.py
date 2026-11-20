@@ -79,8 +79,10 @@ def _score_buttons(index: int, prefix: str, current=None) -> str:
 
 
 def _item(index: int, item: dict, token: str, settled: list[int], pick: Optional[int], picked: str,
-          just_saved: Optional[int]) -> tuple[str, bool]:
-    """(html, answered) for one title."""
+          just_saved: Optional[int], week: bool = False) -> tuple[str, bool]:
+    """(html, answered) for one title. ``week``: the link came from the Your week Sunday nudge, where
+    "still going" means progress made this week, so it is worded that way and counts the day."""
+    still = "Made some progress" if week else "Still going"
     hidden = f'<input type="hidden" name="item" value="{index}"><input type="hidden" name="ok" value="{_e(",".join(map(str, settled)))}">'
     cover = (f'<img src="{_e(item["image"])}" alt="" width="96" height="144" loading="lazy" referrerpolicy="no-referrer">'
              if item.get("image") else f'<span class="ci-cover__initial" aria-hidden="true">{_e(item["title"][:1].upper())}</span>')
@@ -100,7 +102,8 @@ def _item(index: int, item: dict, token: str, settled: list[int], pick: Optional
         if item["finished"]:
             body = '<p class="ci-done"><span aria-hidden="true">✓</span> Finished. No score, and that’s fine.</p>'
         else:
-            body = ('<p class="ci-done"><span aria-hidden="true">✓</span> Still going. It stays on your list.</p>')
+            body = ('<p class="ci-done"><span aria-hidden="true">✓</span> Counted for this week. It stays on your list.</p>'
+                    if week else '<p class="ci-done"><span aria-hidden="true">✓</span> Still going. It stays on your list.</p>')
         return f'<li class="ci-item is-answered{focus}" id="ci-{index}">{head}{body}</div></li>', True
     if item["finished"]:
         body = (f'<form method="post" action="/check-in/{_e(token)}#ci-{index}">{hidden}'
@@ -114,13 +117,13 @@ def _item(index: int, item: dict, token: str, settled: list[int], pick: Optional
                 f'{_score_buttons(index, "finished")}'
                 '<div class="ci-actions"><button type="submit" name="choice" value="finished" class="ci-btn ci-btn--ghost">'
                 'Save as finished, no score</button>'
-                '<button type="submit" name="choice" value="still" class="ci-btn ci-btn--ghost">Not yet, still going</button></div></form>')
+                f'<button type="submit" name="choice" value="still" class="ci-btn ci-btn--ghost">{"Not yet, but I made progress" if week else "Not yet, still going"}</button></div></form>')
         return f'<li class="ci-item{focus}" id="ci-{index}">{head}{body}</div></li>', False
     body = (f'<form method="post" action="/check-in/{_e(token)}?pick={index}#ci-{index}">{hidden}'
             f'<p class="ci-q" id="ci-q-{index}">{_e(item["question"])}</p>'
             '<div class="ci-actions">'
             f'<button type="submit" name="choice" value="open" class="ci-btn">{_e(item["finished_label"])}</button>'
-            '<button type="submit" name="choice" value="still" class="ci-btn ci-btn--ghost">Still going</button></div></form>')
+            f'<button type="submit" name="choice" value="still" class="ci-btn ci-btn--ghost">{still}</button></div></form>')
     return f'<li class="ci-item{focus}" id="ci-{index}">{head}{body}</div></li>', False
 
 
@@ -140,8 +143,10 @@ def _picks_html(suggestions: list[dict]) -> str:
 
 
 def _content(user: models.User, items: list[dict], token: str, settled: list[int], pick: Optional[int],
-             picked: str, just_saved: Optional[int], suggestions: list[dict], signed_in: bool) -> str:
-    rendered = [_item(index, item, token, settled, pick, picked, just_saved) for index, item in enumerate(items)
+             picked: str, just_saved: Optional[int], suggestions: list[dict], signed_in: bool,
+             source: str = "checkin") -> str:
+    week = source == "week"
+    rendered = [_item(index, item, token, settled, pick, picked, just_saved, week) for index, item in enumerate(items)
                 if item is not None]
     answered = sum(1 for _, done in rendered if done)
     total = len(rendered)
@@ -151,6 +156,9 @@ def _content(user: models.User, items: list[dict], token: str, settled: list[int
         lead = ("That’s everything. Your library is up to date, and your scores are already shaping the picks below."
                 if suggestions and any(item and item["rating"] is not None for item in items)
                 else "That’s everything. Your library is up to date.")
+    elif week:
+        lead = ("Finished one, or got a bit further? Tap it and it counts toward your week. "
+                "It saves straight to your library, and you don’t need to sign in.")
     else:
         lead = "Tap an answer for each one. It saves straight to your library, and you don’t need to sign in."
     library_label = "Open my library" if signed_in else "Log in to my library"
@@ -158,7 +166,7 @@ def _content(user: models.User, items: list[dict], token: str, settled: list[int
     return (
         '<section class="ci" aria-labelledby="ciTitle">'
         '<header class="ci-head">'
-        '<p class="eyebrow">CHECK-IN</p>'
+        f'<p class="eyebrow">{"YOUR WEEK" if week else "CHECK-IN"}</p>'
         f'<h1 id="ciTitle">{"All caught up, " + _e(user.username) if all_done else "How’s it going, " + _e(user.username) + "?"}</h1>'
         f'<p class="ci-lead">{lead}</p>'
         f'<p class="ci-progress" role="status"><progress value="{answered}" max="{total}"></progress>'
@@ -192,7 +200,8 @@ def check_in_page(token: str, request: Request, pick: Optional[int] = None, a: s
     picked = a if a in ("finished", "still") else ""
     if pick is not None and items[pick] is None:
         pick = None
-    if pick is not None and picked == "still" and not items[pick]["finished"] and pick not in settled:
+    if (pick is not None and picked == "still" and not items[pick]["finished"] and pick not in settled
+            and data["source"] != "week"):  # from the Sunday nudge, "made progress" is a press, never a link
         # "Still going" changes nothing in the library, so the email's button answers straight away.
         settled = sorted(settled + [pick])
     if not r and _person(request):  # our own redirects after a button press carry r=1
@@ -204,7 +213,7 @@ def check_in_page(token: str, request: Request, pick: Optional[int] = None, a: s
     head = (f'<link rel="stylesheet" href="/static/check-in.css?v={CSS_VERSION}">'
             '<meta name="referrer" content="same-origin">')
     response = page("Check-in", "A quick check-in on titles in your OmniTrackr library.", "/check-in",
-                    _content(user, items, token, settled, pick, picked, saved, suggestions, signed_in),
+                    _content(user, items, token, settled, pick, picked, saved, suggestions, signed_in, data["source"]),
                     indexable=False, head=head, member=True)  # a member's page: no "create a free account" prompt
     return _private(response)
 
@@ -244,6 +253,12 @@ async def check_in_answer(token: str, request: Request, db: Session = Depends(ge
         settled = sorted(set(settled) | {index})
         if action == "still":
             check_in.count(f"still_{source}")
+            if source == "week" and index not in _indexes(str(form.get("ok", "")), size):
+                try:
+                    from .. import your_week
+                    your_week.note_logged(db, user)
+                except Exception:
+                    db.rollback()
     elif action in ("finished", "rate"):
         before = current
         result = check_in.answer(db, user, category, item_id, action, score)

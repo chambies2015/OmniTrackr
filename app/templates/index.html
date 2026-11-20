@@ -106,16 +106,16 @@
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/install-app.css?v=20261118-app-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261118-backlog-draw-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261120-your-week-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
-  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
+  <script src="./preauth.js?v=20261120-settle-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling :is(.home-board,#homeHero,#movies-tab,#mainFooter){visibility:hidden}
+    html.dashboard-settling :is(#homeHero,#friendRecs,#yearInReviewBanner,#libraryLaunchpad,#returnDeck,.home-board,#movies-tab,#mainFooter){visibility:hidden}
     .dashboard-skeleton{display:none}
     .dashboard-skeleton-anchor{position:relative;height:0}
     html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -609,6 +609,57 @@
          The rail turns into a swipeable row on phones (dashboard-home.css). -->
     <div class="home-board">
       <div class="home-board__main">
+        <!-- Your week: days logged Monday to Sunday, a pace the member picks, kept weeks in a row (your-week.js) -->
+        <section id="yourWeek" class="your-week" aria-labelledby="yourWeekTitle" hidden>
+          <div id="yourWeekRecap" class="your-week__recap" hidden>
+            <div class="your-week__recap-copy">
+              <p id="yourWeekRecapEyebrow" class="your-week__eyebrow">Last week</p>
+              <p id="yourWeekRecapTitle" class="your-week__recap-title"></p>
+              <p id="yourWeekRecapSummary" class="your-week__recap-summary"></p>
+            </div>
+            <ul id="yourWeekRecapCovers" class="your-week__covers" aria-label="Finished last week" hidden></ul>
+            <button type="button" id="yourWeekRecapDone" class="your-week__btn your-week__btn--primary">On to this week</button>
+          </div>
+          <div class="your-week__top">
+            <div class="your-week__copy">
+              <p id="yourWeekEyebrow" class="your-week__eyebrow">Your week</p>
+              <h2 id="yourWeekTitle" class="your-week__title">Your week</h2>
+              <p id="yourWeekSummary" class="your-week__summary"></p>
+            </div>
+            <div id="yourWeekRun" class="your-week__run">
+              <p id="yourWeekRunNumber" class="your-week__run-number" hidden></p>
+              <p id="yourWeekRunLabel" class="your-week__run-label"></p>
+              <ol id="yourWeekHistory" class="your-week__history" aria-label="The last eight weeks"></ol>
+            </div>
+          </div>
+          <ol id="yourWeekDays" class="your-week__days" aria-label="This week, Monday to Sunday"></ol>
+          <div id="yourWeekTouched" class="your-week__touched" hidden>
+            <p class="your-week__subhead">So far this week</p>
+            <ul id="yourWeekTouchedList" class="your-week__covers" aria-label="What you logged this week"></ul>
+          </div>
+          <div id="yourWeekPaces" class="your-week__paces" hidden>
+            <p id="yourWeekPacesTitle" class="your-week__subhead">Pick a pace</p>
+            <div id="yourWeekPaceList" class="your-week__pace-list" role="group" aria-labelledby="yourWeekPacesTitle"></div>
+            <p class="your-week__hint">Moving a show or book forward, finishing, rating, adding a title and journal notes all count. Change it whenever you like.</p>
+          </div>
+          <div id="yourWeekNudge" class="your-week__nudge" hidden>
+            <p id="yourWeekNudgeText" class="your-week__nudge-text"></p>
+            <div class="your-week__nudge-actions">
+              <button type="button" id="yourWeekEmail" class="your-week__btn" hidden>Email me on Sundays</button>
+              <button type="button" id="yourWeekPush" class="your-week__btn" hidden>Notify this device</button>
+              <button type="button" id="yourWeekNudgeOff" class="your-week__quiet" hidden>Turn the nudge off</button>
+            </div>
+          </div>
+          <p id="yourWeekStatus" class="your-week__status" role="status" aria-live="polite"></p>
+          <div class="your-week__foot">
+            <button type="button" id="yourWeekChange" class="your-week__quiet" aria-controls="yourWeekPaces" aria-expanded="false" hidden>Change pace</button>
+            <button type="button" id="yourWeekRest" class="your-week__quiet" hidden>Take this week off</button>
+            <button type="button" id="yourWeekUnrest" class="your-week__quiet" hidden>Count this week after all</button>
+            <button type="button" id="yourWeekStop" class="your-week__quiet" hidden>Stop keeping count</button>
+            <button type="button" id="yourWeekHide" class="your-week__quiet">Hide this card</button>
+          </div>
+        </section>
+
         <div class="daily-dashboard">
         <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
           <div class="library-pulse__header">
@@ -2594,7 +2645,8 @@
   <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
   <script src="/static/backlog-draw.js?v=20261118-backlog-draw-2" defer></script>
-  <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
+  <script src="/static/your-week.js?v=20261120-your-week-1" defer></script>
+  <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261118-sheet-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/taste-compare.js?v=20261116-invite-test-1" defer></script>

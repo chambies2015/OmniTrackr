@@ -258,7 +258,18 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "week_one": _week_one(db, days, now),
         "app": _installed_app(db, days, now),
         "backlog_draw": _backlog_draw(db, days, now),
+        "your_week": _your_week(db, days, now),
     }
+
+
+def _your_week(db: Session, days: int, now: datetime) -> dict:
+    """Your week: paces picked, weeks kept, Sunday nudges and who came back after one."""
+    try:
+        from .. import your_week
+        return your_week.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _backlog_draw(db: Session, days: int, now: datetime) -> dict:

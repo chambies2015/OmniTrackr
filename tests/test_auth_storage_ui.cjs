@@ -45,14 +45,20 @@ function harness({dashboard=false, readDenied=true, writeDenied=true, sessionDen
 }
 
 test('preauth startup tolerates denied localStorage and preserves stored sign-in styling',()=>{
-  const added=[],timers=[];
+  const added=[],timers=[],listeners=[];
   const context=vm.createContext({localStorage:{getItem(){throw new Error('denied');}},
-    document:{documentElement:{classList:{add(value){added.push(value);},remove(value){added.splice(added.indexOf(value),1);}}}},
+    document:{documentElement:{classList:{add(value){added.push(value);},remove(value){if(added.includes(value))added.splice(added.indexOf(value),1);}}},
+      addEventListener(type,callback,options){listeners.push({type,callback,options});}},
     setTimeout:(callback,delay)=>{timers.push({callback,delay});}});
   assert.doesNotThrow(()=>vm.runInContext(preauth,context));assert.equal(added.length,0);assert.equal(timers.length,0);
   context.localStorage.getItem=key=>key==='omnitrackr_token'?'legacy':null;
   vm.runInContext(preauth,context);assert.deepEqual(added,['authenticated','dashboard-settling']);
-  assert.equal(timers[0].delay,3000);timers[0].callback();assert.deepEqual(added,['authenticated']);
+  // Outer limit straight away; the three-second bound starts once the page has parsed.
+  assert.deepEqual(timers.map(timer=>timer.delay),[10000]);
+  assert.equal(listeners.length,1);assert.equal(listeners[0].type,'DOMContentLoaded');assert.equal(listeners[0].options.once,true);
+  listeners[0].callback();assert.equal(timers[1].delay,3000);assert.deepEqual(added,['authenticated','dashboard-settling']);
+  timers[1].callback();assert.deepEqual(added,['authenticated']);
+  timers[0].callback();assert.deepEqual(added,['authenticated']);
 });
 
 test('denied storage cannot turn a successful cookie login into an error or store a bearer token',async()=>{

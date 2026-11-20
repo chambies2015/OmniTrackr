@@ -25,7 +25,7 @@ from .titles import _script_json
 
 router = APIRouter()
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261118-browse-notes-1"
+CSS_VERSION = "20261120-speed-1"
 JS_VERSION = "20261031-browse-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
 PAGE_CACHE_SECONDS = 600

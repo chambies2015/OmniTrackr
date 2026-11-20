@@ -791,6 +791,7 @@ function resetDailyDashboard() {
   window.OmniStayPosted?.reset();
   window.OmniWeekOne?.reset();
   window.OmniBacklogDraw?.reset();
+  window.OmniYourWeek?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1805,6 +1806,8 @@ function runDashboardLayoutBatch() {
   window.OmniWeekOne?.refresh();
   // Draw from your backlog: shows with three or more titles saved and never started, in place of Today's pick.
   window.OmniBacklogDraw?.refresh();
+  // Your week: the day tiles light up as the member logs, so every batch after an edit asks again.
+  window.OmniYourWeek?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),
