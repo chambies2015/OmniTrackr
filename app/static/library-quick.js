@@ -76,8 +76,11 @@
         notice(text || 'That change did not save. Try again in a moment.');
         return false;
       }
-      // The heading's stat line and the status chip counts follow the change.
-      window.OmniHomeHero?.refresh?.();
+      // The heading's stat line and the status chip counts follow the change. Ticking off
+      // several titles in a row asks for the numbers once (each read is about 20 queries,
+      // limited to 60 a minute), not once a tick.
+      const hero = window.OmniHomeHero;
+      (hero?.refreshSoon || hero?.refresh)?.();
       return true;
     } catch (_) {
       notice('That change did not save. Check your connection and try again.');

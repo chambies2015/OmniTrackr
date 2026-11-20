@@ -3488,7 +3488,10 @@ function groupRowActions(cell) {
     const left = Math.min(window.innerWidth - width - 8, Math.max(8, box.right - width));
     const below = box.bottom + 6;
     const height = panel.offsetHeight || 180;
-    const top = below + height > window.innerHeight - 8 ? Math.max(8, box.top - height - 6) : below;
+    // On phones the bottom dock covers the last 70 px of the screen: open upwards before reaching it.
+    const dock = document.getElementById('appDock')?.getBoundingClientRect();
+    const floor = dock && dock.height && dock.top < window.innerHeight ? dock.top : window.innerHeight;
+    const top = below + height > floor - 8 ? Math.max(8, box.top - height - 6) : below;
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
   };

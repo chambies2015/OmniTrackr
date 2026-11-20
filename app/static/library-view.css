@@ -358,6 +358,11 @@ body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobil
   body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)):is(:hover, :focus-within) td.library-cell[data-card-field="actions"],
   body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"]:has(details[open]) { opacity: 1; }
 }
+/* An open ••• menu sits above the next covers' corner buttons. Each corner is its own stacking
+   layer (z-index 3), so without this the later cards' Edit and ••• were drawn over the menu on
+   touch screens, and their invisible (opacity 0) copies on desktop took the clicks meant for it. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr td.library-cell[data-card-field="actions"]:has(details.row-menu[open]),
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"]:has(details.row-menu[open]) { position: relative; z-index: 6; }
 /* With details open the card grows a section below the cover, and its actions go there. */
 body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr.card-expanded:not(:has(input, textarea, select)) td[data-card-field="actions"] { grid-row: auto; margin-top: 6px; }
 
@@ -511,6 +516,9 @@ body.app-shell .library-section:not(#lv) .library-pager:not(:has(button:enabled)
 }
 @media (max-width: 760px) {
   body.app-shell .library-section:not(#lv) .library-panel > .library-heading h2 { font-size: 1.3rem; }
+  /* At 320 px "Audiobooks" and the List/Shelf switch don't fit on one line: the switch drops below, still on the right. */
+  body.app-shell .library-section:not(#lv) .library-panel > .library-heading { flex-wrap: wrap; row-gap: 8px; }
+  body.app-shell .library-section:not(#lv) .library-panel > .library-heading > .library-heading__tools { margin-left: auto; }
   body.app-shell .library-section:not(#lv) .library-heading__stats { margin: 0 0 16px 2px; }
   body.app-shell .library-section:not(#lv) .library-heading__stats[style*="--done"]::after { flex-basis: 100%; height: 5px; }
 
