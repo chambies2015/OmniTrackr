@@ -27,6 +27,9 @@ Privacy floors:
   page already shows signed-in members the overlap. A taste match with no title we
   may name is dropped, so nobody is suggested on hidden overlap alone.
 * A taste match needs MIN_SHARED titles in common and a viewer library of MIN_LIBRARY.
+  Without the compare tastes link, only titles the profile shows count toward those, and
+  only they feed the score: matching on the rest of a library would let anyone add a
+  title to their own and see whether a member appears, which tests what's in theirs.
 * Nobody is told they were suggested, or to whom. "Not for me" is private and only
   hides the card.
 """
@@ -37,7 +40,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, literal, or_, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -212,18 +215,46 @@ def _note(shown: dict, kind: Optional[str], title: str, year: Optional[int], *, 
         entry["review_url"] = review_url
 
 
+def _shelves_with(db: Session, user_id: int) -> tuple[set[str], set[str]]:
+    """(shelves with a title rated as a favorite, shelves with a public review long enough to show), in one query.
+
+    It only tells the profile readers which shelves they can skip; what a profile shows is
+    still decided by public_profiles. Reading all nine shelves for both took 18 queries a profile.
+    """
+    parts = []
+    for index, (model, _, _, _, _) in enumerate(_KIND_MODELS):
+        favorite = case((model.rating >= public_profiles.FAVORITE_MIN_RATING, 1), else_=0)
+        review = case((and_(model.review_public == True, model.review.isnot(None),
+                            func.length(func.trim(model.review)) >= title_pages.REVIEW_MIN_CHARS), 1), else_=0)
+        parts.append(select(literal(index).label("shelf"), func.max(favorite).label("favorite"),
+                            func.max(review).label("review")).where(model.user_id == user_id))
+    favorites, reviews = set(), set()
+    for index, favorite, review in db.execute(union_all(*parts)).all():
+        category = _KIND_MODELS[int(index)][2]
+        if favorite:
+            favorites.add(category)
+        if review:
+            reviews.add(category)
+    return favorites, reviews
+
+
+_KIND_MODELS = tuple(title_pages.KINDS.values())
+
+
 def _build_shown(db: Session, user: models.User, profile: models.PublicProfile) -> dict:
     """{pool key: title facts} for every title this member's profile shows anyone right now."""
     shown: dict = {}
     for entry in public_profiles.showcase_items(db, user):
         _note(shown, entry["kind"], entry["title"], entry["year"], url=entry["url"], image=entry["image"],
               rated=True, rating=entry["rating"])
-    if profile.show_favorites:
-        for entry in public_profiles._favorites(db, user):
+    favorite_shelves, review_shelves = (_shelves_with(db, user.id) if profile.show_favorites or profile.show_reviews
+                                        else (set(), set()))
+    if profile.show_favorites and favorite_shelves:
+        for entry in public_profiles._favorites(db, user, categories=favorite_shelves):
             _note(shown, entry["kind"], entry["title"], entry["year"], url=entry["url"], image=entry["image"],
                   rated=True, rating=entry["rating"])
-    if profile.show_reviews:
-        for review in public_profiles._reviews(db, user):
+    if profile.show_reviews and review_shelves:
+        for review in public_profiles._reviews(db, user, categories=review_shelves):
             kind = title_pages.REVIEW_TO_KIND.get(review["category"])
             matches, year = _year_from_path(review["title_url"], review["title"])
             if kind and matches:
@@ -353,43 +384,48 @@ def _taste(db: Session, viewer: models.User, candidates: dict, mine: dict, want:
     except Exception:
         db.rollback()
         return []
-    dot: dict[int, float] = {}
-    overlap: dict[int, int] = {}
-    for key, entry in mine.items():
+    # Titles each candidate has in common with you, from the shelves they share. This is only a
+    # first cut: for a profile without the compare link, what counts is settled below from what it shows.
+    common: dict[int, list] = {}
+    for key in mine:
         pooled = shared_pool.titles.get(key)
         if pooled is None:
             continue
         for other in pooled["members"]:
-            if other not in candidates:
-                continue
-            like = shared_pool.likes.get(other, {}).get(key)
-            if like is None:
-                continue
-            dot[other] = dot.get(other, 0.0) + entry["like"] * like
-            overlap[other] = overlap.get(other, 0) + 1
+            if other in candidates and key in shared_pool.likes.get(other, {}):
+                common.setdefault(other, []).append(key)
     my_norm = sum(entry["like"] ** 2 for entry in mine.values()) ** 0.5 or 1.0
-    scored = []
-    for other, value in dot.items():
-        if value <= 0 or overlap[other] < MIN_SHARED:
-            continue
-        shrink = overlap[other] / (overlap[other] + 2.0)
-        scored.append((value / (my_norm * shared_pool.norms.get(other, 1.0)) * shrink, other))
-    scored.sort(key=lambda pair: (-pair[0], pair[1]))
-    cards = []
-    for score, other in scored[:TASTE_CANDIDATES]:
-        if len(cards) >= want:
+
+    def score(other: int, keys: list) -> float:
+        theirs = shared_pool.likes.get(other, {})
+        value = sum(mine[key]["like"] * theirs[key] for key in keys)
+        return value / (my_norm * shared_pool.norms.get(other, 1.0)) * (len(keys) / (len(keys) + 2.0))
+
+    # Best whole-library overlap first, so the profiles most likely to match are read first. The order
+    # only picks which profiles get read (TASTE_CANDIDATES at most); a profile that is read matches or
+    # not on what it may count.
+    order = sorted((other for other, keys in common.items() if len(keys) >= MIN_SHARED),
+                   key=lambda other: (-score(other, common[other]), other))
+    found = []
+    for other in order[:TASTE_CANDIDATES]:
+        if len(found) >= want:
             break  # Each profile checked costs a few queries the first time; stop once there are enough.
         user, profile = candidates[other]
         kinds = _visible_kinds(user)
         theirs = shared_pool.likes.get(other, {})
-        shared = [key for key in mine if key in theirs and key[0] in kinds]
+        shared = [key for key in common[other] if key[0] in kinds]
         if len(shared) < MIN_SHARED:
             continue
         link_on = bool(profile.show_taste_match)
         shown = shown_titles(db, user, profile)
+        # With the compare tastes link on, that page already shows signed-in members the whole overlap.
+        # Without it, only titles the profile shows anyone may count, be scored or be named.
         nameable = shared if link_on else [key for key in shared if key in shown]
-        if not nameable:
-            continue  # Never suggest someone on overlap their profile doesn't show.
+        if len(nameable) < MIN_SHARED:
+            continue
+        value = score(other, nameable)
+        if value <= 0:
+            continue
 
         def their_rating(key):
             facts = shown.get(key)
@@ -414,8 +450,9 @@ def _taste(db: Session, viewer: models.User, candidates: dict, mine: dict, want:
             extra["compare_url"] = public_profiles.profile_path(user) + "/match"
             if len(shared) > len(named):
                 reason += f", and {len(shared) - len(named)} more in common"
-        cards.append(_card(user, profile, "taste", reason, titles, **extra))
-    return cards
+        found.append((value, other, _card(user, profile, "taste", reason, titles, **extra)))
+    found.sort(key=lambda entry: (-entry[0], entry[1]))
+    return [card for _, _, card in found]
 
 
 def _signals(db: Session, viewer: models.User, visitor_hash: Optional[str], candidates: dict) -> list[dict]:
@@ -454,7 +491,7 @@ def _shelf(db: Session, candidates: dict, mine: dict, want: int = PAGE_LIMIT) ->
             break
         user, profile = candidates[uid]
         try:
-            reviews = public_profiles._reviews(db, user)
+            reviews = public_profiles._reviews(db, user, categories=_shelves_with(db, user.id)[1])
         except Exception:
             db.rollback()
             continue

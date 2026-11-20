@@ -268,7 +268,7 @@ test('expired, future, and malformed stored selections are ignored', async () =>
     JSON.stringify({ at: String(now), keys: ['book-pick'] }),
     JSON.stringify({ at: now, keys: 'book-pick' }),
     JSON.stringify({ at: now, keys: [3] }),
-    JSON.stringify({ at: now, keys: Array(7).fill('book-pick') }),
+    JSON.stringify({ at: now, keys: Array(10).fill('book-pick') }),
   ];
   for (const value of invalidValues) {
     const s = setup({ hash: '#save-picks', storage: new Map([[selectionKey, value]]) });
@@ -277,6 +277,15 @@ test('expired, future, and malformed stored selections are ignored', async () =>
     assert.equal(s.requests.length, 1, value);
     assert.equal(s.get('saveForm').hidden, false, value);
   }
+});
+
+test('a full nine-pick edition selection comes back after signing in', async () => {
+  // Monthly editions hold one pick per format, nine in all, and the save endpoint takes nine.
+  const keys = ['book-pick', 'anime-pick', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9'];
+  const s = setup({ hash: '#save-picks', storage: new Map([[selectionKey, JSON.stringify({ at: now, keys })]]) });
+  await settle();
+  assert.deepEqual(s.inputs().filter(input => input.checked).map(input => input.value), ['book-pick', 'anime-pick']);
+  assert.equal(s.storage.size, 0);
 });
 
 test('saved selection is scoped to its trail and cannot introduce nonexistent picks', async () => {

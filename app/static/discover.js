@@ -41,11 +41,12 @@
   let selectedKeys = null;
   let busy = false;
 
-  // Only public catalog keys are retained, never library matches or account data.
+  // Only public catalog keys are retained, never library matches or account data. Up to nine,
+  // the most an edition holds (the save endpoint takes the same).
   try {
     const saved = JSON.parse(sessionStorage.getItem(selectionKey));
     if (saved && Number.isFinite(saved.at) && saved.at <= Date.now() && Date.now() - saved.at < 86400000
-      && Array.isArray(saved.keys) && saved.keys.length <= 6 && saved.keys.every(key => typeof key === 'string')) {
+      && Array.isArray(saved.keys) && saved.keys.length <= 9 && saved.keys.every(key => typeof key === 'string')) {
       selectedKeys = saved.keys;
     }
     sessionStorage.removeItem(selectionKey);
