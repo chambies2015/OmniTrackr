@@ -67,7 +67,7 @@ def test_pages_ask_for_the_new_copies_of_the_files():
         tags[name] = found.group(0)
     assert tags["auth-forms.css"] in INDEX
     # preauth.js is matched by its exact tag when the public page is built.
-    assert './preauth.js?v=20261010-audit-preauth-1' in INDEX
+    assert './preauth.js?v=20261120-settle-1' in INDEX
 
 
 def test_served_homepage_has_the_card_and_the_pop_up(client):

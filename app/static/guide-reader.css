@@ -89,7 +89,7 @@
   position: relative;
 }
 .trail-guide .guide-byline::before {
-  background: url(/static/vortex-mark.webp) center / cover no-repeat, var(--site-bg-3);
+  background: url(/vortex-mark.webp) center / cover no-repeat, var(--site-bg-3);
   border: 1px solid var(--site-border-strong);
   border-radius: 50%;
   content: "";

@@ -219,13 +219,31 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
     return list(year_in_review.fold_deleted_copies(finished).values())
 
 
-def _release_year(db: Session, finish: dict) -> Optional[int]:
-    kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
-    if kind is None or finish["item_id"] is None:
-        return None
-    model = title_pages.KINDS[kind][0]
-    item = db.get(model, finish["item_id"])
-    return title_pages.item_year(kind, item) if item is not None else None
+def _release_years(db: Session, finishes: list[dict]) -> dict[tuple[str, int], Optional[int]]:
+    """Release years of the finished titles: one query per format, not one per title.
+
+    The card used to look each title up on its own, so a member with 100 finishes this
+    month cost 100 queries on every home screen load. Years follow title_pages.item_year.
+    """
+    wanted: dict[str, set[int]] = {}
+    for finish in finishes:
+        kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
+        if kind is not None and finish["item_id"] is not None:
+            wanted.setdefault(kind, set()).add(finish["item_id"])
+    years: dict[tuple[str, int], Optional[int]] = {}
+    for kind, ids in wanted.items():
+        model = title_pages.KINDS[kind][0]
+        column = model.release_date if kind == "game" else getattr(model, "year", None)
+        if column is None:
+            continue
+        ordered = sorted(ids)
+        for start in range(0, len(ordered), 500):
+            for item_id, value in db.query(model.id, column).filter(model.id.in_(ordered[start:start + 500])):
+                if kind == "game":
+                    years[(kind, item_id)] = value.year if value else None
+                else:
+                    years[(kind, item_id)] = value or None
+    return years
 
 
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
@@ -247,9 +265,10 @@ def _step_count(db: Session, user_id: int, step: dict, finishes: list[dict]) -> 
         picks = _edition_titles(step["edition"])
         return sum(1 for finish in finishes if (finish["category"], title_pages.normalize(finish["title"])) in picks), 1
     if kind == "before":
+        years = _release_years(db, finishes)
         count = 0
         for finish in finishes:
-            year = _release_year(db, finish)
+            year = years.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"]))
             if year and year < step["year"]:
                 count += 1
         return count, 1

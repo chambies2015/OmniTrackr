@@ -110,12 +110,12 @@
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
-  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
+  <script src="./preauth.js?v=20261120-settle-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling :is(.home-board,#homeHero,#movies-tab,#mainFooter){visibility:hidden}
+    html.dashboard-settling :is(#homeHero,#friendRecs,#yearInReviewBanner,#libraryLaunchpad,#returnDeck,.home-board,#movies-tab,#mainFooter){visibility:hidden}
     .dashboard-skeleton{display:none}
     .dashboard-skeleton-anchor{position:relative;height:0}
     html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -2594,7 +2594,7 @@
   <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
   <script src="/static/backlog-draw.js?v=20261118-backlog-draw-2" defer></script>
-  <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
+  <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261118-sheet-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/taste-compare.js?v=20261116-invite-test-1" defer></script>

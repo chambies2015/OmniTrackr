@@ -13,9 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
-from starlette.middleware.gzip import GZipMiddleware
 from slowapi import Limiter
-from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session, undefer
 
@@ -27,7 +25,8 @@ from .reader_pages import enhance as enhance_reader_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
-from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
+from .compression import CompressionMiddleware
+from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware, RateLimitMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from .html_finish import HtmlFinishMiddleware
 from .slash_redirects import PermanentSlashRedirectMiddleware
@@ -202,13 +201,13 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(UploadAuthenticationMiddleware)
 app.add_middleware(CSRFProtectionMiddleware)
-# Inside GZip so it sees plain HTML: poster-sized game covers and breadcrumb data.
+# Inside compression so it sees plain HTML: poster-sized game covers and breadcrumb data.
 app.add_middleware(PermanentSlashRedirectMiddleware)
 app.add_middleware(HtmlFinishMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(CompressionMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
-app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
@@ -530,7 +529,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         '<html lang="en" data-public-shell="true">',
         1,
     )
-    public_head = public_head.replace('  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>\n', "", 1)
+    public_head = public_head.replace('  <script src="./preauth.js?v=20261120-settle-1"></script>\n', "", 1)
     public_tail = html[scripts_start:].replace(
         '  <script src="./app.js"></script>',
         '  <script src="/static/public-landing.js" defer></script>',
