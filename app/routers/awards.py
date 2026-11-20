@@ -463,10 +463,10 @@ def _faq_data(pairs) -> dict:
         for question, answer in pairs]}
 
 
-def _head(signed_in: bool) -> str:
+def _head(signed_in: bool, *, ads: bool = True) -> str:
     head = (f'<link rel="stylesheet" href="/static/awards.css?v={CSS_VERSION}">'
             f'<script src="/static/awards.js?v={JS_VERSION}" defer></script>')
-    if not signed_in:
+    if ads and not signed_in:
         head += '<script src="/static/ad-loader.js" defer></script>'
     return head
 
@@ -529,8 +529,10 @@ def show_page(slug: str, user=Depends(get_optional_current_user), db: Session = 
     show = _show_or_404(slug)
     canonical = awards.SITE_URL + awards.path(slug)
     structured = {"@context": "https://schema.org", "@graph": [_article(show, canonical), _faq_data(show["faq"])]}
+    # A show still waiting for its nominees is mostly a placeholder ballot, so it carries no ads until they're in.
     response = page(show["search_title"], show["description"], awards.path(slug), show_content(db, slug, user),
-                    structured_data=structured, head=_head(user is not None), member=user is not None)
+                    structured_data=structured, head=_head(user is not None, ads=awards.has_nominees(show)),
+                    member=user is not None)
     response.headers["Cache-Control"] = "private, no-cache"
     response.headers["Vary"] = "Cookie"
     return response

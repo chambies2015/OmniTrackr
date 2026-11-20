@@ -7,6 +7,7 @@ marks a word count we estimated ourselves (the guide says how).
 """
 
 REVIEWED = "2026-11-10"
+UPDATED = "2026-11-20"  # guides that gained a third section
 
 
 def _book(name, year, words, audio, creator, **extra):
@@ -18,7 +19,7 @@ ROWLING, TOLKIEN, MARTIN, JORDAN, HERBERT, SANDERSON = (
 
 GUIDES = {
     "harry-potter": {
-        "name": "Harry Potter", "kind": "book", "reviewed": REVIEWED, "in_order": "harry-potter",
+        "name": "Harry Potter", "kind": "book", "reviewed": UPDATED, "in_order": "harry-potter",
         "heading": "How long does it take to read Harry Potter?",
         "summary": "The seven Harry Potter books are about 1.08 million words: roughly 90 hours to read or 116 to hear. Book-by-book times and a planner.",
         "audio": {"narrator": "Jim Dale", "note": "Audiobook lengths are for the Jim Dale recordings."},
@@ -57,6 +58,13 @@ GUIDES = {
                 "about 29 hours for Order of the Phoenix against Dale's 26 and a half. The full-cast editions that "
                 "came out between late 2025 and mid 2026 are close to Dale's lengths.",
             ]),
+            ("editions", "British and American editions", [
+                "The first book is Harry Potter and the Philosopher's Stone in Britain and the Sorcerer's Stone in the US, "
+                "and the American editions change some words and spellings. The story and the length are the same.",
+                "Page counts are another matter. The American hardcover of the first book is 309 pages and the first British "
+                "edition is 223, mostly because of the type size. That gap is why this page works from word counts. Whichever "
+                "copy you have, it takes the same time to read.",
+            ]),
         ],
         "faq": [
             ("How many words are in the Harry Potter series?",
@@ -68,7 +76,7 @@ GUIDES = {
         ],
     },
     "the-lord-of-the-rings": {
-        "name": "The Lord of the Rings", "kind": "book", "reviewed": REVIEWED, "in_order": "lord-of-the-rings",
+        "name": "The Lord of the Rings", "kind": "book", "reviewed": UPDATED, "in_order": "lord-of-the-rings",
         "heading": "How long does it take to read The Lord of the Rings?",
         "summary": "The Lord of the Rings is about 481,000 words: roughly 40 hours to read, or 54 as an audiobook. Volume lengths, The Hobbit, and a planner.",
         "audio": {"narrator": "Rob Inglis", "note": "Audiobook lengths are for the Rob Inglis recordings."},
@@ -104,6 +112,14 @@ GUIDES = {
                 "calendars and a timeline. One of them, the tale of Aragorn and Arwen, is worth reading as an "
                 "epilogue. The Silmarillion is a different kind of book and is not counted.",
             ]),
+            ("structure", "How the story is split", [
+                "The Lord of the Rings is divided into six books, two to each volume. From the second volume on, Tolkien "
+                "tells the two main storylines one after the other instead of cutting between them: Book III follows the rest "
+                "of the Fellowship, and Book IV goes back in time to follow Frodo and Sam on their own.",
+                "So there is a long stretch without Frodo, then nearly as long with little else. Plenty of readers slow down "
+                "in Book IV. Knowing the shape helps, and so does treating each book as a unit: six books at one a week is "
+                "the six-week plan above.",
+            ]),
         ],
         "faq": [
             ("How many words is The Lord of the Rings?",
@@ -116,7 +132,7 @@ GUIDES = {
         ],
     },
     "a-song-of-ice-and-fire": {
-        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": REVIEWED, "in_order": "game-of-thrones",
+        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": UPDATED, "in_order": "game-of-thrones",
         "heading": "How long does it take to read A Song of Ice and Fire?",
         "summary": "The five published A Song of Ice and Fire novels are about 1.77 million words: roughly 148 hours to read, or 201 hours on audio.",
         "audio": {"narrator": "Roy Dotrice", "note": "Audiobook lengths are for the Roy Dotrice recordings."},
@@ -152,6 +168,13 @@ GUIDES = {
                 "Word counts for this series vary by a few percent between sources, so the figures here are rounded to "
                 "the nearest thousand. The Dunk and Egg novellas and Fire & Blood are separate books and are not counted.",
             ]),
+            ("with-the-show", "Reading alongside the show", [
+                "If you want to alternate, the early seasons line up with the books. Season 1 adapts A Game of Thrones and "
+                "season 2 A Clash of Kings. A Storm of Swords is long enough that the show split it across seasons 3 and 4. "
+                "Season 5 draws on books four and five together.",
+                "Season 6 goes past the books entirely. If you read first and watch second, finish A Dance with Dragons "
+                "before season 6, and treat seasons 6 to 8 as the only ending there is for now.",
+            ]),
         ],
         "faq": [
             ("How many words are in A Song of Ice and Fire?",
@@ -163,7 +186,7 @@ GUIDES = {
         ],
     },
     "the-wheel-of-time": {
-        "name": "The Wheel of Time", "kind": "book", "reviewed": REVIEWED,
+        "name": "The Wheel of Time", "kind": "book", "reviewed": UPDATED,
         "heading": "How long does it take to read The Wheel of Time?",
         "summary": "The Wheel of Time is fourteen novels and about 4.3 million words: roughly 357 hours to read or 450 on audio. Book-by-book times.",
         "audio": {"narrator": "Michael Kramer and Kate Reading", "note": "Audiobook lengths are for the Michael Kramer and Kate Reading recordings."},
@@ -209,6 +232,13 @@ GUIDES = {
                 "New Spring is a short prequel set twenty years earlier. It was written late and assumes you know the "
                 "world, so it is left out of the total here. Reading it first is not recommended.",
             ]),
+            ("halfway", "A place to pause", [
+                "Lord of Chaos, book six, ends with one of the largest battles in the series. It is the natural place to take "
+                "a break before the slower run of books seven to ten. By then you have read about 1.96 million words, a "
+                "little under half of the fourteen books.",
+                "Each book ends with a glossary of names and places. Use it. With a cast this large, a month away can make "
+                "the opening chapters of the next book hard going.",
+            ]),
         ],
         "faq": [
             ("How many books are in The Wheel of Time?",
@@ -220,7 +250,7 @@ GUIDES = {
         ],
     },
     "dune": {
-        "name": "Dune", "kind": "book", "reviewed": REVIEWED, "in_order": "dune",
+        "name": "Dune", "kind": "book", "reviewed": UPDATED, "in_order": "dune",
         "heading": "How long does it take to read Dune?",
         "summary": "Dune is about 188,000 words, roughly 16 hours to read or 21 on audio. Times for all six Frank Herbert novels and where to stop.",
         "audio": {"narrator": "Scott Brick, Simon Vance and cast", "note": "Audiobook lengths are for the Macmillan Audio recordings led by Scott Brick and Simon Vance."},
@@ -256,6 +286,13 @@ GUIDES = {
                 "The prequels and sequels written by Brian Herbert and Kevin J. Anderson are not counted. The two "
                 "Denis Villeneuve films released so far cover the first novel only.",
             ]),
+            ("films", "Reading before the films", [
+                "Denis Villeneuve's two films split the first novel in half, so reading Dune before or after them takes the "
+                "same 16 hours. Dune: Part Three, his version of Dune Messiah, opens on December 18, 2026. Messiah is the "
+                "shortest book in the series, about seven hours, so it fits easily before then.",
+                "The films change some things, most of all how Chani feels about Paul by the end. Reading the book afterwards "
+                "is a good way to see what was moved.",
+            ]),
         ],
         "faq": [
             ("How long does it take to read Dune?",
@@ -268,7 +305,7 @@ GUIDES = {
         ],
     },
     "the-stormlight-archive": {
-        "name": "The Stormlight Archive", "kind": "book", "reviewed": REVIEWED, "in_order": "cosmere",
+        "name": "The Stormlight Archive", "kind": "book", "reviewed": UPDATED, "in_order": "cosmere",
         "heading": "How long does it take to read The Stormlight Archive?",
         "summary": "The five Stormlight Archive books so far are about 2.18 million words: roughly 182 hours to read, or 269 hours on audio. Book-by-book times.",
         "audio": {"narrator": "Michael Kramer and Kate Reading", "note": "Audiobook lengths are for the Michael Kramer and Kate Reading recordings."},
@@ -303,6 +340,14 @@ GUIDES = {
                 "novel takes for granted, so most readers include them. Tick them in the planner to add them.",
                 "Sanderson's other series share a universe with Stormlight. None of them are required, and none are "
                 "counted here.",
+            ]),
+            ("focus", "Whose book is it?", [
+                "Each novel gives one character a run of flashback chapters that tell their past alongside the main story: "
+                "Kaladin in The Way of Kings, Shallan in Words of Radiance, Dalinar in Oathbringer, Eshonai and Venli in "
+                "Rhythm of War and Szeth in Wind and Truth. The chapters are spread through the book, so the history arrives "
+                "in pieces.",
+                "That is a reason not to skim them. The flashbacks usually explain the choice that character makes at the "
+                "climax.",
             ]),
         ],
         "faq": [

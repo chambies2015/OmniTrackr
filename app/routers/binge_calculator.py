@@ -294,27 +294,24 @@ def _title_link(entry: dict, details: dict) -> str:
 
 
 def _method(entry: dict) -> str:
+    """Where this guide's numbers came from. The general method is on the hub, so this stays short."""
     kind = entry["kind"]
     if kind == "book":
-        counted = (f"Reading time starts from each book's word count, turned into pages at {binge.WORDS_PER_PAGE} words a "
-                   f"page and read at {binge.PAGES_PER_HOUR} pages an hour, which is about {binge.WORDS_PER_MINUTE} words a "
-                   f"minute. Page counts differ between editions, which is why the page starts from words. "
-                   f"{entry['audio']['note']} Lengths are as listed by Audible when the page was checked.")
+        counted = (f"Reading time starts from each book's word count, read at about {binge.WORDS_PER_MINUTE} words a minute, "
+                   f"because page counts differ between editions. {entry['audio']['note']} Lengths are as listed by "
+                   "Audible when the page was checked.")
     elif kind == "film":
         counted = ("Running times are the theatrical versions with credits, as listed on each film's Wikipedia page "
-                   "when this page was checked, unless the page says otherwise. Disc and streaming versions can differ "
-                   "by a minute or two.")
+                   "when this page was checked, unless the page says otherwise.")
     else:
-        counted = ("Episode counts are for the original broadcast and were checked against TVmaze. Where a part shows "
-                   "episodes times minutes, the minutes are a typical episode on a streaming copy without ad breaks, "
-                   "opening and credits included. Where it shows only a total, we added up the listed running time of "
-                   "each episode. Either way the result is an estimate, good to within a few percent.")
+        counted = ("Episode counts are for the original broadcast, checked against TVmaze, and lengths are a streaming "
+                   "copy without ad breaks, credits included.")
+        if any(part.get("total") for part in entry["parts"]):
+            counted += " A part shown as a total is the sum of each episode's listed running time."
     return (
         '<section id="method" class="guide-sources bc-method" aria-labelledby="method-heading">'
         '<h2 id="method-heading">How we counted</h2>'
-        f'<p>{_e(counted)}</p>'
-        '<p>The finish date counts the start day as day one and only the days of the week you choose. Prepared by '
-        'OmniTrackr and reviewed by the site owner before publishing. If a number here is wrong, tell us and we will fix it.</p>'
+        f'<p>{_e(counted)} <a href="{binge.BASE_PATH}#how-it-works">How the calculator works it out</a>.</p>'
         f'<p class="muted">First published {_e(_long_date(FIRST_PUBLISHED))}. Checked {_e(_long_date(entry["reviewed"]))}. '
         '<a href="/contact">Send a correction or suggest a series</a> · <a href="/content-quality">Editorial standards</a></p>'
         '</section>'
