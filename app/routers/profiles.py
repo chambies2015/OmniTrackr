@@ -409,7 +409,11 @@ def _wall_html(view) -> str:
             break
     if len(images) < 3:
         return ""
-    posters = "".join(f'<img src="{_e(image)}" alt="" decoding="async">' for image in images)
+    # The tiles are 96 x 144 (72 x 108 on phones): width/height let html_finish ask the CDNs for
+    # thumbnail copies, and the first column pair is usually the page's largest paint, so it loads first.
+    early = ' fetchpriority="high"'
+    posters = "".join(f'<img src="{_e(image)}" alt="" width="96" height="144" decoding="async"{early if index < 4 else ""}>'
+                      for index, image in enumerate(images))
     return f'<div class="profile-wall" aria-hidden="true">{posters}</div>'
 
 

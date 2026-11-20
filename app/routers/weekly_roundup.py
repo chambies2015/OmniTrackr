@@ -439,7 +439,7 @@ async def roundup_week(slug: str, request: Request, db: Session = Depends(get_db
         content = ('<header class="hero radar-hero nw-hero">' + view_switch("releases", "new-this-week") + '<p class="eyebrow">New this week</p>'
                    f'<h1>New this week: {_e(roundup.label(monday))}</h1></header>'
                    '<div class="radar-status" role="status"><strong>Gathering this week\'s releases right now.</strong> '
-                   'This page refreshes itself in under a minute, or reload whenever you like.</div>' + _method_section())
+                   'This page checks again in under a minute, or reload whenever you like.</div>' + _method_section())
         return radar_pages._render(f"New this week: {roundup.label(monday)}", "This week's new movies, TV, anime and games.",
                                    roundup.path(monday), content, indexable=False, refresh=True, head=HEAD)
 
