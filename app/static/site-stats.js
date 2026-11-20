@@ -517,6 +517,9 @@
     const draw = growth.backlog_draw || {};
     const drawCounts = draw.counts || {};
     const drawLabels = draw.labels || {};
+    const week = growth.your_week || {};
+    const yourWeekCounts = week.counts || {};
+    const yourWeekLabels = week.labels || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -613,6 +616,15 @@
         { label: 'Evening emails waiting to go out (now)', count: draw.pending_emails || 0 },
         { label: 'Picks finished, all time', count: draw.finished_all_time || 0 },
       ],
+      growthYourWeek: [
+        { label: 'Members keeping count (now)', count: week.with_pace || 0 },
+        ...(week.by_pace || []).filter(item => item.count).map(item => ({ label: `Pace: ${item.pace} (now)`, count: item.count })),
+        { label: 'Kept two or more of the last four weeks (now)', count: week.kept_two_of_four || 0 },
+        { label: 'Sunday email on (now)', count: week.email_on || 0 },
+        { label: 'Sunday notification on (now)', count: week.push_on || 0 },
+        ...Object.keys(yourWeekLabels).map(key => ({ label: yourWeekLabels[key], count: yourWeekCounts[key] || 0 })),
+        { label: 'Weeks kept, all time', count: week.kept_all_time || 0 },
+      ],
       growthSupportAsks: [
         { label: 'Notes shown on the home screen', count: support.shown || 0 },
         ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
@@ -650,6 +662,7 @@
     growthStayPosted: 'Stay posted asks (card and note after saving)',
     growthWeekOne: 'New members\' first-week card',
     growthBacklogDraw: 'Draw from your backlog',
+    growthYourWeek: 'Your week (weekly pace, kept weeks, Sunday nudge)',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',
   };

@@ -2280,3 +2280,74 @@ class BacklogDraw(Base):
     __table_args__ = (
         Index("ix_backlog_draws_user_status", "user_id", "status"),
     )
+
+
+class YourWeekPlan(Base):
+    """A member's "Your week" home card (Nov 2026): the weekly pace they picked and the Sunday nudge.
+
+    A new table only, one row per member, made the first time the card reaches their screen or a
+    button on it is pressed. ``goal`` is a key from your_week.GOALS, empty until they pick one (or
+    after "Stop keeping count"). Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "your_week_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    goal = Column(String(8), nullable=True)
+    goal_set_at = Column(DateTime, nullable=True)
+    started_week = Column(Date, nullable=True)  # the Monday of the week they first picked a pace
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    remind_email = Column(Boolean, nullable=False, default=False)
+    remind_push = Column(Boolean, nullable=False, default=False)
+    remind_set_at = Column(DateTime, nullable=True)
+    next_remind_at = Column(DateTime, nullable=True, index=True)
+    first_seen_on = Column(Date, nullable=True)
+    last_seen_on = Column(Date, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class YourWeekWeek(Base):
+    """One week of a member's "Your week" card, Monday to Sunday in their time zone (Nov 2026).
+
+    A new table only. Days and finishes are counted from the member's own activity and only ever
+    grow, so a kept week stays kept even if a title is later deleted. A week is ``final`` once it has
+    ended and been counted after the fact; it never changes after that.
+    """
+    __tablename__ = "your_week_weeks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    week_start = Column(Date, nullable=False)
+    goal = Column(String(8), nullable=True)  # the pace that week was counted against
+    day_mask = Column(Integer, nullable=False, default=0)  # bit 0 = Monday ... bit 6 = Sunday
+    finishes = Column(Integer, nullable=False, default=0)
+    kept_at = Column(DateTime, nullable=True)
+    rest_at = Column(DateTime, nullable=True)
+    final = Column(Boolean, nullable=False, default=False)
+    recap_seen_at = Column(DateTime, nullable=True)
+    nudged_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)  # first home screen visit after that week's nudge
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "week_start", name="uq_your_week_weeks_user_week"),
+    )
+
+
+class ProgressMark(Base):
+    """When a member moved a saved place forward (Nov 2026), so "Your week" can count the day.
+
+    A new table only. A progress checkpoint keeps just its latest time, so an episode marked on
+    Monday and the next one on Thursday would leave only Thursday behind. One row per member at
+    most every half hour; it holds a time and nothing about the title.
+    """
+    __tablename__ = "progress_marks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_progress_marks_user_at", "user_id", "at"),
+    )

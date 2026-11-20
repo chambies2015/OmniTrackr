@@ -185,6 +185,10 @@ def _write_progress(db, user_id, category, item_id, expected_revision, values):
             if changed != 1:
                 raise _conflict()
             db.refresh(entry)
+        if values.get("position") is not None:
+            # "Your week" counts the day; a checkpoint alone keeps only its latest time.
+            from .your_week import stage_mark
+            stage_mark(db, user_id)
         result = _envelope(item, category, entry)
         db.commit()
         return result

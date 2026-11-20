@@ -21,7 +21,7 @@ import math
 import re
 from html import escape, unescape
 
-CSS_VERSION = "20261110-reader-1"
+CSS_VERSION = "20261120-speed-1"
 JS_VERSION = "20261110-reader-1"
 SERIF_FONT = "/static/fonts/source-serif-4-latin-var-normal.woff2"
 MARKER = "data-guide-layout"
