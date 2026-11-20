@@ -40,3 +40,9 @@
   .widget-code__row textarea, .widget-code__row input { flex: none; width: 100%; }
   .widget-code__row .site-btn { align-self: flex-end; }
 }
+
+@media (max-width: 360px) {
+  .widget-controls { padding: 10px 12px; }
+  .widget-controls__group { flex-wrap: wrap; min-width: 0; }
+  .widget-theme__btn { padding: 6px 12px; }
+}

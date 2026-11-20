@@ -19,7 +19,7 @@ from ..site_chrome import apply_site_chrome
 from .profiles import TITLE_CSS_VERSION, _e, _viewer_id
 
 router = APIRouter(tags=["profiles"])
-CSS_VERSION = "20261120-badges-2"
+CSS_VERSION = "20261120-badges-3"
 FORMATS = (
     ("html", "HTML", "Blogs, personal sites and GitHub READMEs"),
     ("markdown", "Markdown", "GitHub, Obsidian and most wikis"),
