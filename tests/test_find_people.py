@@ -81,6 +81,22 @@ def test_similar_taste_names_only_titles_the_profile_shows(client, db_session):
     assert "more in common" not in card["reason"]
 
 
+def test_switching_a_profile_section_off_takes_effect_at_once(client, db_session):
+    me = viewer(db_session)
+    twin = member(db_session, "twin")
+    movies(db_session, twin, SHARED, rating=9)
+    public(db_session, twin, show_reviews=False)
+    assert "twin" in people(suggest(client, me))
+    profile = db_session.query(models.PublicProfile).filter_by(user_id=twin.id).one()
+    profile.show_favorites = False
+    db_session.commit()
+    assert "twin" not in people(suggest(client, me))
+    profile.show_favorites = True
+    twin.movies_private = True
+    db_session.commit()
+    assert "twin" not in people(suggest(client, me))
+
+
 def test_hidden_overlap_alone_never_suggests_anyone(client, db_session):
     me = viewer(db_session)
     quiet = member(db_session, "quiet")
@@ -183,6 +199,7 @@ def test_endpoints_need_a_signed_in_member(client, db_session):
     assert client.post("/api/people/dismiss/1").status_code == 401
     me = viewer(db_session)
     assert client.post("/api/people/event", json={"name": "profile_prompt"}, headers=headers(me)).status_code == 200
+    assert client.post("/api/people/event", json={"name": "friend_back"}, headers=headers(me)).status_code == 200
     assert client.post("/api/people/event", json={"name": "page_shown"}, headers=headers(me)).status_code == 422
     response = client.get("/api/people/suggestions", headers=headers(me))
     assert response.headers["cache-control"] == "private, no-store"

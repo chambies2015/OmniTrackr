@@ -75,7 +75,7 @@ COUNTERS = {
     "suggest_off": "Switched off Suggest my profile",
     "suggest_on": "Switched Suggest my profile back on",
 }
-CLIENT_COUNTERS = {"profile_prompt"}
+CLIENT_COUNTERS = {"profile_prompt", "friend_back"}
 
 GROUPS = (
     ("taste", "Similar taste", "Members whose libraries line up with yours."),
@@ -345,7 +345,7 @@ def _since(when: Optional[datetime]) -> str:
     return f"on {when.strftime('%b')} {when.day}"
 
 
-def _taste(db: Session, viewer: models.User, candidates: dict, mine: dict) -> list[dict]:
+def _taste(db: Session, viewer: models.User, candidates: dict, mine: dict, want: int = PAGE_LIMIT) -> list[dict]:
     if len(mine) < MIN_LIBRARY or not candidates:
         return []
     try:
@@ -377,6 +377,8 @@ def _taste(db: Session, viewer: models.User, candidates: dict, mine: dict) -> li
     scored.sort(key=lambda pair: (-pair[0], pair[1]))
     cards = []
     for score, other in scored[:TASTE_CANDIDATES]:
+        if len(cards) >= want:
+            break  # Each profile checked costs a few queries the first time; stop once there are enough.
         user, profile = candidates[other]
         kinds = _visible_kinds(user)
         theirs = shared_pool.likes.get(other, {})
@@ -430,7 +432,7 @@ def _signals(db: Session, viewer: models.User, visitor_hash: Optional[str], cand
     return cards
 
 
-def _shelf(db: Session, candidates: dict, mine: dict) -> list[dict]:
+def _shelf(db: Session, candidates: dict, mine: dict, want: int = PAGE_LIMIT) -> list[dict]:
     """Members with a public review of something in the viewer's library."""
     if not candidates or not mine:
         return []
@@ -448,6 +450,8 @@ def _shelf(db: Session, candidates: dict, mine: dict) -> list[dict]:
                     found[uid] = found.get(uid, 0) + 1
     cards = []
     for uid in sorted(found, key=lambda uid: (-found[uid], uid))[:SHELF_CANDIDATES]:
+        if len(cards) >= want:
+            break
         user, profile = candidates[uid]
         try:
             reviews = public_profiles._reviews(db, user)
@@ -480,7 +484,7 @@ def _shelf(db: Session, candidates: dict, mine: dict) -> list[dict]:
     return cards
 
 
-def _active(db: Session, candidates: dict, now: datetime) -> list[dict]:
+def _active(db: Session, candidates: dict, now: datetime, want: int = PAGE_LIMIT) -> list[dict]:
     """Profiles with something new on them this month, read from what the profile shows anyone."""
     if not candidates:
         return []
@@ -492,6 +496,8 @@ def _active(db: Session, candidates: dict, now: datetime) -> list[dict]:
         return []
     cards = []
     for uid in sorted(latest, key=lambda uid: latest[uid], reverse=True)[:ACTIVE_CANDIDATES]:
+        if len(cards) >= want:
+            break
         user, profile = candidates[uid]
         try:
             items = _cached(("active", now.date(), *_profile_stamp(user, profile)),
@@ -532,10 +538,10 @@ def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str] = 
     mine = picked_for_you.own_library(db, viewer.id)
     groups, taken = [], set()
     builders = {
-        "taste": lambda pool_: _taste(db, viewer, pool_, mine),
-        "signal": lambda pool_: _signals(db, viewer, visitor_hash, pool_),
-        "shelf": lambda pool_: _shelf(db, pool_, mine),
-        "active": lambda pool_: _active(db, pool_, now),
+        "taste": lambda pool_, want: _taste(db, viewer, pool_, mine, want),
+        "signal": lambda pool_, want: _signals(db, viewer, visitor_hash, pool_),
+        "shelf": lambda pool_, want: _shelf(db, pool_, mine, want),
+        "active": lambda pool_, want: _active(db, pool_, now, want),
     }
     total = 0
     for key, title, note in GROUPS:
@@ -543,7 +549,7 @@ def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str] = 
             break
         left = {uid: pair for uid, pair in candidates.items() if uid not in taken}
         try:
-            cards = builders[key](left)
+            cards = builders[key](left, limit - total)
         except Exception:
             db.rollback()
             cards = []
@@ -570,7 +576,8 @@ def suggestions(db: Session, viewer: models.User, visitor_hash: Optional[str] = 
 
 def rail(db: Session, viewer: models.User, visitor_hash: Optional[str] = None) -> dict:
     """The rail card: follow-backs first, then the best suggestions, RAIL_LIMIT in all."""
-    data = suggestions(db, viewer, visitor_hash, limit=RAIL_LIMIT)
+    # One more than the card shows, so "more" is true when Find people has someone else.
+    data = suggestions(db, viewer, visitor_hash, limit=RAIL_LIMIT + 1)
     people = [card for card in data["follow_back"] if card["can_follow"]][:RAIL_LIMIT]
     for group in data["groups"]:
         for card in group["people"]:
