@@ -52,6 +52,7 @@ function setup({ browse = false, hash = '', storage = new Map(), blockedStorage 
   }
   let panel = null;
   const cards = [];
+  const chips = [];
   if (browse) {
     add('trail-filters').hidden = true;
     add('trail-search', 'input');
@@ -65,6 +66,9 @@ function setup({ browse = false, hash = '', storage = new Map(), blockedStorage 
       ['Curious journeys across games and books', 'video-games books'],
     ]) {
       const card = makeElement('article'); card.dataset = { search, formats }; cards.push(card);
+    }
+    for (const value of ['', 'books', 'anime']) {
+      const chip = makeElement('button'); chip.dataset = { format: value }; chips.push(chip);
     }
   } else {
     panel = makeElement('section'); panel.dataset.trail = 'quiet-curiosity';
@@ -80,7 +84,7 @@ function setup({ browse = false, hash = '', storage = new Map(), blockedStorage 
       getElementById: id => elements.get(id) || null,
       createElement: makeElement,
       querySelector: selector => selector === '[data-trail]' ? panel : null,
-      querySelectorAll: selector => selector === '.trail[data-search]' ? cards : [],
+      querySelectorAll: selector => selector === '.trail[data-search]' ? cards : selector === '.dx-chip[data-format]' ? chips : [],
     },
     sessionStorage: {
       getItem(key) { if (blockedStorage) throw new Error('Storage blocked'); return storage.get(key) ?? null; },
@@ -96,7 +100,7 @@ function setup({ browse = false, hash = '', storage = new Map(), blockedStorage 
   vm.runInContext(source, context);
   const inputs = () => (elements.get('choices')?.children || [])
     .flatMap(label => label.children).filter(element => element.tag === 'input');
-  return { context, elements, requests, storage, cards, panel, inputs,
+  return { context, elements, requests, storage, cards, chips, panel, inputs,
     get: id => elements.get(id),
     choose: keys => inputs().forEach(input => { input.checked = keys.includes(input.value); }),
   };
@@ -296,4 +300,17 @@ test('blocked browser storage still permits read-only preview and explicit save'
   await s.get('saveForm').trigger('submit');
   assert.equal(s.requests.length, 2);
   assert.equal(s.get('status').children[0].href, '/?collection=9');
+});
+
+test('format chips drive the same filter as the select and show which one is on', () => {
+  const s = setup({ browse: true });
+  assert.deepEqual(s.chips.map(chip => chip.attributes['aria-pressed']), ['true', 'false', 'false']);
+  s.chips[1].trigger('click');
+  assert.equal(s.get('trail-format').value, 'books');
+  assert.deepEqual(s.cards.map(card => card.hidden), [false, true, false]);
+  assert.equal(s.get('trail-results').textContent, '2 of 3 trails including Books');
+  assert.deepEqual(s.chips.map(chip => chip.attributes['aria-pressed']), ['false', 'true', 'false']);
+  s.get('trail-reset').trigger('click');
+  assert.deepEqual(s.chips.map(chip => chip.attributes['aria-pressed']), ['true', 'false', 'false']);
+  assert.equal(s.requests.length, 0);
 });

@@ -5,6 +5,8 @@
     const search = document.getElementById('trail-search');
     const format = document.getElementById('trail-format');
     const cards = Array.from(document.querySelectorAll('.trail[data-search]'));
+    // Format chips are buttons over the same select, so the select stays the one source of truth.
+    const chips = Array.from(document.querySelectorAll('.dx-chip[data-format]'));
     const normalize = value => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     function filterTrails() {
       const terms = normalize(search.value).trim().split(/\s+/).filter(Boolean);
@@ -16,7 +18,9 @@
       }
       document.getElementById('trail-results').textContent = `${count} of ${cards.length} trails${format.value ? ` including ${format.options[format.selectedIndex].text}` : ''}`;
       document.getElementById('trail-empty').hidden = count > 0;
+      chips.forEach(chip => chip.setAttribute('aria-pressed', String(chip.dataset.format === format.value)));
     }
+    chips.forEach(chip => chip.addEventListener('click', () => { format.value = chip.dataset.format; filterTrails(); }));
     search.addEventListener('input', filterTrails);
     format.addEventListener('change', filterTrails);
     document.getElementById('trail-reset').addEventListener('click', () => {
