@@ -25,8 +25,12 @@ def test_verdict_and_glance_summarize_member_data(client, db_session):
     assert "Members rate Interstellar 8.5/10 on average across 6 ratings, and 100% of them gave it 8 or more." in html
     assert "5 of the 6 members tracking it have watched it (83%); the other 1 has it on their list." in html
     assert "3 members added it to their library in the last 30 days." in html
-    assert 'aria-labelledby="glance-title"' in html and "Member score" in html and "169 min" in html
-    assert "Start your free library" in html
+    # Since Nov 20 2026 the numbers sit in one scorecard; the old sidebar is gone.
+    card = html.split('class="title-scorecard', 1)[1].split("</section>", 1)[0]
+    assert "Member score" in card and "8.5<small>/10</small>" in card and "<b>6</b> members tracking it" in card
+    assert "<b>83%</b> of them have watched it" in card and "<b>3</b> added it in the last 30 days" in card
+    assert 'aria-labelledby="glance-title"' not in html and "169 min" in html
+    assert "Start your free library" in card
     assert 'class="title-tabs"' in html and 'href="#community-title"' in html and 'href="#about-title"' in html
 
 
