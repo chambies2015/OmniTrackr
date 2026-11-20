@@ -281,6 +281,23 @@
     if (ask) askFriend(ask);
   });
 
+  // ---------- Members' share menu: closes on a pick, a tap elsewhere, or Escape ----------
+  document.addEventListener('click', event => {
+    document.querySelectorAll('details.title-more[open]').forEach(menu => {
+      const inside = event.target.closest && event.target.closest('details.title-more') === menu;
+      const picked = event.target.closest && event.target.closest('.title-more__item');
+      if (!inside || picked) menu.removeAttribute('open');
+    });
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('details.title-more[open]').forEach(menu => {
+      menu.removeAttribute('open');
+      const summary = menu.querySelector('summary');
+      if (summary) summary.focus();
+    });
+  });
+
   // ---------- "On this page" tabs: sit under the sticky header, mark the section in view ----------
   function setupTabs() {
     const tabs = document.querySelector('.title-tabs');
@@ -315,6 +332,23 @@
       });
     }, { rootMargin: '-35% 0px -55% 0px' });
     links.forEach((link, section) => observer.observe(section));
+    // Back up in the hero, above the first section, the strip starts from its first tab again
+    // instead of staying scrolled to the last tab that was marked further down.
+    const first = links.keys().next().value;
+    const strip = tabs.querySelector('.title-tabs__inner');
+    let queued = false;
+    if (first && strip) {
+      window.addEventListener('scroll', () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          if (strip.scrollLeft > 0 && first.getBoundingClientRect().top > window.innerHeight * 0.45) {
+            strip.scrollTo({ left: 0, behavior: 'auto' });
+          }
+        });
+      }, { passive: true });
+    }
   }
   // ---------- Save button in the sticky bar once the hero's own button scrolls away ----------
   // It presses the hero button, so guest-list.js and addToLibrary stay the only code that saves.

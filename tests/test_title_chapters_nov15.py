@@ -41,14 +41,15 @@ def test_without_providers_the_trailer_stands_alone(client, db_session):
     assert 'class="title-pair"' not in html and 'id="trailer-title"' in html
 
 
-def test_sidebar_sits_beside_the_reviews_and_the_rest_is_full_width(client, db_session):
+def test_reviews_lead_and_the_rest_follows(client, db_session):
     html = page(client, db_session, review=True, count=3)
     lead = between(html, 'class="title-main title-main--lead"', 'class="title-main title-main--rest"')
     assert 'id="community-title"' in lead and "Read the full review" in lead and 'id="write-review"' not in lead
+    assert 'class="title-scorecard' in lead and "Member score" in lead
     rest = html.split('class="title-main title-main--rest"', 1)[1]
     assert rest.index('id="where-title"') < rest.index('id="about-title"') < rest.index('id="faq-title"') < rest.index('id="write-review"')
-    glance = between(html, 'aria-labelledby="glance-title"', "</aside>")
-    assert "Member score" in glance and "How long" in glance and "169 min" in glance and "Genres" not in glance
+    # The Nov 15 sidebar repeated the score a third time; the scorecard replaced it on Nov 20.
+    assert "glance-title" not in html
 
 
 def test_no_reviews_yet_puts_the_review_prompt_by_the_numbers(client, db_session):

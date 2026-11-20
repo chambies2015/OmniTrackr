@@ -138,6 +138,10 @@ async def lifespan(application: FastAPI):
     backlog_draw_task = None
     if backlog_draw.emails_enabled():
         backlog_draw_task = asyncio.create_task(backlog_draw.backlog_draw_loop(application))
+    from . import your_week
+    your_week_task = None
+    if your_week.emails_enabled():
+        your_week_task = asyncio.create_task(your_week.your_week_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -155,7 +159,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task, check_in_task, week_one_task, backlog_draw_task):
+                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -929,6 +933,15 @@ for route in backlog_draw_router.router.routes:
     elif path and path.startswith("/api/backlog-draw/"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(backlog_draw_router.router)
+from .routers import your_week as your_week_router
+# Your week: one read per home refresh, and buttons pressed a click at a time.
+for route in your_week_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/your-week":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path and path.startswith("/api/your-week/"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(your_week_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:
