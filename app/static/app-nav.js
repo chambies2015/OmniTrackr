@@ -60,8 +60,15 @@
     const active = document.body.dataset.activeTab || 'movies';
     if (MEDIA_TABS.has(active)) lastMediaTab = active;
     syncLibraryTarget();
+    // Home until the open tab's own panel (the library list, the feed...) reaches the top. The
+    // home cards sit between the tab strip and that panel, so measuring from the strip lit
+    // "Library" while the member was still reading the home screen.
     const tabs = document.querySelector('.tabs');
-    const nearTop = !tabs || window.scrollY < tabs.offsetTop - 80;
+    const panel = document.querySelector('.tab-content.active');
+    const panelTop = panel && panel.offsetParent !== null
+      ? panel.getBoundingClientRect().top + window.scrollY
+      : (tabs ? tabs.offsetTop : 0);
+    const nearTop = !tabs || window.scrollY < panelTop - 80;
     let current = 'more';
     if (sheet.open) current = 'more';
     else if (nearTop) current = 'home';

@@ -23,11 +23,20 @@
     } catch (error) { /* analytics only */ }
   }
 
+  // The control that shows "Link copied". A Share item inside a menu (the title page's Share menu
+  // is a <details>) disappears as the menu closes on the tap, so the menu's own button says it instead.
+  function flashTarget(button) {
+    const menu = button.closest && button.closest('details');
+    const summary = menu && menu.querySelector('summary');
+    return summary && summary !== button ? summary : button;
+  }
+
   function flash(button, text) {
-    const original = button.dataset.shareLabel || button.textContent;
-    button.dataset.shareLabel = original;
-    button.textContent = text;
-    setTimeout(() => { button.textContent = original; }, 2200);
+    const target = flashTarget(button);
+    const original = target.dataset.shareLabel || target.textContent;
+    target.dataset.shareLabel = original;
+    target.textContent = text;
+    setTimeout(() => { target.textContent = original; }, 2200);
   }
 
   async function share(button) {
@@ -60,5 +69,5 @@
   });
 
   if (typeof window !== 'undefined') window.OmniShare = { share, canonicalUrl };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { share, canonicalUrl };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { share, canonicalUrl, flashTarget };
 })();
