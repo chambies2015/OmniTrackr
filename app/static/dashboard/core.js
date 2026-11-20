@@ -167,7 +167,32 @@ function renderLibraryFilters(category) {
     && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !document.getElementById(source.input).value;
   window.OmniLibraryTags?.renderFilters(category, host);
   window.OmniTitleOrigins?.renderFilters(category, host);
+  syncLibraryFilterCounts(category);
 }
+
+// The shelf summary (home-hero.js) leaves each library's totals on its panel. The
+// status chips show them ("Watched 11") while nothing else narrows the view, since
+// a search or another filter would make the numbers disagree with the list.
+function syncLibraryFilterCounts(category) {
+  const config = libraryPageConfig(category);
+  const host = config && document.getElementById(`${config[0]}Filters`);
+  const panel = host?.closest?.('.library-panel');
+  if (!host || !panel) return;
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const filters = getLibraryFilters(category);
+  const total = Number(panel.dataset.shelfTotal);
+  const finished = Number(panel.dataset.shelfFinished);
+  const narrowed = filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
+    || !!document.getElementById(source.input)?.value;
+  const known = !narrowed && panel.dataset.shelfTotal !== undefined && Number.isInteger(total) && Number.isInteger(finished)
+    && total > 0 && finished >= 0 && finished <= total;
+  const counts = { all: total, finished, unfinished: total - finished };
+  host.querySelectorAll('[data-completion]').forEach(button => {
+    if (known) button.dataset.count = counts[button.dataset.completion].toLocaleString();
+    else delete button.dataset.count;
+  });
+}
+window.syncLibraryFilterCounts = syncLibraryFilterCounts;
 
 function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   if (!libraryPageConfig(category)) return false;
