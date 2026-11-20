@@ -76,6 +76,8 @@
         notice(text || 'That change did not save. Try again in a moment.');
         return false;
       }
+      // The heading's stat line and the status chip counts follow the change.
+      window.OmniHomeHero?.refresh?.();
       return true;
     } catch (_) {
       notice('That change did not save. Check your connection and try again.');

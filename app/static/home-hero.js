@@ -158,7 +158,14 @@
     libraries.forEach(library => {
       const heading = document.querySelector(`#${library.key}-tab .library-panel > .library-heading`);
       if (!heading) return;
-      let line = heading.parentElement.querySelector(':scope > .library-heading__stats');
+      // The library's status chips show these totals (core.js syncLibraryFilterCounts).
+      const panel = heading.parentElement;
+      if (panel.dataset) {
+        panel.dataset.shelfTotal = String(Number(library.total) || 0);
+        panel.dataset.shelfFinished = String(Number(library.finished) || 0);
+      }
+      if (typeof window.syncLibraryFilterCounts === 'function') window.syncLibraryFilterCounts(library.key);
+      let line = panel.querySelector(':scope > .library-heading__stats');
       const text = headingLine(library);
       if (!text) { line?.remove(); return; }
       if (!line) {
@@ -166,6 +173,9 @@
         heading.insertAdjacentElement('afterend', line);
       }
       line.textContent = text;
+      // library-view.css draws a bar of how much is finished; the text already says it.
+      const done = Math.round((Math.min(library.finished, library.total) / library.total) * 100);
+      line.style.setProperty('--done', `${Number.isFinite(done) ? done : 0}%`);
     });
   }
 
@@ -218,6 +228,10 @@
     if (section) section.hidden = true;
     document.querySelectorAll('.tabs .tab[data-count]').forEach(tab => { delete tab.dataset.count; });
     document.querySelectorAll('.library-heading__stats').forEach(line => line.remove());
+    document.querySelectorAll('.library-panel[data-shelf-total]').forEach(panel => {
+      delete panel.dataset.shelfTotal;
+      delete panel.dataset.shelfFinished;
+    });
   }
 
   function init() {

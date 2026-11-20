@@ -17,8 +17,9 @@ def _between(start, end):
 
 def test_stylesheet_loads_before_the_dashboard_theme():
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)"', INDEX.split("</head>")[0])
-    assert links[-4].startswith("/static/dashboard-home.css?v=")
-    assert links[-3].startswith("/static/dashboard-2026.css?v=")
+    names = [href.split("?")[0] for href in links]
+    theme = names.index("/static/dashboard-2026.css")
+    assert names[theme - 1] == "/static/dashboard-home.css"
 
 
 def test_daily_cards_and_badges_share_the_main_column():

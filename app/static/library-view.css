@@ -1,0 +1,562 @@
+/* Library view, Nov 20 2026: the member library in the look of the title pages and
+   Discover. One colour per format (the title page palette), Shelf as a poster wall
+   with the actions on the cover, a drawn cover for titles without art, filter chips
+   with counts, a slimmer toolbar on phones and a tidier wide List.
+
+   Visual only. Rows, edit mode, menus and every handler stay as library.js renders
+   them; rows being edited are left to the earlier layers. Loaded after
+   workspace-2026.css and before a11y.css.
+
+   `.library-section:not(#lv)` matches every library tab. The :not(#lv) only lifts
+   these rules above the older ID-scoped ones without !important. */
+
+/* ---------- One colour per format ---------- */
+/* The same set as the title pages, Discover and Best of 2026 (explore.css). The hue
+   keeps the tab dots, the home mix bar and the library tint on that palette too. */
+body.app-shell :is([data-format="movies"], [data-switch-tab="movies"], #movies-tab) { --fmt-hue: 330; --kind: #f472b6; }
+body.app-shell :is([data-format="tv-shows"], [data-switch-tab="tv-shows"], #tv-shows-tab) { --fmt-hue: 213; --kind: #60a5fa; }
+body.app-shell :is([data-format="anime"], [data-switch-tab="anime"], #anime-tab) { --fmt-hue: 0; --kind: #f87171; }
+body.app-shell :is([data-format="video-games"], [data-switch-tab="video-games"], #video-games-tab) { --fmt-hue: 158; --kind: #34d399; }
+body.app-shell :is([data-format="music"], [data-switch-tab="music"], #music-tab) { --fmt-hue: 255; --kind: #a78bfa; }
+body.app-shell :is([data-format="books"], [data-switch-tab="books"], #books-tab) { --fmt-hue: 43; --kind: #fbbf24; }
+body.app-shell :is([data-format="manga"], [data-switch-tab="manga"], #manga-tab) { --fmt-hue: 27; --kind: #fb923c; }
+body.app-shell :is([data-format="podcasts"], [data-switch-tab="podcasts"], #podcasts-tab) { --fmt-hue: 172; --kind: #2dd4bf; }
+body.app-shell :is([data-format="audiobooks"], [data-switch-tab="audiobooks"], #audiobooks-tab) { --fmt-hue: 292; --kind: #e879f9; }
+body.app-shell .library-section:not(#lv),
+body.app-shell .library-section:not(#lv) .library-table { --shelf-hue: calc(var(--fmt-hue) * 1deg); }
+body.app-shell .library-section:not(#lv) {
+  --lv-cover-shadow: 0 10px 22px rgba(30, 24, 60, .16), inset 0 0 0 1px rgba(20, 16, 40, .08);
+  --lv-chip-on: color-mix(in srgb, var(--kind) 16%, var(--card-bg));
+  --lv-chip-on-edge: color-mix(in srgb, var(--kind) 70%, var(--fg) 10%);
+}
+body.app-shell.dark-mode .library-section:not(#lv) {
+  --lv-cover-shadow: 0 12px 26px rgba(0, 0, 0, .38), inset 0 0 0 1px rgba(255, 255, 255, .09);
+  --lv-chip-on: color-mix(in srgb, var(--kind) 20%, transparent);
+  --lv-chip-on-edge: color-mix(in srgb, var(--kind) 62%, transparent);
+}
+
+/* ---------- Panel and heading ---------- */
+body.app-shell .library-section:not(#lv) .card.library-panel {
+  background:
+    radial-gradient(70% 240px at 0% 0%, color-mix(in srgb, var(--kind) 10%, transparent), transparent 70%),
+    var(--card-bg);
+}
+body.app-shell.dark-mode .library-section:not(#lv) .card.library-panel {
+  background:
+    radial-gradient(70% 260px at 0% 0%, color-mix(in srgb, var(--kind) 13%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .015)),
+    var(--card-bg);
+}
+body.app-shell .library-section:not(#lv) .library-panel > .library-heading h2 { font-size: 1.6rem; gap: 12px; }
+body.app-shell .library-section:not(#lv) .library-panel > .library-heading h2::before {
+  background: var(--kind);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--kind) 22%, transparent);
+  height: 10px;
+  width: 10px;
+}
+/* The stat line under the heading already says how many; the count pill only shows without it. */
+body.app-shell .library-section:not(#lv) .library-panel > .library-heading:has(+ .library-heading__stats) .library-count { display: none; }
+body.app-shell .library-section:not(#lv) .library-heading__stats {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 20px 22px;
+}
+/* How much of the shelf is finished, drawn from --done (home-hero.js). The line's text says the same. */
+body.app-shell .library-section:not(#lv) .library-heading__stats[style*="--done"]::after {
+  background:
+    linear-gradient(90deg, var(--kind) var(--done), transparent 0),
+    color-mix(in srgb, var(--fg-secondary) 22%, transparent);
+  border-radius: var(--radius-pill);
+  content: "";
+  flex: 0 0 132px;
+  height: 6px;
+}
+body.app-shell .library-section:not(#lv) .library-add-toggle > span:first-child::before { color: var(--kind); }
+
+/* ---------- Toolbar ---------- */
+body.app-shell .library-section:not(#lv) .library-panel > .library-toolbar { margin-bottom: 12px; }
+body.app-shell .library-section:not(#lv) .library-toolbar input.library-filter-search { text-overflow: ellipsis; }
+body.app-shell .library-section:not(#lv) .library-toolbar :is(input.library-filter-search, select.library-sort):focus-visible {
+  border-color: color-mix(in srgb, var(--kind) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kind) 22%, transparent);
+  outline: none;
+}
+/* A sort other than the default gets the format colour on its edge. */
+body.app-shell .library-section:not(#lv) .library-panel > .library-toolbar select.library-sort:not(:has(option[value=""]:checked)) {
+  border-color: color-mix(in srgb, var(--kind) 60%, transparent);
+}
+body.app-shell .library-section:not(#lv) .library-toolbar select.library-sort option { background: var(--card-bg); color: var(--fg); }
+
+/* ---------- Filter chips ---------- */
+body.app-shell .library-section:not(#lv) .library-filters { gap: 8px; margin: 0 0 24px; }
+body.app-shell .library-section:not(#lv) .library-filter-completion {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  gap: 8px;
+  padding: 0;
+  width: auto;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-completion button,
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: none;
+  color: var(--fg-secondary);
+  display: inline-flex;
+  flex: none;
+  font-size: .82rem;
+  font-weight: 600;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 15px;
+  transition: background-color var(--dur-fast, .15s) ease, border-color var(--dur-fast, .15s) ease, color var(--dur-fast, .15s) ease;
+  white-space: nowrap;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-completion button:hover,
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:hover { border-color: var(--border-strong); color: var(--fg); }
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-completion button[aria-pressed="true"],
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:has(input:checked),
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:has(option:checked:not([value=""])) {
+  background: var(--lv-chip-on);
+  border-color: var(--lv-chip-on-edge);
+  box-shadow: none;
+  color: var(--fg);
+}
+/* Counts come from the shelf summary (core.js syncLibraryFilterCounts) and only show while nothing else narrows the view. */
+body.app-shell .library-section:not(#lv) .library-filter-completion button[data-count]::after {
+  color: var(--fg-secondary);
+  content: attr(data-count);
+  font-size: .76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+body.app-shell .library-section:not(#lv) .library-filter-completion button[aria-pressed="true"][data-count]::after { color: inherit; opacity: .75; }
+/* Unrated and Has saved progress read as chips; the checkbox stays in place for keyboards and screen readers. */
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option > input[type="checkbox"] {
+  clip-path: inset(50%);
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:has(> input[type="checkbox"])::before {
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  content: "";
+  flex: none;
+  height: 14px;
+  opacity: .7;
+  width: 14px;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:has(> input[type="checkbox"]:checked)::before {
+  background: var(--kind) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23140f2a' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 10px no-repeat;
+  border-color: var(--kind);
+  opacity: 1;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option:has(> input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Tag and Recommended by keep their menus inside the chip. */
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-option select {
+  background-color: transparent;
+  border: 0;
+  color: var(--fg);
+  font: inherit;
+  max-width: 180px;
+  min-height: 34px;
+  padding: 0 4px;
+}
+body.app-shell .library-section:not(#lv) .library-filters .library-filter-reset { color: var(--primary); font-size: .8rem; min-height: 38px; }
+
+/* ---------- Shelf: a poster wall ---------- */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tbody {
+  gap: 30px 20px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tbody tr:not(:has(input, textarea, select)) {
+  align-content: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+  transform: none;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tbody tr:not(:has(input, textarea, select)):hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+/* No transform on the row: the ••• menu is position: fixed and a transformed row would move it. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] {
+  border-radius: var(--poster-radius, 10px);
+  box-shadow: var(--lv-cover-shadow);
+  container-type: inline-size;
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0 0 9px;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow var(--dur, .2s) var(--ease, ease);
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] img {
+  aspect-ratio: 2 / 3;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: block;
+  height: auto !important;
+  margin: 0;
+  max-height: none !important;
+  object-fit: cover;
+  transition: transform var(--dur, .2s) var(--ease, ease);
+  width: 100% !important;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) :is(#musicTable, #podcastTable).mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] img { aspect-ratio: 1; }
+@media (hover: hover) {
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)):is(:hover, :focus-within) td[data-card-field="cover"] {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind) 75%, transparent), var(--lv-cover-shadow);
+    transform: none;
+  }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)):hover td[data-card-field="cover"] img { transform: scale(1.035); }
+}
+
+/* The drawn cover: a title without art set like a cover in the format's colour,
+   the same face Discover and the title pages draw (explore.css .x-cover). The
+   title, its hue and its type size come from library.js drawLibraryCover. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"][data-cover-title]:empty::after {
+  -webkit-hyphens: auto;
+  align-items: flex-start;
+  aspect-ratio: 2 / 3;
+  background:
+    linear-gradient(var(--kind), var(--kind)) 9cqi calc(100% - 6.5cqi) / 18cqi 2px no-repeat,
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--kind) 55%, transparent), transparent 62%),
+    radial-gradient(100% 70% at 100% 100%, hsl(var(--x-hue, 260) 72% 52% / .42), transparent 65%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 14px),
+    linear-gradient(165deg, #241c4c, #0e0c20);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  color: #fff;
+  content: attr(data-cover-title);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-display, 'Poppins'), sans-serif;
+  font-size: clamp(.55rem, var(--cover-fs, 12.5cqi), 1.8rem);
+  font-weight: 800;
+  height: auto !important;
+  hyphens: auto;
+  justify-content: flex-end;
+  justify-content: safe flex-end;
+  letter-spacing: -.02em;
+  line-height: 1.08;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  padding: 10cqi 9cqi 11cqi;
+  text-align: left;
+  text-wrap: balance;
+  width: 100% !important;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) :is(#musicTable, #podcastTable).mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"][data-cover-title]:empty::after { aspect-ratio: 1; }
+
+/* Title and the rating line under the cover. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] {
+  font-size: .92rem;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0;
+  padding: 0 2px;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] a { color: inherit; }
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] { padding: 0 2px; }
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table .library-quick-rate { min-height: 28px; }
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table .library-card-meta { font-size: .76rem; }
+
+/* Edit and ••• sit on the cover's top corner: on hover with a mouse, always on touch. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"] {
+  align-self: start;
+  border: 0;
+  display: flex;
+  gap: 6px;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: end;
+  margin: 8px;
+  padding: 0 !important;
+  position: relative;
+  width: auto;
+  z-index: 3;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary) {
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  align-items: center;
+  background: rgba(14, 11, 30, .62);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+  box-sizing: border-box;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0;
+  height: 36px;
+  justify-content: center;
+  margin: 0;
+  min-height: 36px;
+  min-width: 0;
+  padding: 0;
+  transform: none;
+  width: 36px;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary):hover {
+  background: rgba(14, 11, 30, .82);
+  border-color: color-mix(in srgb, var(--kind) 70%, #fff);
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > button.action-btn::before {
+  background: currentColor;
+  content: "";
+  height: 15px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13.5 3.5l3 3L7 16H4v-3z'/%3E%3Cpath d='M11.5 5.5l3 3'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13.5 3.5l3 3L7 16H4v-3z'/%3E%3Cpath d='M11.5 5.5l3 3'/%3E%3C/svg%3E") center / contain no-repeat;
+  position: static;
+  width: 15px;
+}
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-menu > summary::before {
+  content: "•••";
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin-left: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"] {
+    opacity: 0;
+    transition: opacity var(--dur-fast, .15s) ease;
+  }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)):is(:hover, :focus-within) td.library-cell[data-card-field="actions"],
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"]:has(details[open]) { opacity: 1; }
+}
+/* With details open the card grows a section below the cover, and its actions go there. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr.card-expanded:not(:has(input, textarea, select)) td[data-card-field="actions"] { grid-row: auto; margin-top: 6px; }
+
+/* ---------- List on wide screens ---------- */
+@media (min-width: 1025px) {
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td { padding-bottom: 10px; padding-top: 10px; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-card-field="title"] { font-size: .92rem; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-card-field="title"] a { color: inherit; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-card-field="cover"] img {
+    border: 0;
+    border-radius: 6px;
+    box-shadow: var(--lv-cover-shadow);
+    width: 46px !important;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table tbody tr:not(:has(input, textarea, select)):hover td {
+    background: color-mix(in srgb, var(--kind) 6%, var(--card-bg));
+  }
+  /* A private review is the usual case: a quiet dash instead of a row of crosses. */
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-label="Public review"] .watched-icon.unwatched {
+    background: transparent;
+    color: transparent;
+    position: relative;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-label="Public review"] .watched-icon.unwatched::after {
+    background: var(--border-strong);
+    border-radius: 2px;
+    content: "";
+    height: 2px;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-label="IMDb"] a { color: var(--fg-secondary); }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-label="IMDb"] a:hover { color: var(--primary); }
+}
+/* The small cover in List and on phone cards: the letter tile in the format's colours. */
+body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-card-field="cover"][data-initial]:not([data-initial=""]):empty::after {
+  background:
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--kind) 55%, transparent), transparent 62%),
+    radial-gradient(100% 70% at 100% 100%, hsl(var(--x-hue, 260) 72% 52% / .42), transparent 65%),
+    linear-gradient(165deg, #241c4c, #0e0c20);
+  border: 0;
+  box-shadow: var(--lv-cover-shadow);
+  color: #fff;
+}
+@media (min-width: 1025px) {
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table td[data-card-field="cover"][data-initial]:not([data-initial=""]):empty::after {
+    border-radius: 6px;
+    font-size: 1.2rem;
+    height: 69px;
+    width: 46px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) :is(#musicTable, #podcastTable) td[data-card-field="cover"][data-initial]:not([data-initial=""]):empty::after { height: 46px; }
+}
+
+/* ---------- List cards on tablets and phones ---------- */
+/* Edit and ••• move up beside the title and the finished mark sits under them, so a
+   card is the cover's height instead of carrying a row of buttons. Details lives in
+   the ••• menu, as on Shelf; an open card puts its buttons back underneath. */
+@media (max-width: 1024px) {
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tbody tr:not(:has(input, textarea, select)) {
+    gap: 2px 12px;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] { grid-row: 1 / span 3; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] {
+    align-self: start;
+    grid-column: 2;
+    grid-row: 1;
+    padding-top: 2px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] a { color: inherit; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] { grid-column: 2 / -1; grid-row: 2; }
+  /* The finished mark (or the ring that marks it) sits on the cover's corner, as on Shelf. */
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"] {
+    align-self: start;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    margin: 5px;
+    position: relative;
+    z-index: 2;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .watched-icon.watched { box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="status"] .library-quick-status .watched-icon.unwatched {
+    background: rgba(10, 8, 24, .38);
+    border-color: rgba(255, 255, 255, .88);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td.library-cell[data-card-field="actions"] {
+    align-self: start;
+    border-top: 0;
+    gap: 6px;
+    grid-column: 3;
+    grid-row: 1;
+    margin: 0;
+    padding: 0 !important;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions { display: flex; flex: none; gap: 6px; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary) {
+    align-items: center;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    box-sizing: border-box;
+    color: var(--fg);
+    display: inline-flex;
+    font-size: 0;
+    height: 40px;
+    justify-content: center;
+    margin: 0;
+    min-height: 40px;
+    min-width: 0;
+    padding: 0;
+    width: 40px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > button.action-btn::before {
+    background: currentColor;
+    content: "";
+    height: 16px;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13.5 3.5l3 3L7 16H4v-3z'/%3E%3Cpath d='M11.5 5.5l3 3'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13.5 3.5l3 3L7 16H4v-3z'/%3E%3Cpath d='M11.5 5.5l3 3'/%3E%3C/svg%3E") center / contain no-repeat;
+    width: 16px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) td[data-card-field="actions"] .row-menu > summary::before {
+    content: "•••";
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-left: 1px;
+  }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr:not(.card-expanded):not(:has(input, textarea, select)) .library-card-details { display: none; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table .row-menu__panel .library-card-details-shortcut { display: flex; }
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tr.card-expanded:not(:has(input, textarea, select)) td[data-card-field="actions"] { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  body.app-shell:not(.library-view-shelf) .library-section:not(#lv) .library-table.mobile-library tbody tr:not(:has(input, textarea, select)) { grid-template-columns: 60px minmax(0, 1fr) auto; padding: 12px 10px 12px 12px; }
+}
+
+/* ---------- Pager ---------- */
+/* One page of titles needs no Previous and Next. */
+body.app-shell .library-section:not(#lv) .library-pager:not(:has(button:enabled)) button { display: none; }
+body.app-shell .library-section:not(#lv) .library-pager:not(:has(button:enabled)) [role="status"] { color: var(--fg-secondary); font-size: .78rem; }
+
+/* ---------- Tablets and phones ---------- */
+@media (max-width: 1024px) {
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tbody { gap: 24px 14px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+@media (max-width: 760px) {
+  body.app-shell .library-section:not(#lv) .library-panel > .library-heading h2 { font-size: 1.3rem; }
+  body.app-shell .library-section:not(#lv) .library-heading__stats { margin: 0 0 16px 2px; }
+  body.app-shell .library-section:not(#lv) .library-heading__stats[style*="--done"]::after { flex-basis: 100%; height: 5px; }
+
+  /* Search, sort and the data tools share one row; sort turns into a button that opens the same menu. */
+  body.app-shell .library-section:not(#lv) .library-panel > .library-toolbar { gap: 8px; grid-template-columns: minmax(0, 1fr) auto auto; margin-bottom: 12px; }
+  body.app-shell .library-section:not(#lv) .library-toolbar .library-filter-search { grid-column: 1; min-width: 0; }
+  body.app-shell .library-section:not(#lv) .library-toolbar .library-tools-menu { grid-column: 3; }
+  body.app-shell .library-section:not(#lv) .library-panel > .library-toolbar select.library-sort {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%239aa3b5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4v12M3 13l3 3 3-3M14 16V4M11 7l3-3 3 3'/%3E%3C/svg%3E");
+    background-position: center;
+    background-size: 19px;
+    color: transparent;
+    grid-column: 2;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    text-indent: -999px;
+    width: 44px;
+  }
+
+  /* Chips stay on one or two rows instead of a full-width bar and a second row. */
+  body.app-shell .library-section:not(#lv) .library-filters { gap: 8px; margin-bottom: 18px; }
+  body.app-shell .library-section:not(#lv) .library-filters .library-filter-completion { flex-wrap: wrap; width: auto; }
+  body.app-shell .library-section:not(#lv) .library-filters .library-filter-completion button,
+  body.app-shell .library-section:not(#lv) .library-filters .library-filter-option {
+    flex: none;
+    font-size: .82rem;
+    min-height: 40px;
+    padding: 0 13px;
+  }
+}
+@media (max-width: 600px) {
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tbody { gap: 22px 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] { font-size: .9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr td[data-card-field="cover"],
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr td[data-card-field="cover"] img,
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr td[data-card-field="actions"] { transition: none; }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:hover td[data-card-field="cover"] img { transform: none; }
+}
+
+/* ---------- Editing ---------- */
+/* The quick-rate cell drops its label for the rating button; an edited row gets it back over the field. */
+body.app-shell.library-view-shelf .library-section:not(#lv) .library-table tr:has(input, textarea, select) td.library-cell--quick-rate::before { content: attr(data-label) !important; }
+@media (max-width: 1024px) {
+  body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td.library-cell--quick-rate::before { content: attr(data-label) !important; }
+}
