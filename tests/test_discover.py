@@ -77,8 +77,10 @@ def test_catalog_is_balanced_and_complete():
     )
     for edition in MONTHLY_EDITIONS.values():
         date.fromisoformat(edition['published_date'])
-        assert len(edition['items']) == 6
-        assert {item['category'] for item in edition['items']} == editorial
+        formats = {item['category'] for item in edition['items']}
+        # September to December 2026 cover the six original formats; January 2027 is the first with all nine.
+        assert formats in (editorial, set(CATEGORIES))
+        assert len(edition['items']) == len(formats)
         assert edition['essay_title'] and edition['essay'] and edition['published'] and edition['published_date']
         assert all(
             item['why'] and item['caveat'] and item['source'].startswith('https://')
@@ -140,7 +142,7 @@ def test_monthly_edition_save_is_private_and_idempotent(authenticated_client, db
     base = f'/api/discover/monthly/{slug}'
     assert authenticated_client.get(base + '/preview').json()['items'][0]['existing']
     keys = [item['key'] for item in items]
-    assert authenticated_client.post(base + '/save', json={'keys': keys}).json()['created'] == 5
+    assert authenticated_client.post(base + '/save', json={'keys': keys}).json()['created'] == len(items) - 1
     assert authenticated_client.post(base + '/save', json={'keys': keys}).json()['created'] == 0
     db_session.refresh(existing)
     assert existing.rating == 8.5

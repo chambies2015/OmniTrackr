@@ -11,8 +11,10 @@ NOVEMBER = MONTHLY_EDITIONS["november-2026"]
 def test_editions_publish_on_their_date():
     assert "november-2026" not in published_editions(date(2026, 10, 31))
     assert "november-2026" in published_editions(date(2026, 11, 1))
-    assert list(published_editions(date(2026, 11, 1))) == [slug for slug in MONTHLY_EDITIONS if slug != "december-2026"]
-    assert list(published_editions(date(2026, 12, 1))) == list(MONTHLY_EDITIONS)
+    assert list(published_editions(date(2026, 11, 1))) == [slug for slug in MONTHLY_EDITIONS
+                                                          if slug not in ("december-2026", "january-2027")]
+    assert list(published_editions(date(2026, 12, 1))) == [slug for slug in MONTHLY_EDITIONS if slug != "january-2027"]
+    assert list(published_editions(date(2027, 1, 1))) == list(MONTHLY_EDITIONS)
 
 
 def test_an_edition_before_its_date_has_no_page_or_links(client, monkeypatch):

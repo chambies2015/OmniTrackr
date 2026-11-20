@@ -265,7 +265,7 @@ def test_month_helpers():
 
 
 def test_every_curated_challenge_is_well_formed():
-    kinds = {"total", "formats", "reflect", "edition", "before", "category"}
+    kinds = {"total", "formats", "reflect", "edition", "before", "category", "waiting"}
     for month, challenge in challenges.CHALLENGES.items():
         assert challenges.month_for_slug(challenges.slug_for(month)) == month
         assert challenge["name"] and challenge["tagline"] and challenge["intro"] and challenge["published"]

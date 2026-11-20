@@ -20,6 +20,13 @@ from .collections import CATEGORIES
 router = APIRouter()
 
 
+COUNT_WORDS = {4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine"}
+
+
+def _count_word(count: int) -> str:
+    return COUNT_WORDS.get(count, str(count))
+
+
 def trail_for(slug):
     if slug not in TRAILS:
         raise HTTPException(404, "Trail not found")
@@ -149,7 +156,7 @@ def discover_index(db: Session = Depends(get_db)):
     edition_card = (
         f'<section class="monthly-feature dx-edition" aria-labelledby="edition-heading"><div class="dx-edition__copy">'
         f'<p class="eyebrow">{escape(edition["tag"])}</p><h2 id="edition-heading">{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p>'
-        f'<p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p>'
+        f'<p class="muted">{escape(edition["published"])} · {_count_word(len(edition["items"]))} media types · One place to start in each</p>'
         f'<a class="button" href="{edition_href}">Read this edition →</a></div>'
         f'<ol class="dx-edition__picks" aria-label="In this edition">{edition_picks}</ol></section>')
     archive_items = ''.join(
@@ -448,7 +455,8 @@ def preview_for(trail, user, db):
 
 
 class SaveSelection(BaseModel):
-    keys: list[str] = Field(min_length=1, max_length=6)
+    # An edition can cover all nine formats (January 2027 is the first that does).
+    keys: list[str] = Field(min_length=1, max_length=9)
 
 
 @router.post("/api/discover/{slug}/save")
