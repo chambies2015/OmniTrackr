@@ -13,8 +13,9 @@ mentions: (title, sentence)), plan_heading, plan (paragraphs), related
 guide that covers a single format, such as an anime season; it is never the "current"
 guide), eyebrow (replaces "RELEASE GUIDE"), hub_label (its card label on /new-releases),
 method (paragraphs replacing the standard "How we chose" note; keep the AI-assistance line).
-TV and games season guides (focus "tv" or "games") live in release_guides_tv.py and
-release_guides_games.py and are added to GUIDES at the bottom.
+TV, games, film and book season guides (focus "tv", "games", "movies" or "books") live in
+release_guides_tv.py, release_guides_games.py, release_guides_movies.py and
+release_guides_books.py and are added to GUIDES at the bottom.
 
 Section fields: format (new_releases.FORMAT_ORDER), heading, intro (paragraphs), picks.
 A focused guide's sections share one format, so each also has an id and a label.
@@ -1159,3 +1160,10 @@ GUIDES.update(_TV_GUIDES)
 from .release_guides_games import GUIDES as _GAMES_GUIDES  # noqa: E402
 
 GUIDES.update(_GAMES_GUIDES)
+
+# One-format film and book season guides, the same way.
+from .release_guides_movies import GUIDES as _MOVIE_GUIDES  # noqa: E402
+from .release_guides_books import GUIDES as _BOOK_GUIDES  # noqa: E402
+
+GUIDES.update(_MOVIE_GUIDES)
+GUIDES.update(_BOOK_GUIDES)

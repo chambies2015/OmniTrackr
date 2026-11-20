@@ -72,6 +72,9 @@ def test_guides_publish_on_their_date():
     assert "winter-2027-tv" in new_releases.published(date(2026, 11, 20))
     assert "winter-2027-games" not in new_releases.published(date(2026, 11, 19))
     assert "winter-2027-games" in new_releases.published(date(2026, 11, 20))
+    for slug in ("winter-2027-movies", "winter-2027-books"):
+        assert slug not in new_releases.published(date(2026, 11, 19))
+        assert slug in new_releases.published(date(2026, 11, 20))
     assert new_releases.current(date(2026, 11, 15)) == "november-2026"
     # The anime season guide is newer and covers January too, but Release Radar keeps pointing at the all-format guide.
     assert new_releases.current(date(2027, 1, 20)) == "winter-2026-27"
@@ -236,3 +239,60 @@ def test_games_season_guide_groups_its_picks(client):
     hub = client.get("/new-releases").text
     assert f"{total} games, including Stranger Than Heaven" in hub
     assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 games<')
+
+
+def test_movies_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-movies"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-movies").text
+    assert f"<h1>{entry['name']}</h1>" in html and "MOVIES RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} film picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Films already written up in the broad winter guide are only listed here, not repeated as picks.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "movie"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("Narnia") for title, _ in entry["also"])
+    assert 'href="/in-order/godzilla"' in html
+    assert 'href="/new-releases/winter-2027-movies"' in client.get("/movie-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-movies"
+    hub = client.get("/new-releases").text
+    assert f"{total} films, including The Beekeeper 2" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 movies<')
+
+
+def test_books_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-books"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-books").text
+    assert f"<h1>{entry['name']}</h1>" in html and "BOOKS RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} book picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Every book has a firm US day, and it is a Tuesday, the usual US publishing day.
+    assert not any(item.get("month_only") for item in new_releases.picks(entry))
+    assert all(date.fromisoformat(item["date"]).weekday() == 1 for item in new_releases.picks(entry))
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "book"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("A Court of Forgotten Melody") for title, _ in entry["also"])
+    assert 'href="/new-releases/winter-2027-books"' in client.get("/book-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-books"
+    hub = client.get("/new-releases").text
+    assert f"{total} books, including In One Brief Moment All Eternity" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 books<')
+
+
+def test_season_guide_picks_save_as_themselves():
+    # Pick for me keeps the first copy of a title it sees, so a new film or book must not be shadowed by an
+    # older title of the same name and kind (The Nightingale is also a 2018 film): it would save the wrong year.
+    for slug in ("winter-2027-movies", "winter-2027-books"):
+        for item in new_releases.picks(GUIDES[slug]):
+            pooled = new_releases.pool_entry(item)
+            assert pooled["year"] == item["year"], (slug, item["title"])
+            assert pooled["out"] == item["date"], (slug, item["title"])
