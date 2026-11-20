@@ -44,7 +44,7 @@ def _completed_entry_or_404(db: Session, user: models.User, month: str | None = 
 # ---------------------------------------------------------------- member API
 
 @router.get("/api/challenge")
-def current_challenge(response: Response, user: models.User = Depends(get_current_user),
+def current_challenge(request: Request, response: Response, user: models.User = Depends(get_current_user),
                       db: Session = Depends(get_db)):
     _no_store(response)
     return challenges.payload(db, user)
@@ -69,7 +69,7 @@ def leave_challenge(request: Request, response: Response, user: models.User = De
 
 
 @router.post("/api/challenge/seen")
-def challenge_seen(response: Response, user: models.User = Depends(get_current_user),
+def challenge_seen(request: Request, response: Response, user: models.User = Depends(get_current_user),
                    db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     """The member dismissed the dashboard celebration."""
     _no_store(response)
@@ -88,7 +88,7 @@ def share_challenge(request: Request, response: Response, user: models.User = De
 
 
 @router.delete("/api/challenge/share")
-def unshare_challenge(response: Response, user: models.User = Depends(get_current_user),
+def unshare_challenge(request: Request, response: Response, user: models.User = Depends(get_current_user),
                       db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     _no_store(response)
     entry = _completed_entry_or_404(db, user, month)
@@ -275,7 +275,7 @@ def challenges_index(db: Session = Depends(get_db)):
         + _how_it_counts()
         + OWN_CHALLENGE
     )
-    description = "A small, opt-in challenge every month across movies, TV, anime, games, music and books, with a written guide."
+    description = "A small, opt-in challenge every month across movies, TV, anime, games, music, books, manga, podcasts and audiobooks, with a written guide."
     structured = {
         "@context": "https://schema.org", "@type": "CollectionPage",
         "name": "Monthly challenges", "url": challenges.SITE_URL + "/challenges",
@@ -352,19 +352,19 @@ def shared_challenge_page(token: str, request: Request, db: Session = Depends(ge
     guide = (f'<p><a href="/challenges/{_e(challenges.slug_for(entry.month))}">Read the challenge guide</a></p>'
              if challenges.is_curated(entry.month) and entry.month in challenges.public_months() else "")
     cta = ('<section class="profile-cta site-card"><div><h2>Take this month\'s challenge</h2>'
-           '<p>Three small steps across movies, shows, anime, games, music and books, filled in from what you already track.</p>'
+           '<p>Three small steps a month across nine formats, from movies and books to manga, podcasts and audiobooks, filled in from what you already track.</p>'
            f'{guide}</div>'
            + ('<a class="site-btn site-btn--primary" href="/#challenge">Open your challenge</a>' if signed_in
               else '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a>')
            + '</section>')
     html = _page(
         title=f"{title} · OmniTrackr",
-        description=f"{title} on OmniTrackr, the free tracker for movies, shows, anime, games, music and books.",
+        description=f"{title} on OmniTrackr, the free tracker for movies, TV, anime, games, music, books, manga, podcasts and audiobooks.",
         canonical=canonical,
         card_url=f"{canonical}/card.png",
         eyebrow=f"Monthly challenge · {challenges.month_label(entry.month)}",
         heading=title,
-        lead="Tracked on OmniTrackr, the free tracker for movies, shows, anime, games, music and books.",
+        lead="Tracked on OmniTrackr, the free tracker for movies, TV, anime, games, music, books, manga, podcasts and audiobooks.",
         actions=(f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
                  f'data-share-title="{_e(title)}">Share</button>'),
         body=body + cta,
