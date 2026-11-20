@@ -97,7 +97,8 @@ PALETTES = {
 DEFAULT_ACCENT = ((139, 92, 246), (124, 58, 237))
 FONT_STACK = "'DejaVu Sans',Verdana,Geneva,'Segoe UI',sans-serif"
 # XML 1.0 can't carry these, and bidi overrides could flip a title around in the image.
-_UNSAFE_TEXT = re.compile("[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f​-‏‪-‮⁦-⁩￾￿]")
+_UNSAFE_TEXT = dict.fromkeys([*range(0x00, 0x09), 0x0B, 0x0C, *range(0x0E, 0x20), 0x7F, *range(0x200B, 0x2010),
+                              *range(0x202A, 0x202F), *range(0x2066, 0x206A), 0xFFFE, 0xFFFF])
 
 
 @dataclass
@@ -253,7 +254,7 @@ def _ascent(size: int, bold: bool = False) -> float:
 
 
 def clean_text(value) -> str:
-    return " ".join(_UNSAFE_TEXT.sub("", str(value or "")).split())
+    return " ".join(str(value or "").translate(_UNSAFE_TEXT).split())
 
 
 def _fit(text: str, size: int, width: float, bold: bool = False) -> str:
