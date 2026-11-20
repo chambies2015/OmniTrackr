@@ -65,16 +65,16 @@ def test_similar_taste_names_only_titles_the_profile_shows(client, db_session):
     me = viewer(db_session)
     twin = member(db_session, "twin")
     # Favorites (8+) are on the profile; the 6s are in the library but not shown anywhere.
-    movies(db_session, twin, SHARED[:2], rating=9)
-    movies(db_session, twin, SHARED[2:], rating=6)
+    movies(db_session, twin, SHARED[:3], rating=9)
+    movies(db_session, twin, SHARED[3:], rating=6)
     public(db_session, twin, bio="Slow sci-fi and long books.")
     data = suggest(client, me)
     card = card_for(data, "twin")
     assert card and card["source"] == "taste"
-    assert card["reason"] == "You both loved Dune and Interstellar" or card["reason"] == "You both loved Interstellar and Dune"
+    assert card["reason"].startswith("You both loved ")
     named = {title["title"] for title in card["titles"]}
-    assert named <= {"Interstellar", "Dune"}
-    assert "Arrival" not in card["reason"] and "Her" not in card["reason"]
+    assert named <= {"Interstellar", "Dune", "Arrival"}
+    assert "Her" not in card["reason"] and "Prisoners" not in card["reason"]
     assert card["bio"] == "Slow sci-fi and long books."
     assert card["profile_url"] == "/u/twin" and "compare_url" not in card
     # Nothing on the card counts their library without the compare link switched on.

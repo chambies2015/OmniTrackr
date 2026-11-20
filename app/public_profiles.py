@@ -329,9 +329,13 @@ def _stats(db: Session, user: models.User) -> list[dict]:
     return rows
 
 
-def _favorites(db: Session, user: models.User) -> list[dict]:
+def _favorites(db: Session, user: models.User, categories=None) -> list[dict]:
+    """The member's top-rated titles. ``categories`` (optional) skips shelves the caller knows have no
+    title rated FAVORITE_MIN_RATING or more, which never changes the result, only the queries."""
     picks = []
     for category in _visible_categories(user):
+        if categories is not None and category not in categories:
+            continue
         kind = CATEGORIES[category][0]
         model = _model(category)
         image_field = title_pages.IMAGE_FIELD[kind]
@@ -416,11 +420,15 @@ def _rating_spread(db: Session, user: models.User) -> list[int]:
     return counts if sum(counts) else []
 
 
-def _reviews(db: Session, user: models.User) -> list[dict]:
+def _reviews(db: Session, user: models.User, categories=None) -> list[dict]:
+    """The member's public reviews for the profile. ``categories`` (optional) skips shelves the caller
+    knows hold no public review long enough to show, which never changes the result, only the queries."""
     from .routers.reviews import _current_state_hides_review
     reviews = []
     for kind, (model, review_category, library_category, label, _) in title_pages.KINDS.items():
         if library_category not in _visible_categories(user):
+            continue
+        if categories is not None and library_category not in categories:
             continue
         items = db.query(model).filter(
             model.user_id == user.id, model.review_public == True, model.review.isnot(None),
