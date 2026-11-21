@@ -956,8 +956,10 @@ def _essential_answer(group) -> tuple[str, str, str]:
     if item is None:
         return "", "", ""
     data = essentials.get(item["format"])
-    reason = item["why"].split(". ")[0].rstrip(".") + "."
-    text = f"{group.title} is number {item['number']} of the essential 100 {data['noun']} on OmniTrackr. {reason}"
+    reason = essentials.first_sentence(item["why"])
+    # The lists run in date order, so the number is a place on the list, not a rank.
+    text = (f"Yes. {group.title} is on OmniTrackr's list of the essential 100 {data['noun']}, number {item['number']} "
+            f"of 100 in date order. {reason}")
     html = (_e(text) + f' <a href="{_e(essentials.anchor_url(item))}">See it on the list</a>.')
     return f"Is {group.title} one of the essential {data['noun']}?", text, html
 
