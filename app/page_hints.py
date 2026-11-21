@@ -81,3 +81,24 @@ def allow_large_image_previews(html: str) -> str:
     if not match:
         return html
     return html[:match.start()] + '<meta name="robots" content="index, follow, max-image-preview:large">' + html[match.end():]
+
+
+THEME_COLOR = "#0b0a18"  # --site-bg in site.css
+_SITE_BODY = re.compile(r'<body\b[^>]*\bclass="(?:[^"]*\s)?site(?:\s[^"]*)?"', re.I)
+_VIEWPORT = re.compile(r'<meta name="viewport"[^>]*>', re.I)
+
+
+def add_theme_color(html: str) -> str:
+    """Tint the phone browser's address bar to match the dark site.
+
+    Only the homepage sent theme-color, so Chrome on Android drew a white bar
+    over every guide. Pages that already send one, and pages without the dark
+    site chrome (body class "site"), are left alone.
+    """
+    head_end = html.find("</head>")
+    if head_end == -1 or 'name="theme-color"' in html[:head_end] or not _SITE_BODY.search(html, head_end):
+        return html
+    tag = f'<meta name="theme-color" content="{THEME_COLOR}">'
+    viewport = _VIEWPORT.search(html, 0, head_end)
+    at = viewport.end() if viewport else head_end
+    return html[:at] + tag + html[at:]

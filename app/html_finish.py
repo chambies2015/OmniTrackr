@@ -11,11 +11,11 @@ from .guide_links import add_crosslinks
 from .image_sizes import shrink_html
 from .link_hints import nofollow_account_links
 from .page_breadcrumbs import add_breadcrumbs
-from .page_hints import add_preconnects, allow_large_image_previews
+from .page_hints import add_preconnects, add_theme_color, allow_large_image_previews
 from .site_chrome import fill_join_prompt
 
-STEPS = (shrink_html, add_preconnects, allow_large_image_previews, add_breadcrumbs, fill_join_prompt, add_crosslinks,
-         nofollow_account_links, mark_signup_pages, mark_guest_pages, add_reading_layout)
+STEPS = (shrink_html, add_preconnects, add_theme_color, allow_large_image_previews, add_breadcrumbs, fill_join_prompt,
+         add_crosslinks, nofollow_account_links, mark_signup_pages, mark_guest_pages, add_reading_layout)
 
 
 def finish(html: str) -> str:

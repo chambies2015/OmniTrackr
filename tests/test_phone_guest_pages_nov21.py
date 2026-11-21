@@ -171,3 +171,19 @@ def test_hero_search_results_sit_under_the_box_on_phones(client):
     assert "form.classList.toggle('lp-search--open', open)" in script and "input.blur()" in script
     page = client.get("/").text
     assert "/static/public-landing.css?v=20261121-phone-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
+
+
+def test_public_pages_tint_the_phone_address_bar(client):
+    from app import page_hints
+
+    for path in ("/in-order/star-wars", "/essentials/movies", "/binge-calculator/breaking-bad", "/demo", "/pick", "/browse/manga", "/"):
+        page = client.get(path).text
+        head = page[:page.index("</head>")]
+        assert head.count('name="theme-color"') == 1, path
+        assert '<meta name="theme-color" content="#0b0a18">' in head, path
+    # Light or unknown pages, and pages that already send one, are left alone.
+    light = '<html><head><meta name="viewport" content="width=device-width"></head><body class="website"></body></html>'
+    assert page_hints.add_theme_color(light) == light
+    own = '<html><head><meta name="theme-color" content="#123456"></head><body class="site"></body></html>'
+    assert page_hints.add_theme_color(own) == own
+    assert "--site-bg: #0b0a18;" in SITE_CSS
