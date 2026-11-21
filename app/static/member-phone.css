@@ -76,12 +76,17 @@
 @media (max-width: 760px) {
   /* Shelf cards: the title link was 21px tall and the rating button 28px. Padding with a
      matching negative margin makes them easier to hit without moving anything. */
-  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] a {
+  body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] a {
     display: inline-block;
     margin-block: -8px;
     padding-block: 8px;
   }
-  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table .library-quick-rate { margin-block: -4px; min-height: 36px; }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table .library-quick-rate,
+  body.app-shell .library-section:not(#lv) .library-table .library-quick-rate { margin-block: -4px; min-height: 36px; }
+
+  /* Notifications: "See your badges" and the dismiss cross. */
+  body.app-shell .notification-action-btn { align-items: center; display: inline-flex; min-height: 40px; }
+  body.app-shell .notification-dismiss { min-height: 40px; min-width: 40px; }
 
   /* Friends feed: names and titles are links. */
   body.app-shell .ffeed-card__name { margin-block: -8px; padding-block: 8px; }
@@ -113,8 +118,9 @@
   body.app-shell .completion-ritual-modal__favorite { align-items: center; display: flex; gap: 10px; min-height: 44px; }
   body.app-shell .completion-ritual-modal__favorite input { flex: none; height: 20px; margin: 0; width: 20px; }
 
-  /* Lone links at the end of a card. */
+  /* Lone links at the end of a card, and the footer logo. */
   body.app-shell :is(.social-talk__link, .activity-recap__year a) { display: inline-block; margin-block: -10px; padding-block: 10px; }
+  body.app-shell .app-footer__brand { margin-block: -9px; padding-block: 9px; }
 
   /* Postcards: the nine shelf checkboxes. */
   body.app-shell #recommendationRequestForm label:has(> input[type="checkbox"]) { align-items: center; display: inline-flex; gap: 8px; min-height: 40px; }
