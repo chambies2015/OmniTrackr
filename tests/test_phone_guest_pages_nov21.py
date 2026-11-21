@@ -114,3 +114,14 @@ def test_every_page_loads_the_new_guest_list_script(client):
              and "guest-list.js?v=20261118-sheet-1" in path.read_text(encoding="utf-8")]
     assert stale == []
     assert "/static/guest-list.js?v=20261121-phone-1" in client.get("/in-order/star-wars").text
+
+
+def test_essentials_lists_offer_a_titles_only_view(client):
+    page = client.get("/essentials/movies").text
+    assert '<button type="button" class="es-view" aria-pressed="false" data-es-view hidden>Titles only</button>' in page
+    assert "/static/essentials.js?v=20261121-phone-1" in page and "/static/essentials.css?v=20261121-phone-1" in page
+    css = (ROOT / "app/static/essentials.css").read_text(encoding="utf-8")
+    assert '.es-guide[data-es-view="titles"] .es-item__why, .es-guide[data-es-view="titles"] .es-item__start { display: none; }' in css
+    assert ".es-tracker--stuck .es-view { display: none; }" in css
+    # The notes stay in the page for readers and search engines; only the view changes.
+    assert page.count('class="es-item__why"') == 100
