@@ -1,4 +1,4 @@
-"""Seasonal hubs (/halloween, /holidays), the guides beside the holiday hub, each member's
+"""Seasonal hubs (/halloween, /holidays, /valentines-day), the guides beside the holiday hub, each member's
 progress and the dashboard card.
 
 The hub reads completely without scripts or an account. Members add one pick or
@@ -24,7 +24,7 @@ from ..seasonal_guides import SEASONS
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
-CSS_VERSION = "20261120-christmas-1"
+CSS_VERSION = "20261121-valentines-1"
 JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
 SITE = "https://omnitrackr.xyz"
@@ -37,6 +37,10 @@ EXTRA_LINKS = {
                   "tagline": "What tends to get cheaper on Black Friday, what rarely does, and what to check first."}]
     + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"]}
        for _, entry in seasonal.companions_of("holidays")],
+    "valentines": [{"path": "/discover/one-evening-well-spent", "name": "One evening, well spent",
+                    "tagline": "Four things to finish in a single night, from Before Sunset to Florence, a short game about a first love."},
+                   {"path": "/discover/weather-and-windows", "name": "Weather and windows",
+                    "tagline": "Quiet, rainy stories to watch and read alone, among them In the Mood for Love and The Garden of Words."}],
 }
 
 
@@ -210,7 +214,12 @@ def _related(slug: str, entry: dict, today: date) -> str:
 def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     items = seasonal.picks(entry)
     formats = sorted({item["kind"] for item in items}, key=list(title_pages.KINDS).index)
-    jump = "".join(f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>' for shelf in entry["shelves"])
+    calendar = entry.get("calendar")
+    jump = ""
+    for shelf in entry["shelves"]:
+        jump += f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>'
+        if calendar and calendar["after"] == shelf["key"]:
+            jump += f'<a href="#{_e(calendar["key"])}">{_e(calendar["label"])}</a>'
     progress = ('<section class="sn-progress" data-season-progress="' + _e(slug) + '" data-season-name="' + _e(entry["name"]) + '" aria-labelledby="sn-progress-title" hidden>'
                 f'<p class="eyebrow">YOUR {_e(entry["name"].upper())}</p><h2 id="sn-progress-title" data-season-progress-title>Your progress</h2>'
                 f'<div class="sn-meter" role="progressbar" aria-valuemin="0" aria-valuemax="{len(items)}" aria-valuenow="0" '
@@ -239,7 +248,11 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     if not signed_in:
         parts.append('<p class="yl-section-intro sn-guest-note">Save any pick to a list as you go, no account needed. '
                      'Your list moves into a free library when you sign up.</p>')
-    parts.extend(_shelf_html(entry, shelf, details, signed_in, today) for shelf in entry["shelves"])
+    for shelf in entry["shelves"]:
+        parts.append(_shelf_html(entry, shelf, details, signed_in, today))
+        if calendar and calendar["after"] == shelf["key"]:
+            parts.append(_calendar_html(entry, today))
+    sources = "".join(_source_link(label, url) for label, url in entry.get("sources", ()))
     parts.extend([
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
@@ -248,6 +261,7 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
         _related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
         _paragraphs(entry["method"]),
+        f'<h3>Sources we checked</h3><ul class="sn-sources">{sources}</ul>' if sources else "",
         f'<p class="muted">First published {_e(_long_date(entry["published"]))}. Checked {_e(_long_date(reviewed))}. '
         '<a href="/contact">Suggest a pick or send a correction</a> · <a href="/content-quality">Editorial standards</a></p>'
         '</section></article>',
@@ -283,7 +297,10 @@ def _companion_related(slug: str, entry: dict, today: date) -> str:
 
 
 def _calendar_html(entry: dict, today: date) -> str:
-    """A guide's dated list of new releases (the Christmas guide), grouped by month, linking to picks on the page."""
+    """A guide's dated list of new releases (the Christmas guide, the Valentine's hub), grouped by month.
+
+    A row links to its pick on the page when there is one, else to its write-up elsewhere (``href``), if any.
+    """
     calendar = entry["calendar"]
     anchors = {item["title"]: seasonal.anchor_id(item) for item in seasonal.picks(entry)}
     months: dict[str, list[dict]] = {}
@@ -296,8 +313,12 @@ def _calendar_html(entry: dict, today: date) -> str:
             day = date.fromisoformat(row["date"])
             out = day <= today
             out_tag = ' <span class="sn-calendar__out">Out now</span>' if out else ""
-            title = (f'<a href="#{_e(anchors[row["title"]])}">{_e(row["title"])}</a>' if row["title"] in anchors
-                     else _e(row["title"]))
+            if row["title"] in anchors:
+                title = f'<a href="#{_e(anchors[row["title"]])}">{_e(row["title"])}</a>'
+            elif row.get("href"):
+                title = f'<a href="{_e(row["href"])}">{_e(row["title"])}</a>'
+            else:
+                title = _e(row["title"])
             items.append(
                 f'<li class="sn-calendar__row{" sn-calendar__row--out" if out else ""}">'
                 f'<time class="sn-calendar__date" datetime="{_e(row["date"])}"><span>{day:%a}</span>'

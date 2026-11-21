@@ -1,4 +1,4 @@
-"""Seasonal hubs (/halloween, /holidays): hand-written picks by level, member progress and the dashboard card (Oct 2026)."""
+"""Seasonal hubs (/halloween, /holidays, /valentines-day): hand-written picks by level, member progress and the dashboard card (Oct 2026)."""
 import re
 from datetime import date
 from pathlib import Path
@@ -49,9 +49,10 @@ def test_every_season_is_complete_and_substantial():
         seen = set()
         for shelf in entry["shelves"]:
             assert re.fullmatch(r"[a-z0-9-]{1,40}", shelf["key"])
-            # One pick in every format OmniTrackr tracks, per shelf.
-            # The seasonal guides are written for the six original formats; manga, podcasts and audiobooks came later.
-            assert sorted(item["kind"] for item in shelf["picks"]) == sorted(k for k in title_pages.KINDS if k not in {"manga", "podcast", "audiobook"})
+            # One pick in every format OmniTrackr tracks, per shelf. Halloween and the holidays were written for the
+            # six original formats (manga, podcasts and audiobooks came later); the Valentine's hub covers all nine.
+            formats = title_pages.KINDS if slug == "valentines" else [k for k in title_pages.KINDS if k not in {"manga", "podcast", "audiobook"}]
+            assert sorted(item["kind"] for item in shelf["picks"]) == sorted(formats), (slug, shelf["key"])
             for item in shelf["picks"]:
                 assert 1 <= item["level"] <= 5 and 1800 < item["year"] < 2030
                 assert item["title"] and item["time"] and item["why"] and item["note"] and item["caveat"]

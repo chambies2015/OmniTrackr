@@ -48,6 +48,7 @@ HUBS = {
     "/holidays/reading-and-listening": "Reading and listening",
     "/holidays/advent-calendar": "Advent calendar",
     "/halloween": "Halloween picks",
+    "/valentines-day": "Valentine's Day picks",
     "/binge-calculator": "Binge calculator",
 }
 PARENTS = {

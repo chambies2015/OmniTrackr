@@ -1,4 +1,4 @@
-"""Helpers for the seasonal hubs (/halloween, /holidays), whose writing lives in seasonal_guides.py,
+"""Helpers for the seasonal hubs (/halloween, /holidays, /valentines-day), whose writing lives in seasonal_guides.py,
 and the guides beside the holiday hub (holiday_guides.py: /holidays/thanksgiving and
 /holidays/reading-and-listening), which share the hub's page parts and member API.
 
@@ -59,7 +59,8 @@ def pool_sources():
         label = f"{entry['name']} picks"
         for shelf in entry["shelves"]:
             for item in shelf["picks"]:
-                yield item, label, f"{entry['path']}#{shelf['key']}"
+                if item["kind"] not in EXTRA_KINDS:
+                    yield item, label, f"{entry['path']}#{shelf['key']}"
     for slug, entry in COMPANIONS.items():
         for shelf in entry["shelves"]:
             for item in shelf["picks"]:
@@ -79,7 +80,7 @@ def find_extra(kind: str, slug: str) -> Optional[tuple[str, dict]]:
     """For the saved-before-sign-up import: (browse kind, entry) for a manga, podcast or audiobook pick."""
     if kind not in EXTRA_KINDS:
         return None
-    for entry in COMPANIONS.values():
+    for entry in (*SEASONS.values(), *COMPANIONS.values()):
         for item in picks(entry):
             if item["kind"] == kind:
                 found = extra_entry(item)
@@ -118,7 +119,11 @@ def season_year(entry: dict, today: Optional[date] = None) -> int:
     """The year of the season a hub is about: this year's from its start, last year's before that.
 
     The holiday hub still belongs to 2026 on January 1, 2027, and Halloween to 2026 until October 2027.
+    A hub written ahead of its season names its year (the Valentine's hub, written in November 2026 for
+    February 2027), and keeps it until it is rewritten for the next one.
     """
+    if entry.get("year"):
+        return entry["year"]
     today = today or datetime.utcnow().date()
     start, _ = _bounds(entry, today.year)
     return today.year if today >= start else today.year - 1
