@@ -110,3 +110,41 @@ test('a recommended step offers this month\'s unsaid finishes until it is done',
     delete global.document;
   }
 });
+
+test('a birthday step names titles in the library that turn a round number, or the years that count', () => {
+  const turning = [
+    { category: 'movies', id: 3, title: 'Star Wars', age: 50 },
+    { category: 'video-games', id: 8, title: '  Portal ', age: 20 },
+    { category: 'books', id: 1, title: '', age: 30 },
+    { category: 'music', id: 2, title: 'No age' },
+    { category: 'anime', id: 5, title: 'Den-noh Coil', age: 20 },
+    { category: 'podcasts', id: 6, title: 'Fourth', age: 10 },
+  ];
+  assert.equal(challenge.birthdayHint({ kind: 'birthday', done: false, turning, years: [2017, 2007, 1997, 1987] }),
+    'In your library: Star Wars turns 50, Portal turns 20, Den-noh Coil turns 20');
+  assert.equal(challenge.birthdayHint({ kind: 'birthday', done: false, turning: [], years: [2017, 2007, 1997, 1987] }),
+    'Counts if it came out in 2017, 2007, 1997, 1987 or an earlier year ending in 7');
+  assert.equal(challenge.birthdayHint({ kind: 'birthday', done: false, years: [2018, 2008] }),
+    'Counts if it came out in 2018, 2008 or an earlier year ending in 8');
+  assert.equal(challenge.birthdayHint({ kind: 'birthday', done: false }), '');
+  assert.equal(challenge.birthdayHint({ kind: 'birthday', done: true, turning, years: [2017] }), '');
+  assert.equal(challenge.birthdayHint({ kind: 'reflect', done: false, turning, years: [2017] }), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const item = challenge.stepItem({ kind: 'birthday', label: 'Finish something that turns 10, 20, 30 or more this year',
+      done: false, count: 0, target: 1, turning: [turning[0]], years: [2017] });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, 'In your library: Star Wars turns 50');
+    assert.equal(item.children.some(node => node.tag === 'button'), false);
+  } finally {
+    delete global.document;
+  }
+});
