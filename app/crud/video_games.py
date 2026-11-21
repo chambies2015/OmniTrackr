@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
 
-from .. import models, schemas
+from .. import models, schemas, text_limits
 
 
 def get_video_games(
@@ -55,6 +55,8 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
     if db_video_game is None:
         return None
     update_dict = video_game_update.model_dump(exclude_unset=True)
+    # Text saved before the limits stays editable; it just can't grow past them.
+    text_limits.check_update(db_video_game, update_dict)
     
     allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'review_public', 'cover_art_url', 'rawg_link'}
     for field, value in update_dict.items():

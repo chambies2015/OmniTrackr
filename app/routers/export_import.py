@@ -620,15 +620,17 @@ def import_data(
 
 
 def _run_import(import_data: schemas.ImportData, current_user: models.User, db: Session) -> schemas.ImportResult:
-    movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
-    tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
-    anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
-    video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
-    music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music)
-    books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books)
-    manga_created, manga_updated, manga_errors = crud.import_manga(db, current_user.id, import_data.manga)
-    podcasts_created, podcasts_updated, podcast_errors = crud.import_podcasts(db, current_user.id, import_data.podcasts)
-    audiobooks_created, audiobooks_updated, audiobook_errors = crud.import_audiobooks(db, current_user.id, import_data.audiobooks)
+    # One entry per title, name, review or link shortened to fit text_limits.
+    shortened: list = []
+    movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies, shortened)
+    tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows, shortened)
+    anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime, shortened)
+    video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games, shortened)
+    music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music, shortened)
+    books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books, shortened)
+    manga_created, manga_updated, manga_errors = crud.import_manga(db, current_user.id, import_data.manga, shortened)
+    podcasts_created, podcasts_updated, podcast_errors = crud.import_podcasts(db, current_user.id, import_data.podcasts, shortened)
+    audiobooks_created, audiobooks_updated, audiobook_errors = crud.import_audiobooks(db, current_user.id, import_data.audiobooks, shortened)
     custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
     activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
     collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
@@ -678,6 +680,7 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         playtimes_skipped=playtimes_skipped,
         episode_notes_created=episode_notes_created,
         episode_notes_skipped=episode_notes_skipped,
+        shortened=len(shortened),
         errors=all_errors
     )
 

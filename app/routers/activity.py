@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import diary, memories, models, schemas
+from .. import diary, memories, models, schemas, text_limits
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
@@ -264,10 +264,14 @@ def import_activity_entries(
         ).limit(2).all()
         item = matches[0] if len(matches) == 1 else None
         occurred_at = _naive_utc(incoming.occurred_at)
+        # A title past the restore ceiling is saved shortened, so a second restore of
+        # the same backup must find the shortened copy as well as a full-length one.
+        saved_title = text_limits.shorten(title, text_limits.ceiling("title", restore=True))
+        title_forms = {title, saved_title}
         duplicate = db.query(models.ActivityEntry.id).filter(
             models.ActivityEntry.user_id == user_id,
             models.ActivityEntry.category == incoming.category,
-            models.ActivityEntry.title == title,
+            models.ActivityEntry.title.in_(sorted(title_forms)),
             models.ActivityEntry.action == incoming.action,
             models.ActivityEntry.occurred_at == occurred_at,
             models.ActivityEntry.note == incoming.note,
@@ -280,7 +284,7 @@ def import_activity_entries(
             user_id=user_id,
             category=incoming.category,
             item_id=item.id if item else None,
-            title=title,
+            title=saved_title,
             action=incoming.action,
             note=incoming.note,
             rating=incoming.rating,

@@ -57,12 +57,33 @@
     return words ? words.length : 0;
   }
 
+  // The server's limit (text_limits.REVIEW_MAX) is the textarea's maxlength. A review saved
+  // before the limit loads without it, so it can still be edited; the server only refuses
+  // making it longer.
+  function reviewLimit() {
+    const box = reviewForm.elements.review;
+    return Number(box.dataset.limit) || box.maxLength;
+  }
+
+  function reviewLengthHint(value) {
+    const limit = reviewLimit();
+    if (!(limit > 0) || value.length < limit * 0.9) return '';
+    const count = `${value.length.toLocaleString('en-US')} of ${limit.toLocaleString('en-US')} characters`;
+    if (value.length <= limit) return count;
+    if (value.length <= (reviewForm.dataset.expected || '').trim().length) {
+      return `${count}. This review was saved before the limit: you can edit or shorten it, but not add to it`;
+    }
+    return `${count}. Shorten the review to save it`;
+  }
+
   // Mirrors evaluate_public_review in review_quality.py: 80 characters to be listed here;
   // 240 characters, 35 words and two sentences (or 55 words) for a page of its own.
   function reviewHint(text) {
     const value = String(text || '').trim();
     const words = countWords(value);
     if (!words) return '';
+    const length = reviewLengthHint(value);
+    if (length) return length;
     const sentences = (value.match(/[.!?\u2026](?:\s|$)/g) || []).length;
     const label = `${words} word${words === 1 ? '' : 's'}`;
     if (value.length < 80) return `${label}: keep going, a couple of sentences is plenty`;
@@ -116,7 +137,12 @@
       const data = await response.json();
       if (data.in_library) markInLibrary();
       if (data.in_library && data.review) {
-        reviewForm.elements.review.value = data.review;
+        const box = reviewForm.elements.review;
+        if (box.maxLength > 0 && data.review.length > box.maxLength) {
+          box.dataset.limit = String(box.maxLength);
+          box.removeAttribute('maxlength');
+        }
+        box.value = data.review;
         reviewForm.dataset.expected = data.review;
         reviewForm.querySelector('[type="submit"]').textContent = 'Update review';
       }

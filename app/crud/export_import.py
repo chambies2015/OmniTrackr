@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import null
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import models, schemas, text_limits
 
 
 def _library_row(data: dict) -> dict:
@@ -145,10 +145,16 @@ def find_video_game_by_title_and_release_date(db: Session, user_id: int, title: 
     return query.first()
 
 
-def _import_media(db: Session, user_id: int, entries, model, identity_fields, label):
-    """Keep complete edition identity and make each saved row visible to the next."""
+def _import_media(db: Session, user_id: int, entries, model, identity_fields, label, shortened=None):
+    """Keep complete edition identity and make each saved row visible to the next.
+
+    A backup is the member's own library, so text up to text_limits.RESTORE_FACTOR
+    times the limits comes back whole; anything longer is shortened rather than
+    refused, and ``shortened`` (a list, when given) collects one entry per field cut.
+    """
     created = updated = 0
     errors = []
+    cut_fields = []
     if not entries:
         return created, updated, errors
     from ..progress import lock_progress_owner
@@ -160,16 +166,25 @@ def _import_media(db: Session, user_id: int, entries, model, identity_fields, la
             with db.begin_nested():
                 identity = {field: getattr(incoming, field) for field in identity_fields}
                 existing = db.query(model).filter_by(user_id=user_id, **identity).first()
+                if existing is None:
+                    # An earlier restore of this backup saved a too-long title or name
+                    # shortened; match that copy instead of adding a second one.
+                    short_identity = {field: text_limits.clip(field, value, restore=True) for field, value in identity.items()}
+                    if short_identity != identity:
+                        existing = db.query(model).filter_by(user_id=user_id, **short_identity).first()
                 values = incoming.model_dump(exclude_unset=existing is not None)
                 if values.get("rating") is not None:
                     values["rating"] = round(float(values["rating"]), 1)
                 if existing is None:
+                    cut = text_limits.clip_fields(values, restore=True)
                     db.add(model(**_library_row(values), user_id=user_id))
                 else:
                     # A restore can hide a review but must not re-publish one
                     # the user has since made private.
                     if values.get("review_public") and not existing.review_public:
                         values.pop("review_public")
+                    # Text the entry already holds is kept as it is, however long.
+                    cut = text_limits.clip_for_existing(values, existing, restore=True)
                     for field, value in values.items():
                         if field != "added_at":
                             setattr(existing, field, value)
@@ -178,59 +193,62 @@ def _import_media(db: Session, user_id: int, entries, model, identity_fields, la
                 created += 1
             else:
                 updated += 1
+            cut_fields.extend((label, field) for field in cut)
         except Exception:
-            errors.append(f"Could not import {label} '{incoming.title}'.")
+            errors.append(f"Could not import {label} '{text_limits.shorten(incoming.title, 120)}'.")
     try:
         db.commit()
     except Exception:
         db.rollback()
         errors.append(f"The {label} import could not be saved.")
         return 0, 0, errors
+    if shortened is not None:
+        shortened.extend(cut_fields)
     return created, updated, errors
 
 
-def import_movies(db: Session, user_id: int, movies) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, movies, models.Movie, ("title", "director", "year"), "movie")
+def import_movies(db: Session, user_id: int, movies, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, movies, models.Movie, ("title", "director", "year"), "movie", shortened)
 
 
-def import_tv_shows(db: Session, user_id: int, tv_shows) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, tv_shows, models.TVShow, ("title", "year"), "TV show")
+def import_tv_shows(db: Session, user_id: int, tv_shows, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, tv_shows, models.TVShow, ("title", "year"), "TV show", shortened)
 
 
-def import_anime(db: Session, user_id: int, anime) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, anime, models.Anime, ("title", "year"), "anime")
+def import_anime(db: Session, user_id: int, anime, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, anime, models.Anime, ("title", "year"), "anime", shortened)
 
 
-def import_video_games(db: Session, user_id: int, video_games) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, video_games, models.VideoGame, ("title", "release_date"), "video game")
+def import_video_games(db: Session, user_id: int, video_games, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, video_games, models.VideoGame, ("title", "release_date"), "video game", shortened)
 
 
 def find_music_by_title_and_artist(db: Session, user_id: int, title: str, artist: str) -> Optional[models.Music]:
     return db.query(models.Music).filter_by(user_id=user_id, title=title, artist=artist).first()
 
 
-def import_music(db: Session, user_id: int, music) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, music, models.Music, ("title", "artist", "year"), "music")
+def import_music(db: Session, user_id: int, music, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, music, models.Music, ("title", "artist", "year"), "music", shortened)
 
 
 def find_book_by_title_and_author(db: Session, user_id: int, title: str, author: str) -> Optional[models.Book]:
     return db.query(models.Book).filter_by(user_id=user_id, title=title, author=author).first()
 
 
-def import_books(db: Session, user_id: int, books) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, books, models.Book, ("title", "author", "year"), "book")
+def import_books(db: Session, user_id: int, books, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, books, models.Book, ("title", "author", "year"), "book", shortened)
 
 
-def import_manga(db: Session, user_id: int, manga) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, manga, models.Manga, ("title", "author", "year"), "manga")
+def import_manga(db: Session, user_id: int, manga, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, manga, models.Manga, ("title", "author", "year"), "manga", shortened)
 
 
-def import_podcasts(db: Session, user_id: int, podcasts) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, podcasts, models.Podcast, ("title", "host", "year"), "podcast")
+def import_podcasts(db: Session, user_id: int, podcasts, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, podcasts, models.Podcast, ("title", "host", "year"), "podcast", shortened)
 
 
-def import_audiobooks(db: Session, user_id: int, audiobooks) -> tuple[int, int, List[str]]:
-    return _import_media(db, user_id, audiobooks, models.Audiobook, ("title", "author", "year"), "audiobook")
+def import_audiobooks(db: Session, user_id: int, audiobooks, shortened=None) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, audiobooks, models.Audiobook, ("title", "author", "year"), "audiobook", shortened)
 
 
 def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) -> tuple[int, int, List[str]]:
