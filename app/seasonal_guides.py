@@ -1,4 +1,4 @@
-"""Seasonal hubs: hand-written picks for a time of year (/halloween, /holidays).
+"""Seasonal hubs: hand-written picks for a time of year (/halloween, /holidays, /valentines-day).
 
 Each season is one evergreen page at a fixed path, refreshed each year, so links
 and search results keep working. ``window`` is the stretch of the year (month-day,
@@ -6,15 +6,23 @@ inclusive, UTC) when members see the season's card on their dashboard and the
 public guides promote it; the page itself stays readable all year.
 
 Pick fields:
-    kind     movie | tv | anime | game | book | album
-    level    1 to 5 on the season's ``scale`` (named by ``scale_name``: fright, festive)
+    kind     movie | tv | anime | game | book | album, and for the Valentine's hub also
+             manga | podcast | audiobook (one pick in every format on each of its shelves)
+    level    1 to 5 on the season's ``scale`` (named by ``scale_name``: fright, festive, romance)
     time     what it asks of you, in plain words
     why      why it is on the shelf
     note     how to approach it
     caveat   what to know first (content, pace, availability)
 
-Every pick joins the Pick for me pool (pick.py), which is how saving works.
-A new season is a new entry here plus a theme block in seasonal.css.
+Optional, used by the Valentine's hub:
+    year      the year the hub is written for, when it goes up before its season starts
+    calendar  a dated list of new releases, shown after the shelf named in ``after`` (the same shape as
+              the Christmas guide's in holiday_guides.py; a row may add ``href`` to link to a write-up elsewhere)
+    sources   ((label, url), ...) listed under "How we chose"
+
+Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py), which is how saving works.
+Manga, podcast and audiobook picks are saved straight to their tracker (seasonal.extra_entry).
+A new season is a new entry here plus a theme block in seasonal.css and seasonal-card.css.
 """
 
 SEASONS = {
@@ -818,3 +826,8 @@ SEASONS = {
         ],
     },
 }
+
+# The Valentine's Day hub lives in its own module (it is the longest of the three); it is the last season in the year.
+from .seasonal_guides_valentines import VALENTINES  # noqa: E402
+
+SEASONS["valentines"] = VALENTINES
