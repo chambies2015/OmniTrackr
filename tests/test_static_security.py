@@ -225,7 +225,8 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     assert 'class="review-quality-hint"' in source
     assert "const PUBLIC_REVIEW_MIN_CHARS = 80" in source
     assert "setupReviewQualityCounters()" in source
-    assert "getReviewQualityMessage(textarea.value)" in source
+    # The counter also passes the saved length, so an older review past the length limit reads as editable.
+    assert "getReviewQualityMessage(textarea.value, savedLength)" in source
     assert "Search-ready baseline met" in source
     assert "SEARCH_READY_REVIEW_MIN_CHARS = 240" in source
     assert "SEARCH_READY_REVIEW_MIN_WORDS = 35" in source
