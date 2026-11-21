@@ -280,7 +280,12 @@ GUEST_PANEL_NOTE = ('<p class="save-panel__guest" data-guest-only>No account yet
 
 
 def _other_version(item) -> str:
-    """The pick's version in another format, for editions that name one (July 2027 onward)."""
+    """The pick's version in another format, for editions that name one (July 2027 onward), or the best-known
+    work by the same maker, for editions that name that instead (August 2027)."""
+    shadow = item.get("shadow")
+    if shadow and shadow.get("title") and shadow.get("note"):
+        return (f'<p class="pick-other"><strong>In the shadow of {escape(shadow["title"])}:</strong> '
+                f'{escape(shadow["note"])}</p>')
     other = item.get("other")
     if not other or other.get("category") not in CATEGORIES:
         return ""

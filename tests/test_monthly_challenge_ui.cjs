@@ -227,3 +227,40 @@ test('a pair step names other versions waiting in the library, or how the step c
     delete global.document;
   }
 });
+
+test('a maker step names titles by people you know waiting in the library, or how the step counts', () => {
+  const step = { kind: 'maker', done: false, count: 0, target: 1, waiting: [
+    { title: ' The Conversation ', maker: 'Francis Ford Coppola' },
+    { title: 'Tusk', maker: 'Fleetwood Mac' },
+  ] };
+  assert.equal(challenge.makerHint(step), 'In your library: The Conversation (Francis Ford Coppola), Tusk (Fleetwood Mac)');
+  // At most three, entries without a title are skipped, and a missing maker leaves just the title.
+  const many = { ...step, waiting: [{ title: 'A', maker: 'X' }, { title: '', maker: 'Y' }, { title: 'B', maker: 7 },
+    { title: 'C', maker: 'Z' }, { title: 'D', maker: 'W' }] };
+  assert.equal(challenge.makerHint(many), 'In your library: A (X), B, C (Z)');
+
+  const fallback = "Counts when the director, author, band or host matches something you've finished";
+  assert.equal(challenge.makerHint({ ...step, waiting: [] }), fallback);
+  assert.equal(challenge.makerHint({ ...step, waiting: 'Tusk' }), fallback);
+  assert.equal(challenge.makerHint({ ...step, done: true }), '');
+  assert.equal(challenge.makerHint({ ...step, kind: 'pair' }), '');
+  // The pair hint ignores a maker step, so each step gets only its own line.
+  assert.equal(challenge.pairHint(step), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const item = challenge.stepItem({ kind: 'maker', label: 'Finish something else by a creator you already know',
+      done: false, count: 0, target: 1, waiting: [{ title: 'Sula', maker: 'Toni Morrison' }] });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, 'In your library: Sula (Toni Morrison)');
+  } finally {
+    delete global.document;
+  }
+});
