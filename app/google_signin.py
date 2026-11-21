@@ -9,7 +9,10 @@ first name, used once to suggest a username. No Google token is stored.
 
 Account rules:
 - A Google account already linked to a member signs that member in.
-- Otherwise a member whose email matches Google's verified email is linked and signed in.
+- Linking to an existing member by email requires a Gmail or Google Workspace identity,
+  the addresses Google is authoritative for. A member using another mailbox logs in with
+  email. A new account can still be made from any verified Google address.
+- A member whose email matches Google's authoritative email is linked and signed in.
   If that member had never verified the address, Google has now proved who owns it, so
   the account is marked verified and its unproven password is replaced (whoever chose
   it never showed they own the inbox; the owner can set a new one with "Forgot password").
@@ -214,7 +217,8 @@ def read_id_token(id_token: str, nonce: str, now: Optional[float] = None) -> dic
     if claims.get("email_verified") not in (True, "true"):
         raise SignInError("unverified")
     name = claims.get("given_name") or claims.get("name") or ""
-    return {"sub": sub, "email": email.strip(), "name": name if isinstance(name, str) else ""}
+    return {"sub": sub, "email": email.strip(), "hd": claims.get("hd"),
+            "name": name if isinstance(name, str) else ""}
 
 
 # ---------------------------------------------------------------- accounts
@@ -244,6 +248,13 @@ def _random_password_hash() -> str:
     return auth.get_password_hash(secrets.token_urlsafe(32))
 
 
+def _google_owns_address(profile: dict) -> bool:
+    """Gmail, or a managed Google Workspace account (the hosted-domain claim)."""
+    hosted_domain = profile.get("hd")
+    return (profile["email"].rsplit("@", 1)[-1].lower() == "gmail.com"
+            or (isinstance(hosted_domain, str) and bool(hosted_domain.strip())))
+
+
 def find_or_create_user(db: Session, profile: dict) -> tuple[models.User, str]:
     """Return (user, outcome) where outcome is "signed_in", "linked" or "created"."""
     user = db.query(models.User).filter(models.User.google_sub == profile["sub"]).first()
@@ -256,6 +267,10 @@ def find_or_create_user(db: Session, profile: dict) -> tuple[models.User, str]:
                 .order_by(case((models.User.email == profile["email"], 0), else_=1),
                           case((models.User.is_verified.is_(True), 0), else_=1), models.User.id).first())
         if user is not None:
+            # Google may once have verified a third-party mailbox that has changed hands, so
+            # only an address Google is authoritative for can take over an existing account.
+            if not _google_owns_address(profile):
+                raise SignInError("unverified")
             if not user.is_active:
                 raise SignInError("deactivated")  # Leave a deactivated account exactly as it was.
             if user.google_sub and user.google_sub != profile["sub"]:

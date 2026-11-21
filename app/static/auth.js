@@ -1903,7 +1903,7 @@ const GOOGLE_ERRORS = {
     cancelled: 'Google sign-in was cancelled. Try again, or use your email below.',
     expired: 'That Google sign-in took too long or was opened in another tab. Please try again.',
     failed: "Google sign-in didn't work this time. Please try again, or use your email below.",
-    unverified: "Google hasn't verified that email address yet, so it can't be used. Use your email below instead.",
+    unverified: "Google couldn't confirm current ownership of this address. Use the email form below to sign up or log in.",
     deactivated: 'This account is deactivated. Log in with your password to reactivate it, or reset your password first.',
     unavailable: "Google sign-in isn't available right now. Use your email below.",
 };

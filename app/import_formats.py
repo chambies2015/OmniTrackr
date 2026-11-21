@@ -22,6 +22,18 @@ from defusedxml import ElementTree as SafeElementTree
 
 
 MAX_EXPANDED_BYTES = 40 * 1024 * 1024
+MAX_IMPORT_ROWS = 5000
+# Letterboxd lists one film in several files (watched, ratings, diary, reviews), so a
+# 5,000-film export has well over 5,000 rows. The title cap still applies after merging.
+MAX_SOURCE_ROWS = 50_000
+MAX_CSV_COLUMNS = 128
+MAX_CSV_RECORD_CHARS = 1024 * 1024
+# Allow a full 5,000-title export with dozens of metadata fields per title.
+MAX_DOCUMENT_PARTS = 500_000
+# JSON exports list every play or liked song: a 45,000-song Spotify library or a Trakt
+# history of 15,000 plays fits. Parsing a crafted file this size stays under ~150 MB.
+MAX_JSON_PARTS = 2_000_000
+JSON_PART = re.compile(r'["\[{,:]')
 STRUCTURED_EXTENSIONS = (".zip", ".xml", ".gz", ".json", ".opml")
 LETTERBOXD_FILES = ("watched.csv", "diary.csv", "ratings.csv", "reviews.csv", "watchlist.csv")
 # Archive folders holding entries the member removed, or lists and likes that are not history.
@@ -90,6 +102,24 @@ def _decode(content: bytes) -> str:
         raise ValueError("Export files must use UTF-8 text encoding.") from exc
 
 
+class _JsonBudget:
+    """Share one object-allocation budget across all JSON documents in a ZIP."""
+    def __init__(self):
+        self.remaining = MAX_JSON_PARTS
+
+    def read(self, text: str):
+        offset = 0
+        while match := JSON_PART.search(text, offset):
+            self.remaining -= 1
+            if self.remaining < 0:
+                raise ValueError("The export contains too many JSON fields or values.")
+            offset = match.end()
+            if match[0] == '"':
+                # Skip quoted punctuation with the JSON decoder's own escape rules.
+                _, offset = json.decoder.scanstring(text, offset)
+        return json.loads(text)
+
+
 # ---------------------------------------------------------------------------
 # Letterboxd: the account export ZIP, or one of its CSV files on its own.
 
@@ -97,8 +127,53 @@ def _letterboxd_key(row: dict[str, str]) -> tuple[str, str]:
     return re.sub(r"\s+", " ", (row.get("Name") or "").strip().casefold()), (row.get("Year") or "").strip()
 
 
+class ImportRowLimit(ValueError):
+    """An export contains too many records to process safely."""
+
+
+def csv_records(text: str, dialect=csv.excel):
+    """Bound each logical record before DictReader can allocate or pad its fields."""
+    stream = io.StringIO(text)
+    remaining = MAX_CSV_RECORD_CHARS
+
+    def lines():
+        nonlocal remaining
+        while line := stream.readline(remaining + 1):
+            remaining -= len(line)
+            if remaining < 0:
+                raise ValueError("A CSV record is too long.")
+            yield line
+
+    reader = csv.DictReader(lines(), dialect=dialect)
+    headers = reader.fieldnames or []
+    if len(headers) > MAX_CSV_COLUMNS:
+        raise ValueError(f"CSV files are limited to {MAX_CSV_COLUMNS} columns.")
+
+    def records():
+        nonlocal remaining
+        while True:
+            remaining = MAX_CSV_RECORD_CHARS
+            row = next(reader, None)
+            if row is None:
+                return
+            if len(headers) + len(row.get(None, ())) > MAX_CSV_COLUMNS:
+                raise ValueError(f"CSV files are limited to {MAX_CSV_COLUMNS} columns.")
+            yield row
+
+    return headers, records()
+
+
+def _letterboxd_records(text: str, remaining: int):
+    _, records = csv_records(text)
+    for number, row in enumerate(records, start=1):
+        if number > remaining:
+            raise ImportRowLimit(f"Imports are limited to {MAX_SOURCE_ROWS:,} source rows at a time.")
+        yield row
+
+
 def _letterboxd_rows(files: dict[str, str]) -> list[Row]:
     films: dict[tuple[str, str], dict[str, Any]] = {}
+    remaining = MAX_SOURCE_ROWS
 
     def film(row: dict[str, str]) -> dict[str, Any] | None:
         key = _letterboxd_key(row)
@@ -108,11 +183,15 @@ def _letterboxd_rows(files: dict[str, str]) -> list[Row]:
                                       "rating": "", "review": ""})
 
     def rows(name: str) -> list[dict[str, str]]:
+        nonlocal remaining
         text = files.get(name)
         if not text:
             return []
         # Oldest first, so later diary entries and reviews win.
-        return sorted(csv.DictReader(io.StringIO(text)), key=lambda r: (r.get("Watched Date") or r.get("Date") or ""))
+        records = list(_letterboxd_records(text, remaining))
+        remaining -= len(records)
+        records.sort(key=lambda r: (r.get("Watched Date") or r.get("Date") or ""))
+        return records
 
     for name in ("watched.csv", "diary.csv", "reviews.csv", "ratings.csv"):
         for row in rows(name):
@@ -148,7 +227,7 @@ def letterboxd_csv_name(filename: str) -> str | None:
 def _letterboxd_diary_rows(text: str) -> list[dict[str, Any]]:
     """Dated diary visits from diary.csv: {"title", "year", "date", "rewatch", "rating"}."""
     visits = []
-    for row in csv.DictReader(io.StringIO(text)):
+    for row in _letterboxd_records(text, MAX_SOURCE_ROWS):
         title = (row.get("Name") or "").strip()
         try:
             watched = datetime.strptime((row.get("Watched Date") or "").strip(), "%Y-%m-%d").date()
@@ -171,13 +250,16 @@ def letterboxd_diary(content: bytes, filename: str) -> list[dict[str, Any]]:
     """The dated visits in a Letterboxd export ZIP or its diary.csv, or [] for anything else."""
     try:
         if content[:4] == b"PK\x03\x04":
-            for name, data in _zip_files(content).items():
+            # Match the last eligible diary selected by _letterboxd_from_zip.
+            for name, data in reversed(_zip_files(content).items()):
                 parts = [part.lower() for part in name.split("/")]
                 if parts[-1] == "diary.csv" and not LETTERBOXD_SKIPPED_FOLDERS & set(parts[:-1]):
                     return _letterboxd_diary_rows(_decode(data))
             return []
         if letterboxd_csv_name(filename) == "diary.csv":
             return _letterboxd_diary_rows(_decode(content))
+    except ImportRowLimit:
+        raise
     except (ValueError, csv.Error):
         return []
     return []
@@ -375,11 +457,11 @@ def _spotify_rows(document: dict[str, Any]) -> list[Row]:
     return rows
 
 
-def _spotify_from_zip(files: dict[str, bytes]) -> list[Row] | None:
+def _spotify_from_zip(files: dict[str, bytes], budget: _JsonBudget) -> list[Row] | None:
     for name, data in files.items():
         if posixpath.basename(name).lower() == "yourlibrary.json":
             try:
-                document = json.loads(_decode(data))
+                document = budget.read(_decode(data))
             except json.JSONDecodeError as exc:
                 raise ValueError("YourLibrary.json in this ZIP could not be read.") from exc
             if isinstance(document, dict):
@@ -395,7 +477,15 @@ def _xml_root(text: str) -> ElementTree.Element:
     if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         raise ValueError("XML files with document type declarations aren't accepted.")
     try:
-        return SafeElementTree.fromstring(text)
+        # The parser retains the tree. Count elements and attributes as it builds
+        # it so short, repeated elements cannot expand into unbounded objects.
+        remaining = MAX_DOCUMENT_PARTS
+        parser = SafeElementTree.iterparse(io.StringIO(text), events=("start",))
+        for _, node in parser:
+            remaining -= 1 + len(node.attrib)
+            if remaining < 0:
+                raise ValueError("The export contains too many XML elements or attributes.")
+        return parser.root
     except DefusedXmlException as exc:
         raise ValueError("XML files with document type declarations aren't accepted.") from exc
     except ElementTree.ParseError as exc:
@@ -484,6 +574,7 @@ def _letterboxd_from_zip(files: dict[str, bytes]) -> list[Row] | None:
 def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
     """Return (source, generic rows) for a ZIP, XML, gzip or JSON export."""
     name = (filename or "").lower()
+    budget = _JsonBudget()
     if content[:2] == b"\x1f\x8b":
         content = _gunzip(content)
         name = name.removesuffix(".gz")
@@ -492,14 +583,14 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
         rows = _letterboxd_from_zip(files)
         if rows is not None:
             return "letterboxd", rows
-        rows = _spotify_from_zip(files)
+        rows = _spotify_from_zip(files, budget)
         if rows is not None:
             return "spotify", rows
         documents = []
         for member, data in files.items():
             if member.lower().endswith(".json"):
                 try:
-                    documents.append((member, json.loads(_decode(data))))
+                    documents.append((member, budget.read(_decode(data))))
                 except json.JSONDecodeError:
                     continue
         if any(_looks_like_trakt(document) for _, document in documents):
@@ -513,7 +604,7 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
         return "myanimelist", _mal_rows(root)
     if text.startswith(("{", "[")):
         try:
-            document = json.loads(text)
+            document = budget.read(text)
         except json.JSONDecodeError as exc:
             raise ValueError("The JSON file could not be read.") from exc
         if isinstance(document, dict) and document.get("source") == "anilist":

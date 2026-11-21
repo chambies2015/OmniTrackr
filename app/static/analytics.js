@@ -31,6 +31,19 @@
     }
   }
 
+  // Invite keys grant access. A return URL can carry a private list key in its path.
+  // Keep third-party code off these sign-up and sign-in visits entirely.
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('invite') || params.has('next')) return;
+
+  function referrerOrigin() {
+    try {
+      return new URL(document.referrer).origin;
+    } catch (error) {
+      return '';
+    }
+  }
+
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() {
     window.dataLayer.push(arguments);
@@ -38,6 +51,7 @@
   window.gtag('js', new Date());
   window.gtag('config', MEASUREMENT_ID, {
     page_location: pageLocation(),
+    page_referrer: referrerOrigin(),
     anonymize_ip: true,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,

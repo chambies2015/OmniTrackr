@@ -2,11 +2,12 @@
 Pytest configuration and fixtures for OmniTrackr tests.
 """
 import os
+import secrets
 # Application imports create/migrate their configured database before dependency
 # overrides are installed. Keep both startup and fixtures isolated from .env.
 os.environ["PYTHON_DOTENV_DISABLED"] = "1"
 os.environ["DATABASE_URL"] = "sqlite://"
-os.environ["SECRET_KEY"] = "omnitrackr-tests-only-secret-key-32-bytes"
+os.environ["SECRET_KEY"] = secrets.token_urlsafe(32)
 os.environ["ENVIRONMENT"] = "development"
 os.environ["MAIL_USERNAME"] = ""
 os.environ["MAIL_PASSWORD"] = ""

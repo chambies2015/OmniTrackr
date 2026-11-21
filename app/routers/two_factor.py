@@ -37,8 +37,8 @@ def _require_enabled(db: Session, user: models.User) -> models.UserTwoFactor:
     return row
 
 
-def _require_code(row: models.UserTwoFactor, code: str) -> str:
-    used = two_factor.check_code(row, code)
+def _require_code(db: Session, row: models.UserTwoFactor, code: str) -> str:
+    used = two_factor.check_code(db, row, code)
     if used is None:
         raise HTTPException(status_code=400, detail="That code didn't work. Codes change every 30 seconds, so try the newest one.")
     return used
@@ -89,7 +89,7 @@ def enable(payload: schemas.TwoFactorCode, request: Request, background_tasks: B
         raise HTTPException(status_code=400, detail="Start the setup first.")
     if row.enabled_at is not None:
         raise HTTPException(status_code=400, detail="Two-factor sign-in is already on.")
-    if two_factor.check_code(row, payload.code, allow_recovery=False) is None:
+    if two_factor.check_code(db, row, payload.code, allow_recovery=False) is None:
         raise HTTPException(status_code=400, detail="That code didn't match. Check that your phone's clock is set automatically, then try the newest code.")
     codes = two_factor.new_recovery_codes()
     now = two_factor.utcnow()
@@ -107,7 +107,7 @@ def new_recovery_codes(payload: schemas.TwoFactorCode, request: Request, current
     """Replace every recovery code with a new set; the old ones stop working."""
     _require_password(current_user, payload.password)
     row = _require_enabled(db, current_user)
-    _require_code(row, payload.code)
+    _require_code(db, row, payload.code)
     codes = two_factor.new_recovery_codes()
     row.recovery_codes = two_factor.hash_recovery_codes(codes)
     row.recovery_codes_created_at = two_factor.utcnow()
@@ -129,7 +129,7 @@ def disable(payload: schemas.TwoFactorCode, request: Request, background_tasks: 
             current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     _require_password(current_user, payload.password)
     row = _require_enabled(db, current_user)
-    _require_code(row, payload.code)
+    _require_code(db, row, payload.code)
     db.delete(row)
     db.commit()
     background_tasks.add_task(_send_notice, current_user.email, current_user.username, False)

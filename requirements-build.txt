@@ -1,5 +1,5 @@
 -r requirements.txt
 # Patched packaging tools used by standalone builds.
 pip>=26.2
-setuptools>=83.0.0
+setuptools>=84.1.0
 pyinstaller==6.3.0
