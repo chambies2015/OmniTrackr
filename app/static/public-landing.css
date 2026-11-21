@@ -454,6 +454,11 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-savebar__wide { display: none; }
   body.lp:has(.lp-savebar:not([hidden])) { padding-bottom: 136px; }
 }
+/* Phones (Nov 21 2026): while hero search results show, the quick picks and hint step aside
+   so the results sit right under the box, above the keyboard (title-search.js sets the class). */
+@media (max-width: 760px) {
+  .lp-search--hero.lp-search--open :is(.lp-quick, .lp-search__hint) { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .lp-quick__pick { transition: none; } }
 
 /* ---------- Hero poster wall (guest_picks.stage_html) ----------

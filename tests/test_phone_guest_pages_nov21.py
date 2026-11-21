@@ -162,3 +162,12 @@ def test_demo_text_is_readable_on_phones(client):
     sizes = [float("0." + value) for value in re.findall(r"font-size: \.(\d+)rem", block)]
     assert sizes and min(sizes) >= .72, sizes
     assert "/static/demo.css?v=20261121-phone-1" in client.get("/demo").text
+
+
+def test_hero_search_results_sit_under_the_box_on_phones(client):
+    css = (ROOT / "app/static/public-landing.css").read_text(encoding="utf-8")
+    assert ".lp-search--hero.lp-search--open :is(.lp-quick, .lp-search__hint) { display: none; }" in css
+    script = (ROOT / "app/static/title-search.js").read_text(encoding="utf-8")
+    assert "form.classList.toggle('lp-search--open', open)" in script and "input.blur()" in script
+    page = client.get("/").text
+    assert "/static/public-landing.css?v=20261121-phone-1" in page and "/static/title-search.js?v=20261121-phone-1" in page

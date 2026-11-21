@@ -82,6 +82,12 @@
     let timer = null;
     let controller = null;
     let generation = 0;
+    // On phones the quick picks and hint step aside while results show (public-landing.css),
+    // so the results sit right under the box instead of under the keyboard.
+    const phone = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 760px)') : null;
+    function showing(open) {
+      if (form.classList) form.classList.toggle('lp-search--open', open);
+    }
 
     async function run() {
       const query = input.value.trim();
@@ -90,6 +96,7 @@
       if (query.replace(/[^\p{L}\p{N}]/gu, '').length < MIN_CHARS) {
         container.hidden = true;
         container.replaceChildren();
+        showing(false);
         return;
       }
       report('title_search_used');
@@ -101,10 +108,12 @@
         const data = await response.json();
         if (current !== generation) return;
         render(container, Array.isArray(data.results) ? data.results : [], query);
+        showing(true);
       } catch (error) {
         if (current !== generation || (error && error.name === 'AbortError')) return;
         container.replaceChildren(element('p', 'lp-search__empty', 'Search is not available right now. Try the popular picks below.'));
         container.hidden = false;
+        showing(true);
       }
     }
 
@@ -122,6 +131,8 @@
       event.preventDefault();
       clearTimeout(timer);
       run();
+      // Pressing Search or Go on a phone closes the keyboard so the results can be seen.
+      if (phone && phone.matches && typeof input.blur === 'function') input.blur();
     });
     return { run, render };
   }

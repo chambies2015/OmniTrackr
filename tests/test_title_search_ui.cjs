@@ -61,3 +61,44 @@ test('results refresh the list state; no match offers sign-up', () => {
   const cta = flatten(container).find(node => node.dataset.action === 'show-register-form');
   assert.ok(cta, 'empty results point to sign-up');
 });
+
+function searchForm(phoneMatches) {
+  const { api } = load();
+  global.window.matchMedia = () => ({ matches: phoneMatches });
+  const handlers = {};
+  const classes = new Set();
+  let blurred = 0;
+  const input = {
+    value: '', addEventListener: (type, fn) => { handlers[`input:${type}`] = fn; }, blur: () => { blurred += 1; },
+  };
+  const container = fakeNode('div');
+  container.hidden = true;
+  const form = {
+    classList: { toggle: (name, on) => (on ? classes.add(name) : classes.delete(name)), contains: name => classes.has(name) },
+    querySelector: selector => (selector === 'input[type="search"]' ? input : container),
+    addEventListener: (type, fn) => { handlers[`form:${type}`] = fn; },
+  };
+  global.fetch = async () => ({ ok: true, json: async () => ({ results: [{ kind: 'movie', label: 'Movie', title: 'Dune', year: 2021, slug: 'dune-2021' }] }) });
+  const search = api.setup(form);
+  const submit = () => handlers['form:submit']({ preventDefault() {} });
+  return { search, input, container, form, submit, blurred: () => blurred };
+}
+
+test('on a phone, results mark the form open and Search closes the keyboard', async () => {
+  const { search, input, form, submit, blurred } = searchForm(true);
+  input.value = 'dune';
+  await search.run();
+  assert.equal(form.classList.contains('lp-search--open'), true);
+  submit();
+  assert.equal(blurred(), 1);
+  input.value = '';
+  await search.run();
+  assert.equal(form.classList.contains('lp-search--open'), false);
+});
+
+test('on a wide screen, Search keeps the cursor in the box', () => {
+  const { input, submit, blurred } = searchForm(false);
+  input.value = 'dune';
+  submit();
+  assert.equal(blurred(), 0);
+});
