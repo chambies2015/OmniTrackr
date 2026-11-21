@@ -99,3 +99,18 @@ def test_star_wars_crosslinks_render_distinct_names(client):
             continue
         names = [part.split("</em>")[0] for part in card.split("Also covers", 1)[1].split("</strong>")[0].split("<em>")[1:]]
         assert len(names) == len(set(names)), names
+
+
+def test_guide_save_bars_are_one_slim_row_on_phones():
+    block = _phone_block()
+    assert "body.site :is(.io-bar, .yl-bar, .bc-bar, .dc-bar) { border-radius: 16px;" in block and "flex-wrap: nowrap" in block
+    assert "body.site :is(.io-bar, .yl-bar, .bc-bar, .dc-bar, .search-guestbar, .x-dock) .guest-count__ask { display: none; }" in block
+    guest_list = (ROOT / "app/static/guest-list.js").read_text(encoding="utf-8")
+    assert "ask.className = 'guest-count__ask';" in guest_list
+
+
+def test_every_page_loads_the_new_guest_list_script(client):
+    stale = [path for path in (ROOT / "app").rglob("*") if path.suffix in (".py", ".html")
+             and "guest-list.js?v=20261118-sheet-1" in path.read_text(encoding="utf-8")]
+    assert stale == []
+    assert "/static/guest-list.js?v=20261121-phone-1" in client.get("/in-order/star-wars").text

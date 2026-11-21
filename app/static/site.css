@@ -447,6 +447,16 @@ body.site .site-finder__field input:focus-visible { outline: none; }
   body.site.public-reader .reader-contents > summary { margin: -16px -20px; padding: 16px 20px; }
   body.site .editorial > details > summary { padding-block: 9px; }
 
+  /* Guide save bars: one slim row instead of a two-row card that covered a sixth of the screen. */
+  body.site :is(.io-bar, .yl-bar, .bc-bar, .dc-bar) { border-radius: 16px; bottom: max(10px, env(safe-area-inset-bottom, 0px)); flex-wrap: nowrap; gap: 10px; padding: 8px 8px 8px 14px; }
+  body.site :is(.io-bar__count, .yl-bar__count, .bc-bar__count, .dc-bar__count) { flex: 1 1 auto; font-size: .82rem; line-height: 1.35; min-width: 0; }
+  body.site :is(.io-bar, .yl-bar, .bc-bar, .dc-bar) .button { align-items: center; display: inline-flex; flex: none; font-size: .9rem; margin: 0; min-height: 44px; padding: 0 16px; white-space: nowrap; }
+
   /* Fact lines under shelf covers were 11.5px. */
   body.site .browse-card__facts { font-size: .8rem; }
+}
+@media (max-width: 480px) {
+  body.site :is(.io-bar, .yl-bar, .bc-bar, .dc-bar, .search-guestbar, .x-dock) .guest-count__ask { display: none; }
+  body.site .search-guestbar .site-btn { flex: none; white-space: nowrap; }
+  body.site :is(.io-bar__count, .yl-bar__count, .bc-bar__count, .dc-bar__count) { font-size: .9rem; font-weight: 600; }
 }

@@ -640,6 +640,18 @@
     return node;
   }
 
+  // The same note guest-list.js keeps: after sign-up, the "Added your saved titles" toast links back here.
+  function rememberPage() {
+    const path = window.location && window.location.pathname;
+    if (typeof path !== 'string' || !/^\/[A-Za-z0-9/_.-]{1,200}$/.test(path)) return;
+    const heading = document.querySelector('h1');
+    let title = (heading && heading.textContent ? heading.textContent : document.title || '').replace(/\s+/g, ' ').trim();
+    if (title.length > 80) title = title.slice(0, 79) + '…';
+    try {
+      window.localStorage.setItem('omnitrackr_guest_return', JSON.stringify({ path: path, title: title, at: Date.now() }));
+    } catch (_) { /* storage blocked: no link back */ }
+  }
+
   function googleLogo() {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -672,15 +684,15 @@
     google.rel = 'nofollow';
     google.appendChild(googleLogo());
     google.appendChild(element('span', '', 'Continue with Google'));
-    google.addEventListener('click', function () { report('signup_sheet_google'); report('signup_form_opened'); });
+    google.addEventListener('click', function () { rememberPage(); report('signup_sheet_google'); report('signup_form_opened'); });
     const email = element('a', 'guest-sheet__btn guest-sheet__btn--ghost', 'Sign up with email');
     email.href = '/#signup';
-    email.addEventListener('click', function () { report('signup_sheet_email'); });
+    email.addEventListener('click', function () { rememberPage(); report('signup_sheet_email'); });
     actions.append(google, email);
     const note = element('p', 'guest-sheet__note', 'Free, no card needed. Already a member? ');
     const login = element('a', '', 'Log in');
     login.href = '/#login';
-    login.addEventListener('click', function () { report('signup_sheet_login'); });
+    login.addEventListener('click', function () { rememberPage(); report('signup_sheet_login'); });
     note.appendChild(login);
     dialog.append(close, element('p', 'guest-sheet__kicker', 'Free account'), title, lead, actions, note);
     // A press on the dimmed page around the sheet closes it.

@@ -50,6 +50,7 @@ function load({ mark = 'google', phone = true, member = false, saved = 0, guestS
   global.document = {
     body,
     documentElement: { dataset: {}, classList: { add() {}, remove() {} } },
+    title: 'Star Wars in order | OmniTrackr',
     querySelector: () => null,
     querySelectorAll: selector => (selector === 'details.site-menu[open]' ? menus : []),
     addEventListener(type, fn) { if (type === 'click') clicks.push(fn); },
@@ -64,6 +65,7 @@ function load({ mark = 'google', phone = true, member = false, saved = 0, guestS
     matchMedia: query => ({ matches: phone && query === '(max-width: 760px)' }),
     reportFunnelEvent: event => events.push(event),
     OmniGuestList: guestList,
+    location: { pathname: '/in-order/star-wars' },
   };
   global.navigator = {};
   delete require.cache[require.resolve('../app/static/site-nav.js')];
@@ -77,7 +79,7 @@ function load({ mark = 'google', phone = true, member = false, saved = 0, guestS
     return event;
   }
   const sheet = () => body.children.find(node => node.dataset && 'signupSheetDialog' in node.dataset);
-  return { press, sheet, events, menus };
+  return { press, sheet, events, menus, store };
 }
 
 test('on a phone, Start tracking opens the sheet in place and closes the menu', () => {
@@ -98,12 +100,15 @@ test('on a phone, Start tracking opens the sheet in place and closes the menu', 
   assert.deepEqual(links, ['/auth/google/start', '/#signup', '/#login']);
 });
 
-test('Continue with Google counts as starting to sign up', () => {
-  const { press, sheet, events } = load();
+test('Continue with Google counts as starting to sign up and remembers the page', () => {
+  const { press, sheet, events, store } = load();
   press();
   const google = sheet().children.find(node => node.className === 'guest-sheet__actions').children[0];
   google.listeners.click.forEach(fn => fn({}));
   assert.deepEqual(events, ['signup_sheet_opened', 'signup_sheet_google', 'signup_form_opened']);
+  const back = JSON.parse(store.get('omnitrackr_guest_return'));
+  assert.equal(back.path, '/in-order/star-wars');
+  assert.equal(back.title, 'Star Wars in order | OmniTrackr');
 });
 
 test('the sheet mentions titles saved in this browser', () => {
