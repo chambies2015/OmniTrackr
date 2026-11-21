@@ -12,6 +12,8 @@
 .episode-actions button { min-height: 32px; padding: 5px 11px; border-radius: 999px; font: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; line-height: 1.2; white-space: nowrap; }
 .episode-next { border: 1px solid transparent; background: var(--teal, #63d1ad); color: var(--on-accent, #0e211c); }
 .episode-next:hover:not(:disabled) { filter: brightness(1.08); }
+/* Dark mode's --on-accent is white, which reads at 1.5:1 on its light teal; the dark ink is 11:1. */
+body.app-shell.dark-mode .episode-next { color: #0e211c; }
 .episode-guide-open { border: 1px solid var(--border, #456b61); background: transparent; color: var(--fg, #e4f2ee); }
 .episode-guide-open:hover { background: var(--surface-hover, #1d3736); }
 .episode-actions button:disabled { opacity: .55; cursor: default; }
