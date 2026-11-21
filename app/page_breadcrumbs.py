@@ -51,6 +51,14 @@ HUBS = {
     "/valentines-day": "Valentine's Day picks",
     "/binge-calculator": "Binge calculator",
 }
+# The written-guide hubs are sections of the guide library, so their trail runs
+# Home > Guides > hub > guide. Exact paths only: their own pages nest under them as usual.
+HUB_PARENTS = {
+    hub: "/guides" for hub in (
+        "/discover", "/if-you-liked", "/in-order", "/best-of", "/essentials", "/new-releases",
+        "/awards", "/holidays", "/halloween", "/valentines-day", "/binge-calculator",
+    )
+}
 PARENTS = {
     "/new-this-week/": "/new-this-week/archive",
     "/collections/public/": "/collections/explore",
@@ -82,6 +90,8 @@ def _page_name(html: str) -> Optional[str]:
 
 
 def _parent(path: str) -> Optional[str]:
+    if path in HUB_PARENTS:
+        return HUB_PARENTS[path]
     for prefix, hub in PARENTS.items():
         if path.startswith(prefix) and path != hub:
             return hub

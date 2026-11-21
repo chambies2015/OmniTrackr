@@ -42,8 +42,8 @@ SECTIONS = {"guides": ("Guides", "/guides"), "about": ("About", "/about")}
 
 PAGES = {
     "guides.html": ReaderPage("/guides", "Guides", "guides",
-        "Step-by-step help for starting a library, importing a list, saving your place and sharing.",
-        ("media_tracking.html", "export_import_guide.html", "media_tracker_checklist.html")),
+        "Every guide on the site by format and kind, and how to use the tracker.",
+        ("content_quality.html", "media_tracking.html", "switch.html")),
     "media_tracking.html": ReaderPage("/media-tracking", "Media tracking hub", "guides",
         "Every tracking guide in one place, grouped by what you track.",
         ("guides.html", "use_cases.html", "compare.html")),
@@ -148,7 +148,7 @@ MIN_WORDS_FOR_TIME = 300
 MIN_SECTIONS_FOR_CONTENTS = 4
 WORDS_PER_MINUTE = 230
 
-INLINE_STYLES = ("fonts.css", "public-reader.css", "site.css")
+INLINE_STYLES = ("fonts.css", "public-reader.css", "site.css", "guide-library.css")
 _STYLE_LINK = re.compile(
     r'<link rel="stylesheet" href="/static/(' + "|".join(re.escape(n) for n in INLINE_STYLES) + r')(?:\?v=[\w.-]+)?">'
 )

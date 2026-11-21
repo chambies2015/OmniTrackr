@@ -48,7 +48,7 @@ NAV_MENUS = (
     ("guides", "Guides", (
         ("in-order", "Franchises in order", "/in-order", "Watch and play the big series the right way"),
         ("if-you-liked", "If you liked…", "/if-you-liked", "What to try next after a favorite"),
-        ("guides", "All guides", "/guides", "How to track, import, review and more"),
+        ("guides", "All guides", "/guides", "Every guide by format and kind, plus how-tos"),
         ("switch", "Switch trackers", "/switch", "Bring your lists over from another site"),
         ("faq", "FAQ", "/faq", "Quick answers about accounts and features"),
     )),

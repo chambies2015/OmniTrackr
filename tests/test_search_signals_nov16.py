@@ -73,7 +73,7 @@ def test_other_redirects_keep_their_status(client):
 
 def test_binge_guides_sit_under_the_calculator_in_the_trail():
     steps = trail("https://omnitrackr.xyz/binge-calculator/breaking-bad", "How long does it take to watch Breaking Bad?")
-    assert [name for name, _ in steps] == ["Home", "Binge calculator", "How long does it take to watch Breaking Bad?"]
+    assert [name for name, _ in steps] == ["Home", "Guides", "Binge calculator", "How long does it take to watch Breaking Bad?"]
 
 
 def test_question_titles_are_named_by_the_question():
@@ -89,7 +89,7 @@ def test_binge_guide_page_breadcrumb(client):
               if "BreadcrumbList" in block]
     assert crumbs
     names = [item["name"] for item in crumbs[0]["itemListElement"]]
-    assert names[:2] == ["Home", "Binge calculator"] and len(names) == 3
+    assert names[:3] == ["Home", "Guides", "Binge calculator"] and len(names) == 4
 
 
 def test_browse_shelf_trail_starts_at_home(client):

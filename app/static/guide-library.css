@@ -1,0 +1,113 @@
+/* The /guides library: start-here picks, format desks, the filterable list of every guide.
+   Loaded only by guides.html and inlined by reader_pages.py. Colours come from the reader
+   tokens, so the light and dark reader themes both work. */
+
+.public-reader .gl-library [hidden],
+.public-reader .gl-section [hidden] { display: none !important; }
+.public-reader .reader-main > .gl-section { max-width: none; }
+.public-reader .gl-section > p { max-width: 740px; }
+
+/* Format colours: the shared --fmt-* tokens when site.css has them, these otherwise. */
+.public-reader .gl-section {
+  --gl-movie: var(--fmt-movie, #fb923c); --gl-tv: var(--fmt-tv, #38bdf8); --gl-anime: var(--fmt-anime, #f472b6);
+  --gl-game: var(--fmt-game, #a3e635); --gl-book: var(--fmt-book, #fbbf24); --gl-music: var(--fmt-album, #c084fc);
+  --gl-manga: var(--fmt-manga, #fb7185); --gl-podcast: var(--fmt-podcast, #2dd4bf); --gl-audiobook: var(--fmt-audiobook, #818cf8);
+}
+
+/* Header numbers */
+.public-reader .gl-stats { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 4px 0 6px !important; font-size: .92rem !important; color: var(--site-muted) !important; }
+.public-reader .gl-stats strong { color: var(--site-text); font-family: var(--site-display); font-size: 1.15rem; margin-right: 4px; }
+.public-reader .gl-stats time { color: var(--site-text); }
+
+/* Start here */
+.public-reader .gl-picks { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 22px 0 10px; }
+.public-reader .gl-pick { background: var(--reader-card); border: 1px solid var(--site-border); border-radius: 16px; color: var(--site-soft); display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 20px 22px; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
+.public-reader .gl-pick:hover { border-color: var(--reader-hover-line); color: var(--site-soft); transform: translateY(-2px); }
+.public-reader .gl-pick__kind { color: var(--site-teal); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.public-reader .gl-pick strong { color: var(--site-text); font-family: var(--site-display); font-size: 1.08rem; line-height: 1.35; }
+.public-reader .gl-pick__why { color: var(--site-muted); font-size: .9rem; line-height: 1.6; }
+
+/* Format desks */
+.public-reader .gl-desks { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 22px 0 10px; }
+.public-reader .gl-desk { --gl-accent: var(--site-violet-soft); background: var(--reader-card); border: 1px solid var(--site-border); border-radius: 16px; border-top: 3px solid var(--gl-accent); display: flex; flex-direction: column; min-width: 0; padding: 18px 20px 16px; }
+.public-reader .gl-desk#format-films { --gl-accent: var(--gl-movie); }
+.public-reader .gl-desk#format-tv { --gl-accent: var(--gl-tv); }
+.public-reader .gl-desk#format-anime { --gl-accent: var(--gl-anime); }
+.public-reader .gl-desk#format-games { --gl-accent: var(--gl-game); }
+.public-reader .gl-desk#format-books { --gl-accent: var(--gl-book); }
+.public-reader .gl-desk#format-music { --gl-accent: var(--gl-music); }
+.public-reader .gl-desk#format-manga { --gl-accent: var(--gl-manga); }
+.public-reader .gl-desk#format-podcasts { --gl-accent: var(--gl-podcast); }
+.public-reader .gl-desk#format-audiobooks { --gl-accent: var(--gl-audiobook); }
+.public-reader .gl-section .gl-desk h3 { align-items: baseline; display: flex; font-size: 1.1rem; gap: 10px; justify-content: space-between; margin: 0 0 8px; }
+.public-reader .gl-desk h3 span { color: var(--site-muted); font-family: var(--site-font); font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.public-reader .gl-section .gl-desk p { color: var(--site-muted); font-size: .9rem; line-height: 1.6; margin: 0 0 12px; }
+.public-reader .gl-section .gl-desk ul { list-style: none; margin: 0 0 12px; padding: 0; }
+.public-reader .gl-section .gl-desk li { border-top: 1px solid var(--site-border); font-size: .9rem; line-height: 1.45; margin: 0; padding: 8px 0; }
+.public-reader .gl-desk li a { display: block; text-decoration: none; }
+.public-reader .gl-desk li a:hover { text-decoration: underline; }
+.public-reader .gl-desk__all { font-size: .86rem; font-weight: 700; margin-top: auto; text-decoration: none; }
+.public-reader .gl-desk__all::after { content: " \2192"; }
+
+/* Filter bar */
+.public-reader .gl-tools { border-bottom: 1px solid var(--site-border); margin: 18px 0 8px; padding-bottom: 16px; }
+.public-reader .gl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.public-reader .gl-chip { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 999px; color: var(--site-soft); display: inline-flex; font-size: .86rem; font-weight: 600; gap: 6px; min-height: 40px; padding: 0 14px; text-decoration: none; }
+.public-reader .gl-chip span { color: var(--site-muted); font-size: .78rem; font-weight: 600; }
+.public-reader .gl-chip:hover { border-color: var(--reader-hover-line); color: var(--reader-strong); }
+.public-reader .gl-chip[aria-current="true"] { background: var(--site-violet-soft); border-color: transparent; color: var(--site-bg); }
+.public-reader .gl-chip[aria-current="true"] span { color: inherit; opacity: .8; }
+.public-reader .gl-find { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; max-width: 420px; }
+.public-reader .gl-find label { color: var(--site-muted); font-size: .8rem; font-weight: 600; letter-spacing: .04em; }
+.public-reader .gl-find input { background: var(--site-bg-2); border: 1px solid var(--site-border-strong); border-radius: 12px; color: var(--site-text); font: inherit; font-size: 1rem; min-height: 44px; padding: 0 14px; }
+.public-reader .gl-find input:focus { border-color: var(--site-violet-soft); outline: 2px solid var(--reader-link-line); outline-offset: 1px; }
+.public-reader .gl-section .gl-count { color: var(--site-muted); font-size: .86rem; margin: 12px 0 0; }
+
+/* Shelves */
+.public-reader .gl-shelf { border-top: 1px solid var(--site-border); padding: 26px 0 10px; }
+.public-reader .gl-shelf:first-child { border-top: 0; }
+.public-reader .gl-shelf__head { align-items: baseline; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+.public-reader .gl-section .gl-shelf h3 { font-size: 1.25rem; margin: 0; }
+.public-reader .gl-shelf__count { background: var(--site-surface-2); border-radius: 999px; color: var(--site-soft); font-family: var(--site-font); font-size: .78rem; font-weight: 700; margin-left: 6px; padding: 2px 9px; vertical-align: 3px; }
+.public-reader .gl-section .gl-shelf__hubs { font-size: .86rem; margin: 0; }
+.public-reader .gl-shelf__hubs a { font-weight: 600; }
+.public-reader .gl-section .gl-shelf__intro { color: var(--site-soft); font-size: .98rem; line-height: 1.7; margin: 10px 0 14px; max-width: 740px; }
+.public-reader .gl-section .gl-rows { column-gap: 32px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.public-reader .gl-section .gl-row { border-bottom: 1px solid var(--site-border); display: flex; flex-direction: column; gap: 2px; margin: 0; min-width: 0; padding: 10px 0; }
+.public-reader .gl-row > a { font-weight: 600; line-height: 1.4; text-decoration: none; }
+.public-reader .gl-row > a:hover { text-decoration: underline; }
+.public-reader .gl-row__note { color: var(--site-soft); font-size: .86rem; line-height: 1.5; }
+.public-reader .gl-row__meta { color: var(--site-muted); font-size: .8rem; }
+.public-reader .gl-section .gl-empty { background: var(--site-surface); border: 1px dashed var(--site-border-strong); border-radius: 14px; margin: 18px 0; padding: 16px 20px; }
+
+/* Recently checked */
+.public-reader .gl-section .gl-recent { counter-reset: none; list-style: none; margin: 18px 0 16px; max-width: 860px; padding: 0; }
+.public-reader .gl-section .gl-recent li { align-items: baseline; border-bottom: 1px solid var(--site-border); display: grid; gap: 4px 18px; grid-template-columns: 9.5rem minmax(0, 1fr) auto; margin: 0; padding: 10px 0; }
+.public-reader .gl-recent time { color: var(--site-muted); font-size: .86rem; font-variant-numeric: tabular-nums; }
+.public-reader .gl-recent a { font-weight: 600; text-decoration: none; }
+.public-reader .gl-recent a:hover { text-decoration: underline; }
+.public-reader .gl-recent span { color: var(--site-teal); font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+
+/* The how-to half of the page starts with a clear break. */
+.public-reader .reader-main > .gl-part { border-top: 3px solid var(--site-border-strong); margin-top: 36px; padding-top: 48px; }
+.public-reader .reader-main > .gl-part > p { max-width: 740px; }
+
+@media (max-width: 920px) {
+  .public-reader .gl-picks, .public-reader .gl-desks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .public-reader .gl-section .gl-rows { grid-template-columns: 1fr; }
+  .public-reader .gl-section .gl-recent li { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .public-reader .gl-picks, .public-reader .gl-desks { grid-template-columns: 1fr; }
+  /* Ten chips wrap to four rows on a phone; one sideways row keeps the list in view. */
+  .public-reader .gl-chips { flex-wrap: nowrap; margin: 0 -16px; overflow-x: auto; padding: 2px 16px 6px; scrollbar-width: none; }
+  .public-reader .gl-chips::-webkit-scrollbar { display: none; }
+  .public-reader .gl-chip { flex: 0 0 auto; min-height: 44px; }
+  .public-reader .gl-find { max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-reader .gl-pick { transition: none; }
+  .public-reader .gl-pick:hover { transform: none; }
+}
