@@ -24,9 +24,9 @@ def test_light_mode_today_labels_are_readable():
 
 def test_changed_assets_carry_new_tags():
     # challenges.js changed again for the May (#276) and June challenges, and home-layout.js for the
-    # member phone pass ("Mark watched" on Do this next), so they carry later tags.
+    # member phone pass ("Mark watched" on Do this next) and the Nov 21 morning sweep, so they carry later tags.
     for tag in ("./styles.css?v=20261121-sweep-1", "/static/challenges.js?v=20261121-all-in-a-day-1",
-                "/static/home-layout.js?v=20261121-member-phone-1"):
+                "/static/home-layout.js?v=20261121-sweep-d-1"):
         assert tag in INDEX, tag
 
 
