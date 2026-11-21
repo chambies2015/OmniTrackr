@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
 
-from .. import models, schemas
+from .. import models, schemas, text_limits
 
 
 def get_anime(
@@ -54,6 +54,8 @@ def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas
     if db_anime is None:
         return None
     update_dict = anime_update.model_dump(exclude_unset=True)
+    # Text saved before the limits stays editable; it just can't grow past them.
+    text_limits.check_update(db_anime, update_dict)
     
     allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'review_public', 'poster_url'}
     for field, value in update_dict.items():

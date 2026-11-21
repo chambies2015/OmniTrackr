@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import affiliate, models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
+from .. import affiliate, models, pick, review_spoilers, supporters, text_limits, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -28,7 +28,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261103-where-1"
-JS_VERSION = "20261120-title-scorecard-1"
+JS_VERSION = "20261121-text-limits-1"
 DETAIL_CSS_VERSION = "20261120-a11y-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
@@ -638,7 +638,7 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
             f'<form class="title-write__form" data-title-review data-title-kind="{_e(group.kind)}" data-title-slug="{_e(slug)}"'
             f'{take_attr} novalidate>'
             '<label class="title-write__label" for="titleReviewText">Your review</label>'
-            f'<textarea id="titleReviewText" name="review" rows="6" maxlength="10000" required '
+            f'<textarea id="titleReviewText" name="review" rows="6" maxlength="{text_limits.REVIEW_MAX}" required '
             f'placeholder="What stayed with you? Who would you recommend it to?"></textarea>'
             '<p class="title-write__meter" id="titleReviewMeter" aria-live="polite"></p>'
             '<div class="title-write__row">'
@@ -1596,13 +1596,15 @@ def add_title(kind: str, slug: str, response: Response, user=Depends(get_current
 
 
 class TitleReview(BaseModel):
-    review: str = Field(..., min_length=1, max_length=10000)
+    # The length limit is checked against the saved review (text_limits), so a review
+    # written before the limit existed can still be edited from this page.
+    review: str = Field(..., min_length=1)
     rating: Optional[float] = Field(None, ge=0, le=10)
     public: bool = True
     # None leaves an existing spoiler flag alone (older pages that predate the checkbox).
     spoilers: Optional[bool] = None
     # The review text the composer loaded; a mismatch means it was edited elsewhere since.
-    expected_review: str = Field("", max_length=10000)
+    expected_review: str = ""
     # Present when the member arrived through a friend's "what did you think?" link.
     take: Optional[str] = Field(None, max_length=64)
 
@@ -1696,6 +1698,7 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     item = _own_item(db, user, group)
     if item is not None and (item.review or "").strip() != payload.expected_review.strip():
         raise HTTPException(409, "Your review for this title changed somewhere else. Reload the page to see the latest version.")
+    text_limits.check_value("review", payload.review, item.review if item is not None else None)
     state = "existing"
     if item is None:
         state, item = add_group_to_library(db, user, group)

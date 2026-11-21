@@ -4,8 +4,9 @@ These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from . import text_limits
 from .integer_bounds import SQL_INTEGER_MAX
 
 
@@ -315,6 +316,23 @@ class MediaWriteValidation(BaseModel):
         return value
 
 
+class LibraryTextLimits(BaseModel):
+    """New library entries keep titles, names, reviews and links within text_limits.
+
+    Only create schemas use this. Edits are checked against the stored entry instead
+    (text_limits.check_update), so text saved before the limits stays editable, and
+    imports shorten long text rather than refusing it.
+    """
+
+    @model_validator(mode="after")
+    def text_within_limits(self):
+        message = text_limits.first_problem(
+            {field: getattr(self, field) for field in text_limits.LIMITS if field in type(self).model_fields})
+        if message:
+            raise ValueError(message)
+        return self
+
+
 class RequiredUpdateValues(BaseModel):
     @field_validator("name", "source_type", "allow_uploads", "fields", "field_values", check_fields=False)
     @classmethod
@@ -339,7 +357,7 @@ class MovieBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class MovieCreate(MovieBase, MediaWriteValidation):
+class MovieCreate(MovieBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -380,7 +398,7 @@ class TVShowBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class TVShowCreate(TVShowBase, MediaWriteValidation):
+class TVShowCreate(TVShowBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
     seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
@@ -422,7 +440,7 @@ class AnimeBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class AnimeCreate(AnimeBase, MediaWriteValidation):
+class AnimeCreate(AnimeBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
     seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
@@ -465,7 +483,7 @@ class VideoGameBase(BaseModel):
     _validate_rawg_link = field_validator("rawg_link")(validate_public_url)
 
 
-class VideoGameCreate(VideoGameBase, MediaWriteValidation):
+class VideoGameCreate(VideoGameBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -505,7 +523,7 @@ class MusicBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class MusicCreate(MusicBase, MediaWriteValidation):
+class MusicCreate(MusicBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -546,7 +564,7 @@ class BookBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class BookCreate(BookBase, MediaWriteValidation):
+class BookCreate(BookBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -589,7 +607,7 @@ class MangaBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class MangaCreate(MangaBase, MediaWriteValidation):
+class MangaCreate(MangaBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -631,7 +649,7 @@ class PodcastBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class PodcastCreate(PodcastBase, MediaWriteValidation):
+class PodcastCreate(PodcastBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -673,7 +691,7 @@ class AudiobookBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class AudiobookCreate(AudiobookBase, MediaWriteValidation):
+class AudiobookCreate(AudiobookBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -775,7 +793,10 @@ class ActivityEntry(BaseModel):
 class ActivityEntryImport(BaseModel):
     category: str
     item_id: Optional[int] = Field(None, ge=1, le=SQL_INTEGER_MAX)
-    title: str = Field(..., min_length=1, max_length=500)
+    # Journal titles copy the library title, which had no limit before text_limits, so a
+    # backup can hold longer ones. The import keeps them (shortening only past the restore
+    # ceiling) instead of refusing the whole file.
+    title: str = Field(..., min_length=1)
     action: str
     note: Optional[str] = Field(None, max_length=500)
     rating: Optional[float] = Field(None, ge=0, le=10)
@@ -819,7 +840,7 @@ class BookImport(BookBase, MediaWriteValidation, LibraryImportAddedAt):
     year: Optional[int] = Field(..., ge=0, le=9999)
 
 
-class VideoGameImport(VideoGameCreate, LibraryImportAddedAt):
+class VideoGameImport(VideoGameBase, MediaWriteValidation, LibraryImportAddedAt):
     pass
 
 
@@ -926,6 +947,7 @@ class ImportResult(BaseModel):
     playtimes_skipped: int = Field(default=0, description="Playtime rows with no single matching game, or a game that already has playtime")
     episode_notes_created: int = Field(default=0, description="Episode ratings and notes restored")
     episode_notes_skipped: int = Field(default=0, description="Episode entries already saved, unmatched, over the limit or invalid")
+    shortened: int = Field(default=0, description="Titles, names and reviews shortened (or links left out) to fit the length limits")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas
@@ -1477,7 +1499,7 @@ class CompletionMoment(BaseModel):
 
 class CompletionReview(BaseModel):
     """A review written from the finish modal, saved onto the finished library entry."""
-    review: str = Field(..., min_length=1, max_length=10000)
+    review: str = Field(..., min_length=1)
     public: bool = False
     spoilers: bool = False
 
@@ -1488,6 +1510,14 @@ class CompletionReview(BaseModel):
         if not value:
             raise ValueError("Write a few words first")
         return value
+
+    @model_validator(mode="after")
+    def review_within_limit(self):
+        # Only ever a new review (an existing one is never replaced from here).
+        message = text_limits.problem("review", self.review)
+        if message:
+            raise ValueError(message)
+        return self
 
 
 # ============================================================================

@@ -14,7 +14,7 @@ from typing import Any, Iterable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from . import game_playtime, import_formats, models, schemas, steam
+from . import game_playtime, import_formats, models, schemas, steam, text_limits
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
@@ -95,6 +95,8 @@ class ParsedRow:
     error: str | None = None
     # Facts kept beside the library record, such as Steam minutes played.
     extra: dict[str, Any] | None = None
+    # Said beside a row that will import, such as a review shortened to fit.
+    note: str | None = None
 
 
 def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "", filename: str = "") -> str:
@@ -524,11 +526,12 @@ def parse_csv(
     for number, row in enumerate(rows, start=2):
         try:
             category, data = _source_row(detected, row, category_override, normalized_mapping, watchlist)
+            note = text_limits.describe(text_limits.clip_fields(data))
             validated = SCHEMA_BY_CATEGORY[category](**data)
-            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), note=note))
         except ValueError as exc:
             title = _field(row, normalized_mapping, "title", "title", "name", "series title") or f"Row {number}"
-            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
+            parsed.append(ParsedRow(number, None, text_limits.shorten(title, text_limits.TITLE_MAX), None, _error_message(exc)))
     return detected, parsed
 
 
@@ -557,10 +560,12 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
                 data["cover_art_url"] = steam.cover_url(appid)
                 extra = {"source": "steam", "external_id": str(appid), "minutes": int(row.get("steam_minutes") or 0),
                          "store_url": steam.store_url(appid)}
+            note = text_limits.describe(text_limits.clip_fields(data))
             validated = SCHEMA_BY_CATEGORY[category](**data)
-            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra))
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra, note=note))
         except ValueError as exc:
-            parsed.append(ParsedRow(number, None, row.get("title") or f"Entry {number}", None, _error_message(exc)))
+            title = text_limits.shorten(str(row.get("title") or f"Entry {number}"), text_limits.TITLE_MAX)
+            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
     return detected, parsed
 
 
@@ -571,7 +576,9 @@ def _error_message(exc: ValueError) -> str:
 
 
 def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
-    title = re.sub(r"\s+", " ", data["title"].strip().casefold())
+    # Compared at the shortened length too, so a title saved before the length limit
+    # still matches the shortened copy of it in a file.
+    title = re.sub(r"\s+", " ", _title_key(data["title"]).casefold())
     if category == "movies":
         return title, int(data.get("year") or 0)
     if category in {"tv-shows", "anime"}:
@@ -588,6 +595,10 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
     if category == "audiobooks":
         return title, _clean(data.get("author")).casefold()
     return title, _clean(data.get("author")).casefold()
+
+
+def _title_key(title: str) -> str:
+    return text_limits.shorten(title.strip(), text_limits.TITLE_MAX)
 
 
 def _unknown(identity: tuple[Any, ...]) -> bool:
@@ -643,7 +654,7 @@ def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[
             classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data, "extra": row.extra})
             continue
         identities[row.category].add(identity)
-        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data, "extra": row.extra})
+        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": row.note, "data": row.data, "extra": row.extra})
     return classified
 
 

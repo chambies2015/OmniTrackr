@@ -1052,6 +1052,9 @@ const REVIEW_PREVIEW_LEN = 60;
 const PUBLIC_REVIEW_MIN_CHARS = 80;
 const SEARCH_READY_REVIEW_MIN_CHARS = 240;
 const SEARCH_READY_REVIEW_MIN_WORDS = 35;
+// Matches text_limits.REVIEW_MAX on the server. A review saved before the limit can be
+// edited and shortened, but not made longer.
+const REVIEW_MAX_CHARS = 20000;
 
 function getReviewCellContent(review, title, subtitle) {
   if (!review || !String(review).trim()) return '';
@@ -1094,7 +1097,21 @@ function closeReviewModal() {
   }
 }
 
-function getReviewQualityMessage(reviewText) {
+// Shown in place of the quality hint once a review nears the length limit.
+function getReviewLengthMessage(reviewText, savedLength = 0) {
+  const length = String(reviewText || '').length;
+  if (length < REVIEW_MAX_CHARS * 0.9) return '';
+  const count = `${length.toLocaleString('en-US')} of ${REVIEW_MAX_CHARS.toLocaleString('en-US')} characters`;
+  if (length <= REVIEW_MAX_CHARS) return count;
+  if (savedLength > REVIEW_MAX_CHARS && length <= savedLength) {
+    return `${count} - this review was saved before the limit, so you can edit or shorten it but not add to it`;
+  }
+  return `${count} - shorten the review to save it`;
+}
+
+function getReviewQualityMessage(reviewText, savedLength = 0) {
+  const lengthMessage = getReviewLengthMessage(reviewText, savedLength);
+  if (lengthMessage) return lengthMessage;
   const text = String(reviewText || '').trim();
   const length = text.length;
   const wordCount = (text.match(/[\w'-]+/gu) || []).length;
@@ -1121,12 +1138,16 @@ function reviewQualityHintHtml(inputId) {
 function setupReviewQualityCounter(textarea) {
   if (!textarea || !textarea.id || textarea.dataset.reviewCounterBound === 'true') return;
   textarea.dataset.reviewCounterBound = 'true';
+  // What the entry held when editing began; a longer review saved before the limit may stay that long.
+  const savedLength = textarea.value.length;
   const updateCounter = () => {
     const counter = document.querySelector(`[data-review-counter-for="${textarea.id}"]`);
     if (!counter) return;
     const length = textarea.value.trim().length;
-    counter.textContent = getReviewQualityMessage(textarea.value);
-    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS);
+    const over = textarea.value.length > Math.max(REVIEW_MAX_CHARS, savedLength);
+    counter.textContent = getReviewQualityMessage(textarea.value, savedLength);
+    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS && !over);
+    counter.classList.toggle('is-over', over);
   };
   textarea.addEventListener('input', updateCounter);
   // form.reset() does not fire "input"; refresh once the reset has cleared the value.

@@ -111,6 +111,11 @@ async function importData(fileInput) {
       message += `\nEpisode ratings and notes: ${result.episode_notes_created || 0} restored, ${result.episode_notes_skipped || 0} skipped. Episodes you had already rated keep what you wrote.`;
     }
 
+    if (result.shortened) {
+      const one = result.shortened === 1;
+      message += `\nShortened to fit: ${result.shortened} ${one ? 'title, name, review or link was' : 'titles, names, reviews or links were'} far past the length limits and ${one ? 'was' : 'were'} cut to size. Text already in your library keeps its full length.`;
+    }
+
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
     }

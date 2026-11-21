@@ -2427,6 +2427,11 @@ body.dark-mode .review-textarea:focus {
   color: #4caf50;
 }
 
+/* Past the review length limit (text_limits.REVIEW_MAX). */
+.review-quality-count.is-over {
+  color: var(--danger, #b91c1c);
+}
+
 .review-cell {
   max-width: 200px;
   vertical-align: middle;
