@@ -6089,6 +6089,9 @@ body.app-shell .year-goals__status, body.app-shell .year-goal--done .year-goal__
 .month-challenge__step--done .month-challenge__label { opacity: .8; }
 .month-challenge__count { font-size: .8rem; opacity: .72; white-space: nowrap; }
 .month-challenge__hint { display: block; font-size: .8rem; line-height: 1.4; margin-top: 3px; opacity: .75; }
+.month-challenge__credits { align-items: center; display: flex; flex-wrap: wrap; gap: 0 8px; margin-top: 3px; }
+.month-challenge__credits .month-challenge__hint { flex-basis: 100%; margin-top: 0; }
+.month-challenge__credits .month-challenge__link { font-size: .8rem; max-width: 100%; overflow-wrap: anywhere; padding: 0; text-align: left; }
 .month-challenge__celebration { align-items: center; background: linear-gradient(110deg, rgba(20, 184, 166, .18), rgba(102, 126, 234, .14)); border: 1px solid rgba(20, 184, 166, .45); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; margin: 0 0 12px; padding: 12px 14px; }
 .month-challenge__celebration-copy { display: grid; gap: 2px; }
 .month-challenge__celebration-copy strong { color: var(--fg); font-size: 1rem; }

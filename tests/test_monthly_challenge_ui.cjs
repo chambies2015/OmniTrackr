@@ -65,3 +65,48 @@ test('a stretch step lists the formats that count for this member until it is do
   assert.equal(challenge.stretchHint({ kind: 'stretch', done: false }), '');
   assert.equal(challenge.stretchHint({ kind: 'reflect', done: false, formats: ['manga'] }), '');
 });
+
+test('a recommended step offers this month\'s unsaid finishes until it is done', () => {
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const unsaid = [
+      { category: 'books', id: 4, title: 'A Lent Book' },
+      { category: 'movies', id: 9, title: 'Film' },
+      { category: 'manga', id: 0, title: 'No id' },
+      { category: 'anime', id: 2, title: 'Show' },
+      { category: 'music', id: 3, title: 'Fourth' },
+    ];
+    const item = challenge.stepItem({ kind: 'recommended', label: 'Finish something someone recommended to you', done: false, count: 0, target: 1, unsaid });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    const row = label.children.find(node => node.className === 'month-challenge__credits');
+    assert.ok(row);
+    assert.equal(row.children[0].textContent, 'Did someone recommend one of these?');
+    const buttons = row.children.filter(node => node.tag === 'button');
+    assert.deepEqual(buttons.map(button => button.textContent), ['A Lent Book', 'Film', 'Show']);
+    assert.equal(buttons[0].dataset.challengeAction, 'credit');
+    assert.equal(buttons[0].dataset.category, 'books');
+    assert.equal(buttons[0].dataset.itemId, '4');
+    assert.equal(buttons[0].attributes['aria-label'], 'Say who recommended A Lent Book');
+
+    const one = challenge.creditRow({ unsaid: [{ category: 'books', id: 4, title: 'A Lent Book' }] });
+    assert.equal(one.children[0].textContent, 'Did someone recommend it?');
+    assert.equal(challenge.creditRow({ unsaid: [] }), null);
+
+    const empty = challenge.stepItem({ kind: 'recommended', label: 'x', done: false, count: 0, target: 1, unsaid: [] });
+    const hint = empty.children.find(node => node.className === 'month-challenge__label').children[0];
+    assert.equal(hint.textContent, 'Name them under "Why I added it" on the title');
+
+    const done = challenge.stepItem({ kind: 'recommended', label: 'x', done: true, count: 1, target: 1, unsaid });
+    assert.equal(done.children.find(node => node.className === 'month-challenge__label').children.length, 0);
+    const other = challenge.stepItem({ kind: 'reflect', label: 'x', done: false, count: 0, target: 1, unsaid });
+    assert.equal(other.children.find(node => node.className === 'month-challenge__label').children.length, 0);
+  } finally {
+    delete global.document;
+  }
+});
