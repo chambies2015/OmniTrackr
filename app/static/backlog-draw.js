@@ -624,8 +624,16 @@
     return Promise.resolve(busy ? null : refresh(true)).then(() => {
       const section = $('backlogDraw');
       const shown = Boolean(section && !section.hidden);
-      if (shown && section.scrollIntoView) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      return shown;
+      if (!shown) return false;
+      // Past the first few cards the home screen tucks this one behind "Show more" (display: none), where
+      // scrolling to it does nothing; bring it out first.
+      const layout = typeof window !== 'undefined' ? window.OmniHomeLayout : null;
+      const tucked = typeof section.classList?.contains === 'function' && section.classList.contains('is-home-tucked');
+      if (tucked && layout && typeof layout.reveal === 'function') {
+        try { layout.reveal(section); } catch (error) { /* it still scrolls into view if it can */ }
+      }
+      if (section.scrollIntoView) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return true;
     });
   }
 

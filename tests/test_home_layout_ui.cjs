@@ -383,3 +383,23 @@ test('after "Mark watched" from the keyboard, focus waits on the card heading fo
   await done.listeners.click[0]();
   assert.equal(focusAtMoment, other);
 });
+
+test('another card can bring a tucked card out before scrolling to it, without opening Show more (Nov 21 sweep f)', () => {
+  const { root, api, storage } = setup();
+  board(root, ['daily', 'homeNews', 'nextUpQueue', 'yourWeek', 'backlogDraw', 'comingUp'], ['monthlyChallenge']);
+  root.querySelector('#homeNews').append(section('homeNewsShows'));
+  const items = Object.assign(new Node('div'), { id: 'nextUpQueueItems' }); items.append(new Node('div'));
+  root.querySelector('#nextUpQueue').append(items);
+  api.OmniHomeLayout.arrange();
+  assert.deepEqual(tucked(root), ['backlogDraw', 'comingUp']);
+  // The October challenge's "Deal me in" asks for the backlog draw.
+  assert.equal(typeof api.OmniHomeLayout.reveal, 'function');
+  api.OmniHomeLayout.reveal(root.querySelector('#backlogDraw'));
+  // A card asked for doesn't take another card's place.
+  assert.deepEqual(tucked(root), ['comingUp']);
+  // It stays out on the next arrange; Show more stays the member's own choice.
+  api.OmniHomeLayout.arrange();
+  assert.equal(tucked(root).includes('backlogDraw'), false);
+  assert.equal(root.querySelector('.home-board').classList.contains('home-board--more'), false);
+  assert.equal(storage.has('omnitrackr_home_more'), false);
+});

@@ -163,6 +163,7 @@ def send_recommendation(body: RecSend, request: Request, response: Response,
     if _sent_today(db, user.id, links=False) + len(friends) > DAILY_SEND_LIMIT:
         raise HTTPException(429, "That's a lot of recommendations for one day. Try again tomorrow.")
     now = datetime.utcnow()
+    this_month = datetime(now.year, now.month, 1)
     sent, already = [], []
     names = {u.id: u.username for u in db.query(models.User).filter(models.User.id.in_(friends))}
     for friend_id in friends:
@@ -177,6 +178,10 @@ def send_recommendation(body: RecSend, request: Request, response: Response,
             # Sending again only refreshes the note; the friend isn't pinged twice.
             if body.note:
                 existing.note = body.note
+            # Still waiting from an earlier month: sending it again is this month's telling (a challenge
+            # step can ask for one), so it moves up their inbox as sent today, still without a second ping.
+            if existing.created_at is None or existing.created_at < this_month:
+                existing.created_at = now
             already.append(names.get(friend_id))
             continue
         db.add(models.FriendRecommendation(
