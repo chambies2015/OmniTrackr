@@ -15,9 +15,9 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261120-a11y-1"
+SITE_CSS_VERSION = "20261121-phone-1"
 SITE_JS_VERSION = "20261028-nav-1"
-SITE_NAV_JS_VERSION = "20261114-search-1"
+SITE_NAV_JS_VERSION = "20261121-phone-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
