@@ -1647,7 +1647,10 @@ async def faq_page(request: Request):
 
 @app.get("/guides", tags=["public"])
 async def guides_page(request: Request):
-    response = strict_template_response("guides.html", request)
+    from . import guide_library
+    # ?format=anime opens the library filtered to one format; the canonical link stays /guides.
+    response = strict_template_response("guides.html", request,
+                                        guide_library.replacements(request.query_params.get("format")))
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
