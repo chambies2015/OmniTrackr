@@ -30,6 +30,7 @@ VISIT_JS_VERSION = "20261118-search-1"
 NAV_MENUS = (
     ("explore", "Explore", (
         ("discover", "Discover", "/discover", "Trails that connect film, TV, games, books and more"),
+        ("essentials", "The Essential 100", "/essentials", "The all-time titles worth knowing, as checklists"),
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
         ("awards", "Awards season", "/awards", "Dates, nominees and a ballot for each big show"),
         ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
@@ -88,6 +89,7 @@ VIEW_SWITCHES = {
 FOOTER_GROUPS = (
     ("Explore", (
         ("Discover", "/discover"),
+        ("The Essential 100", "/essentials"),
         ("Best of 2026", "/best-of"),
         ("Awards season", "/awards"),
         ("Release Radar", "/release-radar"),

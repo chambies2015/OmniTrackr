@@ -65,6 +65,7 @@ CORE_SITEMAP_PATHS = (
     ("/binge-calculator", "monthly", "0.7"),
     ("/if-you-liked", "monthly", "0.75"),
     ("/best-of", "weekly", "0.75"),
+    ("/essentials", "monthly", "0.8"),
     ("/in-order", "monthly", "0.75"),
     ("/halloween", "weekly", "0.75"),
     ("/holidays", "weekly", "0.75"),
@@ -293,6 +294,14 @@ def _database_parts(db: Session) -> list[str]:
             f"<url><loc>{base_url}{best_of.path(slug)}</loc>"
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
+    # The Essential 100: one hand-written canon list per format (shared counts under it are noindex).
+    from .. import essentials
+    for fmt, data in essentials.lists().items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{essentials.path(fmt)}</loc>"
+            f"<lastmod>{data['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.8</priority></url>"
         )
     # Release guides: hand-written picks from a month's (or a season's) new releases, live from their publish date.
     from .. import new_releases
@@ -675,6 +684,7 @@ Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, ani
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
 {release_line}Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
+The Essential 100 at {base_url}/essentials has nine hand-written lists of 100 all-time essential titles each (films, TV shows, anime, games, books, albums, manga, podcasts and audiobooks, for example {base_url}/essentials/movies or {base_url}/essentials/anime), in date order, with why each title matters, where to start and how long it takes. Each list is also a checklist: visitors can tick what they have finished and share the count.
 Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
 {new_year_line}{advent_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.

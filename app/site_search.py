@@ -102,6 +102,11 @@ def _guide_sources(today: date) -> list[dict]:
         also = [guide.get("search_title")]
         also.extend(item.get("title") for item in guide.get("picks") or [])
         entries.append(_entry(guide["name"], best_of.path(slug), "Best of", guide.get("summary", ""), also))
+    from . import essentials
+    for fmt, data in essentials.lists().items():
+        also = [data.get("search_title"), "essential", "all time", "classics", "greatest", "canon"]
+        also.extend(item["title"] for item in data["items"])
+        entries.append(_entry(data["name"], essentials.path(fmt), "The Essential 100", data.get("summary", ""), also))
     for slug, guide in new_releases.published(today).items():
         entries.append(_entry(guide["name"], new_releases.path(slug), "Release guide", guide.get("summary", ""),
                               [guide.get("search_title")]))

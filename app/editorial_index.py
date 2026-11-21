@@ -30,6 +30,7 @@ SECTION_LABELS = {
     "if-you-liked": "If you liked",
     "seasonal": "Seasonal",
     "best-of": "Best of the year",
+    "essentials": "The Essential 100",
     "new-releases": "Release guide",
     "binge": "How long it takes",
 }
@@ -101,6 +102,13 @@ def _best_of() -> list[dict]:
             for slug, guide in GUIDES.items()]
 
 
+def _essentials() -> list[dict]:
+    from . import essentials
+    return [{"section": "essentials", "href": essentials.path(fmt), "name": data["name"],
+             "summary": data["summary"], "updated": data["reviewed"]}
+            for fmt, data in essentials.lists().items()]
+
+
 def _new_releases() -> list[dict]:
     from . import new_releases
     return [{"section": "new-releases", "href": new_releases.path(slug), "name": guide["name"],
@@ -150,7 +158,7 @@ def _awards() -> list[dict]:
 
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _new_releases() + _binge()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _essentials() + _new_releases() + _binge()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 
@@ -213,6 +221,7 @@ SECTION_ORDER = (
     ("monthly", "Monthly editions", "/discover"),
     ("seasonal", "Seasonal picks", "/halloween"),
     ("best-of", "Best of the year", "/best-of"),
+    ("essentials", "The Essential 100", "/essentials"),
     ("new-releases", "Release guides", "/new-releases"),
     ("binge", "How long it takes", "/binge-calculator"),
 )
