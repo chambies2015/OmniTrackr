@@ -349,10 +349,10 @@ def _shelf_html(key: str, heading: str, intro: str, hubs, items: list[dict], kin
 def _chips(counts: dict[str, int], total: int, current: str | None) -> str:
     def chip(slug: str | None, label: str, count: int, kind: str) -> str:
         href = f"/guides?format={slug}#{LIBRARY_ANCHOR}" if slug else f"/guides#{LIBRARY_ANCHOR}"
-        active = (slug or None) == current
+        active = ' aria-current="true"' if (slug or None) == current else ""
         plural = PLURAL_BY_KIND.get(kind, "")
         return (f'<a class="gl-chip" href="{href}" data-format="{kind}" data-slug="{slug or ""}" '
-                f'data-plural="{escape(plural, quote=True)}"{" aria-current=\"true\"" if active else ""}>'
+                f'data-plural="{escape(plural, quote=True)}"{active}>'
                 f'{escape(label)} <span>{count}</span></a>')
     chips = [chip(None, "All", total, "")]
     chips += [chip(row[0], row[2], counts.get(row[1], 0), row[1]) for row in FORMATS]
