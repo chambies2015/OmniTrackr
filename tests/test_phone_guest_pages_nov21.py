@@ -187,3 +187,10 @@ def test_public_pages_tint_the_phone_address_bar(client):
     own = '<html><head><meta name="theme-color" content="#123456"></head><body class="site"></body></html>'
     assert page_hints.add_theme_color(own) == own
     assert "--site-bg: #0b0a18;" in SITE_CSS
+
+
+def test_sign_up_sheets_fit_a_sideways_phone():
+    start = SITE_CSS.index("/* Phones turned sideways")
+    block = SITE_CSS[start:SITE_CSS.index("}\n}", start)]
+    assert "@media (max-height: 480px) and (min-width: 561px)" in block
+    assert ".guest-sheet__actions { grid-template-columns: 1fr 1fr; margin-top: 12px; }" in block

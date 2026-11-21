@@ -411,6 +411,17 @@ body.site .site-finder__field input:focus-visible { outline: none; }
 /* Phones, guest pages (Nov 21 2026). */
 /* "Start tracking" sheet (site-nav.js) uses the guest-sheet look above. */
 .guest-sheet--start .guest-sheet__lead { margin-bottom: 4px; }
+/* Phones turned sideways: less padding and the two buttons side by side, so the sign-up
+   buttons and the note fit on a 360px-tall screen without scrolling inside the sheet. */
+@media (max-height: 480px) and (min-width: 561px) {
+  .guest-sheet { max-width: 560px; padding: 18px 22px 14px; }
+  .guest-sheet__kicker { margin-bottom: 2px; }
+  .guest-sheet__title { font-size: 1.25rem; margin-bottom: 4px; }
+  .guest-sheet__lead { font-size: .9rem; line-height: 1.45; margin-bottom: 10px; }
+  .guest-sheet__actions { grid-template-columns: 1fr 1fr; margin-top: 12px; }
+  .guest-sheet__btn { min-height: 46px; }
+  .guest-sheet__note { margin-top: 10px; }
+}
 @media (max-width: 760px) {
   /* Boxes under 16px make iPhones zoom the whole page in when one is tapped. */
   body.site input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), body.site select, body.site textarea { font-size: max(16px, 1em); }
