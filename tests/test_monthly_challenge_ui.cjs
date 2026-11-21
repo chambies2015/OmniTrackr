@@ -191,3 +191,39 @@ test('a day step says when the next finish is due, in local time, or how the ste
     delete global.document;
   }
 });
+
+test('a pair step names other versions waiting in the library, or how the step counts', () => {
+  const step = { kind: 'pair', done: false, count: 0, target: 1, waiting: [
+    { title: ' Dune ', format: 'film', with: 'book' },
+    { title: 'Akira', format: 'anime', with: 'manga' },
+  ] };
+  assert.equal(challenge.pairHint(step), 'In your library: Dune (film) to go with the book, Akira (anime) to go with the manga');
+  // At most three, and entries without a title or format are skipped.
+  const many = { ...step, waiting: [{ title: 'A', format: 'film' }, { title: '', format: 'book' }, { title: 'B', format: 7 },
+    { title: 'C', format: 'game', with: 'book' }, { title: 'D', format: 'TV' }, { title: 'E', format: 'album' }] };
+  assert.equal(challenge.pairHint(many), 'In your library: A (film), C (game) to go with the book, D (TV)');
+
+  const fallback = "Counts when it shares a name with something you've finished in another format";
+  assert.equal(challenge.pairHint({ ...step, waiting: [] }), fallback);
+  assert.equal(challenge.pairHint({ ...step, waiting: 'Dune' }), fallback);
+  assert.equal(challenge.pairHint({ ...step, done: true }), '');
+  assert.equal(challenge.pairHint({ ...step, kind: 'day' }), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const item = challenge.stepItem({ kind: 'pair', label: 'Finish the other version of something', done: false,
+      count: 0, target: 1, waiting: [] });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, fallback);
+    assert.ok(!item.children.some(node => node.className === 'month-challenge__count'));
+  } finally {
+    delete global.document;
+  }
+});

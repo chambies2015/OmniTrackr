@@ -13,9 +13,12 @@ anyone's titles.
 from __future__ import annotations
 
 import os
+import re
 import secrets
+import unicodedata
 from calendar import monthrange
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Optional
 
 from sqlalchemy import and_, func, or_
@@ -55,6 +58,9 @@ FORMAT_NOUNS = {
 #               ``every`` years before it (2017, 2007, 1997... in 2027), going by the year saved on the title
 #   day         finish ``count`` titles less than ``hours`` hours apart: a day's worth of finishes, measured in
 #               hours so it works the same in every time zone and across midnight
+#   pair        finish ``count`` titles whose other version, in another format, the member has also finished, then
+#               or any time before: matched by name, or by an edition pick's "other" version (a book and an
+#               audiobook of the same name are the same words, so they never pair)
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -265,6 +271,29 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. This month, try writing down when and where you were: on the train at eight in the morning, on the sofa at one at night, outside on the longest evening of the year. A year from now that line will bring the day back better than a score will. Takeaways stay private unless you publish a review."},
         ],
         "reflection": "Which of this month's stories felt longer than the time it covered, and which felt shorter?",
+    },
+    "2027-07": {
+        "name": "Told twice",
+        "tagline": "Finish one of July's nine stories that exist in two formats, finish the other version of something you know and say which one you'd hand a friend first.",
+        "published": "2027-07-01",
+        # The July edition (out July 1) has nine picks, one per format, each naming its version in another format.
+        "edition": "july-2027",
+        "intro": [
+            "July is when the big summer adaptations open, and when somebody always says the book was better. This challenge, and the July edition it pairs with, are about stories told twice, in two different formats. Jaws was a bestselling novel before it was a film, and Spielberg's mechanical shark broke down so often that he left most of it to your imagination. The film of Akira had to invent an ending because the manga still had two years to run. The Last of Us went from a game to a television series, Homecoming from a podcast to one, and Tommy from a double album to a film that changes who dies. The edition has nine picks, one in each format, and each names its other version. The challenge asks you to finish one of the nine, to finish the other version of something you already know, and to write down which version you would hand a friend first.",
+            "The middle step counts a July finish whose other version you have finished in a different format, whenever that was: the film of a book you read years ago, or the manga of an anime you watched last week. It goes by the names in your library, so two titles with the same name in different formats pair up on their own, and the challenge card on your home screen lists a few titles already in your library that would make a pair. For the edition's nine, the other versions it names count under their own names too. A book and its own audiobook don't count, since they are the same words. Anything you finish in July counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "july-2027",
+             "label": "Finish one pick from the July edition",
+             "detail": "The July edition has nine picks, one in each format OmniTrackr tracks, and each has another version in a different format that is worth finishing too. Tommy is about 75 minutes and The Girl Who Leapt Through Time 98, so either fits an evening, and Jaws is a little over two hours. Akira is six volumes and more than 2,000 pages, so start that one early. Finish any one of the nine in July and this step is done."},
+            {"kind": "pair", "count": 1,
+             "label": "Finish the other version of something",
+             "detail": "Any title you finish in July counts if you have also finished a version of it in another format, this month or any time before: the novel and the film, the manga and the anime, the game and the series. The step goes by the names in your library, so check that both are saved under the same title. For the edition's picks, the other version it names counts under its own name, so 80 Days pairs with Around the World in Eighty Days. A book and its audiobook are the same words, so they don't pair. If you finish one of the edition's picks in July and have already finished its other version, this step and the first are both done."},
+            {"kind": "reflect", "count": 1,
+             "label": "Say which you'd hand a friend first",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. If you have finished both versions of something, write down which you would give a friend first and why: the quicker one, the one that keeps a surprise, or the one that does something the other can't. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which version of a story you love did you meet first, and do you think that decided which one you prefer?",
     },
 }
 
@@ -684,6 +713,134 @@ def day_progress(finishes: list[dict], month: str, hours: int = 24, target: int 
     return result
 
 
+# ---------------------------------------------------------------- pair steps
+
+# Formats whose titles of the same name are the same words read or heard, so they never make a pair.
+SAME_WORDS = frozenset({"books", "audiobooks"})
+# Words for each format in the card's "Other versions in your library" line.
+PAIR_NOUNS = {
+    "movies": "film", "tv-shows": "TV", "anime": "anime", "video-games": "game", "music": "album",
+    "books": "book", "manga": "manga", "podcasts": "podcast", "audiobooks": "audiobook",
+}
+# How many unfinished titles the card names under a pair step.
+PAIR_WAITING_LIMIT = 3
+# Rows read per format: enough for any real library, and a bound on the card's cost for a huge import.
+PAIR_LIBRARY_CAP = 5000
+
+_NUMBER = r"(?:\d+|[ivx]+|one|two|three|four|five|six|seven|eight|nine|ten)"
+# "Akira, Vol. 1", "24: Season 1", "The Last of Us Part I", "Dune: Part Two", "... The Final Season".
+_PART = re.compile(r"[\s,:;.\-\u2013\u2014]+(?:(?:season|series|part|volume|vol|book|chapter|episode)\.?\s*" + _NUMBER
+                   + r"|(?:the\s+)?(?:complete|final|first)\s+(?:season|series|collection|edition))$")
+_BRACKETS = re.compile(r"\s*[(\[][^()\[\]]*[)\]]$")
+_ARTICLE = re.compile(r"^(?:the|a|an)\s+")
+
+
+@lru_cache(maxsize=16384)
+def story_key(title: str) -> str:
+    """A title reduced to the name its versions share: "The Last of Us Part I" and "The Last of Us: Season 1"
+    are both "last of us". Trailing brackets, season/part/volume numbers and a leading article go; accents
+    and punctuation are folded. Titles with no Latin letters keep their own script. "" when nothing is left.
+    """
+    text = unicodedata.normalize("NFKD", title or "")
+    folded = text.encode("ascii", "ignore").decode("ascii")
+    text = (folded if re.search(r"[A-Za-z0-9]", folded) else text).casefold().replace("&", " and ")
+    text = text.replace("'", "").replace("\u2019", "")
+    text = " ".join(text.split())
+    previous = None
+    while previous != text:
+        previous = text
+        text = _PART.sub("", _BRACKETS.sub("", text)).strip()
+    text = " ".join(re.sub(r"[\W_]+", " ", text).split())
+    return _ARTICLE.sub("", text) or text
+
+
+def _edition_versions() -> tuple[dict, dict]:
+    """Edition picks that name an "other" version: (category, name) of the pick -> its keys, and
+    name of the other version -> [(pick category, key)]. The other version counts in any format but the pick's."""
+    picks: dict[tuple[str, str], set[str]] = {}
+    others: dict[str, list[tuple[str, str]]] = {}
+    for slug, edition in MONTHLY_EDITIONS.items():
+        for item in edition.get("items", []):
+            other = item.get("other")
+            if not other:
+                continue
+            key = f"{slug}/{item['key']}"
+            for name in (item["title"], *item.get("aliases", ())):
+                picks.setdefault((item["category"], title_pages.normalize(name)), set()).add(key)
+            for name in (other["title"], *other.get("aliases", ())):
+                others.setdefault(title_pages.normalize(name), []).append((item["category"], key))
+    return picks, others
+
+
+def _story_keys(category: str, title: str, versions: tuple[dict, dict]) -> list[str]:
+    picks, others = versions
+    keys = set(picks.get((category, title_pages.normalize(title)), ()))
+    keys.update(key for pick_category, key in others.get(title_pages.normalize(title), ()) if pick_category != category)
+    plain = story_key(title or "")
+    if plain:
+        keys.add("name:" + plain)
+    return sorted(keys)
+
+
+def _pairs_with(category: str, other: str) -> bool:
+    return category != other and {category, other} != SAME_WORDS
+
+
+def _library_rows(db: Session, user_id: int) -> list[dict]:
+    """The member's library across the nine formats: title, finished or not, newest saves first."""
+    rows = []
+    for kind, (model, _, category, _, _) in title_pages.KINDS.items():
+        done = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        for item_id, title, finished, added_at in db.query(model.id, model.title, done, model.added_at).filter(
+                model.user_id == user_id).order_by(model.id.desc()).limit(PAIR_LIBRARY_CAP):
+            if (title or "").strip():
+                rows.append({"category": category, "id": item_id, "title": title.strip(),
+                             "finished": bool(finished), "added": added_at or datetime.min})
+    rows.sort(key=lambda row: (row["added"], row["id"]), reverse=True)
+    return rows
+
+
+def pair_progress(finishes: list[dict], library: list[dict], limit: int = PAIR_WAITING_LIMIT) -> dict:
+    """Stories finished in two formats, counting only those with a finish this month, and up to ``limit``
+    unfinished library titles that would make a pair.
+
+    The other version can have been finished at any time: a library title marked finished counts, and so
+    does any of this month's finishes, including a title since removed. Each story counts once, whether
+    one or both of its versions were finished this month. "waiting" names the member's own titles, so only
+    their card gets it.
+    """
+    versions = _edition_versions()
+    finished: dict[str, set[str]] = {}
+    for row in (*(row for row in library if row["finished"]), *finishes):
+        for key in _story_keys(row["category"], row["title"], versions):
+            finished.setdefault(key, set()).add(row["category"])
+
+    def partner(category: str, keys: list[str]) -> Optional[tuple[str, str]]:
+        for key in keys:
+            match = next((other for other in sorted(finished.get(key, ())) if _pairs_with(category, other)), None)
+            if match:
+                return key, match
+        return None
+
+    stories = set()
+    for finish in finishes:
+        found = partner(finish["category"], _story_keys(finish["category"], finish["title"], versions))
+        if found:
+            stories.add(found[0])
+    waiting, seen = [], set()
+    for row in library:
+        if len(waiting) >= limit:
+            break
+        if row["finished"] or (row["category"], title_pages.normalize(row["title"])) in seen:
+            continue
+        found = partner(row["category"], _story_keys(row["category"], row["title"], versions))
+        if found:
+            seen.add((row["category"], title_pages.normalize(row["title"])))
+            waiting.append({"title": row["title"], "format": PAIR_NOUNS[row["category"]],
+                            "with": PAIR_NOUNS[found[1]]})
+    return {"count": len(stories), "waiting": waiting}
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -746,6 +903,12 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count = found["best"]
             # "open" names the member's own titles, like "turning", so only their card has it.
             extra = {"hours": hours, "open": found["open"]}
+        elif step["kind"] == "pair":
+            target = step.get("count", 1)
+            found = pair_progress(finishes, _library_rows(db, user_id))
+            count = found["count"]
+            # "waiting" names the member's own titles, like "turning", so only their card has it.
+            extra = {"waiting": [] if count >= target else found["waiting"]}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],

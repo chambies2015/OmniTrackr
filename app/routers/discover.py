@@ -279,9 +279,19 @@ GUEST_PANEL_NOTE = ('<p class="save-panel__guest" data-guest-only>No account yet
                     'Your list waits in this browser and moves into your library when you sign up.</p>')
 
 
+def _other_version(item) -> str:
+    """The pick's version in another format, for editions that name one (July 2027 onward)."""
+    other = item.get("other")
+    if not other or other.get("category") not in CATEGORIES:
+        return ""
+    label = CATEGORIES[other["category"]][1]
+    label = label if label == "TV show" else label.lower()
+    return f'<p class="pick-other"><strong>Pair it with the {escape(label)}:</strong> {escape(other["note"])}</p>'
+
+
 def detail_content(trail, back_path, back_label, api_path, published, essay=None, covers=None):
     covers = covers or {}
-    items = "".join(f'<article class="pick dx-pick" data-kind="{CATEGORY_KIND.get(i["category"], "")}">{_pick_cover(i, covers)}<p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p><div class="pick-actions">{_guest_save(i)}<a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></div></article>' for n, i in enumerate(trail["items"], 1))
+    items = "".join(f'<article class="pick dx-pick" data-kind="{CATEGORY_KIND.get(i["category"], "")}">{_pick_cover(i, covers)}<p class="eyebrow">{n:02d} / {CATEGORIES[i["category"]][1]}</p><h2>{escape(i["title"])}</h2><p>{escape(i["why"])}</p><p class="caveat">{escape(i["caveat"])}</p>{_other_version(i)}<div class="pick-actions">{_guest_save(i)}<a href="{escape(i["source"], quote=True)}" rel="noopener noreferrer" target="_blank">Source / learn more ↗</a></div></article>' for n, i in enumerate(trail["items"], 1))
     essay_section = ""
     if essay:
         essay_section = f'<section id="essay" class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
