@@ -1,5 +1,6 @@
 """Guest pages on phones (Nov 21 2026): the Start tracking sheet marker, tap areas,
 16px form boxes, and crosslink cards that list each shared title once."""
+import re
 from pathlib import Path
 
 from app import funnel, guest_signup, guide_links, html_finish, site_chrome
@@ -114,3 +115,82 @@ def test_every_page_loads_the_new_guest_list_script(client):
              and "guest-list.js?v=20261118-sheet-1" in path.read_text(encoding="utf-8")]
     assert stale == []
     assert "/static/guest-list.js?v=20261121-phone-1" in client.get("/in-order/star-wars").text
+
+
+def test_essentials_lists_offer_a_titles_only_view(client):
+    page = client.get("/essentials/movies").text
+    assert '<button type="button" class="es-view" aria-pressed="false" data-es-view hidden>Titles only</button>' in page
+    assert "/static/essentials.js?v=20261121-phone-2" in page and "/static/essentials.css?v=20261121-phone-1" in page
+    css = (ROOT / "app/static/essentials.css").read_text(encoding="utf-8")
+    assert '.es-guide[data-es-view="titles"] .es-item__why, .es-guide[data-es-view="titles"] .es-item__start { display: none; }' in css
+    assert ".es-tracker--stuck .es-view { display: none; }" in css
+    # The notes stay in the page for readers and search engines; only the view changes.
+    assert page.count('class="es-item__why"') == 100
+
+
+def test_editorial_paragraphs_get_room_between_them(client):
+    discover_css = (ROOT / "app/static/discover.css").read_text(encoding="utf-8")
+    rule = ".editorial p + p { margin-top: 12px; }"
+    assert rule in discover_css
+    # Written before the reflection rule so that one keeps its own 14px.
+    assert discover_css.index(rule) < discover_css.index(".guide-reflection p + p { margin-top: 14px; }")
+    for path in ("/pick", "/tier-list", "/daily", "/discover", "/challenges"):
+        assert "/static/discover.css?v=20261121-phone-1" in client.get(path).text, path
+    assert "body.site.public-reader .sample-card p + p { margin-top: 8px; }" in SITE_CSS
+
+
+def test_browse_byline_sits_below_the_deck(client):
+    css = (ROOT / "app/static/browse.css").read_text(encoding="utf-8")
+    assert ".browse-page .site-hero .browse-byline { margin-top: 20px; }" in css
+    assert "/static/browse.css?v=20261121-phone-1" in client.get("/browse/manga").text
+
+
+def test_in_order_rows_open_from_anywhere_on_phones():
+    block = _phone_block()
+    assert "body.site .io-rows li { position: relative; }" in block
+    assert 'body.site .io-row__text a::after { border-radius: 14px; content: ""; inset: 0; position: absolute; }' in block
+    assert site_chrome.SITE_CSS_VERSION >= "20261121-phone-2"
+
+
+def test_demo_text_is_readable_on_phones(client):
+    css = (ROOT / "app/static/demo.css").read_text(encoding="utf-8")
+    block = css[css.index("/* Phones (Nov 21 2026)"):]
+    assert block.startswith("/* Phones (Nov 21 2026)") and "@media (max-width: 600px)" in block
+    assert ".demo-eyebrow, .demo-library-heading .demo-eyebrow, .demo-panel-heading .demo-eyebrow { font-size: .74rem;" in block
+    assert ".demo-practice p, .demo-stats-caption, .demo-filter-summary p, .demo-filter-hint, .demo-status { font-size: .84rem; }" in block
+    # Nothing in the phone block goes below 11.5px.
+    sizes = [float("0." + value) for value in re.findall(r"font-size: \.(\d+)rem", block)]
+    assert sizes and min(sizes) >= .72, sizes
+    assert "/static/demo.css?v=20261121-phone-1" in client.get("/demo").text
+
+
+def test_hero_search_results_sit_under_the_box_on_phones(client):
+    css = (ROOT / "app/static/public-landing.css").read_text(encoding="utf-8")
+    assert ".lp-search--hero.lp-search--open :is(.lp-quick, .lp-search__hint) { display: none; }" in css
+    script = (ROOT / "app/static/title-search.js").read_text(encoding="utf-8")
+    assert "form.classList.toggle('lp-search--open', open)" in script and "input.blur()" in script
+    page = client.get("/").text
+    assert "/static/public-landing.css?v=20261121-phone-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
+
+
+def test_public_pages_tint_the_phone_address_bar(client):
+    from app import page_hints
+
+    for path in ("/in-order/star-wars", "/essentials/movies", "/binge-calculator/breaking-bad", "/demo", "/pick", "/browse/manga", "/"):
+        page = client.get(path).text
+        head = page[:page.index("</head>")]
+        assert head.count('name="theme-color"') == 1, path
+        assert '<meta name="theme-color" content="#0b0a18">' in head, path
+    # Light or unknown pages, and pages that already send one, are left alone.
+    light = '<html><head><meta name="viewport" content="width=device-width"></head><body class="website"></body></html>'
+    assert page_hints.add_theme_color(light) == light
+    own = '<html><head><meta name="theme-color" content="#123456"></head><body class="site"></body></html>'
+    assert page_hints.add_theme_color(own) == own
+    assert "--site-bg: #0b0a18;" in SITE_CSS
+
+
+def test_sign_up_sheets_fit_a_sideways_phone():
+    start = SITE_CSS.index("/* Phones turned sideways")
+    block = SITE_CSS[start:SITE_CSS.index("}\n}", start)]
+    assert "@media (max-height: 480px) and (min-width: 561px)" in block
+    assert ".guest-sheet__actions { grid-template-columns: 1fr 1fr; margin-top: 12px; }" in block

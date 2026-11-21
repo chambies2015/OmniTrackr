@@ -141,6 +141,32 @@
     });
   }
 
+  // "Titles only": the notes fold away so 100 titles can be ticked without scrolling past
+  // a paragraph each (about 80,000px of page on a phone). The choice is kept in this browser.
+  const VIEW_KEY = 'omnitrackr_essentials_view';
+
+  function setupView(root) {
+    const button = root.querySelector('[data-es-view]');
+    if (!button) return;
+    const apply = compact => {
+      button.setAttribute('aria-pressed', String(compact));
+      if (compact) root.dataset.esView = 'titles';
+      else delete root.dataset.esView;
+    };
+    let saved = false;
+    try { saved = localStorage.getItem(VIEW_KEY) === 'titles'; } catch (error) { saved = false; }
+    apply(saved);
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      const compact = button.getAttribute('aria-pressed') !== 'true';
+      apply(compact);
+      try {
+        if (compact) localStorage.setItem(VIEW_KEY, 'titles');
+        else localStorage.removeItem(VIEW_KEY);
+      } catch (error) { /* this page only */ }
+    });
+  }
+
   function visible(item, filter) {
     if (filter === 'starter') return item.dataset.esStarter === '1';
     if (filter === 'todo') return item.dataset.esState !== 'done';
@@ -369,6 +395,7 @@
     if (!tracker) return;
     const count = counter(tracker);
     setupFilters(root);
+    setupView(root);
     setupStuck(tracker);
     if (count.member) {
       setupSaves(root, count);
@@ -378,7 +405,7 @@
     }
   }
 
-  const api = { readTicks, writeTicks, visible, markEmpty, KEY, LIST_PATH };
+  const api = { readTicks, writeTicks, visible, markEmpty, setupView, KEY, VIEW_KEY, LIST_PATH };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

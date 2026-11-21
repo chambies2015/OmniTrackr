@@ -33,8 +33,9 @@ from .discover import page
 from .if_you_liked import GUEST_LIST_JS
 
 router = APIRouter(tags=["essentials"])
-CSS_VERSION = "20261121-essentials-1"
-JS_VERSION = "20261121-essentials-sweep-1"
+CSS_VERSION = "20261121-phone-1"
+# Both the phone pass (Titles only) and the Nov 21 sweep changed essentials.js.
+JS_VERSION = "20261121-phone-2"
 IMPORT_JS = "/static/essentials-import.js?v=20261121-essentials-sweep-1"
 SITE = "https://omnitrackr.xyz"
 PUBLISHED = "2026-11-21"
@@ -217,6 +218,8 @@ def _tracker(data: dict, signed_in: bool, states: Optional[dict]) -> str:
         f'<button type="button" aria-pressed="true" data-es-filter="all">All {total}</button>'
         f'<button type="button" aria-pressed="false" data-es-filter="todo">Not {_e(word)} yet</button>'
         '<button type="button" aria-pressed="false" data-es-filter="starter">Start here</button></div>'
+        # Hides the notes so the list reads as a checklist; essentials.js shows it and remembers the choice.
+        '<button type="button" class="es-view" aria-pressed="false" data-es-view hidden>Titles only</button>'
         f'<a class="es-share" href="{_e(share)}" data-es-share{"" if signed_in else " hidden"}>Share my count</a>'
         + ('' if signed_in else f'<a class="es-save-count" href="{_e(_signup_back(fmt))}" data-es-signup hidden>Keep my count, free</a>')
         + '</div></aside>'
