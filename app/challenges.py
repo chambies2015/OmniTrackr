@@ -823,17 +823,30 @@ _BRACKETS = re.compile(r"\s*[(\[][^()\[\]]*[)\]]$")
 _ARTICLE = re.compile(r"^(?:the|a|an)\s+")
 
 
-@lru_cache(maxsize=16384)
+# Characters of a title read for its story key. Library titles have no length limit, and the cache below
+# keeps every title it is given, so a long one is cut first; the longest real titles are well under this.
+STORY_KEY_CHARS = 300
+# Punctuation that only separates words. A run of it is folded to one space before the suffixes are cut, so
+# _PART never rescans a long run (40,000 commas and spaces used to take half a minute).
+_SEPARATORS = re.compile(r"[\s,:;.\-\u2013\u2014]+")
+
+
 def story_key(title: str) -> str:
     """A title reduced to the name its versions share: "The Last of Us Part I" and "The Last of Us: Season 1"
     are both "last of us". Trailing brackets, season/part/volume numbers and a leading article go; accents
     and punctuation are folded. Titles with no Latin letters keep their own script. "" when nothing is left.
+    Only the first STORY_KEY_CHARS characters are read.
     """
-    text = unicodedata.normalize("NFKD", title or "")
+    return _story_key(str(title or "")[:STORY_KEY_CHARS])
+
+
+@lru_cache(maxsize=16384)
+def _story_key(title: str) -> str:
+    text = unicodedata.normalize("NFKD", title)
     folded = text.encode("ascii", "ignore").decode("ascii")
     text = (folded if re.search(r"[A-Za-z0-9]", folded) else text).casefold().replace("&", " and ")
     text = text.replace("'", "").replace("\u2019", "")
-    text = " ".join(text.split())
+    text = _SEPARATORS.sub(" ", text).strip()
     previous = None
     while previous != text:
         previous = text
@@ -1147,41 +1160,64 @@ def report_words(text: Optional[str]) -> int:
     return len(REPORT_WORD.findall(_WIDE_CHARS.sub(" ", text))) + (wide + 1) // 2
 
 
-def _reviews(db: Session, finishes: list[dict]) -> dict[tuple[str, int], str]:
-    """The library review on each finished title still in the library: one query per format."""
+# Characters of each review, takeaway or note read for a report. Fifty words fit many times over, and a
+# library review has no length limit, so the card never reads (or counts through) more than this.
+REPORT_TEXT_CHARS = 20000
+
+
+def _reviews(db: Session, user_id: int, finishes: list[dict]) -> dict[tuple[str, int], list[str]]:
+    """What the member wrote on each finished title still in their library, besides this month's journal notes:
+    the title's review and the takeaway on its finish screen, whenever either was saved. One query per format
+    for reviews and one for takeaways, reading only the member's own rows.
+
+    A takeaway saved in an earlier month counts as well as the review does: "Keep writing" on the card opens
+    the title's one finish screen, which may date from an earlier finish, and what is added there must count.
+    """
     wanted: dict[str, set[int]] = {}
     for finish in finishes:
         kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
-        if kind is not None and finish["item_id"] is not None:
+        if kind is not None and finish["item_id"] is not None and finish["item_id"] > 0:
             wanted.setdefault(kind, set()).add(finish["item_id"])
-    reviews: dict[tuple[str, int], str] = {}
+    written: dict[tuple[str, int], list[str]] = {}
     for kind, ids in wanted.items():
         model = title_pages.KINDS[kind][0]
         ordered = sorted(ids)
         for first in range(0, len(ordered), 500):
-            for item_id, review in db.query(model.id, model.review).filter(
-                model.id.in_(ordered[first:first + 500]), model.review.isnot(None),
+            for item_id, review in db.query(model.id, func.substr(model.review, 1, REPORT_TEXT_CHARS)).filter(
+                model.user_id == user_id, model.id.in_(ordered[first:first + 500]), model.review.isnot(None),
             ):
                 if (review or "").strip():
-                    reviews[(kind, item_id)] = review
-    return reviews
+                    written.setdefault((kind, item_id), []).append(review)
+    ids = sorted({item_id for found in wanted.values() for item_id in found})
+    for first in range(0, len(ids), 500):
+        for category, item_id, takeaway in db.query(
+            models.CompletionMoment.category, models.CompletionMoment.item_id,
+            func.substr(models.CompletionMoment.takeaway, 1, REPORT_TEXT_CHARS),
+        ).filter(
+            models.CompletionMoment.user_id == user_id, models.CompletionMoment.item_id.in_(ids[first:first + 500]),
+            models.CompletionMoment.takeaway.isnot(None),
+        ):
+            kind = title_pages.LIBRARY_TO_KIND.get(category)
+            if kind is not None and item_id in wanted.get(kind, ()) and (takeaway or "").strip():
+                written.setdefault((kind, item_id), []).append(takeaway)
+    return written
 
 
-def report_progress(finishes: list[dict], reviews: dict[tuple[str, int], str], words: int = 50,
+def report_progress(finishes: list[dict], reviews: dict[tuple[str, int], list[str]], words: int = 50,
                     target: int = 1) -> dict:
     """This month's finishes with at least ``words`` words written about them, and the one to write more about.
 
     A finish's words are its takeaway on the finish screen, the notes on its journal finishes and the title's
-    review, added together; the same text saved in two places counts once. While the step isn't done, "best"
+    review (``reviews``, from _reviews), added together; the same text saved in two places counts once. While the step isn't done, "best"
     is the finish with the most words so far (the latest finish if none has any), so the card can show the
     count and open the finish screen for it. It names the member's own title, so only their card gets it.
     """
     counted, written = 0, []
     for finish in finishes:
         texts: dict[str, str] = {}
-        review = reviews.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"]))
-        for text in (*finish.get("notes", ()), review):
-            plain = " ".join(str(text or "").split())
+        saved = reviews.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"])) or ()
+        for text in (*finish.get("notes", ()), *((saved,) if isinstance(saved, str) else saved)):
+            plain = " ".join(str(text or "")[:REPORT_TEXT_CHARS].split())
             if plain:
                 texts.setdefault(plain.casefold(), plain)
         total = sum(report_words(text) for text in texts.values())
@@ -1309,7 +1345,7 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             extra = {"waiting": found["waiting"]}
         elif step["kind"] == "report":
             target, words = step.get("count", 1), step.get("words", 50)
-            found = report_progress(finishes, _reviews(db, finishes), words, target)
+            found = report_progress(finishes, _reviews(db, user_id, finishes), words, target)
             count = found["count"]
             # "best" names one of the member's own finishes, like "waiting", so only their card has it.
             extra = {"words": words, "best": found["best"]}

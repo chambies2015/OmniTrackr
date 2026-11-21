@@ -275,11 +275,21 @@
     }
   }
 
-  // After a takeaway or review saved from the card: say whether it finished the step.
+  // After a takeaway or review saved from the card: say whether it finished the step. The finish screen
+  // closes on save and the card is redrawn, so focus would fall to the page: put it back on the card's
+  // Keep writing button, or the card's heading once the report is in.
   function afterWrite() {
     const step = ((state.data && state.data.steps) || []).find(item => item.kind === 'report');
     if (!step) return;
     status(step.done ? 'Saved. That counts as your report.' : `Saved. ${reportHint(step)}.`);
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    const next = document.querySelector('#monthlyChallenge [data-challenge-action="write"]');
+    const title = $('monthlyChallengeTitle');
+    const target = next || title;
+    if (!target || typeof target.focus !== 'function') return;
+    if (target === title && !title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
   }
 
   const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
