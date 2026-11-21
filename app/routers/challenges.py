@@ -122,7 +122,15 @@ PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
 def _with_other(item: dict) -> str:
     """", with the book" after a pick whose edition names its version in another format, ", in the shadow
     of Rumours" after one that names its maker's best-known work, ", taught at Harvard" after one that
-    says where it has been taught, or ", a deal with a chained god" after one that names who a bargain is with."""
+    says where it has been taught, ", a deal with a chained god" after one that names who a bargain is with,
+    ", told by a grandfather" after one that names its storyteller, or ", by way of a microwave" after one that
+    names its time machine."""
+    teller = (item.get("teller") or {}).get("who")
+    if teller:
+        return f", told by {_e(teller)}"
+    machine = (item.get("machine") or {}).get("what")
+    if machine:
+        return f", by way of {_e(machine)}"
     deal = (item.get("bargain") or {}).get("with")
     if deal:
         return f", a deal with {_e(deal)}"
@@ -164,6 +172,14 @@ def _companion_section(challenge: dict) -> str:
     return (f'<section class="editorial challenge-edition"><h2>Reading for the month</h2>'
             f'<p>{_e(edition["intro"])}</p>'
             f'<p><a href="/discover/monthly/{_e(slug)}">Read the {_e(edition["name"])} edition →</a></p></section>')
+
+
+def _links_section(links, heading: str = "Elsewhere on OmniTrackr this month") -> str:
+    """Pages a challenge points to instead of repeating them, such as the holiday guides in December."""
+    rows = "".join(f'<li><a href="{_e(href)}">{_e(label)}</a></li>' for label, href in links or ()
+                   if isinstance(href, str) and href.startswith("/") and not href.startswith("//"))
+    return (f'<section class="editorial challenge-links"><h2>{_e(heading)}</h2><ul>{rows}</ul></section>'
+            if rows else "")
 
 
 def _cta(month: str, current: bool) -> str:
@@ -336,7 +352,8 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         + f'{_counts_line(challenges.public_counts(db, month))}</header>'
         f'<section class="editorial challenge-intro">{_paragraphs(challenge["intro"])}</section>'
         f'<div class="picks challenge-steps">{step_cards}</div>'
-        + edition + _how_it_counts() + reflection + _cta(month, current) + _archive(month) + _method(challenge["published"])
+        + edition + _how_it_counts() + reflection + _links_section(challenge.get("links"))
+        + _cta(month, current) + _archive(month) + _method(challenge["published"])
     )
     path = f"/challenges/{slug}"
     name = f"{label} challenge: {challenge['name']}"

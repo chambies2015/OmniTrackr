@@ -69,6 +69,11 @@ FORMAT_NOUNS = {
 #               the finish screen, the note on a journal finish and the title's review, added together
 #   draw        finish ``count`` titles this month that the member kept from the backlog draw on the home screen
 #               (the "Draw from your backlog" card), whenever they kept it and whatever happened to the card after
+#   tell        recommend ``count`` titles to someone this month with Recommend to a friend: sent to a friend's inbox
+#               on OmniTrackr, or as a share link for someone who isn't on it yet (the step counts the sending, not
+#               whether anyone opened it)
+#   decades     finish titles released in ``count`` different decades this month, going by the year saved on each
+#               title (1987 and 1989 are the same decade, 1989 and 1990 are not)
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -371,6 +376,62 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Wishes come in threes in the old stories, from The Monkey's Paw to the genie in the bottle, and the third is usually the one that puts things right. Finish three titles in October, in any format. The edition pick and the card you were dealt both count toward the three, so a single extra finish can do it. Nobody is keeping score but you."},
         ],
         "reflection": "Which of this month's finishes cost you more than you expected, in time, nerve or sleep, and was it worth the price?",
+    },
+    "2027-11": {
+        "name": "Tell me a story",
+        "tagline": "Finish one of November's nine storytellers, tell someone about a title you loved and hear stories told two different ways.",
+        "published": "2027-11-01",
+        # The November edition (out November 1) has nine picks, one per format, each saying who tells its story.
+        "edition": "november-2027",
+        "intro": [
+            "November is the month of long evenings and, in America, of the Thanksgiving table, where the same stories come out every year and somebody always tells them better than everyone else. This challenge, and the November edition it pairs with, are about storytellers: nine of them, one in each format, from a grandfather reading a fairy tale to a boy home sick from school to a folk singer who spends eighteen minutes explaining how he was arrested for littering on Thanksgiving Day in 1965. The challenge asks you to finish one of them, to tell somebody about a title you loved, and to finish stories in two different formats.",
+            "The telling is the new part. In April the challenge counted titles somebody recommended to you; this month it is your turn. Choose Recommend on any title in your library, or on a title's page, and send it to a friend on OmniTrackr or make a share link for someone who isn't on it yet. Either one counts, and the step counts the telling, not whether they get round to it. The challenge card on your home screen offers your latest finish to start with. Anything you finish in November counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "november-2027",
+             "label": "Finish one of November's nine storytellers",
+             "detail": "The November edition has nine stories about telling stories, one in each format OmniTrackr tracks, and each says who is telling it. The Princess Bride is 98 minutes and the title song of Alice's Restaurant eighteen and a half, so either fits an evening, and an episode of The Storyteller is about 22 minutes. The Thirteenth Tale is a long novel and Showa Genroku Rakugo Shinju 25 episodes, so start those early. Finish any one of the nine in November and this step is done."},
+            {"kind": "tell", "count": 1,
+             "label": "Tell someone about one",
+             "detail": "Choose Recommend on a title in your library, or on its title page, and either send it to a friend on OmniTrackr with a line about why, or make a share link and send it to someone who isn't on OmniTrackr yet, by text, email or however you usually talk. Any title counts, whether you finished it this month or years ago, and the step counts the telling, not whether they listen. A share link opens a page with the title and your note, and if they join from it, you'll be friends. A recommendation shares only public facts about a title, never your rating, review or notes. The challenge card offers your latest finish to start with."},
+            {"kind": "formats", "count": 2,
+             "label": "Hear it told two ways",
+             "detail": "Finish titles in two different formats in November: a film and a book, an album and a podcast, a manga and a game. A story told aloud, drawn or played is a different thing from one you read, and the edition has a storyteller in every format if you want ideas. The edition pick counts toward this step, so one more finish in another format will do it."},
+        ],
+        "reflection": "Which story from this month would you tell at the dinner table, and what would you leave out to make it better?",
+        "links": [
+            ("The Thanksgiving weekend guide", "/holidays/thanksgiving"),
+        ],
+    },
+    "2027-12": {
+        "name": "Between the years",
+        "tagline": "Finish one of December's nine time machines, visit three decades and leave a note for next December.",
+        "published": "2027-12-01",
+        # The December edition (out December 1) has nine picks, one per format, each naming its time machine.
+        # Christmas, the best-of lists and Year in Review have pages of their own, linked rather than repeated.
+        "edition": "december-2027",
+        "intro": [
+            "December is when the year looks back at itself. Your Year in Review fills in, the best-of lists come out and the holiday guides fill the evenings, and then comes the odd, quiet week between Christmas and New Year that Germans call zwischen den Jahren, between the years. This challenge, and the December edition it pairs with, are about time travel: nine stories, one in each format, from a man who goes back to fix his love life by clenching his fists in a dark cupboard to a teacher who steps out of a diner's pantry into 1958 to stop the assassination of a president. The challenge asks you to finish one of them, to finish titles from three different decades, and to leave a note for the person you will be next December.",
+            "The decades are the new part. Each of your December finishes counts for the decade it was released in, going by the year saved on the title in your library, so a film from 1987 and an album from 1989 are one decade and a book from 1990 is another. Three decades will do. The challenge card on your home screen keeps track of the decades you have visited and lists a few unfinished titles in your library from the ones you haven't. Anything you finish in December counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "december-2027",
+             "label": "Finish one of December's nine time machines",
+             "detail": "The December edition has nine time-travel stories, one in each format OmniTrackr tracks, and each names its time machine. About Time is 123 minutes and Electric Light Orchestra's Time about 44, so either fits an evening, and Kindred is a weekend's reading. Steins;Gate is 24 episodes, Chrono Trigger twenty hours or more and 11/22/63 over thirty hours on audio, so save those for the long break. Finish any one of the nine in December and this step is done."},
+            {"kind": "decades", "count": 3,
+             "label": "Visit three decades",
+             "detail": "Finish titles released in three different decades in December: a film from the 1980s, an album from the 1960s and a game from last year would do it. Each title counts for its decade, going by the year saved on it in your library, so check that it is filled in; for a game it is the release date. 1987 and 1989 are the same decade, and 1989 and 1990 are not. The edition's nine come from four decades, from Kindred in 1979 to You're Dead to Me in 2019, so three of them can do this step on their own, and the challenge card lists a few titles in your library from decades you haven't visited yet."},
+            {"kind": "reflect", "count": 1,
+             "label": "Leave a note for next December",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. Write it for the person who will read it a year from now: what it was like to meet it now, where you were and who you watched, read, played or heard it with. It will be waiting in your journal. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "If you could go back and meet a story for the first time again, which would it be, and what would you tell yourself before you started?",
+        "links": [
+            ("The holiday guides", "/holidays"),
+            ("The Christmas guide", "/holidays/christmas"),
+            ("Your Year in Review", "/year-in-review"),
+            ("The best of the year", "/best-of"),
+        ],
     },
 }
 
@@ -1269,6 +1330,96 @@ def draw_progress(db: Session, user: models.User, finishes: list[dict], month: s
     return {"count": counted, "card": card, "ready": ready}
 
 
+# ---------------------------------------------------------------- tell steps
+
+def tell_count(db: Session, user_id: int, month: str) -> int:
+    """Titles the member recommended this month with Recommend to a friend: to a friend's inbox or as a share link.
+
+    The copy a share link leaves in someone's inbox when they open it (``source_id`` set) is the reader's, not
+    another recommendation, and sending one title to three friends is still one title told.
+    """
+    start, end = month_bounds(month)
+    told = db.query(models.FriendRecommendation.category, func.lower(func.trim(models.FriendRecommendation.title))).filter(
+        models.FriendRecommendation.sender_id == user_id,
+        models.FriendRecommendation.source_id.is_(None),
+        models.FriendRecommendation.created_at >= start,
+        models.FriendRecommendation.created_at < end,
+    ).distinct().limit(1000).all()
+    return len(told)
+
+
+def tell_suggestion(db: Session, user_id: int, finishes: list[dict]) -> Optional[dict]:
+    """The finish the card offers to recommend: this month's latest, rated or noted ones first, while it is
+    still in the library (the recommend dialog sends a library title). Private, like every other "best"."""
+    ordered = sorted((finish for finish in finishes if finish["item_id"] is not None),
+                     key=lambda finish: (finish["reflected"], finish["at"] or datetime.min), reverse=True)
+    for finish in ordered[:20]:
+        kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
+        if kind is None:
+            continue
+        model = title_pages.KINDS[kind][0]
+        title = db.query(model.title).filter(model.id == finish["item_id"], model.user_id == user_id).scalar()
+        if (title or "").strip():
+            return {"title": title.strip(), "category": finish["category"], "id": finish["item_id"]}
+    return None
+
+
+# ---------------------------------------------------------------- decade steps
+
+DECADE_WAITING_LIMIT = 3
+DECADE_LIBRARY_CAP = 500
+# A year outside this range is a typo or a placeholder, not a decade anyone can visit.
+FIRST_YEAR, LAST_YEAR = 1000, 2100
+
+
+def decade_of(year) -> Optional[int]:
+    """1987 -> 1980; None for a missing or implausible year."""
+    if not isinstance(year, int) or isinstance(year, bool) or not FIRST_YEAR <= year <= LAST_YEAR:
+        return None
+    return year - year % 10
+
+
+def _decade_waiting(db: Session, user_id: int, visited: set[int], limit: int = DECADE_WAITING_LIMIT) -> list[dict]:
+    """Up to ``limit`` unfinished library titles from decades this month hasn't visited yet, one per decade,
+    newest saves first. Each names the member's own title, so only their card gets them."""
+    rows = []
+    for kind, (model, _, category, _, _) in title_pages.KINDS.items():
+        column = model.release_date if kind == "game" else model.year
+        done = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        query = db.query(model.id, model.title, column, model.added_at).filter(
+            model.user_id == user_id, column.isnot(None), or_(done.is_(None), done == False),  # noqa: E712
+        ).order_by(model.id.desc()).limit(DECADE_LIBRARY_CAP)
+        for item_id, title, value, added_at in query:
+            year = value.year if kind == "game" and value is not None else value
+            decade = decade_of(year)
+            if decade is not None and decade not in visited and (title or "").strip():
+                rows.append({"title": title.strip(), "category": category, "decade": decade,
+                             "added": added_at or datetime.min, "id": item_id})
+    rows.sort(key=lambda row: (row["added"], row["id"]), reverse=True)
+    waiting, seen = [], set()
+    for row in rows:
+        if row["decade"] in seen:
+            continue
+        seen.add(row["decade"])
+        waiting.append({"title": row["title"], "category": row["category"], "decade": row["decade"]})
+        if len(waiting) >= limit:
+            break
+    return waiting
+
+
+def decade_progress(db: Session, user_id: int, finishes: list[dict], target: int = 3) -> dict:
+    """The decades this month's finishes were released in, going by the year saved on each title, and while
+    the step isn't done, a few unfinished library titles from decades still to visit."""
+    years = _release_years(db, finishes)
+    visited = set()
+    for finish in finishes:
+        decade = decade_of(years.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"])))
+        if decade is not None:
+            visited.add(decade)
+    waiting = _decade_waiting(db, user_id, visited) if len(visited) < target else []
+    return {"count": len(visited), "decades": sorted(visited), "waiting": waiting}
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -1349,6 +1500,17 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count = found["count"]
             # "best" names one of the member's own finishes, like "waiting", so only their card has it.
             extra = {"words": words, "best": found["best"]}
+        elif step["kind"] == "tell":
+            target = step.get("count", 1)
+            count = tell_count(db, user_id, month)
+            # "suggest" names one of the member's own finishes, like "best", so only their card has it.
+            extra = {"suggest": tell_suggestion(db, user_id, finishes) if count < target else None}
+        elif step["kind"] == "decades":
+            target = step.get("count", 3)
+            found = decade_progress(db, user_id, finishes, target)
+            count = found["count"]
+            # "decades" and "waiting" describe the member's own titles, so only their card has them.
+            extra = {"decades": found["decades"], "waiting": found["waiting"]}
         elif step["kind"] == "draw":
             target = step.get("count", 1)
             user = db.get(models.User, user_id)

@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const state = { request: 0, data: null, forced: false, busy: false, crediting: null, writing: null };
+  const state = { request: 0, data: null, forced: false, busy: false, crediting: null, writing: null, telling: null };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -68,9 +68,9 @@
       item.appendChild(log);
     }
     const hint = stretchHint(step) || birthdayHint(step) || dayHint(step) || pairHint(step) || makerHint(step)
-      || reportHint(step) || drawHint(step);
+      || reportHint(step) || drawHint(step) || tellHint(step) || decadesHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
-    const write = writeButton(step) || drawButton(step);
+    const write = writeButton(step) || drawButton(step) || tellButton(step);
     if (write) copy.appendChild(write);
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
@@ -351,6 +351,79 @@
     }
   }
 
+  function tellSuggestion(step) {
+    const suggest = step.suggest && typeof step.suggest === 'object' ? step.suggest : null;
+    if (!suggest || typeof suggest.title !== 'string' || !suggest.title.trim()) return null;
+    if (!Number.isInteger(suggest.id) || suggest.id < 1 || typeof suggest.category !== 'string' || !suggest.category) return null;
+    return { ...suggest, title: suggest.title.trim() };
+  }
+
+  // Under a step about telling someone about a title: the finish the card offers to recommend ("Loved Dune?
+  // Send it to a friend, or make a link for someone who isn't on OmniTrackr"), or how the step counts.
+  function tellHint(step) {
+    if (!step || step.kind !== 'tell' || step.done) return '';
+    const suggest = tellSuggestion(step);
+    if (suggest) return `Loved ${suggest.title}? Send it to a friend, or make a link for someone who isn't on OmniTrackr`;
+    return 'Choose Recommend on anything in your library: a friend\'s inbox or a share link both count';
+  }
+
+  // A button under the tell step that opens the Recommend dialog for that title. friend-recs.js opens any
+  // [data-friend-rec-open] button; the card only remembers which one it was.
+  function tellButton(step) {
+    if (!step || step.kind !== 'tell' || step.done) return null;
+    const suggest = tellSuggestion(step);
+    if (!suggest) return null;
+    const button = el('button', 'month-challenge__link', 'Recommend it');
+    button.type = 'button';
+    button.dataset.challengeAction = 'tell';
+    button.dataset.friendRecOpen = '';
+    button.dataset.recCategory = suggest.category;
+    button.dataset.recItemId = String(suggest.id);
+    button.dataset.recTitle = suggest.title;
+    button.setAttribute('aria-label', `Recommend ${suggest.title} to someone`);
+    return button;
+  }
+
+  function tellTitle(button) {
+    const recs = typeof window !== 'undefined' ? window.OmniFriendRecs : null;
+    if (!recs || typeof recs.open !== 'function') {
+      state.telling = null;
+      status('Open the title in your library and choose Recommend.');
+      return;
+    }
+    state.telling = { category: button.dataset.recCategory, id: Number(button.dataset.recItemId) };
+  }
+
+  // After a recommendation sent from the card: say whether it finished the step.
+  function afterTell() {
+    const step = ((state.data && state.data.steps) || []).find(item => item.kind === 'tell');
+    if (step) status(step.done ? 'Sent. That counts for this step.' : 'Sent.');
+  }
+
+  function decadeName(decade) {
+    return `the ${decade}s`;
+  }
+
+  // Under a step about finishing titles from different decades: the decades visited so far and a few
+  // unfinished titles from other decades ("So far: the 1980s. In your library: Alien (1970s), Halo (2000s)"),
+  // or how the step counts.
+  function decadesHint(step) {
+    if (!step || step.kind !== 'decades' || step.done) return '';
+    const decades = (Array.isArray(step.decades) ? step.decades : [])
+      .filter(decade => Number.isInteger(decade) && decade > 0 && decade % 10 === 0).slice(0, 9);
+    const waiting = (Array.isArray(step.waiting) ? step.waiting : [])
+      .filter(title => title && typeof title.title === 'string' && title.title.trim()
+        && Number.isInteger(title.decade) && title.decade > 0 && title.decade % 10 === 0)
+      .slice(0, 3);
+    const parts = [];
+    if (decades.length) parts.push(`So far: ${listText(decades.map(decadeName))}`);
+    if (waiting.length) {
+      parts.push(`In your library: ${waiting.map(title => `${title.title.trim()} (${title.decade}s)`).join(', ')}`);
+    }
+    if (parts.length) return parts.join('. ');
+    return 'Counts by the year saved on each title: 1987 and 1989 are one decade, 1989 and 1990 are two';
+  }
+
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
   async function openRevisitForm() {
     const opened = typeof navigateLibraryTab === 'function' ? await navigateLibraryTab('activity') : false;
@@ -426,6 +499,7 @@
     if (!$('monthlyChallenge')) return;
     const credited = Boolean(options && options.credited === true);
     const wrote = Boolean(options && options.wrote === true);
+    const told = Boolean(options && options.told === true);
     const request = ++state.request;
     try {
       const response = await fetch(`${apiBase()}/api/challenge`, fetchOptions({ headers: { Accept: 'application/json' } }));
@@ -436,6 +510,7 @@
       openFromHash();
       if (credited) afterCredit();
       if (wrote) afterWrite();
+      if (told) afterTell();
     } catch (error) {
       // The challenge is optional; the dashboard works without it.
     }
@@ -525,6 +600,8 @@
       writeReport(target);
     } else if (action === 'draw') {
       showDraw();
+    } else if (action === 'tell') {
+      tellTitle(target);
     }
   }
 
@@ -560,6 +637,15 @@
       if (fromCard) state.writing = null;
       refreshMonthlyChallenge({ wrote: fromCard });
     });
+    // A recommendation sent or a share link made, from the card or anywhere else, can tell someone.
+    window.addEventListener('omnitrackr:friend-rec-sent', event => {
+      if (!state.data || !(state.data.steps || []).some(step => step.kind === 'tell')) return;
+      const sent = event && event.detail;
+      const fromCard = Boolean(state.telling && sent && sent.category === state.telling.category
+        && Number(sent.id) === state.telling.id);
+      if (fromCard) state.telling = null;
+      refreshMonthlyChallenge({ told: fromCard });
+    });
     // Keeping, finishing or giving up a card on the backlog draw moves the "Take the deal" step.
     window.addEventListener('omnitrackr:backlog-draw-changed', () => {
       if (!state.data || !(state.data.steps || []).some(step => step.kind === 'draw')) return;
@@ -572,7 +658,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint, reportHint, writeButton, afterWrite, drawHint, drawButton, nightName, showDraw };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint, reportHint, writeButton, afterWrite, drawHint, drawButton, nightName, showDraw, tellHint, tellButton, tellTitle, afterTell, decadesHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

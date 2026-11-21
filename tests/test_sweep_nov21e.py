@@ -144,8 +144,8 @@ def test_report_progress_still_takes_one_review_string():
 
 
 def test_challenges_script_carries_the_sweep_tag():
-    # The October challenge (#292) changed challenges.js again after this sweep, so it carries a later tag.
-    assert "/static/challenges.js?v=20261121-at-a-price-2" in INDEX
+    # The October (#292), November and December challenges changed challenges.js again after this sweep, so it carries a later tag.
+    assert "/static/challenges.js?v=20261121-between-the-years-1" in INDEX
 
 
 def _testuser(db_session):
