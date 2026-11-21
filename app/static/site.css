@@ -407,3 +407,46 @@ body.site .site-finder__field input:focus-visible { outline: none; }
   .guest-sheet { border-radius: 22px 22px 0 0; bottom: 0; margin: auto auto 0; max-width: none; padding: 24px 18px calc(18px + env(safe-area-inset-bottom, 0px)); width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .guest-sheet[open] { animation: none; } }
+
+/* Phones, guest pages (Nov 21 2026). */
+/* "Start tracking" sheet (site-nav.js) uses the guest-sheet look above. */
+.guest-sheet--start .guest-sheet__lead { margin-bottom: 4px; }
+@media (max-width: 760px) {
+  /* Boxes under 16px make iPhones zoom the whole page in when one is tapped. */
+  body.site input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), body.site select, body.site textarea { font-size: max(16px, 1em); }
+
+  /* Taller tap areas for small links that sit alone on their line. The ::after band
+     is part of the link, so it takes the tap, and the page layout does not move. */
+  body.site .trail-guide > .hero > a:first-child, body.site .reader-crumbs a, body.site .title-crumbs a, body.site .title-links > a,
+  body.site .io-progress__link, body.site .bc-track__link, body.site .yl-pick__link, body.site .gg-gift__link, body.site .guide-source-link,
+  body.site .dx-hero__link, body.site .trail__go, body.site .es-link, body.site .es-formats__label, body.site .bo-formats__label,
+  body.site .browse-chart__source, body.site .bc-related__more a, body.site .title-scorecard__rank, body.site .save-jump,
+  body.site .site-header .site-brand, body.site .site-footer .site-brand { position: relative; }
+  body.site .trail-guide > .hero > a:first-child::after, body.site .reader-crumbs a::after, body.site .title-crumbs a::after, body.site .title-links > a::after,
+  body.site .io-progress__link::after, body.site .bc-track__link::after, body.site .yl-pick__link::after, body.site .gg-gift__link::after, body.site .guide-source-link::after,
+  body.site .dx-hero__link::after, body.site .trail__go::after, body.site .es-link::after, body.site .es-formats__label::after, body.site .bo-formats__label::after,
+  body.site .browse-chart__source::after, body.site .bc-related__more a::after, body.site .title-scorecard__rank::after, body.site .save-jump::after,
+  body.site .site-header .site-brand::after, body.site .site-footer .site-brand::after {
+    content: ""; height: 44px; left: -4px; min-height: 100%; position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
+  }
+
+  /* Cards in "Other guides" lists: the whole card opens the guide, not only its title line. */
+  body.site .guide-related-grid article { position: relative; }
+  body.site .guide-related-grid article h3 a::after { content: ""; inset: 0; position: absolute; }
+  body.site .guide-related-grid article a:not(h3 a) { position: relative; z-index: 1; }
+
+  /* Stacked links get real room between them instead of an overlapping band. */
+  body.site .site-footer__brand > a:not(.site-brand) { margin-top: 2px; padding-block: 10px; }
+  body.site .browse-related__list a { display: inline-block; padding-block: 8px; }
+  body.site .bo-sources li a, body.site .es-sources li a { display: inline-block; padding-block: 6px; }
+
+  /* Small buttons and summaries. */
+  body.site .bc-use, body.site .bc-link-button { min-height: 40px; }
+  body.site .x-jump__inner > a, body.site .title-tabs__inner > a { align-items: center; display: inline-flex; min-height: 40px; }
+  /* "On this page": the whole box header opens it, not just the 26px line of text. */
+  body.site.public-reader .reader-contents > summary { margin: -16px -20px; padding: 16px 20px; }
+  body.site .editorial > details > summary { padding-block: 9px; }
+
+  /* Fact lines under shelf covers were 11.5px. */
+  body.site .browse-card__facts { font-size: .8rem; }
+}

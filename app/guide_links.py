@@ -155,7 +155,12 @@ def titles(href: str) -> dict[str, str]:
 
 
 def _score(own: dict, other: dict) -> tuple[float, list[str], list[str]]:
-    shared = [key for key in own["titles"] if key in other["titles"]]
+    shared, named = [], set()
+    for key in own["titles"]:
+        # A title and its other names ("A New Hope") share one display name: count and list it once.
+        if key in other["titles"] and own["titles"][key] not in named:
+            named.add(own["titles"][key])
+            shared.append(key)
     creators = [key for key in own["creators"] if key in other["creators"]]
     same_kind = bool(own["kind"]) and own["kind"] == other["kind"]
     score = 3 * len(shared) + 1.5 * min(len(creators), 2) + (1 if same_kind else 0)

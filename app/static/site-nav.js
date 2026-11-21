@@ -584,3 +584,131 @@
     if (searched) remember(searched);
   }
 })();
+
+/* Phones: "Start tracking" opens a small sheet on the page being read.
+   On a phone the homepage sign-up form covers the whole screen, so the link used
+   to load the homepage only to hide it, and closing the form left the visitor on
+   the homepage instead of the guide they were reading. The server marks the pages
+   where this applies (body[data-signup-sheet], app/guest_signup.py: Google sign-in
+   is set up and the page has no sign-up form of its own). A guest who saved titles
+   on a guide gets guest-list.js's "Keep your list" sheet instead. */
+(function () {
+  const body = document.body;
+  if (!body || !body.dataset || body.dataset.signupSheet !== 'google') return;
+  if (typeof window.HTMLDialogElement !== 'function' || typeof window.matchMedia !== 'function') return;
+  const phone = window.matchMedia('(max-width: 760px)');
+  const GOOGLE_PATHS = [
+    ['#4285F4', 'M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z'],
+    ['#34A853', 'M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z'],
+    ['#FBBC05', 'M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z'],
+    ['#EA4335', 'M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z'],
+  ];
+  let sheet = null;
+
+  function member() {
+    try {
+      return Boolean(window.localStorage.getItem('omnitrackr_user') || window.localStorage.getItem('omnitrackr_token'));
+    } catch (_) { return false; }
+  }
+
+  function savedCount() {
+    try {
+      const list = JSON.parse(window.localStorage.getItem('omnitrackr_guest_list') || '[]');
+      return Array.isArray(list) ? list.length : 0;
+    } catch (_) { return 0; }
+  }
+
+  // Once per visit, the same rule as reportFunnelEvent in auth.js (only the homepage loads it).
+  function report(event) {
+    if (typeof window.reportFunnelEvent === 'function') { window.reportFunnelEvent(event); return; }
+    try {
+      const sent = JSON.parse(window.sessionStorage.getItem('omnitrackr_funnel_sent') || '[]');
+      if (Array.isArray(sent) && sent.indexOf(event) >= 0) return;
+      window.sessionStorage.setItem('omnitrackr_funnel_sent', JSON.stringify((Array.isArray(sent) ? sent : []).concat(event).slice(-20)));
+    } catch (_) { /* storage blocked: count it anyway */ }
+    try {
+      if (navigator.sendBeacon && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: event })], { type: 'application/json' }));
+      }
+    } catch (_) { /* analytics only */ }
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function googleLogo() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    [['class', 'guest-sheet__g'], ['viewBox', '0 0 18 18'], ['width', '18'], ['height', '18'], ['aria-hidden', 'true'], ['focusable', 'false']]
+      .forEach(function (pair) { svg.setAttribute(pair[0], pair[1]); });
+    GOOGLE_PATHS.forEach(function (pair) {
+      const shape = document.createElementNS(ns, 'path');
+      shape.setAttribute('fill', pair[0]);
+      shape.setAttribute('d', pair[1]);
+      svg.appendChild(shape);
+    });
+    return svg;
+  }
+
+  function build() {
+    const dialog = element('dialog', 'guest-sheet guest-sheet--start');
+    dialog.setAttribute('aria-labelledby', 'signupSheetTitle');
+    dialog.dataset.signupSheetDialog = '';
+    const close = element('button', 'guest-sheet__close', '×');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close');
+    close.addEventListener('click', function () { dialog.close(); });
+    const title = element('h2', 'guest-sheet__title', 'Start your library');
+    title.id = 'signupSheetTitle';
+    const lead = element('p', 'guest-sheet__lead');
+    lead.dataset.signupSheetLead = '';
+    const actions = element('div', 'guest-sheet__actions');
+    const google = element('a', 'guest-sheet__btn guest-sheet__btn--google');
+    google.href = '/auth/google/start';
+    google.rel = 'nofollow';
+    google.appendChild(googleLogo());
+    google.appendChild(element('span', '', 'Continue with Google'));
+    google.addEventListener('click', function () { report('signup_sheet_google'); report('signup_form_opened'); });
+    const email = element('a', 'guest-sheet__btn guest-sheet__btn--ghost', 'Sign up with email');
+    email.href = '/#signup';
+    email.addEventListener('click', function () { report('signup_sheet_email'); });
+    actions.append(google, email);
+    const note = element('p', 'guest-sheet__note', 'Free, no card needed. Already a member? ');
+    const login = element('a', '', 'Log in');
+    login.href = '/#login';
+    login.addEventListener('click', function () { report('signup_sheet_login'); });
+    note.appendChild(login);
+    dialog.append(close, element('p', 'guest-sheet__kicker', 'Free account'), title, lead, actions, note);
+    // A press on the dimmed page around the sheet closes it.
+    dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+    body.appendChild(dialog);
+    return dialog;
+  }
+
+  function open() {
+    if (!sheet) sheet = build();
+    if (typeof sheet.showModal !== 'function') return false;
+    const saved = savedCount();
+    sheet.querySelector('[data-signup-sheet-lead]').textContent = saved
+      ? 'One list for everything you watch, play, read and listen to. The ' + (saved === 1 ? 'title' : saved + ' titles')
+        + ' you saved in this browser move into it when you sign up.'
+      : 'One list for everything you watch, play, read and listen to. Mark what you finish, rate it, and see what to try next.';
+    document.querySelectorAll('details.site-menu[open]').forEach(function (menu) { menu.open = false; });
+    if (!sheet.open) sheet.showModal();
+    report('signup_sheet_opened');
+    return true;
+  }
+
+  document.addEventListener('click', function (event) {
+    if (event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!phone.matches || member()) return;
+    const link = event.target && event.target.closest ? event.target.closest('a[href="/#signup"]') : null;
+    if (!link || link.closest('dialog')) return;
+    if (body.dataset.guestSheet && window.OmniGuestList && window.OmniGuestList.read().length) return;
+    if (open()) event.preventDefault();
+  });
+})();
