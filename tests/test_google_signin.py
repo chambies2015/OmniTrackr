@@ -159,8 +159,6 @@ def test_deactivated_account_is_left_untouched(client, google, db_session, test_
 
 @pytest.mark.parametrize("overrides, code", [
     ({"email_verified": False}, "unverified"),
-    ({"email": "new@example.com"}, "unverified"),
-    ({"email": "new@example.com", "hd": " "}, "unverified"),
     ({"aud": "someone-else"}, "failed"),
     ({"iss": "https://evil.example"}, "failed"),
     ({"nonce": "replayed"}, "failed"),
@@ -170,6 +168,17 @@ def test_bad_id_tokens_are_refused(client, google, db_session, overrides, code):
     response = _sign_in(client, google, **overrides)
     assert response.headers["location"] == f"/?google_error={code}#landing-auth"
     assert db_session.query(models.User).count() == 0
+
+
+@pytest.mark.parametrize("hd", [None, " "])
+def test_external_google_address_can_still_make_a_new_account(client, google, db_session, hd):
+    overrides = {"email": "new@example.com", "sub": "6006"}
+    if hd is not None:
+        overrides["hd"] = hd
+    response = _sign_in(client, google, **overrides)
+    assert "google_error" not in response.headers["location"]
+    user = _user(db_session, "new@example.com")
+    assert user.google_sub == "6006" and auth.AUTH_COOKIE_NAME in response.headers.get("set-cookie", "")
 
 
 def test_external_email_alone_cannot_link_a_member(client, google, db_session, test_user_data):

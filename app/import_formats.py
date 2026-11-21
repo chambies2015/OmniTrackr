@@ -23,10 +23,16 @@ from defusedxml import ElementTree as SafeElementTree
 
 MAX_EXPANDED_BYTES = 40 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
+# Letterboxd lists one film in several files (watched, ratings, diary, reviews), so a
+# 5,000-film export has well over 5,000 rows. The title cap still applies after merging.
+MAX_SOURCE_ROWS = 50_000
 MAX_CSV_COLUMNS = 128
 MAX_CSV_RECORD_CHARS = 1024 * 1024
 # Allow a full 5,000-title export with dozens of metadata fields per title.
 MAX_DOCUMENT_PARTS = 500_000
+# JSON exports list every play or liked song: a 45,000-song Spotify library or a Trakt
+# history of 15,000 plays fits. Parsing a crafted file this size stays under ~150 MB.
+MAX_JSON_PARTS = 2_000_000
 JSON_PART = re.compile(r'["\[{,:]')
 STRUCTURED_EXTENSIONS = (".zip", ".xml", ".gz", ".json", ".opml")
 LETTERBOXD_FILES = ("watched.csv", "diary.csv", "ratings.csv", "reviews.csv", "watchlist.csv")
@@ -99,7 +105,7 @@ def _decode(content: bytes) -> str:
 class _JsonBudget:
     """Share one object-allocation budget across all JSON documents in a ZIP."""
     def __init__(self):
-        self.remaining = MAX_DOCUMENT_PARTS
+        self.remaining = MAX_JSON_PARTS
 
     def read(self, text: str):
         offset = 0
@@ -161,13 +167,13 @@ def _letterboxd_records(text: str, remaining: int):
     _, records = csv_records(text)
     for number, row in enumerate(records, start=1):
         if number > remaining:
-            raise ImportRowLimit(f"Imports are limited to {MAX_IMPORT_ROWS:,} source rows at a time.")
+            raise ImportRowLimit(f"Imports are limited to {MAX_SOURCE_ROWS:,} source rows at a time.")
         yield row
 
 
 def _letterboxd_rows(files: dict[str, str]) -> list[Row]:
     films: dict[tuple[str, str], dict[str, Any]] = {}
-    remaining = MAX_IMPORT_ROWS
+    remaining = MAX_SOURCE_ROWS
 
     def film(row: dict[str, str]) -> dict[str, Any] | None:
         key = _letterboxd_key(row)
@@ -221,7 +227,7 @@ def letterboxd_csv_name(filename: str) -> str | None:
 def _letterboxd_diary_rows(text: str) -> list[dict[str, Any]]:
     """Dated diary visits from diary.csv: {"title", "year", "date", "rewatch", "rating"}."""
     visits = []
-    for row in _letterboxd_records(text, MAX_IMPORT_ROWS):
+    for row in _letterboxd_records(text, MAX_SOURCE_ROWS):
         title = (row.get("Name") or "").strip()
         try:
             watched = datetime.strptime((row.get("Watched Date") or "").strip(), "%Y-%m-%d").date()

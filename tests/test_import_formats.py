@@ -151,7 +151,7 @@ def test_letterboxd_watchlist_csv_on_its_own_stays_unwatched():
 
 
 def test_letterboxd_counts_source_rows_across_files_before_merging(monkeypatch):
-    monkeypatch.setattr(import_formats, "MAX_IMPORT_ROWS", 2)
+    monkeypatch.setattr(import_formats, "MAX_SOURCE_ROWS", 2)
     _, rows = parse_csv(build_zip({"diary.csv": LB_DIARY}), filename="library.zip")
     assert [row.title for row in rows] == ["Arrival"]
     with pytest.raises(ValueError, match="source rows"):
@@ -159,7 +159,7 @@ def test_letterboxd_counts_source_rows_across_files_before_merging(monkeypatch):
 
 
 def test_letterboxd_diary_checks_source_limit_before_sorting(monkeypatch):
-    monkeypatch.setattr(import_formats, "MAX_IMPORT_ROWS", 1)
+    monkeypatch.setattr(import_formats, "MAX_SOURCE_ROWS", 1)
     with pytest.raises(ValueError, match="source rows"):
         import_formats.letterboxd_diary(LB_DIARY.encode(), "diary.csv")
 
@@ -183,7 +183,7 @@ def test_csv_record_budget_accounts_for_quoted_newlines(monkeypatch):
 
 
 def test_archive_members_share_one_json_budget(monkeypatch):
-    monkeypatch.setattr(import_formats, "MAX_DOCUMENT_PARTS", 2)
+    monkeypatch.setattr(import_formats, "MAX_JSON_PARTS", 2)
     with pytest.raises(ValueError, match="too many JSON"):
         parse_csv(build_zip({"a.json": "[1,2]", "b.json": "[3,4]"}), filename="export.zip")
 
@@ -319,3 +319,43 @@ def test_unsupported_upload_types_are_refused(authenticated_client):
     )
     assert response.status_code == 400
     assert "ZIP, XML, OPML or JSON" in response.json()["detail"]
+
+
+def test_a_large_letterboxd_export_still_imports():
+    # 2,600 films, most rated and some logged: 5,400 source rows for 2,600 titles.
+    films = [f"2020-01-01,Film {i},{1950 + i % 70},https://boxd.it/{i}" for i in range(2600)]
+    rated = [f"{row},4" for row in films[:2000]]
+    logged = [f"{row},3,No,,2021-03-0{1 + i % 9}" for i, row in enumerate(films[:800])]
+    content = build_zip({
+        "watched.csv": "Date,Name,Year,Letterboxd URI\n" + "\n".join(films),
+        "ratings.csv": "Date,Name,Year,Letterboxd URI,Rating\n" + "\n".join(rated),
+        "diary.csv": "Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date\n" + "\n".join(logged),
+    })
+    source, rows = parse_csv(content, filename="letterboxd-someone.zip")
+    assert source == "letterboxd" and len(rows) == 2600
+    assert len(import_formats.letterboxd_diary(content, "letterboxd-someone.zip")) == 800
+
+
+def _deflated_zip(files):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, text in files.items():
+            archive.writestr(name, text)
+    return buffer.getvalue()
+
+
+def test_large_spotify_and_trakt_exports_fit_the_json_budget():
+    # Both are well under the 5 MB upload limit once zipped, as real exports are.
+    library = {"tracks": [{"artist": f"Artist {i % 1200}", "album": f"Album {i % 1200}", "track": f"Song {i}",
+                           "uri": f"spotify:track:{i:022d}"} for i in range(30_000)],
+               "albums": [], "shows": [], "episodes": [], "artists": []}
+    source, rows = parse_csv(_deflated_zip({"YourLibrary.json": json.dumps(library, indent=2)}), filename="my_spotify_data.zip")
+    assert source == "spotify" and len(rows) == 1200
+    history = [{"id": i, "watched_at": "2024-01-01T00:00:00.000Z", "action": "watch", "type": "episode",
+                "episode": {"season": 1 + i % 8, "number": 1 + i % 20, "title": f"Episode {i}",
+                            "ids": {"trakt": i, "tvdb": i, "imdb": None, "tmdb": i, "tvrage": None}},
+                "show": {"title": f"Show {i % 400}", "year": 2010,
+                         "ids": {"trakt": i % 400, "slug": f"show-{i % 400}", "tvdb": i % 400, "imdb": f"tt{i % 400:07d}",
+                                 "tmdb": i % 400, "tvrage": None}}} for i in range(15_000)]
+    source, rows = parse_csv(_deflated_zip({"watched-history.json": json.dumps(history, indent=2)}), filename="trakt.zip")
+    assert source == "trakt" and len(rows) == 400
