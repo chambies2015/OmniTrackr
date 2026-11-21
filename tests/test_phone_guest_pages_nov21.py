@@ -1,5 +1,6 @@
 """Guest pages on phones (Nov 21 2026): the Start tracking sheet marker, tap areas,
 16px form boxes, and crosslink cards that list each shared title once."""
+import re
 from pathlib import Path
 
 from app import funnel, guest_signup, guide_links, html_finish, site_chrome
@@ -149,3 +150,15 @@ def test_in_order_rows_open_from_anywhere_on_phones():
     assert "body.site .io-rows li { position: relative; }" in block
     assert 'body.site .io-row__text a::after { border-radius: 14px; content: ""; inset: 0; position: absolute; }' in block
     assert site_chrome.SITE_CSS_VERSION >= "20261121-phone-2"
+
+
+def test_demo_text_is_readable_on_phones(client):
+    css = (ROOT / "app/static/demo.css").read_text(encoding="utf-8")
+    block = css[css.index("/* Phones (Nov 21 2026)"):]
+    assert block.startswith("/* Phones (Nov 21 2026)") and "@media (max-width: 600px)" in block
+    assert ".demo-eyebrow, .demo-library-heading .demo-eyebrow, .demo-panel-heading .demo-eyebrow { font-size: .74rem;" in block
+    assert ".demo-practice p, .demo-stats-caption, .demo-filter-summary p, .demo-filter-hint, .demo-status { font-size: .84rem; }" in block
+    # Nothing in the phone block goes below 11.5px.
+    sizes = [float("0." + value) for value in re.findall(r"font-size: \.(\d+)rem", block)]
+    assert sizes and min(sizes) >= .72, sizes
+    assert "/static/demo.css?v=20261121-phone-1" in client.get("/demo").text
