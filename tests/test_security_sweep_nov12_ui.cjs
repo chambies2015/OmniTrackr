@@ -8,15 +8,16 @@ const vm = require('node:vm');
 const ANALYTICS = fs.readFileSync(path.join(__dirname, '../app/static/analytics.js'), 'utf8');
 
 // Runs analytics.js on a page at `href` and returns what it queued for gtag.js.
-function visit(href, { publicShell = true, doNotTrack = null } = {}) {
+function visit(href, { publicShell = true, doNotTrack = null, referrer = '' } = {}) {
   const location = href === null ? { origin: 'https://omnitrackr.xyz', pathname: '/', href: 'not an address' } : new URL(href);
   const window = { location, addEventListener() {}, setTimeout() {} };
   const document = {
+    referrer,
     readyState: 'loading',
     documentElement: { hasAttribute: name => publicShell && name === 'data-public-shell' },
     getElementById: () => null,
   };
-  vm.runInNewContext(ANALYTICS, { window, document, navigator: { doNotTrack }, URL });
+  vm.runInNewContext(ANALYTICS, { window, document, navigator: { doNotTrack }, URL, URLSearchParams });
   const queued = (window.dataLayer || []).map(entry => Array.from(entry));
   return queued.find(entry => entry[0] === 'config') || null;
 }
@@ -47,6 +48,17 @@ test('an ordinary visit is reported as it is', () => {
 
 test('an address that cannot be read is reported as the path alone', () => {
   assert.equal(visit(null)[2].page_location, 'https://omnitrackr.xyz/');
+});
+
+test('friend invitations and private-list return links skip Analytics', () => {
+  assert.equal(visit('https://omnitrackr.xyz/?invite=example#signup'), null);
+  assert.equal(visit('https://omnitrackr.xyz/?next=%2Flists%2Fjoin%2Fexample#login'), null);
+});
+
+test('landing-page referrer reports only the origin', () => {
+  const config = visit('https://omnitrackr.xyz/', { referrer: 'https://omnitrackr.xyz/lists/join/example' });
+  assert.equal(config[2].page_referrer, 'https://omnitrackr.xyz');
+  assert.equal(visit('https://omnitrackr.xyz/')[2].page_referrer, '');
 });
 
 test('nothing is queued on the dashboard or when the browser asks not to be tracked', () => {

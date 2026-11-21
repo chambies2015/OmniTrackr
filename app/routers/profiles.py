@@ -19,7 +19,7 @@ from ..integer_bounds import PositiveDatabaseId
 from .. import follows, funnel, models, profile_widgets, public_profiles, review_spoilers, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
-from ..dependencies import get_current_user, get_db
+from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
@@ -729,11 +729,8 @@ def _season_recap(db: Session, user_id: int) -> tuple[Optional[str], Optional[in
 
 
 def _viewer_id(request: Request, db: Session) -> Optional[int]:
-    """The signed-in viewer's account id from the session cookie, or None. Only used for the owner hint."""
-    from .. import auth
-    payload = auth.decode_access_token(request.cookies.get(AUTH_COOKIE_NAME) or "")
-    uid = (payload or {}).get("uid")
-    return uid if isinstance(uid, int) and not isinstance(uid, bool) else None
+    viewer = get_optional_current_user(request, None, db)
+    return viewer.id if viewer else None
 
 
 @router.get("/u/id/{user_id:database_id}", include_in_schema=False)

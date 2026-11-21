@@ -4,7 +4,6 @@ from __future__ import annotations
 import csv
 import hashlib
 import html
-import io
 import math
 import re
 from dataclasses import dataclass
@@ -15,10 +14,10 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from . import game_playtime, import_formats, models, schemas, steam, text_limits
+from .import_formats import MAX_IMPORT_ROWS
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
-MAX_IMPORT_ROWS = 5000
 SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam",
                      "spotify", "opml", "rateyourmusic", "libib", "generic"}
 SOURCE_LABELS = {
@@ -247,19 +246,19 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
         dialect = csv.Sniffer().sniff(text[:8192], delimiters=",;\t")
     except csv.Error:
         dialect = csv.excel
-    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
-    if not reader.fieldnames:
-        raise ValueError("The CSV file does not contain a header row.")
     rows = []
     try:
-        for row in reader:
+        headers, records = import_formats.csv_records(text, dialect)
+        if not headers:
+            raise ValueError("The CSV file does not contain a header row.")
+        for row in records:
             # Stop at the cap: a file of millions of one-letter rows fits in 5 MB.
             if len(rows) >= MAX_IMPORT_ROWS:
                 raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
             rows.append(_normalized_row(row))
     except csv.Error as exc:
         raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
-    return rows, {_header(name) for name in reader.fieldnames}
+    return rows, {_header(name) for name in headers}
 
 
 def _field(row: dict[str, str], mapping: dict[str, str], target: str, *aliases: str) -> str:
@@ -541,6 +540,8 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
         raise ValueError("Import files must be 5 MB or smaller.")
     try:
         detected, rows = import_formats.read_structured(content, filename)
+    except csv.Error as exc:
+        raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
     except RecursionError as exc:
         # json.loads gives up on arrays nested thousands deep; that is a broken file, not a server error.
         raise ValueError("This file is nested too deeply to be an export.") from exc

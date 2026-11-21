@@ -616,7 +616,7 @@ app, because startup creates tables and runs migrations:
 $env:PYTHON_DOTENV_DISABLED = '1'
 $env:DATABASE_URL = 'sqlite:///:memory:'
 $env:ENVIRONMENT = 'development'
-$env:SECRET_KEY = 'omnitrackr-isolated-test-key-not-for-deployment'
+$env:SECRET_KEY = .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))"
 $env:TESTING = 'true'
 .\.venv\Scripts\python.exe -m pytest
 ```

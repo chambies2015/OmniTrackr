@@ -124,9 +124,8 @@ async def change_email(
             current_user.username,
             email_change_token
         )
-    except Exception as e:
-        print(f"Failed to send email change verification email: {e}")
-        # Don't fail the request, but log the error
+    except Exception:
+        print("Failed to send email change verification email.")
     
     return {
         "message": "Verification email sent to new address. Please verify your new email to complete the change."
@@ -151,24 +150,25 @@ def change_password(
         raise HTTPException(status_code=400, detail=error_msg)
 
     hashed_new_password = auth.get_password_hash(password_change.new_password)
-    user_update = schemas.UserUpdate(password=hashed_new_password)
-    updated_user = crud.update_user(db, current_user.id, user_update)
-    
-    if updated_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    # A reset link emailed before this change must not undo it.
-    if updated_user.reset_token or updated_user.reset_token_expires or not updated_user.has_password:
-        updated_user.reset_token = None
-        updated_user.reset_token_expires = None
-        updated_user.password_set = True
-        db.commit()
+    table = models.User
+    changed = db.query(table).filter(
+        table.id == current_user.id, table.hashed_password == current_user.hashed_password,
+    ).update({
+        table.hashed_password: hashed_new_password, table.password_set: True,
+        table.reset_token: None, table.reset_token_expires: None,
+    }, synchronize_session=False)
+    if changed != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Your password changed. Sign in again.")
+    db.commit()
+    db.refresh(current_user)
 
     # A heads-up to the account's email, in case someone else holds this session.
-    background_tasks.add_task(email_utils.send_security_notice_quietly, updated_user.email,
-                              updated_user.username, *email_utils.PASSWORD_CHANGED_NOTICE)
+    background_tasks.add_task(email_utils.send_security_notice_quietly, current_user.email,
+                              current_user.username, *email_utils.PASSWORD_CHANGED_NOTICE)
     # Other devices are signed out by the new password; keep this one signed in.
     response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})
-    auth.set_auth_cookie(response, auth.create_user_access_token(updated_user))
+    auth.set_auth_cookie(response, auth.create_user_access_token(current_user))
     return response
 
 

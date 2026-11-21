@@ -9,7 +9,9 @@ first name, used once to suggest a username. No Google token is stored.
 
 Account rules:
 - A Google account already linked to a member signs that member in.
-- Otherwise a member whose email matches Google's verified email is linked and signed in.
+- Email-based linking and account creation require a Gmail or Google Workspace identity.
+  Members using another mailbox can sign up or log in with email.
+- A member whose email matches Google's authoritative email is linked and signed in.
   If that member had never verified the address, Google has now proved who owns it, so
   the account is marked verified and its unproven password is replaced (whoever chose
   it never showed they own the inbox; the owner can set a new one with "Forgot password").
@@ -214,7 +216,8 @@ def read_id_token(id_token: str, nonce: str, now: Optional[float] = None) -> dic
     if claims.get("email_verified") not in (True, "true"):
         raise SignInError("unverified")
     name = claims.get("given_name") or claims.get("name") or ""
-    return {"sub": sub, "email": email.strip(), "name": name if isinstance(name, str) else ""}
+    return {"sub": sub, "email": email.strip(), "hd": claims.get("hd"),
+            "name": name if isinstance(name, str) else ""}
 
 
 # ---------------------------------------------------------------- accounts
@@ -250,6 +253,12 @@ def find_or_create_user(db: Session, profile: dict) -> tuple[models.User, str]:
     if user is not None:
         outcome = "signed_in"
     else:
+        # Google may once have verified a third-party mailbox that has changed hands.
+        # The hosted-domain claim identifies a managed Google Workspace account.
+        hosted_domain = profile.get("hd")
+        if (profile["email"].rsplit("@", 1)[-1].lower() != "gmail.com"
+                and not (isinstance(hosted_domain, str) and hosted_domain.strip())):
+            raise SignInError("unverified")
         user = (db.query(models.User)
                 .filter(func.lower(models.User.email) == profile["email"].lower())
                 # A capitalised copy someone else registered must not win over the real account.

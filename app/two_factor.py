@@ -171,27 +171,38 @@ def enabled_for(db: Session, user: models.User) -> Optional[models.UserTwoFactor
     return row if row is not None and row.enabled_at is not None else None
 
 
-def check_code(row: models.UserTwoFactor, raw: str, *, allow_recovery: bool = True,
+def check_code(db: Session, row: models.UserTwoFactor, raw: str, *, allow_recovery: bool = True,
                now: Optional[float] = None) -> Optional[str]:
     """Check an authenticator or recovery code and use it up.
 
     Returns "app" or "recovery" on success (the caller commits), None otherwise.
     """
     code = normalize_code(raw)
-    if len(code) == DIGITS and code.isdigit():
+    table = models.UserTwoFactor
+    current = db.query(table).filter(table.user_id == row.user_id, table.secret_encrypted == row.secret_encrypted,
+                                     table.enabled_at == row.enabled_at)
+    if len(code) == DIGITS and code.isascii() and code.isdigit():
         secret = decrypt_secret(row.secret_encrypted)
         step = matching_step(secret, code, row.last_used_step, now) if secret else None
         if step is None:
             return None
-        row.last_used_step = step
-        return "app"
+        changed = current.filter(table.last_used_step == row.last_used_step).update(
+            {table.last_used_step: step}, synchronize_session=False)
+        if changed:
+            db.expire(row)
+            return "app"
     if allow_recovery and len(code) == RECOVERY_CODE_LENGTH and all(ch in RECOVERY_ALPHABET for ch in code):
         wanted = _recovery_hash(code)
         stored = _stored_hashes(row)
         for index, candidate in enumerate(stored):
             if hmac.compare_digest(candidate, wanted):
-                row.recovery_codes = json.dumps(stored[:index] + stored[index + 1:])
-                return "recovery"
+                changed = current.filter(table.recovery_codes == row.recovery_codes).update(
+                    {table.recovery_codes: json.dumps(stored[:index] + stored[index + 1:])},
+                    synchronize_session=False)
+                if changed:
+                    db.expire(row)
+                    return "recovery"
+                return None
     return None
 
 

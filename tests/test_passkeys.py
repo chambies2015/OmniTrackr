@@ -137,6 +137,15 @@ def _passkey_login(client, authenticator, **assertion_kwargs):
 
 # ---------------------------------------------------------------- the pieces
 
+def test_challenge_consumption_is_durable_and_transactional(db_session):
+    challenge = passkeys.new_challenge()
+    assert passkeys.consume_challenge(db_session, challenge)
+    db_session.rollback()
+    assert passkeys.consume_challenge(db_session, challenge)
+    db_session.commit()
+    assert not passkeys.consume_challenge(db_session, challenge)
+    assert passkeys.consume_challenge(db_session, passkeys.new_challenge())
+
 def test_cbor_reader_handles_what_authenticators_send():
     value = {"fmt": "none", "attStmt": {}, "authData": b"\x01\x02", 1: -7, -2: [True, False, None, 300, 70000]}
     decoded, consumed = passkeys.cbor_decode(cbor(value) + b"trailing")

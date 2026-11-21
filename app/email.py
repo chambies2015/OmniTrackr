@@ -2,6 +2,7 @@
 Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
+import asyncio
 import hashlib
 import hmac
 import os
@@ -12,6 +13,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi_mail.schemas import MultipartSubtypeEnum
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
+from .auth import SECRET_KEY
 
 load_dotenv()
 
@@ -30,14 +32,6 @@ conf = ConnectionConfig(
 )
 
 # Token serializer for generating secure tokens
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    if ENVIRONMENT == "production":
-        raise ValueError("SECRET_KEY must be set in production environment")
-    SECRET_KEY = "dev-secret-key-change-in-production"
-    import warnings
-    warnings.warn("Using default SECRET_KEY - not for production!")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Base URL for the application
@@ -368,6 +362,18 @@ def verification_email_html(username: str, code: str, verification_url: str) -> 
     """
 
 
+async def _deliver_credential_email(message: MessageSchema) -> bool:
+    """Send credentials only to the mailbox. SMTP errors may contain message content."""
+    if not (conf.MAIL_USERNAME and conf.MAIL_PASSWORD):
+        print("Credential email delivery skipped because SMTP is not configured.")
+        return False
+    try:
+        await asyncio.wait_for(FastMail(conf).send_message(message), timeout=30.0)
+    except Exception:
+        raise RuntimeError("Credential email delivery failed. Check SMTP configuration.") from None
+    return True
+
+
 async def send_verification_email(email: str, username: str, token: str):
     """
     Send the confirm-your-email message to a new member: a 6-digit code and a link.
@@ -384,35 +390,7 @@ async def send_verification_email(email: str, username: str, token: str):
     # The code leads the subject, so a phone's notification shows it without opening the mail.
     message = html_message(f"{code} is your OmniTrackr code", [email], html)
     
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            # Add timeout to prevent hanging (30 seconds)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send verification email to {email}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send verification email to {email}")
-            print(f"Error: {error_msg}")
-            print(f"Verification URL (fallback): {verification_url}")
-            # Re-raise the exception so caller knows it failed
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
-    else:
-        # Development mode - just print the verification URL
-        print(f"\n{'='*60}")
-        print(f"Email Verification Required")
-        print(f"{'='*60}")
-        print(f"To: {email}")
-        print(f"Username: {username}")
-        print(f"Code: {code}")
-        print(f"Verification URL: {verification_url}")
-        print(f"{'='*60}\n")
+    return await _deliver_credential_email(message)
 
 
 async def send_password_reset_email(email: str, username: str, token: str):
@@ -455,34 +433,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
     
     message = html_message("Reset Your OmniTrackr Password", [email], html)
     
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            # Add timeout to prevent hanging (30 seconds)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send password reset email to {email}")
-            print(f"Reset URL (fallback): {reset_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send password reset email to {email}")
-            print(f"Error: {error_msg}")
-            print(f"Reset URL (fallback): {reset_url}")
-            # Re-raise the exception so caller knows it failed
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
-    else:
-        # Development mode - just print the reset URL
-        print(f"\n{'='*60}")
-        print(f"Password Reset Requested")
-        print(f"{'='*60}")
-        print(f"To: {email}")
-        print(f"Username: {username}")
-        print(f"Reset URL: {reset_url}")
-        print(f"{'='*60}\n")
+    return await _deliver_credential_email(message)
 
 
 async def send_email_change_verification_email(new_email: str, username: str, token: str):
@@ -525,33 +476,7 @@ async def send_email_change_verification_email(new_email: str, username: str, to
     
     message = html_message("Verify Your New OmniTrackr Email", [new_email], html)
     
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send email change verification email to {new_email}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send email change verification email to {new_email}")
-            print(f"Error: {error_msg}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration.")
-    else:
-        # Development mode - just print the verification URL
-        print(f"\n{'='*60}")
-        print(f"Email Change Verification Required")
-        print(f"{'='*60}")
-        print(f"To: {new_email}")
-        print(f"Username: {username}")
-        print(f"Verification URL: {verification_url}")
-        print(f"{'='*60}\n")
-
+    return await _deliver_credential_email(message)
 
 
 async def send_two_factor_change_email(email: str, username: str, turned_on: bool):
@@ -705,9 +630,4 @@ async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
     """
 
     message = html_message("Link your Ko-fi support to OmniTrackr", [email], html)
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        import asyncio
-        fm = FastMail(conf)
-        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-    else:
-        print(f"INFO: Ko-fi claim link for @{username}: {confirm_url} (email not configured)")
+    await _deliver_credential_email(message)

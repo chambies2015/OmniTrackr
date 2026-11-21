@@ -299,6 +299,9 @@ def test_owner_sees_edit_hint_and_others_do_not(client, db_session):
     token = auth.create_user_access_token(a)
     client.cookies.set(auth.AUTH_COOKIE_NAME, token)
     assert "This is your public profile" in client.get("/u/owner1").text
+    a.hashed_password = auth.get_password_hash("a newly chosen password")
+    db_session.commit()
+    assert "This is your public profile" not in client.get("/u/owner1").text
     client.cookies.set(auth.AUTH_COOKIE_NAME, auth.create_user_access_token(b))
     page = client.get("/u/owner1")
     assert "This is your public profile" not in page.text

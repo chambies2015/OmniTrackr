@@ -371,8 +371,8 @@ CLAIM_EMAIL_SENT = ("If a Ko-fi payment from that address is waiting, we've emai
 async def _send_claim(email: str, username: str, token: str) -> None:
     try:
         await email_utils.send_kofi_claim_email(email, username, f"{email_utils.APP_URL}/supporter/claim?token={token}")
-    except Exception as error:  # the member sees the same reply either way
-        print(f"Failed to send Ko-fi claim email: {error}")
+    except Exception:  # the member sees the same reply either way
+        print("Failed to send Ko-fi claim email.")
 
 
 @router.post("/api/supporter/claim")

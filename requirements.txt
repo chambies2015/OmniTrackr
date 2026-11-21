@@ -7,6 +7,8 @@ starlette>=1.6.0
 h11>=0.16.0
 anyio>=4.14.2
 idna>=3.15
+certifi>=2026.10.18
+dnspython>=2.9.2
 pydantic-settings>=2.14.2
 
 # PostgreSQL

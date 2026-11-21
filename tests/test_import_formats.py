@@ -5,7 +5,7 @@ import zipfile
 
 import pytest
 
-from app import models
+from app import import_formats, models
 from app.import_studio import parse_csv
 
 
@@ -148,6 +148,50 @@ def test_letterboxd_watchlist_csv_on_its_own_stays_unwatched():
     assert [row.data["watched"] for row in rows] == [False, False]
     _, rows = parse_csv(LB_WATCHED.encode(), filename="watched.csv")
     assert [row.data["watched"] for row in rows] == [True, True]
+
+
+def test_letterboxd_counts_source_rows_across_files_before_merging(monkeypatch):
+    monkeypatch.setattr(import_formats, "MAX_IMPORT_ROWS", 2)
+    _, rows = parse_csv(build_zip({"diary.csv": LB_DIARY}), filename="library.zip")
+    assert [row.title for row in rows] == ["Arrival"]
+    with pytest.raises(ValueError, match="source rows"):
+        parse_csv(build_zip({"diary.csv": LB_DIARY, "ratings.csv": LB_RATINGS}), filename="library.zip")
+
+
+def test_letterboxd_diary_checks_source_limit_before_sorting(monkeypatch):
+    monkeypatch.setattr(import_formats, "MAX_IMPORT_ROWS", 1)
+    with pytest.raises(ValueError, match="source rows"):
+        import_formats.letterboxd_diary(LB_DIARY.encode(), "diary.csv")
+
+
+@pytest.mark.parametrize("zipped", [False, True])
+def test_csv_checks_width_before_expanding_sparse_rows(monkeypatch, zipped):
+    monkeypatch.setattr(import_formats, "MAX_CSV_COLUMNS", 2)
+    text = "Name,Year,Date\nArrival\n"
+    content = build_zip({"watched.csv": text}) if zipped else text.encode()
+    with pytest.raises(ValueError, match="2 columns"):
+        parse_csv(content, filename="films.zip" if zipped else "films.csv")
+
+
+def test_csv_record_budget_accounts_for_quoted_newlines(monkeypatch):
+    monkeypatch.setattr(import_formats, "MAX_CSV_RECORD_CHARS", 15)
+    _, records = import_formats.csv_records('title\n"one\ntwo"\n"three\nfour"\n')
+    assert [row["title"] for row in records] == ["one\ntwo", "three\nfour"]
+    _, records = import_formats.csv_records('title\n"one\ntwo\nthree\nfour"\n')
+    with pytest.raises(ValueError, match="record is too long"):
+        list(records)
+
+
+def test_archive_members_share_one_json_budget(monkeypatch):
+    monkeypatch.setattr(import_formats, "MAX_DOCUMENT_PARTS", 2)
+    with pytest.raises(ValueError, match="too many JSON"):
+        parse_csv(build_zip({"a.json": "[1,2]", "b.json": "[3,4]"}), filename="export.zip")
+
+
+def test_xml_budget_counts_attributes_as_well_as_elements(monkeypatch):
+    monkeypatch.setattr(import_formats, "MAX_DOCUMENT_PARTS", 2)
+    with pytest.raises(ValueError, match="too many XML"):
+        parse_csv(b'<opml><body name="list"/></opml>', filename="subscriptions.opml")
 
 
 def test_mal_xml_and_gzip_become_anime_and_books():

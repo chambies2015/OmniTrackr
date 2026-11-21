@@ -34,7 +34,7 @@ import json
 import os
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -42,6 +42,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 from itsdangerous import BadSignature, URLSafeTimedSerializer
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import auth, models
@@ -195,6 +196,21 @@ def set_challenge_cookie(response, value: str, path: str) -> None:
 def clear_challenge_cookie(response, path: str) -> None:
     response.delete_cookie(key=CHALLENGE_COOKIE, path=path, samesite="lax",
                            secure=auth.ENVIRONMENT == "production", httponly=True)
+
+
+def consume_challenge(db: Session, challenge: bytes) -> bool:
+    """Claim a verified challenge once, in the credential operation's transaction."""
+    now = utcnow()
+    table = models.UsedPasskeyChallenge
+    cutoff = now - timedelta(seconds=CHALLENGE_MAX_AGE_SECONDS + 1)
+    db.query(table).filter(table.used_at < cutoff).delete(synchronize_session=False)
+    db.add(table(digest=hashlib.sha256(challenge).hexdigest(), used_at=now))
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        return False
+    return True
 
 
 # ---------------------------------------------------------------- CBOR (RFC 8949, the subset authenticators use)
