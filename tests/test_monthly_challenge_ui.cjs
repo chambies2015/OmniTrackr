@@ -381,3 +381,84 @@ test('Deal me in opens the backlog draw, or says where to find it', async () => 
     delete global.document;
   }
 });
+
+test('a tell step offers the latest finish to recommend, or says how the step counts', () => {
+  const step = { kind: 'tell', done: false, count: 0, target: 1, suggest: { title: ' The Princess Bride ', category: 'movies', id: 7 } };
+  assert.equal(challenge.tellHint(step),
+    "Loved The Princess Bride? Send it to a friend, or make a link for someone who isn't on OmniTrackr");
+  const fallback = "Choose Recommend on anything in your library: a friend's inbox or a share link both count";
+  assert.equal(challenge.tellHint({ ...step, suggest: null }), fallback);
+  assert.equal(challenge.tellHint({ ...step, suggest: { ...step.suggest, title: '  ' } }), fallback);
+  // A finish removed from the library has no id, so the dialog has nothing to send.
+  assert.equal(challenge.tellHint({ ...step, suggest: { ...step.suggest, id: null } }), fallback);
+  assert.equal(challenge.tellHint({ ...step, suggest: 'The Princess Bride' }), fallback);
+  assert.equal(challenge.tellHint({ ...step, done: true }), '');
+  assert.equal(challenge.tellHint({ ...step, kind: 'draw' }), '');
+  // The other hints ignore a tell step, so it gets only its own line.
+  assert.equal(challenge.drawHint(step), '');
+  assert.equal(challenge.decadesHint(step), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {}, type: '',
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const button = challenge.tellButton(step);
+    assert.equal(button.textContent, 'Recommend it');
+    assert.equal(button.dataset.challengeAction, 'tell');
+    // friend-recs.js opens any button marked like this, with the title from the member's own library.
+    assert.equal(button.dataset.friendRecOpen, '');
+    assert.equal(button.dataset.recCategory, 'movies');
+    assert.equal(button.dataset.recItemId, '7');
+    assert.equal(button.dataset.recTitle, 'The Princess Bride');
+    assert.equal(button.attributes['aria-label'], 'Recommend The Princess Bride to someone');
+    assert.equal(challenge.tellButton({ ...step, suggest: null }), null);
+    assert.equal(challenge.tellButton({ ...step, suggest: { ...step.suggest, category: '' } }), null);
+    assert.equal(challenge.tellButton({ ...step, done: true }), null);
+    assert.equal(challenge.tellButton({ ...step, kind: 'reflect' }), null);
+
+    const item = challenge.stepItem({ ...step, label: 'Tell someone about one' });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[1].dataset.challengeAction, 'tell');
+  } finally {
+    delete global.document;
+  }
+});
+
+test('Recommend it remembers the title, or says where to find Recommend', () => {
+  const said = [];
+  global.document = { getElementById: id => (id === 'monthlyChallengeStatus' ? { set textContent(value) { said.push(value); } } : null) };
+  global.window = { OmniFriendRecs: { open() {} } };
+  try {
+    challenge.tellTitle({ dataset: { recCategory: 'movies', recItemId: '7' } });
+    assert.deepEqual(challenge.state.telling, { category: 'movies', id: 7 });
+    assert.deepEqual(said, []);
+    delete window.OmniFriendRecs;
+    challenge.tellTitle({ dataset: { recCategory: 'movies', recItemId: '7' } });
+    assert.equal(challenge.state.telling, null);
+    assert.equal(said.at(-1), 'Open the title in your library and choose Recommend.');
+  } finally {
+    delete global.window;
+    delete global.document;
+  }
+});
+
+test('a decades step lists the decades so far and titles from others, or how the step counts', () => {
+  const step = { kind: 'decades', done: false, count: 2, target: 3, decades: [1980, 2010],
+    waiting: [{ title: ' Alien ', category: 'movies', decade: 1970 }, { title: 'Halo', category: 'video-games', decade: 2000 }] };
+  assert.equal(challenge.decadesHint(step), 'So far: the 1980s and the 2010s. In your library: Alien (1970s), Halo (2000s)');
+  assert.equal(challenge.decadesHint({ ...step, waiting: [] }), 'So far: the 1980s and the 2010s');
+  assert.equal(challenge.decadesHint({ ...step, decades: [1990] }), 'So far: the 1990s. In your library: Alien (1970s), Halo (2000s)');
+  assert.equal(challenge.decadesHint({ ...step, decades: [] }), 'In your library: Alien (1970s), Halo (2000s)');
+  const fallback = 'Counts by the year saved on each title: 1987 and 1989 are one decade, 1989 and 1990 are two';
+  assert.equal(challenge.decadesHint({ ...step, decades: [], waiting: [] }), fallback);
+  // Anything that isn't a whole decade is left out rather than printed.
+  assert.equal(challenge.decadesHint({ ...step, decades: [1987, '1990', null], waiting: [{ title: 'X', decade: 1955 }, { title: '', decade: 1950 }] }), fallback);
+  assert.equal(challenge.decadesHint({ ...step, done: true }), '');
+  assert.equal(challenge.decadesHint({ ...step, kind: 'tell' }), '');
+  assert.equal(challenge.tellHint(step), '');
+});

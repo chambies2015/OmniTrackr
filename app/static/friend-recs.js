@@ -225,6 +225,16 @@
     updateSend();
   }
 
+  // A recommendation sent or a link made can finish a challenge step ("Tell someone about one").
+  function told(how) {
+    const source = state.source || {};
+    try {
+      window.dispatchEvent(new CustomEvent('omnitrackr:friend-rec-sent', {
+        detail: { how, category: source.category || null, id: Number(source.item_id) || null },
+      }));
+    } catch (error) { /* old browsers: the card catches up on its next refresh */ }
+  }
+
   async function sendToFriends() {
     const friendIds = chosenFriends();
     if (!friendIds.length || !state.source) return;
@@ -233,6 +243,7 @@
     setStatus('Sending…');
     try {
       const data = await api('/api/friend-recs', { json: payload({ friend_ids: friendIds }) });
+      if (data.sent) told('friends');
       const names = data.friends || [];
       const who = names.length === 1 ? names[0] : `${names.length} friends`;
       setStatus(data.sent ? `Sent to ${who}. They'll find it on their dashboard.` : `Already in ${who}'s inbox. We updated your note.`, 'ok');
@@ -251,6 +262,7 @@
     setStatus('Making your link…');
     try {
       const data = await api('/api/friend-recs/link', { json: payload() });
+      told('link');
       if (navigator.share) {
         try {
           await navigator.share({ title: data.title, text: data.text, url: data.url });
