@@ -703,12 +703,16 @@ def day_progress(finishes: list[dict], month: str, hours: int = 24, target: int 
         return result
     recent = [(when, index) for when, index in events if now - span < when <= now]
     if recent:
-        names, seen = [], set()
-        for _, index in recent:
+        names, seen, latest = [], set(), {}
+        for when, index in recent:
+            latest[index] = when
             if index not in seen:
                 seen.add(index)
                 names.append((finishes[index].get("title") or "").strip() or "Untitled")
-        closes = min(recent[0][0] + span, end)
+        # A title logged twice in the window (finished again, or a journal entry beside its finish
+        # moment) pairs from its latest time, so the window closes a day after the earliest of each
+        # title's latest finish, not a day after the very first one.
+        closes = min(min(latest.values()) + span, end)
         result["open"] = {"titles": names[:DAY_TITLES_LIMIT], "count": len(seen), "until": _iso(closes)}
     return result
 

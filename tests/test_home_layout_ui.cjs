@@ -359,3 +359,27 @@ test('a card a link asked for stays out after its own script clears the hash (No
   api.OmniHomeLayout.arrange();
   assert.equal(tucked(root).includes('badgeCase'), true);
 });
+
+test('after "Mark watched" from the keyboard, focus waits on the card heading for the finish moment to hand back', async () => {
+  const { root, api, context, document } = setup();
+  focusMarkup(root);
+  context.API_BASE = '';
+  let focusAtMoment = null;
+  context.authenticatedFetch = async () => ({ ok: true });
+  context.showNotice = () => {};
+  context.openCompletionMoment = () => { focusAtMoment = document.activeElement; };
+  api.OmniHomeFocus.claim([{ id: 3, category: 'movies', category_label: 'Movie', title: 'Aftersun', status_label: 'Not watched' }]);
+  const heading = root.querySelector('#homeFocusTitle');
+  heading.focus = () => { document.activeElement = heading; };
+  const done = root.querySelector('#homeFocusActions').querySelector('.home-focus__done');
+  document.activeElement = done;
+  await done.listeners.click[0]();
+  // The button is redrawn away with the next title; the heading stays, so the dialog's opener is still there.
+  assert.equal(focusAtMoment, heading);
+  assert.equal(heading.getAttribute('tabindex'), '-1');
+  // A tap that left focus elsewhere (another script moved it) is left alone.
+  const other = new Node('button');
+  document.activeElement = other;
+  await done.listeners.click[0]();
+  assert.equal(focusAtMoment, other);
+});
