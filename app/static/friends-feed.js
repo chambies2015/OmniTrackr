@@ -181,9 +181,16 @@
     return `added ${noun}`;
   }
 
+  // A run of adds can bring finished titles with it (an import, or ticking down a list).
+  function burstLine(item) {
+    const finished = Number(item.finished) || 0;
+    if (!finished) return `added ${item.count} titles`;
+    return finished >= item.count ? `added ${item.count} titles they've finished` : `added ${item.count} titles, ${finished} finished`;
+  }
+
   function matches(item, filter) {
     if (filter === 'all') return true;
-    if (item.type === 'burst') return filter === 'added';
+    if (item.type === 'burst') return filter === 'added' || (filter === 'finished' && item.finished > 0);
     if (filter === 'finished') return item.kind === 'finished' || (item.kind === 'added' && item.finished);
     if (filter === 'opinions') return item.kind === 'rated' || item.kind === 'reviewed' || Boolean(item.review) || item.rating !== null;
     if (filter === 'added') return item.kind === 'added';
@@ -223,7 +230,7 @@
     name.dataset.action = 'open-friend-profile';
     name.dataset.friendId = String(item.friend.id);
     name.title = `See ${item.friend.username}'s library`;
-    line.append(name, document.createTextNode(` ${item.type === 'burst' ? `added ${item.count} titles` : action(item)}`));
+    line.append(name, document.createTextNode(` ${item.type === 'burst' ? burstLine(item) : action(item)}`));
     const time = el('time', 'ffeed-card__time', ago(item.at));
     time.dateTime = item.at;
     head.append(line, time);
@@ -593,7 +600,7 @@
   window.refreshFriendFeed = refresh;
   window.resetFriendFeed = reset;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { action, ago, dayLabel, initSwitch, matches, parseTime, rating, safePath, showView, spoilerParts };
+    module.exports = { action, ago, burstLine, dayLabel, initSwitch, matches, parseTime, rating, safePath, showView, spoilerParts };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

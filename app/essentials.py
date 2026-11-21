@@ -32,6 +32,8 @@ BROWSE_KINDS = {"manga": "manga", "podcast": "podcasts", "audiobook": "audiobook
 # Formats whose titles are matched on name and year. Remakes and re-releases share names
 # (The Thing 1951 and 1982), so a year both sides know must agree within a year.
 YEAR_CHECKED = {"movie", "tv", "anime", "game"}
+# Kinds where two different titles often share a name, so a name alone doesn't say the member has it.
+NAME_SHARED = YEAR_CHECKED | {"album"}
 UNDO_MINUTES = 30
 
 _lists: Optional[dict] = None
@@ -185,14 +187,56 @@ def add(db: Session, user, item: dict, seen: bool, image: Optional[str] = None) 
     """
     from . import browse, pick
 
+    # Found the way the list counts it (library_states): any of the title's names, the year
+    # for films, shows and games, the artist for albums, and anime films filed under movies.
+    # So The Thing (1982) is added when the member only has the 2011 film of that name.
+    match = library_match(db, user.id, item)
+    if match is not None:
+        kind, row_id = match
+        record = db.get(title_pages.KINDS[kind][0], row_id)
+        if record is not None:
+            return "existing", record
     saved = entry(item)
-    kind = item["kind"]
     # A "seen" title is created already finished: a friend's feed then shows it as added, not as
     # something finished just now (ticking 200 titles would otherwise post 200 finishes), and it
     # costs one write instead of two.
-    if kind in BROWSE_KINDS:
-        return browse.add_to_library(db, user, saved["browse_kind"], saved, image, finished=seen)
-    return pick.add_to_library(db, user, saved, image, finished=seen)
+    if item["kind"] in BROWSE_KINDS:
+        return browse.add_to_library(db, user, saved["browse_kind"], saved, image, finished=seen, checked=True)
+    return pick.add_to_library(db, user, saved, image, finished=seen, checked=True)
+
+
+def library_match(db: Session, user_id: int, item: dict) -> Optional[tuple[str, int]]:
+    """(kind, record id) of the member's entry that counts for this essential title, if any.
+
+    The same rules as library_states, finished entries first.
+    """
+    kinds = [item["kind"]]
+    if item["kind"] == "anime" and (item.get("extra") or {}).get("film"):
+        kinds.append("movie")
+    for kind in kinds:
+        best = None
+        for row_id, title, year, done, creator in _rows(db, user_id, kind, names(item)):
+            if _matches(item, kind, title, year, creator) and (best is None or (done and not best[1])):
+                best = (row_id, done)
+        if best is not None:
+            return kind, best[0]
+    return None
+
+
+def kind_of(record) -> Optional[str]:
+    """The title kind (movie, anime, album...) of a library record."""
+    for kind, config in title_pages.KINDS.items():
+        if isinstance(record, config[0]):
+            return kind
+    return None
+
+
+def from_a_list(kind: str, record) -> bool:
+    """Whether a library record is one of the essential titles (so a list's Undo may take it back)."""
+    year = getattr(record, "release_date", None) if kind == "game" else getattr(record, "year", None)
+    if kind == "game" and year is not None:
+        year = year.year
+    return for_title(kind, record.title or "", year) is not None
 
 
 def library_titles(db: Session, user_id: int, items: list[dict]) -> set[tuple[str, str]]:

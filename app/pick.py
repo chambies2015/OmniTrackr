@@ -207,20 +207,23 @@ def _build_title_details(index: list[dict]) -> dict[str, dict]:
 
 # ---------------------------------------------------------------- saving
 
-def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None, finished: bool = False) -> tuple[str, object]:
+def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None, finished: bool = False,
+                   checked: bool = False) -> tuple[str, object]:
     """Add a curated pick to the member's library as not yet started. Does not commit.
 
     Returns ("existing" | "created", record). A title the member already has (same
     name, any case) is left exactly as it is. With ``finished`` a new record is saved
     already finished (the Essential 100's "Seen it"), so it reads as an add, not as a
-    finish that happened just now.
+    finish that happened just now. ``checked`` means the caller already looked for the
+    title more carefully (essentials.add tells a remake from the original by year).
     """
     kind = pick["kind"]
     model, _, category, _, _ = title_pages.KINDS[kind]
-    normalized = title_pages.normalize(pick["title"])
-    existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
-    if existing is not None:
-        return "existing", existing
+    if not checked:
+        normalized = title_pages.normalize(pick["title"])
+        existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
+        if existing is not None:
+            return "existing", existing
     fields = {"user_id": user.id, "title": pick["title"]}
     if kind == "game":
         fields["release_date"] = datetime(pick["year"], 1, 1) if pick["year"] else None

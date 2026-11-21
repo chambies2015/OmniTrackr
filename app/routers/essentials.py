@@ -715,10 +715,12 @@ def essentials_save(payload: EssentialSave, request: Request, response: Response
         raise HTTPException(404, "That title isn't on the list.")
     lock_progress_owner(db, user.id)
     state, record = essentials.add(db, user, item, payload.answer == "seen", _image_for(db, item))
-    category = title_pages.KINDS[item["kind"]][2]
+    # An anime film the member filed under movies is found there, so name the shelf it is on.
+    kind = essentials.kind_of(record) or item["kind"]
+    category = title_pages.KINDS[kind][2]
     result = {
         "state": state, "title": record.title, "category": category, "item_id": record.id,
-        "done": bool(getattr(record, title_pages.COMPLETE_FIELD[item["kind"]], False)),
+        "done": bool(getattr(record, title_pages.COMPLETE_FIELD[kind], False)),
         "library_url": f"/?library_category={category}&library_item={record.id}",
     }
     db.commit()
@@ -744,6 +746,9 @@ def essentials_undo(payload: EssentialUndo, request: Request, response: Response
         raise HTTPException(404, "That title is no longer in your library.")
     if not essentials.undo_allowed(record):
         raise HTTPException(409, "That title has been in your library for a while. Remove it from your library instead.")
+    if not essentials.from_a_list(kind, record):
+        # Undo is for a save made on a list; anything else is removed from the library itself.
+        raise HTTPException(409, "That title isn't on the Essential 100 lists. Remove it from your library instead.")
     db.rollback()
     if delete_owned_media(db, user.id, payload.category, payload.item_id) is None:
         raise HTTPException(404, "That title is no longer in your library.")
@@ -772,7 +777,9 @@ def essentials_import(payload: EssentialImport, request: Request, response: Resp
     have = essentials.library_titles(db, user.id, items)
     for item in items:
         key = (item["kind"], title_pages.normalize(item["title"]))
-        if key in have:
+        # A name is enough for books and the like; films, shows, games and albums share names
+        # (remakes, two albums called Blue), so essentials.add checks those properly.
+        if key in have and item["kind"] not in essentials.NAME_SHARED:
             existing += 1
             continue
         state, _ = essentials.add(db, user, item, True)
