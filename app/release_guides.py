@@ -15,7 +15,8 @@ guide), eyebrow (replaces "RELEASE GUIDE"), hub_label (its card label on /new-re
 method (paragraphs replacing the standard "How we chose" note; keep the AI-assistance line).
 TV, games, film and book season guides (focus "tv", "games", "movies" or "books") live in
 release_guides_tv.py, release_guides_games.py, release_guides_movies.py and
-release_guides_books.py and are added to GUIDES at the bottom.
+release_guides_books.py, the spring 2027 guides (all-format, movies, anime and books) live in
+release_guides_spring_2027.py, and all of them are added to GUIDES at the bottom.
 
 Section fields: format (new_releases.FORMAT_ORDER), heading, intro (paragraphs), picks.
 A focused guide's sections share one format, so each also has an id and a label.
@@ -1164,6 +1165,8 @@ GUIDES.update(_GAMES_GUIDES)
 # One-format film and book season guides, the same way.
 from .release_guides_movies import GUIDES as _MOVIE_GUIDES  # noqa: E402
 from .release_guides_books import GUIDES as _BOOK_GUIDES  # noqa: E402
+from .release_guides_spring_2027 import GUIDES as _SPRING_2027_GUIDES  # noqa: E402
 
 GUIDES.update(_MOVIE_GUIDES)
 GUIDES.update(_BOOK_GUIDES)
+GUIDES.update(_SPRING_2027_GUIDES)

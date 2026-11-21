@@ -283,7 +283,16 @@ def release_guides_index():
     current = new_releases.current(today)
     cards = []
     # This month's guide first, then the other all-format guides, then one-format guides such as an anime season.
-    ordered = sorted(live.items(), key=lambda pair: (pair[0] != current, bool(pair[1].get("focus"))))
+    # Within each group, guides still to come run in calendar order (winter before spring), and guides whose
+    # stretch has ended follow, newest first.
+    day = today.isoformat()
+
+    def hub_order(pair):
+        slug, entry = pair
+        ended = entry["ends"] < day
+        return (slug != current, bool(entry.get("focus")), ended, "" if ended else entry["starts"])
+
+    ordered = sorted(live.items(), key=hub_order)
     for slug, entry in ordered:
         titles = " · ".join(item["title"] for item in new_releases.picks(entry)[:4])
         label = "This month" if slug == current else entry.get("hub_label", entry["period"])
