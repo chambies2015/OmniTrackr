@@ -460,3 +460,12 @@ body.site .site-finder__field input:focus-visible { outline: none; }
   body.site .search-guestbar .site-btn { flex: none; white-space: nowrap; }
   body.site :is(.io-bar__count, .yl-bar__count, .bc-bar__count, .dc-bar__count) { font-size: .9rem; font-weight: 600; }
 }
+
+/* Phones, guest pages, round two (Nov 21 2026). */
+/* Sample library cards: each line sat flush against the next one. */
+body.site.public-reader .sample-card p + p { margin-top: 8px; }
+@media (max-width: 760px) {
+  /* "In order" lists: the whole row jumps to the entry, not only the title text. */
+  body.site .io-rows li { position: relative; }
+  body.site .io-row__text a::after { border-radius: 14px; content: ""; inset: 0; position: absolute; }
+}

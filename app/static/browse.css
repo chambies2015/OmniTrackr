@@ -12,6 +12,7 @@
 .browse-page { --read-font: "Source Serif 4", "Iowan Old Style", Charter, "Sitka Text", Georgia, serif; }
 .browse-page .site-hero .browse-deck { color: #e2dff4; font-family: var(--read-font); font-size: clamp(1.2rem, 1.1rem + .45vw, 1.4rem); line-height: 1.55; max-width: 38em; text-wrap: pretty; }
 .browse-byline { color: var(--site-muted); font-size: var(--text-md); line-height: 1.55; margin: 20px 0 0; min-height: 36px; padding: 7px 0 0 48px; position: relative; }
+.browse-page .site-hero .browse-byline { margin-top: 20px; }
 .browse-byline::before { background: url(/vortex-mark.webp) center / cover no-repeat, var(--site-bg-3); border: 1px solid var(--site-border-strong); border-radius: 50%; content: ""; height: 36px; left: 0; position: absolute; top: 0; width: 36px; }
 .browse-byline a { color: var(--site-text); font-weight: 700; text-decoration: none; }
 .browse-byline a + a { color: var(--site-violet-soft); font-weight: 600; }

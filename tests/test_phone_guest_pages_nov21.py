@@ -125,3 +125,27 @@ def test_essentials_lists_offer_a_titles_only_view(client):
     assert ".es-tracker--stuck .es-view { display: none; }" in css
     # The notes stay in the page for readers and search engines; only the view changes.
     assert page.count('class="es-item__why"') == 100
+
+
+def test_editorial_paragraphs_get_room_between_them(client):
+    discover_css = (ROOT / "app/static/discover.css").read_text(encoding="utf-8")
+    rule = ".editorial p + p { margin-top: 12px; }"
+    assert rule in discover_css
+    # Written before the reflection rule so that one keeps its own 14px.
+    assert discover_css.index(rule) < discover_css.index(".guide-reflection p + p { margin-top: 14px; }")
+    for path in ("/pick", "/tier-list", "/daily", "/discover", "/challenges"):
+        assert "/static/discover.css?v=20261121-phone-1" in client.get(path).text, path
+    assert "body.site.public-reader .sample-card p + p { margin-top: 8px; }" in SITE_CSS
+
+
+def test_browse_byline_sits_below_the_deck(client):
+    css = (ROOT / "app/static/browse.css").read_text(encoding="utf-8")
+    assert ".browse-page .site-hero .browse-byline { margin-top: 20px; }" in css
+    assert "/static/browse.css?v=20261121-phone-1" in client.get("/browse/manga").text
+
+
+def test_in_order_rows_open_from_anywhere_on_phones():
+    block = _phone_block()
+    assert "body.site .io-rows li { position: relative; }" in block
+    assert 'body.site .io-row__text a::after { border-radius: 14px; content: ""; inset: 0; position: absolute; }' in block
+    assert site_chrome.SITE_CSS_VERSION >= "20261121-phone-2"
