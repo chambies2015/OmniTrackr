@@ -22,7 +22,9 @@ def test_stylesheet_loads_between_workspace_and_accessibility_layers():
     names = [href.split("?")[0] for href in links]
     view = names.index("/static/library-view.css")
     assert names[view - 1] == "/static/workspace-2026.css"
-    assert names[view + 1] == "/static/a11y.css"
+    # The member phone layer (Nov 21 2026) sits between the library view and accessibility.
+    assert names[view + 1] == "/static/member-phone.css"
+    assert names[view + 2] == "/static/a11y.css"
 
 
 def test_each_library_uses_the_title_page_colour():

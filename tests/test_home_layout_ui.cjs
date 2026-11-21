@@ -150,10 +150,41 @@ test('a saved title nobody started reads "Ready when you are"; a book leads with
   focusMarkup(root);
   api.OmniHomeFocus.claim([{ id: 3, category: 'movies', category_label: 'Movie', title: 'Aftersun', status_label: 'Not watched' }]);
   assert.equal(root.querySelector('#homeFocusEyebrow').textContent, 'Ready when you are');
-  assert.equal(root.querySelector('#homeFocusActions').querySelector('.home-focus__primary').textContent, 'Open');
+  // A film has nothing to step through: finishing it is the one tap that moves it forward.
+  assert.equal(root.querySelector('#homeFocusActions').querySelector('.home-focus__primary').textContent, 'Mark watched');
+  assert.ok(root.querySelector('#homeFocusActions').querySelector('.home-focus__open'), 'Open stays next to it');
   api.OmniHomeFocus.claim([{ id: 4, category: 'books', category_label: 'Book', title: 'Dune', status_label: 'Not read', progress: { unit: 'page', position: 212 } }]);
   assert.equal(root.querySelector('#homeFocusEyebrow').textContent, 'Pick up where you left off');
   assert.equal(root.querySelector('#homeFocusActions').querySelector('.home-focus__primary').textContent, 'Update progress');
+});
+
+test('"Mark watched" finishes a film in one tap and refreshes Continue; a failed save says so', async () => {
+  const { root, api, context } = setup();
+  focusMarkup(root);
+  const calls = [], notices = [], moments = [];
+  let pulses = 0, ok = true;
+  context.API_BASE = '';
+  context.authenticatedFetch = async (url, options) => { calls.push([url, options.method, JSON.parse(options.body)]); return { ok }; };
+  context.showNotice = (message, tone) => notices.push([message, tone]);
+  context.openCompletionMoment = (category, id) => moments.push([category, id]);
+  context.refreshLibraryPulse = () => { pulses += 1; };
+  api.OmniHomeFocus.claim([{ id: 3, category: 'movies', category_label: 'Movie', title: 'Aftersun', status_label: 'Not watched' }]);
+  const done = root.querySelector('#homeFocusActions').querySelector('.home-focus__done');
+  assert.equal(done.getAttribute('aria-label'), 'Mark Aftersun as watched');
+  await done.listeners.click[0]();
+  assert.deepEqual(calls, [['/movies/3', 'PUT', { watched: true }]]);
+  assert.deepEqual(notices, [['Aftersun: marked watched.', 'success']]);
+  assert.deepEqual(moments, [['movies', 3]]);
+  assert.equal(pulses, 1);
+  ok = false;
+  await done.listeners.click[0]();
+  assert.equal(notices.at(-1)[1], 'error');
+  assert.equal(moments.length, 1, 'no finish moment when nothing saved');
+  // An album says "listened"; a show with an episode to log keeps "+ S2 E6" first and gets no finish button.
+  api.OmniHomeFocus.claim([{ id: 9, category: 'music', category_label: 'Album', title: 'Blonde', status_label: 'Not listened' }]);
+  assert.equal(root.querySelector('#homeFocusActions').querySelector('.home-focus__primary').textContent, 'Mark listened');
+  api.OmniHomeFocus.claim([SEVERANCE]);
+  assert.equal(root.querySelector('#homeFocusActions').querySelector('.home-focus__done'), null);
 });
 
 test('with nothing on the go the top of Next Up is offered with Start; an empty home shows nothing', () => {
