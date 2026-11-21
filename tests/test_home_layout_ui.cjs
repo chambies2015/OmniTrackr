@@ -301,3 +301,30 @@ test('Continue skips the title shown in "Do this next" and keeps ratings when no
   context.renderLibraryPulse({ continue_items: items.slice(0, 1), reflection_items: [] });
   assert.equal(get('libraryPulse').hidden, true);
 });
+
+test('a card a link asked for stays out after its own script clears the hash (Nov 21 sweep)', () => {
+  const { root, api, window, storage } = setup();
+  board(root, ['daily', 'homeNews', 'nextUpQueue', 'badgeCase'], ['monthlyChallenge', 'yearGoals']);
+  root.querySelector('#yearGoals').append(Object.assign(new Node('ul'), { id: 'yearGoalsList', hidden: true }));
+  const listeners = {};
+  window.addEventListener = (type, fn) => { (listeners[type] ||= []).push(fn); };
+  // Opened from /#goals (the goals page, a goal email or a notification); goals.js then clears the hash.
+  window.location.hash = '#goals';
+  api.OmniHomeLayout.start();
+  window.location.hash = '';
+  api.OmniHomeLayout.arrange();
+  assert.equal(tucked(root).includes('yearGoals'), false);
+  assert.equal(tucked(root).includes('badgeCase'), true);
+
+  // Later, a same-page link to the badge case: the hash may already be gone when this listener runs.
+  listeners.hashchange.forEach(fn => fn({ newURL: 'https://omnitrackr.xyz/#badges' }));
+  assert.equal(tucked(root).includes('badgeCase'), false);
+  // Only the linked card comes out; Show more stays the member's own choice.
+  assert.equal(root.querySelector('.home-board').classList.contains('home-board--more'), false);
+  assert.equal(storage.has('omnitrackr_home_more'), false);
+
+  // Signing out forgets it.
+  api.OmniHomeLayout.reset();
+  api.OmniHomeLayout.arrange();
+  assert.equal(tucked(root).includes('badgeCase'), true);
+});

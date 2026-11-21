@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const state = { request: 0, data: null, forced: false, busy: false };
+  const state = { request: 0, data: null, forced: false, busy: false, crediting: null };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -102,7 +102,24 @@
     const origins = typeof window !== 'undefined' ? window.OmniTitleOrigins : null;
     const opened = origins && typeof origins.open === 'function'
       && origins.open(button.dataset.category, Number(button.dataset.itemId), button.dataset.title, button);
+    state.crediting = opened ? { category: button.dataset.category, id: Number(button.dataset.itemId) } : null;
     if (!opened) status('Open the title in your library and choose Why I added it.');
+  }
+
+  // After a save from the card: its button is gone once the card redraws, so the keyboard would
+  // drop to the top of the page. Move to the next title to credit (or the card's heading) and say
+  // whether the save finished the step.
+  function afterCredit() {
+    const step = ((state.data && state.data.steps) || []).find(item => item.kind === 'recommended');
+    status(step && step.done ? 'Saved. That counts for this step.' : 'Saved.');
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    const next = document.querySelector('#monthlyChallenge [data-challenge-action="credit"]');
+    const title = $('monthlyChallengeTitle');
+    const target = next || title;
+    if (!target || typeof target.focus !== 'function') return;
+    if (target === title && !title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
   }
 
   // "Counts for you: manga, podcasts or audiobooks" under a step about a format you rarely finish.
@@ -200,8 +217,9 @@
     if (node) node.textContent = text || '';
   }
 
-  async function refreshMonthlyChallenge() {
+  async function refreshMonthlyChallenge(options) {
     if (!$('monthlyChallenge')) return;
+    const credited = Boolean(options && options.credited === true);
     const request = ++state.request;
     try {
       const response = await fetch(`${apiBase()}/api/challenge`, fetchOptions({ headers: { Accept: 'application/json' } }));
@@ -210,6 +228,7 @@
       if (request !== state.request) return;
       render(data);
       openFromHash();
+      if (credited) afterCredit();
     } catch (error) {
       // The challenge is optional; the dashboard works without it.
     }
@@ -313,7 +332,14 @@
     document.addEventListener('click', handleClick);
     window.addEventListener('hashchange', openFromHash);
     // Saying who recommended a title can finish a step, wherever it was said.
-    window.addEventListener('omnitrackr:title-origin-saved', () => { if (state.data) refreshMonthlyChallenge(); });
+    window.addEventListener('omnitrackr:title-origin-saved', event => {
+      if (!state.data) return;
+      const saved = event && event.detail;
+      const fromCard = Boolean(state.crediting && saved && saved.category === state.crediting.category
+        && Number(saved.id) === state.crediting.id);
+      if (fromCard) state.crediting = null;
+      refreshMonthlyChallenge({ credited: fromCard });
+    });
   }
 
   if (typeof window !== 'undefined') {
@@ -321,7 +347,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, birthdayHint };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
