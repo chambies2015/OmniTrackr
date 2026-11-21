@@ -275,6 +275,8 @@
     } else {
       summary.textContent = "Nothing from your library is on the schedule right now. Here's what's popular instead.";
     }
+    // Popular-only lists wait behind "Show more" on home (home-layout.js); library matches don't.
+    if (section.dataset) section.dataset.source = matches.length ? 'library' : 'popular';
     const cards = matches.length ? matches.concat(popular.slice(0, Math.max(0, 6 - matches.length))) : popular;
     cards.forEach(card => {
       const fromLibrary = Boolean(card.reason);

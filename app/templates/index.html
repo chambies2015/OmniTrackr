@@ -107,7 +107,7 @@
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
   <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
   <link rel="stylesheet" href="/static/install-app.css?v=20261118-app-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261120-sweep-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261120-streamline-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/library-view.css?v=20261120-sweep-1">
@@ -117,7 +117,7 @@
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling :is(#homeHero,#friendRecs,#yearInReviewBanner,#libraryLaunchpad,#returnDeck,.home-board,#movies-tab,#mainFooter){visibility:hidden}
+    html.dashboard-settling :is(#homeHero,#homeFocus,#friendRecs,#yearInReviewBanner,#libraryLaunchpad,#returnDeck,.home-board,#movies-tab,#mainFooter){visibility:hidden}
     .dashboard-skeleton{display:none}
     .dashboard-skeleton-anchor{position:relative;height:0}
     html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -522,6 +522,40 @@
       <div id="homeHeroCovers" class="home-hero__covers" role="group" aria-label="Recently added" hidden></div>
     </section>
 
+    <!-- Do this next: the first title from Continue (or the top of Next Up when nothing is on the go), with the
+         button that moves it forward. Continue lists the rest, so it isn't shown twice (home-layout.js). -->
+    <section id="homeFocus" class="home-focus" aria-labelledby="homeFocusTitle" hidden>
+      <span id="homeFocusCover" class="home-focus__cover" aria-hidden="true"></span>
+      <div class="home-focus__copy">
+        <p id="homeFocusEyebrow" class="home-focus__eyebrow">Pick up where you left off</p>
+        <h2 id="homeFocusTitle" class="home-focus__title"></h2>
+        <p id="homeFocusMeta" class="home-focus__meta"></p>
+        <div id="homeFocusProgress" class="home-focus__progress"></div>
+      </div>
+      <div id="homeFocusActions" class="home-focus__actions"></div>
+    </section>
+
+    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
+      <div class="return-deck__header">
+        <div>
+          <p class="return-deck__eyebrow">Welcome back</p>
+          <h2 id="returnDeckTitle">Pick up where you left off</h2>
+          <p id="returnDeckSummary" class="return-deck__summary"></p>
+        </div>
+        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
+      </div>
+      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckReleased" class="return-deck__released" hidden></div>
+      <div id="returnDeckRecap" class="return-deck__recap"></div>
+    </section>
+    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
+      <div>
+        <p class="recap-banner__eyebrow">Year in Review</p>
+        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
+        <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
+      </div>
+      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
+    </section>
     <section id="friendRecs" class="friend-recs" aria-labelledby="friendRecsTitle" hidden>
       <div class="friend-recs__header">
         <div>
@@ -533,7 +567,6 @@
       </div>
       <ul id="friendRecsItems" class="friend-recs__items" aria-live="polite"></ul>
     </section>
-
     <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
       <div class="for-you-card__head">
         <div>
@@ -561,16 +594,6 @@
         <div class="wk-peek-host" data-weekly-preview="for_you" data-weekly-actions="copy"></div>
       </div>
     </section>
-
-    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
-      <div>
-        <p class="recap-banner__eyebrow">Year in Review</p>
-        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
-        <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
-      </div>
-      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
-    </section>
-
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
       <div class="library-launchpad__copy">
         <p class="library-launchpad__eyebrow">Your library, your pace</p>
@@ -592,25 +615,134 @@
       </div>
     </section>
 
-
-    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
-      <div class="return-deck__header">
-        <div>
-          <p class="return-deck__eyebrow">Welcome back</p>
-          <h2 id="returnDeckTitle">Pick up where you left off</h2>
-          <p id="returnDeckSummary" class="return-deck__summary"></p>
-        </div>
-        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
-      </div>
-      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
-      <div id="returnDeckReleased" class="return-deck__released" hidden></div>
-      <div id="returnDeckRecap" class="return-deck__recap"></div>
-    </section>
-
     <!-- Home board: daily cards and badges in the main column, goals and extras in the rail.
          The rail turns into a swipeable row on phones (dashboard-home.css). -->
     <div class="home-board">
       <div class="home-board__main">
+        <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
+        <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
+          <div class="week-one__head">
+            <div>
+              <p id="weekOneEyebrow" class="week-one__eyebrow">Your first week</p>
+              <h2 id="weekOneTitle" class="week-one__title">Your week</h2>
+              <p id="weekOneSummary" class="week-one__summary"></p>
+            </div>
+            <ol id="weekOneDots" class="week-one__dots" aria-label="Days of your first week"></ol>
+          </div>
+          <ol id="weekOneDays" class="week-one__days" aria-label="This week, day by day" hidden></ol>
+          <div id="weekOneSuggest" class="week-one__suggest" hidden>
+            <h3 id="weekOneSuggestTitle" class="week-one__subhead">Watching something right now?</h3>
+            <p class="week-one__hint">Shows members follow that have a new episode this week. Save the ones you're watching and their episodes show up here, day by day.</p>
+            <ul id="weekOneSuggestList" class="week-one__picks" aria-labelledby="weekOneSuggestTitle"></ul>
+            <button type="button" class="week-one__link" data-action="open-quick-capture">Search for another show</button>
+          </div>
+          <div id="weekOneReleases" class="week-one__suggest" hidden>
+            <h3 id="weekOneReleasesTitle" class="week-one__subhead">Out this week</h3>
+            <p class="week-one__hint">New movies, games and premieres coming out in the next seven days. Save one and its release day goes on your week.</p>
+            <ul id="weekOneReleaseList" class="week-one__picks" aria-labelledby="weekOneReleasesTitle"></ul>
+          </div>
+          <div id="weekOneRemind" class="week-one__remind" hidden>
+            <p id="weekOneRemindText" class="week-one__remind-text"></p>
+            <div class="week-one__remind-actions">
+              <button type="button" id="weekOneEmail" class="week-one__btn week-one__btn--primary" hidden></button>
+              <button type="button" id="weekOnePush" class="week-one__btn" hidden>Notify me on this device</button>
+              <button type="button" id="weekOneCancel" class="week-one__quiet" hidden>Cancel the reminder</button>
+            </div>
+          </div>
+          <p id="weekOneStatus" class="week-one__status" role="status" aria-live="polite"></p>
+          <div class="week-one__foot">
+            <button type="button" id="weekOneHide" class="week-one__quiet">Hide this card</button>
+          </div>
+        </section>
+        <div class="daily-dashboard">
+        <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+          <div class="library-pulse__header">
+            <div>
+              <p class="library-pulse__eyebrow">Right where you left off</p>
+              <h2 id="libraryPulseTitle">Continue</h2>
+            </div>
+            <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
+          </div>
+          <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
+          <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
+            <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
+            <p>Add a rating or a few words while you still remember it.</p>
+            <div id="libraryPulseReflect" class="library-pulse__list"></div>
+          </details>
+        </section>
+
+        <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+          <div class="todays-pick__copy">
+            <h2 id="todaysPickTitle">Today’s pick</h2>
+            <label class="todays-pick__filter" for="todaysPickFilter">Choose from
+              <select id="todaysPickFilter" data-change-action="pick-category">
+                <option value="">All media</option>
+                <option value="movies">Movies</option>
+                <option value="tv-shows">TV shows</option>
+                <option value="anime">Anime</option>
+                <option value="video-games">Games</option>
+                <option value="music">Music</option>
+                <option value="books">Books</option>
+                <option value="manga">Manga</option>
+                <option value="podcasts">Podcasts</option>
+                <option value="audiobooks">Audiobooks</option>
+              </select>
+            </label>
+            <p id="todaysPickReason" class="todays-pick__reason"></p>
+          </div>
+          <div class="todays-pick__choice">
+            <span id="todaysPickCategory" class="todays-pick__category"></span>
+            <strong id="todaysPickName" aria-live="polite"></strong>
+          </div>
+          <div class="todays-pick__actions">
+            <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
+            <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+            <a class="todays-pick__new" href="/pick">Find something new</a>
+          </div>
+        </section>
+        </div>
+        <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
+        <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
+          <div class="home-news__head">
+            <div>
+              <p id="homeNewsEyebrow" class="home-news__eyebrow">This week</p>
+              <h2 id="homeNewsTitle">What's new</h2>
+              <p id="homeNewsSummary" class="home-news__summary"></p>
+            </div>
+          </div>
+          <div class="home-news__grid">
+            <div id="homeNewsShows" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Your shows</h3>
+              <ul id="homeNewsShowList" class="home-news__list"></ul>
+            </div>
+            <div id="homeNewsFriends" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Friends</h3>
+              <ul id="homeNewsFriendList" class="home-news__list"></ul>
+              <button id="homeNewsFriendsMore" type="button" class="home-news__link" data-switch-tab="friends-feed" hidden>Open the friends feed</button>
+            </div>
+          </div>
+          <p id="homeNewsStatus" class="home-news__status" role="status" aria-live="polite"></p>
+        </section>
+        <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+          <div class="next-up-queue__header">
+            <div>
+              <h2 id="nextUpQueueTitle">Next Up</h2>
+              <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
+            </div>
+            <div class="next-up-queue__actions">
+              <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
+              <a class="next-up-queue__toggle next-up-queue__poll" href="/tonight">Let friends vote</a>
+              <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
+            </div>
+          </div>
+          <div id="nextUpQueueFilters" class="next-up-queue__filters" role="group" aria-label="Show in Next Up" hidden></div>
+          <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+          <p id="nextUpQueueStatus" class="sr-only" role="status" aria-live="polite"></p>
+          <div id="nextUpQueueSuggest" class="next-up-queue__suggest" hidden>
+            <h3 id="nextUpQueueSuggestTitle" class="next-up-queue__suggest-title">Line up more from your library</h3>
+            <ul id="nextUpQueueSuggestList" class="next-up-queue__suggest-list" aria-labelledby="nextUpQueueSuggestTitle"></ul>
+          </div>
+        </section>
         <!-- Your week: days logged Monday to Sunday, a pace the member picks, kept weeks in a row (your-week.js) -->
         <section id="yourWeek" class="your-week" aria-labelledby="yourWeekTitle" hidden>
           <div id="yourWeekRecap" class="your-week__recap" hidden>
@@ -661,55 +793,6 @@
             <button type="button" id="yourWeekHide" class="your-week__quiet">Hide this card</button>
           </div>
         </section>
-
-        <div class="daily-dashboard">
-        <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
-          <div class="library-pulse__header">
-            <div>
-              <p class="library-pulse__eyebrow">Right where you left off</p>
-              <h2 id="libraryPulseTitle">Continue</h2>
-            </div>
-            <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
-          </div>
-          <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
-          <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
-            <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
-            <p>Add a rating or a few words while you still remember it.</p>
-            <div id="libraryPulseReflect" class="library-pulse__list"></div>
-          </details>
-        </section>
-
-        <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
-          <div class="todays-pick__copy">
-            <h2 id="todaysPickTitle">Today’s pick</h2>
-            <label class="todays-pick__filter" for="todaysPickFilter">Choose from
-              <select id="todaysPickFilter" data-change-action="pick-category">
-                <option value="">All media</option>
-                <option value="movies">Movies</option>
-                <option value="tv-shows">TV shows</option>
-                <option value="anime">Anime</option>
-                <option value="video-games">Games</option>
-                <option value="music">Music</option>
-                <option value="books">Books</option>
-                <option value="manga">Manga</option>
-                <option value="podcasts">Podcasts</option>
-                <option value="audiobooks">Audiobooks</option>
-              </select>
-            </label>
-            <p id="todaysPickReason" class="todays-pick__reason"></p>
-          </div>
-          <div class="todays-pick__choice">
-            <span id="todaysPickCategory" class="todays-pick__category"></span>
-            <strong id="todaysPickName" aria-live="polite"></strong>
-          </div>
-          <div class="todays-pick__actions">
-            <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
-            <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
-            <a class="todays-pick__new" href="/pick">Find something new</a>
-          </div>
-        </section>
-        </div>
-
         <!-- Draw from your backlog: deal three titles saved and never started, keep one, give it a night (backlog-draw.js) -->
         <section id="backlogDraw" class="backlog-draw" aria-labelledby="backlogDrawTitle" hidden>
           <div class="backlog-draw__head">
@@ -723,66 +806,6 @@
           <div id="backlogDrawBody" class="backlog-draw__body" aria-live="polite"></div>
           <p id="backlogDrawStatus" class="backlog-draw__status" role="status" aria-live="polite"></p>
         </section>
-
-        <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
-        <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
-          <div class="week-one__head">
-            <div>
-              <p id="weekOneEyebrow" class="week-one__eyebrow">Your first week</p>
-              <h2 id="weekOneTitle" class="week-one__title">Your week</h2>
-              <p id="weekOneSummary" class="week-one__summary"></p>
-            </div>
-            <ol id="weekOneDots" class="week-one__dots" aria-label="Days of your first week"></ol>
-          </div>
-          <ol id="weekOneDays" class="week-one__days" aria-label="This week, day by day" hidden></ol>
-          <div id="weekOneSuggest" class="week-one__suggest" hidden>
-            <h3 id="weekOneSuggestTitle" class="week-one__subhead">Watching something right now?</h3>
-            <p class="week-one__hint">Shows members follow that have a new episode this week. Save the ones you're watching and their episodes show up here, day by day.</p>
-            <ul id="weekOneSuggestList" class="week-one__picks" aria-labelledby="weekOneSuggestTitle"></ul>
-            <button type="button" class="week-one__link" data-action="open-quick-capture">Search for another show</button>
-          </div>
-          <div id="weekOneReleases" class="week-one__suggest" hidden>
-            <h3 id="weekOneReleasesTitle" class="week-one__subhead">Out this week</h3>
-            <p class="week-one__hint">New movies, games and premieres coming out in the next seven days. Save one and its release day goes on your week.</p>
-            <ul id="weekOneReleaseList" class="week-one__picks" aria-labelledby="weekOneReleasesTitle"></ul>
-          </div>
-          <div id="weekOneRemind" class="week-one__remind" hidden>
-            <p id="weekOneRemindText" class="week-one__remind-text"></p>
-            <div class="week-one__remind-actions">
-              <button type="button" id="weekOneEmail" class="week-one__btn week-one__btn--primary" hidden></button>
-              <button type="button" id="weekOnePush" class="week-one__btn" hidden>Notify me on this device</button>
-              <button type="button" id="weekOneCancel" class="week-one__quiet" hidden>Cancel the reminder</button>
-            </div>
-          </div>
-          <p id="weekOneStatus" class="week-one__status" role="status" aria-live="polite"></p>
-          <div class="week-one__foot">
-            <button type="button" id="weekOneHide" class="week-one__quiet">Hide this card</button>
-          </div>
-        </section>
-
-        <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
-        <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
-          <div class="home-news__head">
-            <div>
-              <p id="homeNewsEyebrow" class="home-news__eyebrow">This week</p>
-              <h2 id="homeNewsTitle">What's new</h2>
-              <p id="homeNewsSummary" class="home-news__summary"></p>
-            </div>
-          </div>
-          <div class="home-news__grid">
-            <div id="homeNewsShows" class="home-news__col" hidden>
-              <h3 class="home-news__subhead">Your shows</h3>
-              <ul id="homeNewsShowList" class="home-news__list"></ul>
-            </div>
-            <div id="homeNewsFriends" class="home-news__col" hidden>
-              <h3 class="home-news__subhead">Friends</h3>
-              <ul id="homeNewsFriendList" class="home-news__list"></ul>
-              <button id="homeNewsFriendsMore" type="button" class="home-news__link" data-switch-tab="friends-feed" hidden>Open the friends feed</button>
-            </div>
-          </div>
-          <p id="homeNewsStatus" class="home-news__status" role="status" aria-live="polite"></p>
-        </section>
-
         <!-- Offered once in a while to members with no weekly email, notifications or calendar yet (stay-posted.js) -->
         <section id="stayPosted" class="stay-posted" aria-labelledby="stayPostedTitle" hidden>
           <div class="stay-posted__head">
@@ -818,72 +841,6 @@
           </div>
           <p id="stayPostedStatus" class="stay-posted__status" role="status" aria-live="polite"></p>
         </section>
-
-        <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
-          <div class="next-up-queue__header">
-            <div>
-              <h2 id="nextUpQueueTitle">Next Up</h2>
-              <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
-            </div>
-            <div class="next-up-queue__actions">
-              <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
-              <a class="next-up-queue__toggle next-up-queue__poll" href="/tonight">Let friends vote</a>
-              <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
-            </div>
-          </div>
-          <div id="nextUpQueueFilters" class="next-up-queue__filters" role="group" aria-label="Show in Next Up" hidden></div>
-          <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
-          <p id="nextUpQueueStatus" class="sr-only" role="status" aria-live="polite"></p>
-          <div id="nextUpQueueSuggest" class="next-up-queue__suggest" hidden>
-            <h3 id="nextUpQueueSuggestTitle" class="next-up-queue__suggest-title">Line up more from your library</h3>
-            <ul id="nextUpQueueSuggestList" class="next-up-queue__suggest-list" aria-labelledby="nextUpQueueSuggestTitle"></ul>
-          </div>
-        </section>
-
-        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
-          <div class="on-this-day__head">
-            <div>
-              <p class="on-this-day__eyebrow">On this day</p>
-              <h2 id="onThisDayTitle">From your past</h2>
-            </div>
-            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
-          </div>
-          <ul id="onThisDayList" class="on-this-day__list"></ul>
-          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
-        </section>
-
-        <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
-        <section id="reviewInbox" class="for-you-card review-inbox" aria-labelledby="reviewInboxTitle" hidden>
-          <div class="for-you-card__head">
-            <div>
-              <p class="for-you-card__eyebrow">Only you can see these</p>
-              <h2 id="reviewInboxTitle">Share your reviews</h2>
-              <p id="reviewInboxSummary" class="for-you-card__summary"></p>
-            </div>
-            <div class="for-you-card__side">
-              <button type="button" id="reviewInboxHide" class="for-you-card__dismiss">Hide for now</button>
-            </div>
-          </div>
-          <ol id="reviewInboxList" class="review-inbox__list" aria-live="polite"></ol>
-          <button type="button" id="reviewInboxMore" class="review-inbox__more" aria-controls="reviewInboxList" hidden></button>
-          <p class="review-inbox__note">A shared review shows on its title's page and under <a href="/reviews">Reviews</a> with your username and rating. You can make it private again from the title in your library. Reviews you import from other sites always start private.</p>
-        </section>
-
-        <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
-          <div class="for-you-card__head">
-            <div>
-              <p class="for-you-card__eyebrow">From members with your taste</p>
-              <h2 id="picksTeaserTitle">Picked for you</h2>
-              <p class="for-you-card__summary">Titles you haven't saved yet, chosen from what you rate highly.</p>
-            </div>
-            <div class="for-you-card__side">
-              <button type="button" class="action-btn" data-switch-tab="for-you">See all picks</button>
-              <button type="button" id="picksTeaserHide" class="for-you-card__dismiss">Hide from home</button>
-            </div>
-          </div>
-          <div id="picksTeaserList" class="for-you-grid for-you-grid--wide"></div>
-        </section>
-
         <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
           <div class="for-you-card__head">
             <div>
@@ -929,7 +886,47 @@
           <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
           <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
         </section>
-
+        <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">From members with your taste</p>
+              <h2 id="picksTeaserTitle">Picked for you</h2>
+              <p class="for-you-card__summary">Titles you haven't saved yet, chosen from what you rate highly.</p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" class="action-btn" data-switch-tab="for-you">See all picks</button>
+              <button type="button" id="picksTeaserHide" class="for-you-card__dismiss">Hide from home</button>
+            </div>
+          </div>
+          <div id="picksTeaserList" class="for-you-grid for-you-grid--wide"></div>
+        </section>
+        <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
+        <section id="reviewInbox" class="for-you-card review-inbox" aria-labelledby="reviewInboxTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">Only you can see these</p>
+              <h2 id="reviewInboxTitle">Share your reviews</h2>
+              <p id="reviewInboxSummary" class="for-you-card__summary"></p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" id="reviewInboxHide" class="for-you-card__dismiss">Hide for now</button>
+            </div>
+          </div>
+          <ol id="reviewInboxList" class="review-inbox__list" aria-live="polite"></ol>
+          <button type="button" id="reviewInboxMore" class="review-inbox__more" aria-controls="reviewInboxList" hidden></button>
+          <p class="review-inbox__note">A shared review shows on its title's page and under <a href="/reviews">Reviews</a> with your username and rating. You can make it private again from the title in your library. Reviews you import from other sites always start private.</p>
+        </section>
+        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
+          <div class="on-this-day__head">
+            <div>
+              <p class="on-this-day__eyebrow">On this day</p>
+              <h2 id="onThisDayTitle">From your past</h2>
+            </div>
+            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
+          </div>
+          <ul id="onThisDayList" class="on-this-day__list"></ul>
+          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
+        </section>
         <section id="badgeCase" class="badge-case" aria-labelledby="badgeCaseTitle" hidden>
           <div class="badge-case__header">
             <div>
@@ -953,6 +950,67 @@
       <aside class="home-board__rail" aria-labelledby="homeBoardRailTitle">
         <p id="homeBoardRailTitle" class="home-board__rail-title">This season</p>
         <div class="home-board__rail-cards">
+          <section id="adventCard" class="year-goals ny-pledge-card advent-card" aria-labelledby="adventCardTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="adventCardEyebrow" class="year-goals__eyebrow">Advent calendar</p>
+                <h2 id="adventCardTitle">Today's door is open</h2>
+                <p id="adventCardSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <ol id="adventCardDoors" class="advent-card__doors" aria-hidden="true"></ol>
+            <div class="year-goals__footer">
+              <a id="adventCardLink" class="action-btn ny-pledge-card__link" href="/holidays/advent-calendar">Open today's door</a>
+              <button id="adventCardDismiss" type="button" class="year-goals__dismiss">Hide</button>
+            </div>
+          </section>
+          <section id="monthlyChallenge" class="month-challenge" aria-labelledby="monthlyChallengeTitle" hidden>
+            <div class="month-challenge__header">
+              <p id="monthlyChallengeEyebrow" class="month-challenge__eyebrow">Monthly challenge</p>
+              <h2 id="monthlyChallengeTitle">This month's challenge</h2>
+              <p id="monthlyChallengeSummary" class="month-challenge__summary"></p>
+            </div>
+            <div id="monthlyChallengeCelebration" class="month-challenge__celebration" role="status" hidden></div>
+            <ol id="monthlyChallengeSteps" class="month-challenge__steps"></ol>
+            <div class="month-challenge__footer">
+              <button id="monthlyChallengeJoin" type="button" class="action-btn" data-challenge-action="join">Take the challenge</button>
+              <a id="monthlyChallengeGuide" class="month-challenge__link" href="/challenges" hidden>Read the guide</a>
+              <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
+              <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
+              <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+          <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p class="year-goals__eyebrow">Yearly goals</p>
+                <h2 id="yearGoalsTitle">Your goals</h2>
+                <p id="yearGoalsSummary" class="year-goals__summary"></p>
+              </div>
+              <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
+            </div>
+            <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
+            <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
+            <div id="yearGoalsFormSlot"></div>
+            <div class="year-goals__footer">
+              <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
+              <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
+              <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+          <section id="awardsBallot" class="year-goals ny-pledge-card" aria-labelledby="awardsBallotTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="awardsBallotEyebrow" class="year-goals__eyebrow">Awards season</p>
+                <h2 id="awardsBallotTitle">Pick the winners</h2>
+                <p id="awardsBallotSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <div class="year-goals__footer">
+              <a id="awardsBallotLink" class="action-btn ny-pledge-card__link" href="/awards">Fill in your ballot</a>
+              <button id="awardsBallotDismiss" type="button" class="year-goals__dismiss">Hide</button>
+            </div>
+          </section>
           <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
             <div class="year-so-far__head">
               <div>
@@ -976,7 +1034,6 @@
               <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
             </div>
           </section>
-
           <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
             <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
             <h2 id="seasonCardTitle">The seasonal hub is open</h2>
@@ -987,24 +1044,6 @@
               <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
             </div>
           </section>
-
-          <section id="monthlyChallenge" class="month-challenge" aria-labelledby="monthlyChallengeTitle" hidden>
-            <div class="month-challenge__header">
-              <p id="monthlyChallengeEyebrow" class="month-challenge__eyebrow">Monthly challenge</p>
-              <h2 id="monthlyChallengeTitle">This month's challenge</h2>
-              <p id="monthlyChallengeSummary" class="month-challenge__summary"></p>
-            </div>
-            <div id="monthlyChallengeCelebration" class="month-challenge__celebration" role="status" hidden></div>
-            <ol id="monthlyChallengeSteps" class="month-challenge__steps"></ol>
-            <div class="month-challenge__footer">
-              <button id="monthlyChallengeJoin" type="button" class="action-btn" data-challenge-action="join">Take the challenge</button>
-              <a id="monthlyChallengeGuide" class="month-challenge__link" href="/challenges" hidden>Read the guide</a>
-              <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
-              <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
-              <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
-            </div>
-          </section>
-
           <section id="newYearPledge" class="year-goals ny-pledge-card" aria-labelledby="newYearPledgeTitle" hidden>
             <div class="year-goals__header">
               <div>
@@ -1018,55 +1057,6 @@
               <button id="newYearPledgeDismiss" type="button" class="year-goals__dismiss">Hide</button>
             </div>
           </section>
-
-          <section id="awardsBallot" class="year-goals ny-pledge-card" aria-labelledby="awardsBallotTitle" hidden>
-            <div class="year-goals__header">
-              <div>
-                <p id="awardsBallotEyebrow" class="year-goals__eyebrow">Awards season</p>
-                <h2 id="awardsBallotTitle">Pick the winners</h2>
-                <p id="awardsBallotSummary" class="year-goals__summary"></p>
-              </div>
-            </div>
-            <div class="year-goals__footer">
-              <a id="awardsBallotLink" class="action-btn ny-pledge-card__link" href="/awards">Fill in your ballot</a>
-              <button id="awardsBallotDismiss" type="button" class="year-goals__dismiss">Hide</button>
-            </div>
-          </section>
-
-          <section id="adventCard" class="year-goals ny-pledge-card advent-card" aria-labelledby="adventCardTitle" hidden>
-            <div class="year-goals__header">
-              <div>
-                <p id="adventCardEyebrow" class="year-goals__eyebrow">Advent calendar</p>
-                <h2 id="adventCardTitle">Today's door is open</h2>
-                <p id="adventCardSummary" class="year-goals__summary"></p>
-              </div>
-            </div>
-            <ol id="adventCardDoors" class="advent-card__doors" aria-hidden="true"></ol>
-            <div class="year-goals__footer">
-              <a id="adventCardLink" class="action-btn ny-pledge-card__link" href="/holidays/advent-calendar">Open today's door</a>
-              <button id="adventCardDismiss" type="button" class="year-goals__dismiss">Hide</button>
-            </div>
-          </section>
-
-          <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
-            <div class="year-goals__header">
-              <div>
-                <p class="year-goals__eyebrow">Yearly goals</p>
-                <h2 id="yearGoalsTitle">Your goals</h2>
-                <p id="yearGoalsSummary" class="year-goals__summary"></p>
-              </div>
-              <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
-            </div>
-            <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
-            <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
-            <div id="yearGoalsFormSlot"></div>
-            <div class="year-goals__footer">
-              <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
-              <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
-              <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
-            </div>
-          </section>
-
           <section id="supportAsk" class="support-ask" aria-labelledby="supportAskTitle" hidden>
             <p id="supportAskEyebrow" class="support-ask__eyebrow"></p>
             <h2 id="supportAskTitle" class="support-ask__title"></h2>
@@ -1086,7 +1076,6 @@
             </div>
             <p id="supportAskStatus" class="support-ask__status" role="status" aria-live="polite"></p>
           </section>
-
           <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
             <img class="install-card__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="56" height="56" loading="lazy" decoding="async">
             <div class="install-card__copy">
@@ -1101,6 +1090,13 @@
           </section>
         </div>
       </aside>
+      <!-- Cards past the first few in each column, and cards with nothing of the member's own in them yet,
+           wait behind this button (home-layout.js). They keep their own hide buttons and rules. -->
+      <div id="homeMore" class="home-board__more" hidden>
+        <button type="button" id="homeMoreToggle" class="home-board__more-toggle" aria-expanded="false">Show more on your home</button>
+        <p id="homeMoreNames" class="home-board__more-names" hidden></p>
+        <p id="homeMoreStatus" class="sr-only" role="status" aria-live="polite"></p>
+      </div>
     </div>
 
     <!-- Movies Tab Content -->
@@ -2642,7 +2638,8 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261120-sweep-1"></script>
   <script src="/static/home-today.js?v=20261116-invite-test-1"></script>
-  <script src="/static/for-you.js?v=20261118-peek-1"></script>
+  <script src="/static/home-layout.js?v=20261120-streamline-1"></script>
+  <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261120-widgets-1"></script>
