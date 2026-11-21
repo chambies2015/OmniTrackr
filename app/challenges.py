@@ -18,7 +18,7 @@ from calendar import monthrange
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -51,6 +51,8 @@ FORMAT_NOUNS = {
 #               the month began; if every format already has that many, their least-finished format counts
 #   recommended finish ``count`` titles that the member says a person recommended (Why I added it: a friend on
 #               OmniTrackr or someone they know), whenever they said it
+#   birthday    finish ``count`` titles that turn a round number in the month's year: released a whole number of
+#               ``every`` years before it (2017, 2007, 1997... in 2027), going by the year saved on the title
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -213,6 +215,31 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. Write it the way you would say it to a friend: who it is for, and what they should know before they start. \"Keep going until season two\" has probably got more people through Schitt's Creek than any review. Takeaways stay private unless you publish a review."},
         ],
         "reflection": "Who recommended the best thing you finished this month, and have you told them you finished it?",
+    },
+    "2027-05": {
+        "name": "Many happy returns",
+        "tagline": "Finish one of May's nine birthday picks, finish something else that turns a round number this year and say how it has aged.",
+        "published": "2027-05-01",
+        # The May edition (out May 1) has nine picks, one per format and one per decade from 1937 to 2017.
+        "edition": "may-2027",
+        # Birthdays are a reason to go back to things, so a logged rewatch or reread counts as a finish this month.
+        "revisits_count": True,
+        "intro": [
+            "Star Wars turns fifty on May 25, and it has plenty of company. Everything released in a year ending in seven has a round birthday in 2027: Of Mice and Men is ninety, The Plague eighty, JoJo's Bizarre Adventure forty and Castlevania: Symphony of the Night thirty. An anniversary is an arbitrary reason to go back to something, but it works. A restoration comes out, a cinema shows the old version, and somebody asks whether you have ever actually seen it. This challenge, and the May edition it pairs with, take the excuse. The edition has nine picks, one in each format and one from each decade between 1937 and 2017. The challenge asks you to finish one of them, to finish something else that turns 10, 20, 30 or more this year, and to write down how it has aged.",
+            "The middle step goes by the release year saved on the title in your library, so anything from 2017, 2007, 1997, 1987 and every ten years before counts, and the challenge card on your home screen names a few titles already in your library that do. Plenty of these will be things you have seen before, so a rewatch, reread or replay that you log in your Journal counts as a finish for every step this month. Anything you finish or revisit in May counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "may-2027",
+             "label": "Finish one pick from the May edition",
+             "detail": "The May edition has nine picks, one in each format OmniTrackr tracks, each with a round birthday this year, from Ear Hustle at ten to Of Mice and Men at ninety. The \"Chirping\" Crickets is 26 minutes and Star Wars 121, so either fits an evening. Den-noh Coil is 26 episodes and The Prisoner 17, so start those early. If you have seen or read one of the nine before, a revisit you log in your Journal this month counts too."},
+            {"kind": "birthday", "count": 1, "every": 10,
+             "label": "Finish something that turns 10, 20, 30 or more this year",
+             "detail": "Anything released in a year ending in seven counts: 2017, 2007, 1997, 1987, 1977 and so on back. The step goes by the year saved on the title in your library, so check it is filled in, because a title without a year can't count. The challenge card lists a few titles already in your library that qualify. Every pick in the May edition qualifies too, so finishing one with its year saved does this step and the first one at once."},
+            {"kind": "reflect", "count": 1,
+             "label": "Say how it has aged",
+             "detail": "Rate one of this month's finishes or revisits, or add a line about it. If you went back to something, write down what changed: what you noticed this time, what you had remembered wrong, whether it is better or worse than you thought the first time. A takeaway on the finish screen counts, and so does a private note when you log a revisit. Notes and takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which of this month's finishes would you still want to go back to in another ten years?",
     },
 }
 
@@ -515,6 +542,61 @@ def unsaid_finishes(db: Session, user_id: int, finishes: list[dict], sources: di
     return unsaid
 
 
+# The oldest release year a birthday step looks for in a library (a 160th birthday in 2027).
+BIRTHDAY_OLDEST = 1867
+# How many not-yet-finished titles the card names under a birthday step.
+TURNING_LIMIT = 3
+
+
+def birthday_years(month: str, every: int = 10) -> list[int]:
+    """Release years that turn a round number in the month's year, newest first: 2017, 2007, 1997... for 2027."""
+    current = int(month[:4])
+    return list(range(current - every, BIRTHDAY_OLDEST - 1, -every))
+
+
+def _turns_round(year: Optional[int], month: str, every: int) -> bool:
+    current = int(month[:4])
+    return bool(year) and year < current and (current - year) % every == 0
+
+
+def _birthday_count(db: Session, month: str, finishes: list[dict], every: int) -> int:
+    """This month's finishes whose saved release year makes them 10, 20, 30... years old this year."""
+    years = _release_years(db, finishes)
+    return sum(1 for finish in finishes
+               if _turns_round(years.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"])),
+                               month, every))
+
+
+def turning_titles(db: Session, user_id: int, month: str, every: int = 10, limit: int = TURNING_LIMIT) -> list[dict]:
+    """Titles in the member's library, not finished yet, that turn a round number this year.
+
+    The card names these under a birthday step so a member can see what already counts. One short
+    query per format; newest saves first. Each entry says how old the title turns.
+    """
+    years = birthday_years(month, every)
+    if not years:
+        return []
+    current = int(month[:4])
+    found = []
+    for kind, (model, _, category, _, _) in title_pages.KINDS.items():
+        column = title_pages._year_column(kind, model)
+        if kind == "game":
+            matches = or_(*(and_(column >= datetime(year, 1, 1), column < datetime(year + 1, 1, 1)) for year in years))
+        else:
+            matches = column.in_(years)
+        rows = db.query(model.id, model.title, column, model.added_at).filter(
+            model.user_id == user_id, getattr(model, title_pages.COMPLETE_FIELD[kind]).isnot(True), matches,
+        ).order_by(model.added_at.desc(), model.id.desc()).limit(limit).all()
+        for item_id, title, value, added_at in rows:
+            year = value.year if kind == "game" else value
+            if not (title or "").strip() or not _turns_round(year, month, every):
+                continue
+            found.append({"category": category, "id": item_id, "title": title, "age": current - year,
+                          "_added": added_at or datetime.min})
+    found.sort(key=lambda entry: entry["_added"], reverse=True)
+    return [{key: value for key, value in entry.items() if key != "_added"} for entry in found[:limit]]
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -565,6 +647,12 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count, target = _recommended_count(finishes, sources), step.get("count", 1)
             # Private to the member, like "formats": finishes the card can offer to credit to someone.
             extra = {"unsaid": [] if count >= target else unsaid_finishes(db, user_id, finishes, sources)}
+        elif step["kind"] == "birthday":
+            every = step.get("every", 10)
+            count, target = _birthday_count(db, month, finishes, every), step.get("count", 1)
+            # "years" is the same for everyone; "turning" names the member's own titles, so only their card has it.
+            extra = {"years": birthday_years(month, every)[:4],
+                     "turning": [] if count >= target else turning_titles(db, user_id, month, every)}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],

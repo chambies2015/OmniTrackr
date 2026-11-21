@@ -67,7 +67,7 @@
       log.dataset.challengeAction = 'log-revisit';
       item.appendChild(log);
     }
-    const hint = stretchHint(step);
+    const hint = stretchHint(step) || birthdayHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
@@ -129,6 +129,21 @@
     const names = step.formats.map(String);
     const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
     return `Counts for you: ${list}`;
+  }
+
+  // Under a step about titles turning a round number this year: up to three from the member's own
+  // library ("In your library: Star Wars turns 50, Portal turns 20"), or the years that count.
+  function birthdayHint(step) {
+    if (step.kind !== 'birthday' || step.done) return '';
+    const turning = (Array.isArray(step.turning) ? step.turning : [])
+      .filter(title => title && typeof title.title === 'string' && title.title.trim() && Number.isInteger(title.age) && title.age > 0)
+      .slice(0, 3);
+    if (turning.length) {
+      return `In your library: ${turning.map(title => `${title.title.trim()} turns ${title.age}`).join(', ')}`;
+    }
+    const years = (Array.isArray(step.years) ? step.years : []).filter(year => Number.isInteger(year) && year > 0).slice(0, 4);
+    if (!years.length) return '';
+    return `Counts if it came out in ${years.join(', ')} or an earlier year ending in ${years[0] % 10}`;
   }
 
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
@@ -332,7 +347,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

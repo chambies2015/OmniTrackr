@@ -1,7 +1,7 @@
 """Public editorial trails with authenticated, atomic library saves."""
 from html import escape
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -471,6 +471,16 @@ def monthly_save(slug: str, selection: SaveSelection, response: Response, user=D
     return save_for(monthly_for(slug), selection, user, db, "Monthly Edition")
 
 
+def _library_fields(item) -> dict:
+    """A pick's meta as library columns. Games keep a release date, not a year, so a game pick's year
+    becomes January 1 of that year, the same as Pick for me saves it."""
+    fields = dict(item["meta"])
+    if item["category"] == "video-games" and "year" in fields:
+        year = fields.pop("year")
+        fields["release_date"] = datetime(year, 1, 1) if year else None
+    return fields
+
+
 def save_for(trail, selection, user, db, collection_prefix):
     keys = set(selection.keys)
     if not keys.issubset({i["key"] for i in trail["items"]}):
@@ -491,7 +501,7 @@ def save_for(trail, selection, user, db, collection_prefix):
                 continue
             media = match(db, user.id, item)
             if media is None:
-                media = CATEGORIES[item["category"]][0](user_id=user.id, title=item["title"], **item["meta"])
+                media = CATEGORIES[item["category"]][0](user_id=user.id, title=item["title"], **_library_fields(item))
                 db.add(media)
                 db.flush()
                 created += 1
