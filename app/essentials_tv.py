@@ -240,7 +240,7 @@ LIST = {
                           "thing takes about six and a half hours. Manuel, the Spanish waiter, is a broad accent joke you "
                           "may wince at."},
                 {"title": "Saturday Night Live", "year": 1975, "creator": "Lorne Michaels",
-                 "origin": "NBC, USA", "length": "Ongoing; 50 seasons and nearly 1,000 episodes by mid-2025",
+                 "origin": "NBC, USA", "length": "Ongoing; more than 1,000 episodes, the 1,000th in January 2026",
                  "hours": 1400, "aka": ["SNL"],
                  "why": "A live sketch show from Studio 8H in New York, built around a guest host and a musical act, which "
                         "Lorne Michaels has produced for all but five of its seasons. The first cast, billed as the Not "
@@ -413,8 +413,8 @@ LIST = {
                           "through the others. Dekalog: One sets the tone within minutes. A Short Film About Killing is the "
                           "longer version of Five."},
                 {"title": "The Simpsons", "year": 1989, "creator": "Matt Groening",
-                 "origin": "Fox, USA", "length": "Ongoing; 36 seasons and more than 770 episodes by mid-2025",
-                 "hours": 285,
+                 "origin": "Fox, USA", "length": "Ongoing; more than 800 episodes, the 800th in February 2026",
+                 "hours": 295,
                  "why": "A family in a middle-sized American town: Homer works at the nuclear plant, Marge holds things "
                         "together, Bart is trouble and Lisa is the smartest person in Springfield. It began as shorts on "
                         "The Tracey Ullman Show in 1987, and Matt Groening named the family after his own. In the early "
@@ -816,7 +816,7 @@ LIST = {
                           "finds Nyborg as foreign minister and works as an epilogue."},
                 {"title": "The Great British Bake Off", "year": 2010,
                  "creator": "Anna Beattie and Richard McKerrow (Love Productions)",
-                 "origin": "BBC Two, later Channel 4, UK", "length": "Ongoing; 15 series by mid-2025", "hours": 140,
+                 "origin": "BBC Two, later Channel 4, UK", "length": "Ongoing; 17 series by autumn 2026", "hours": 160,
                  "aka": ["The Great British Baking Show"],
                  "why": "Twelve amateur bakers compete in a tent on an English country estate, with one sent home each week "
                         "until the winner gets a cake stand and nothing more. Each episode has three rounds, including a "
@@ -850,7 +850,7 @@ LIST = {
                           "short final season was widely criticized. The prequel House of the Dragon (2022) is optional."},
                 {"title": "Black Mirror", "year": 2011, "creator": "Charlie Brooker",
                  "origin": "Channel 4, later Netflix, UK",
-                 "length": "Ongoing; 7 series, 33 episodes by mid-2025, plus the film Bandersnatch", "hours": 33,
+                 "length": "7 series and 33 episodes so far, plus the film Bandersnatch; an eighth series was filming in 2026", "hours": 33,
                  "why": "Each episode is a standalone story about what a near-future technology does to people: a social "
                         "rating for every interaction, a dead partner rebuilt from his messages, a prime minister "
                         "blackmailed into a humiliating act on live TV. Charlie Brooker named it after the dark glass of a "
@@ -1129,7 +1129,7 @@ LIST = {
                  "start": "The first three episodes, released together, are slow; the heist on Aldhani in episodes 4 to 6 "
                           "is where it takes off. You need very little Star Wars knowledge, but watch Rogue One after."},
                 {"title": "The Bear", "year": 2022, "creator": "Christopher Storer",
-                 "origin": "FX on Hulu, USA", "length": "Ongoing; 4 seasons, 38 episodes by mid-2025", "hours": 19,
+                 "origin": "FX on Hulu, USA", "length": "5 seasons, 46 episodes (2022 to 2026), plus the standalone episode Gary", "hours": 23,
                  "why": "Carmy Berzatto, a young chef from top fine-dining kitchens in New York and Copenhagen, comes home "
                         "to Chicago to run the sandwich shop his brother left him after killing himself. Christopher "
                         "Storer shoots the kitchen at full noise. \"Review\", in season 1, is a single unbroken take of "
@@ -1137,7 +1137,8 @@ LIST = {
                         "hour-long family Christmas dinner in flashback, with Jamie Lee Curtis as Carmy's mother. It "
                         "competes at the Emmys as a comedy, which has been argued over ever since.",
                  "start": "Seasons 1 and 2 are the essential ones. Season 2's \"Forks\" follows Richie through a week "
-                          "working at a fine-dining restaurant. Seasons 3 and 4 slow down a great deal and divide fans."},
+                          "working at a fine-dining restaurant. Seasons 3 and 4 slow down a great deal and divide fans, and the "
+                          "eight-episode fifth season, in 2026, ends the series."},
                 {"title": "Shōgun", "year": 2024, "creator": "Rachel Kondo and Justin Marks, from James Clavell's novel",
                  "origin": "FX, USA", "length": "10 episodes", "hours": 10,
                  "aka": ["Shogun"],

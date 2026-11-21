@@ -1233,7 +1233,9 @@ app.include_router(best_of_router.router)
 from .routers import essentials as essentials_router
 # Ticking through a list of 100 is quick work, so saves get the start wall's limit.
 ESSENTIALS_LIMITS = {"/api/essentials/save": "90/minute", "/api/essentials/undo": "30/minute",
-                     "/api/essentials/import": "10/minute"}
+                     "/api/essentials/import": "10/minute",
+                     # Every count has its own card, drawn on first ask, so a run of new counts costs real CPU.
+                     "/essentials/score/{counts}/card.png": "30/minute", "/essentials/{fmt}/score/{done}/card.png": "30/minute"}
 for route in essentials_router.router.routes:
     limit = ESSENTIALS_LIMITS.get(getattr(route, "path", None))
     if limit:

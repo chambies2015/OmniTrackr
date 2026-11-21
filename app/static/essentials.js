@@ -22,9 +22,15 @@
     }
   }
 
+  // The list being ticked, so the new library can link back to it after sign-up (essentials-import.js).
+  const LIST_PATH = /^\/essentials\/(?:movies|tv|anime|games|books|music|manga|podcasts|audiobooks)$/;
+
   function writeTicks(ids) {
     try {
-      if (ids.length) localStorage.setItem(KEY, JSON.stringify({ v: 1, seen: ids.slice(0, MAX) }));
+      const data = { v: 1, seen: ids.slice(0, MAX) };
+      const path = typeof window !== 'undefined' && window.location ? window.location.pathname : '';
+      if (LIST_PATH.test(path)) data.from = path;
+      if (ids.length) localStorage.setItem(KEY, JSON.stringify(data));
       else localStorage.removeItem(KEY);
       return true;
     } catch (error) {
@@ -121,10 +127,17 @@
       if (!button) return;
       group.querySelectorAll('[data-es-filter]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
       root.dataset.esFilter = button.dataset.esFilter;
-      root.querySelectorAll('.es-section').forEach(section => {
-        const shown = Array.from(section.querySelectorAll('.es-item')).some(item => visible(item, button.dataset.esFilter));
-        section.classList.toggle('es-section--empty', !shown);
-      });
+      markEmpty(root);
+    });
+  }
+
+  // A section whose every title the filter hides loses its heading too. Run again after a tick or a
+  // save, so finishing the last title of a section under "Not seen yet" doesn't leave a bare heading.
+  function markEmpty(root) {
+    const filter = root.dataset.esFilter || 'all';
+    root.querySelectorAll('.es-section').forEach(section => {
+      const shown = Array.from(section.querySelectorAll('.es-item')).some(item => visible(item, filter));
+      section.classList.toggle('es-section--empty', !shown);
     });
   }
 
@@ -149,6 +162,7 @@
         if (button) button.setAttribute('aria-pressed', String(on));
       });
       count.show(done);
+      markEmpty(root);
     }
     root.addEventListener('click', event => {
       const button = event.target.closest('[data-es-tick]');
@@ -182,6 +196,8 @@
       const status = item && item.querySelector('[data-es-status]');
       if (!actions) return;
       const answer = button.dataset.esSave;
+      // Disabling a focused button drops focus to the page, so note it first and hand it on after.
+      const hadFocus = document.activeElement === button;
       actions.querySelectorAll('button').forEach(other => { other.disabled = true; });
       if (status) status.textContent = 'Adding…';
       let result;
@@ -196,14 +212,15 @@
       }
       if (!result.ok || !result.data) {
         actions.querySelectorAll('button').forEach(other => { other.disabled = false; });
+        if (hadFocus) button.focus();
         if (status) status.textContent = 'Could not add this one. Try again in a moment.';
         return;
       }
-      showSaved(item, actions, status, result.data, answer, count);
+      showSaved(item, actions, status, result.data, answer, count, hadFocus);
     });
   }
 
-  function showSaved(item, actions, status, data, answer, count) {
+  function showSaved(item, actions, status, data, answer, count, hadFocus) {
     const link = el('a', 'es-link', 'In your library');
     link.href = safeUrl(data.library_url) || '/';
     const created = data.state === 'created';
@@ -211,19 +228,24 @@
     const badge = el('span', `es-have${data.done ? ' es-have--done' : ''}`, label);
     const keep = Array.from(actions.querySelectorAll('a.es-link')).filter(anchor => anchor.textContent === 'Title page');
     const nodes = [badge, link];
+    let undo = null;
     if (created) {
-      const undo = el('button', 'es-btn es-btn--quiet', 'Undo');
+      undo = el('button', 'es-btn es-btn--quiet', 'Undo');
       undo.type = 'button';
+      undo.setAttribute('aria-label', `Undo adding ${data.title}`);
       undo.addEventListener('click', () => takeBack(item, actions, status, data, answer, count, undo));
       nodes.push(undo);
     }
     actions.replaceChildren(...nodes, ...keep);
+    if (hadFocus) (undo || link).focus();
     if (data.done) {
       item.dataset.esState = 'done';
       if (created) count.show(count.done + 1);
     } else {
       item.dataset.esState = 'tracked';
     }
+    const root = item.closest('.es-guide');
+    if (root) markEmpty(root);
     if (status) {
       status.textContent = created
         ? (data.done ? `Added "${data.title}" as ${count.word}.` : `Added "${data.title}" to your library for later.`)
@@ -232,6 +254,7 @@
   }
 
   async function takeBack(item, actions, status, data, answer, count, undo) {
+    const hadFocus = document.activeElement === undo;
     undo.disabled = true;
     let result;
     try {
@@ -241,6 +264,7 @@
     }
     if (!result.ok) {
       undo.disabled = false;
+      if (hadFocus) undo.focus();
       if (status) status.textContent = (result.data && typeof result.data.detail === 'string') ? result.data.detail : 'Could not undo that. Try again.';
       return;
     }
@@ -252,8 +276,11 @@
     want.dataset.esSave = 'want';
     const keep = Array.from(actions.querySelectorAll('a.es-link')).filter(anchor => anchor.textContent === 'Title page');
     actions.replaceChildren(seen, want, ...keep);
+    if (hadFocus) seen.focus();
     if (item.dataset.esState === 'done') count.show(Math.max(0, count.done - 1));
     delete item.dataset.esState;
+    const root = item.closest('.es-guide');
+    if (root) markEmpty(root);
     if (status) status.textContent = `Took "${data.title}" back out of your library.`;
   }
 
@@ -351,7 +378,7 @@
     }
   }
 
-  const api = { readTicks, writeTicks, visible, KEY };
+  const api = { readTicks, writeTicks, visible, markEmpty, KEY, LIST_PATH };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
