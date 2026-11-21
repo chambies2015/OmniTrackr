@@ -2,32 +2,35 @@
  *
  * Deliberately small:
  *  - Versioned files (anything under /static/ loaded with ?v=, plus the root
- *    /app.js and /auth.js) and the self-hosted fonts are cached
+ *    /app.js, /auth.js and /dashboard.css) and the self-hosted fonts are cached
  *    after first use, so repeat visits and the installed app open faster. When a
  *    new version of a file is cached, older versions of that same file are
  *    dropped, so the cache holds what the pages use today.
  *  - Pages always come from the network. Library pages are private, so no HTML
- *    is stored; when the network is down the visitor sees /offline instead.
+ *    is stored; when the network is down the visitor sees /offline instead
+ *    (stored with the app icon it shows), which reloads once the connection is back.
  *    Navigation preload starts that network request while the worker boots,
  *    which on phones saves the worker's start-up time on every page open.
  *  - API calls, sign-in and everything else are never touched.
  *  - Push messages show a notification; tapping it opens that page.
  */
-const VERSION = '20261101-speed-1';
+const VERSION = '20261118-app-1';
 // The static cache keeps its old name on purpose: renaming it would make every
 // member download every file again after this update.
 const STATIC_CACHE = 'omnitrackr-static-20261010-push-1';
 const OFFLINE_CACHE = `omnitrackr-offline-${VERSION}`;
 const OFFLINE_URL = '/offline';
+// The offline page shows the app icon, so it is stored with the page.
+const OFFLINE_ICON = '/static/icons/icon-192.png?v=20261003-pwa-1';
 // The dashboard alone uses about 80 files, so leave room for the public pages too.
 const MAX_STATIC_ENTRIES = 220;
 // Root scripts the server already marks immutable when they carry ?v=.
-const VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js']);
+const VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js', '/dashboard.css']);
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(OFFLINE_CACHE)
-      .then(cache => cache.add(new Request(OFFLINE_URL, { cache: 'reload' })))
+      .then(cache => cache.addAll([new Request(OFFLINE_URL, { cache: 'reload' }), OFFLINE_ICON]))
       .then(() => self.skipWaiting())
   );
 });
@@ -62,7 +65,7 @@ async function trimCache(cache, keep) {
 
 async function staticFirst(request) {
   const cache = await caches.open(STATIC_CACHE);
-  const cached = await cache.match(request);
+  const cached = (await cache.match(request)) || (await caches.match(request));
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok && response.type === 'basic') {

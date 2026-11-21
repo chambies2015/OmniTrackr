@@ -201,7 +201,7 @@ class TestCollections:
         assert published.json()["moderation_status"] == "approved"
         assert published.json()["readiness"]["discover_ready"] is True
         assert public_page.headers["x-robots-tag"] == "index, follow"
-        assert '<meta name="robots" content="index, follow">' in public_page.text
+        assert '<meta name="robots" content="index, follow, max-image-preview:large">' in public_page.text
         assert public_url in authenticated_client.get("/sitemap.xml").text
 
         unpublished = authenticated_client.patch(f"/collections/{collection_id}", json={"is_public": False})

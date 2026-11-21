@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import digest, for_you, models
+from .. import digest, for_you, models, picked_for_you
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..site_chrome import message_page
@@ -75,6 +75,86 @@ def get_first_week(response: Response, user=Depends(get_current_user), db: Sessi
     return for_you.first_week(db, user)
 
 
+# ---------------------------------------------------------------- picks from members' libraries
+
+class PickChoice(BaseModel):
+    id: str = Field(min_length=3, max_length=160)
+
+
+def _pick_key(choice: PickChoice):
+    key = picked_for_you.parse_pick_id(choice.id)
+    if key is None:
+        raise HTTPException(400, "That pick isn't valid. Reload your picks and try again.")
+    return key
+
+
+@router.get("/api/for-you/picks")
+def get_picks(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    _private(response)
+    return picked_for_you.picks_for(db, user.id)
+
+
+@router.post("/api/for-you/picks/add")
+def add_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Save a pick to the member's library, copying only public details (never anyone's rating or notes)."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    category = picked_for_you.KIND_TO_LIBRARY[kind]
+    model = for_you.LIBRARY[category][0]
+    for existing in db.query(model).filter(model.user_id == user.id, model.title.isnot(None)):
+        if title_slug_of(existing) == slug:
+            return {"state": "existing", "category": category, "item_id": existing.id, "title": existing.title}
+    payload = picked_for_you.entry_payload(db, kind, slug, year)
+    if payload is None or not payload.get("title"):
+        raise HTTPException(404, "That pick is no longer available. Reload your picks and try again.")
+    record = model(user_id=user.id, **payload)
+    for flag in ("watched", "played", "listened", "read"):
+        if hasattr(model, flag):
+            setattr(record, flag, False)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    picked_for_you.forget_member(user.id)
+    return {"state": "created", "category": category, "item_id": record.id, "title": record.title}
+
+
+def title_slug_of(item) -> str:
+    from ..title_pages import slugify
+    return slugify((item.title or "").strip())
+
+
+@router.post("/api/for-you/picks/dismiss")
+def dismiss_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """"Not for me": hide a pick for good. Nothing in the library changes."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    key = picked_for_you.pick_id(kind, slug, year)
+    exists = db.query(models.ForYouDismissal.id).filter_by(user_id=user.id, title_key=key).first()
+    if exists is None:
+        count = db.query(func.count(models.ForYouDismissal.id)).filter_by(user_id=user.id).scalar() or 0
+        if count >= picked_for_you.DISMISS_LIMIT:
+            oldest = (db.query(models.ForYouDismissal).filter_by(user_id=user.id)
+                      .order_by(models.ForYouDismissal.created_at, models.ForYouDismissal.id).first())
+            if oldest is not None:
+                db.delete(oldest)
+        db.add(models.ForYouDismissal(user_id=user.id, title_key=key))
+        db.commit()
+    picked_for_you.forget_member(user.id)
+    return {"state": "dismissed", "id": key}
+
+
+@router.post("/api/for-you/picks/restore")
+def restore_pick(choice: PickChoice, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Undo "Not for me"."""
+    _private(response)
+    kind, slug, year = _pick_key(choice)
+    key = picked_for_you.pick_id(kind, slug, year)
+    db.query(models.ForYouDismissal).filter_by(user_id=user.id, title_key=key).delete(synchronize_session=False)
+    db.commit()
+    picked_for_you.forget_member(user.id)
+    return {"state": "restored", "id": key}
+
+
 def _email_state(db: Session, user_id: int) -> dict:
     from ..announcements import opted_out
     subscription = digest.subscription_for(db, user_id)
@@ -89,7 +169,7 @@ def _email_state(db: Session, user_id: int) -> dict:
 class EmailPreference(BaseModel):
     enabled: bool | None = None
     updates: bool | None = None  # occasional product news and come-back check-ins
-    source: Literal["start", "first_week", "dashboard", "account"] | None = None  # which prompt was used (counted anonymously)
+    source: Literal["start", "first_week", "dashboard", "account", "home_card", "after_save", "preview"] | None = None  # which prompt was used (counted anonymously)
 
 
 @router.get("/api/for-you/email")
@@ -152,12 +232,22 @@ def unsubscribe(token: str = Query("", max_length=64), db: Session = Depends(get
 
 # ---------------------------------------------------------------- one-click opt-in from an email
 
-def _weekly_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False):
+# Where a signed opt-in link was opened from: a link in a product email, the copy a member sent
+# themselves, or the Yes button on their own preview page. Counted under digest.SOURCES.
+LINK_SOURCES = {"copy": "copy_email", "preview": "preview"}
+
+
+def _link_source(value: str) -> str:
+    return LINK_SOURCES.get(value, "email_link")
+
+
+def _weekly_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False, came_from: str = ""):
     page = message_page(title, heading, message, eyebrow="Weekly email",
                         actions=(("Open my library", "/"), ("Open Release Radar", "/release-radar")))
     if confirm:
+        tag = f"&from={came_from}" if came_from in LINK_SOURCES else ""
         # A real button, so link scanners in mail apps can't subscribe anyone by prefetching.
-        form = (f'<form method="post" action="/email/weekly/subscribe?token={escape(token, quote=True)}" class="site-message__actions">'
+        form = (f'<form method="post" action="/email/weekly/subscribe?token={escape(token, quote=True)}{tag}" class="site-message__actions">'
                 '<button class="site-btn site-btn--primary" type="submit">Yes, email me weekly</button></form>')
         page = page.replace('<div class="site-message__actions">', form + '<div class="site-message__actions">', 1)
     response = strict_html_response(page)
@@ -175,7 +265,8 @@ def _weekly_member(db: Session, token: str):
 
 
 @router.get("/email/weekly/subscribe", include_in_schema=False)
-def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+def weekly_subscribe_confirm(token: str = Query("", max_length=300), came_from: str = Query("", alias="from", max_length=16),
+                             db: Session = Depends(get_db)):
     user = _weekly_member(db, token)
     if user is None:
         return _weekly_page("Weekly email", "This link has expired",
@@ -187,16 +278,17 @@ def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session
     return _weekly_page("Weekly email", "Get a weekly heads-up?",
                         "Once a week, a short email lists new episodes of your shows, upcoming seasons, games and releases "
                         "connected to what you track, and what your friends added. Weeks with no news are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.",
-                        token=token, confirm=True)
+                        token=token, confirm=True, came_from=came_from)
 
 
 @router.post("/email/weekly/subscribe", include_in_schema=False)
-def weekly_subscribe(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+def weekly_subscribe(token: str = Query("", max_length=300), came_from: str = Query("", alias="from", max_length=16),
+                     db: Session = Depends(get_db)):
     user = _weekly_member(db, token)
     if user is None:
         return _weekly_page("Weekly email", "This link has expired",
                             "Turn on the weekly email from the \u201cComing up for you\u201d card in your library instead.")
-    digest.subscribe(db, user.id, source="email_link")
+    digest.subscribe(db, user.id, source=_link_source(came_from))
     return _weekly_page("Weekly email", "You're subscribed",
                         "Your first weekly email arrives within a day if something you track is coming up. "
                         "You can turn it off any time from any email or from your library.")
@@ -238,6 +330,16 @@ def weekly_preview(request: Request, user=Depends(get_current_user), db: Session
         else:
             banner = PREVIEW_BANNER.format(heading="This is what your weekly email would look like.",
                                            note="Quiet weeks are skipped.", verb="on")
+            if user.is_verified and user.email and digest.mail_configured():
+                # One tap from the sample itself. A signed link and a real POST, like the emailed opt-in.
+                action = escape(f"/email/weekly/subscribe?token={digest.subscribe_link_token(user.id)}&from=preview", quote=True)
+                banner = banner.replace(
+                    '</div></div>',
+                    f'<form method="post" action="{action}" style="margin:10px 0 0">'
+                    '<button type="submit" style="background:#7c3aed;color:#fff;border:0;border-radius:999px;padding:9px 16px;'
+                    'font-weight:700;font-size:14px;cursor:pointer">Yes, email me this every week</button></form></div></div>', 1)
+        from .. import weekly_preview
+        weekly_preview.count("preview_page")
         html = html.replace("<html>", f'<html lang="en"><head><title>{escape(subject)}</title></head>', 1)
         html = html.replace('<div style="max-width:560px;margin:0 auto;padding:24px">', banner +
                             '<div style="max-width:560px;margin:0 auto;padding:24px">', 1)

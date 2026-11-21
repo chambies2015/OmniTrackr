@@ -1,5 +1,6 @@
 // "If you liked" guides (/if-you-liked/<slug>). Members add a pick to their library
-// through POST /api/pick/add; visitors save it to the browser-only guest list, which
+// through POST /api/pick/add (or the endpoint the button names: the best-of lists save
+// manga, podcasts and audiobooks through /api/best-of/add); visitors save it to the browser-only guest list, which
 // guest-list.js toggles on the same click. This script only counts saves and handles
 // the member button.
 (function () {
@@ -44,7 +45,8 @@
     button.disabled = true;
     setStatus(button, 'Adding…');
     try {
-      const response = await fetch('/api/pick/add', {
+      const endpoint = button.dataset.likedEndpoint === '/api/best-of/add' ? '/api/best-of/add' : '/api/pick/add';
+      const response = await fetch(endpoint, {
         method: 'POST', credentials: 'same-origin', headers: authHeaders(),
         body: JSON.stringify({ id: button.dataset.likedAdd, source: 'if-you-liked' }),
       });

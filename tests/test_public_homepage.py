@@ -116,15 +116,16 @@ def test_landing_assets_are_versioned(client):
 
 def test_homepage_tours_member_features_and_free_tools(client):
     html = client.get("/").text
-    tour = html[html.index('id="features"'):html.index('lp-tryout')]
-    for heading in ("diary of every watch", "Your year as a story", "Badges in bronze", "Lists you build with friends",
-                    "Compare your taste", "Rank anything from S to D", "Goals and monthly challenges", "Bring your history"):
+    tour = html[html.index('id="how-it-works"'):html.index('<!--LATEST_GUIDES-->') if '<!--LATEST_GUIDES-->' in html else len(html)]
+    for heading in ("A diary of finishes and rewatches", "Your year as a story", "Badges in bronze", "Lists you build with friends",
+                    "Compare your taste", "Rank anything from S to D", "Goals and monthly challenges", "Bring your history from 13"):
         assert heading in tour, heading
     assert 'style="' not in tour  # the strict CSP blocks inline styles
-    tryout = html[html.index('lp-tryout'):]
+    tryout = html[html.index('id="free-tools"'):]
     tryout = tryout[:tryout.index("</section>")]
-    for href in ("/daily", "/tier-list", "/in-order", "/if-you-liked", "/pick", "/release-radar", "/reviews"):
+    for href in ("/daily", "/tier-list", "/in-order", "/if-you-liked", "/pick", "/tonight", "/binge-calculator", "/taste-quiz"):
         assert f'href="{href}"' in tryout, href
+    assert 'href="/release-radar"' in html and 'href="/reviews"' in html
     assert re.search(r'href="/(halloween|holidays)"', tryout)
     assert "<!--" not in tryout
 

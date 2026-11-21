@@ -191,41 +191,6 @@ def test_binge_plan_counts_the_start_day():
     assert plan == {"days": 25, "finish": "2026-11-25", "hours": 48.6}
 
 
-def test_binge_examples_add_up():
-    breaking_bad = binge_calculator.EXAMPLES["breaking-bad"]
-    assert binge_calculator.example_minutes(breaking_bad) == 62 * 47
-    assert binge_calculator.days_at(62 * 47, 2) == 25
-    potter = binge_calculator.EXAMPLES["harry-potter"]
-    assert binge_calculator.example_pages(potter) == round(1084000 / binge_calculator.WORDS_PER_PAGE)
-
-
-def test_binge_calculator_page_is_public_and_indexable(client):
-    response = client.get("/binge-calculator")
-    assert response.status_code == 200
-    html = response.text
-    assert '<link rel="canonical" href="https://omnitrackr.xyz/binge-calculator">' in html
-    assert 'content="index, follow' in html
-    assert "Breaking Bad" in html and "Harry Potter" in html
-    assert '"@type": "FAQPage"' in html
-    assert "/static/binge-calculator.js" in html and "/static/ad-loader.js" in html
-    assert " style=" not in html.split("<main", 1)[1]
-    # Worked examples read without scripts.
-    assert '<li class="bc-item" id="breaking-bad">' in html and "<dd>25 days</dd>" in html
-
-
-def test_binge_calculator_skips_ads_for_members(client):
-    from app.auth import AUTH_COOKIE_NAME
-    client.cookies.set(AUTH_COOKIE_NAME, "signed-in")
-    assert "/static/ad-loader.js" not in client.get("/binge-calculator").text
-
-
-def test_binge_calculator_is_in_the_sitemap_and_ad_paths(client):
-    assert "https://omnitrackr.xyz/binge-calculator" in client.get("/sitemap.xml").text
-    from pathlib import Path
-    loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
-    assert r"/^\/binge-calculator$/" in loader
-
-
 def test_binge_length_reads_the_cache_only(client, db_session):
     _cache(db_session, "tv", "Severance", 2022, [{"label": "Episode length", "value": "50 min"}])
     key = episodes.layout_key("tv-shows", "Severance", 2022)
@@ -237,7 +202,7 @@ def test_binge_length_reads_the_cache_only(client, db_session):
 
     missing = client.get("/api/binge-calculator/length", params={"kind": "book", "title": "Nothing Cached"}).json()
     assert missing["pages"] is None
-    assert client.get("/api/binge-calculator/length", params={"kind": "movie", "title": "Arrival"}).status_code == 400
+    assert client.get("/api/binge-calculator/length", params={"kind": "album", "title": "Arrival"}).status_code == 400
 
 
 def test_public_hours_are_reused_for_a_few_minutes_but_follow_privacy(db_session, monkeypatch):

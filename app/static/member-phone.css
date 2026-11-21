@@ -1,0 +1,157 @@
+/* Phones, member app (Nov 21 2026).
+   Loads after library-view.css and before a11y.css. Visual only: no data or behaviour
+   changes beyond what the dashboard scripts already do. */
+
+/* ---------- Nothing scrolls sideways ---------- */
+/* At 380px and below the page gutter is 10px (app-theme.css), not 16px. Rows that bleed to
+   the screen edge used -16px, which made the whole page 6-12px wider than the phone. */
+@media (max-width: 380px) {
+  body.app-shell .ffeed__filters { margin-inline: -10px; padding-inline: 10px; }
+  body.app-shell #statistics-tab .stats-head__jump { margin-inline: -10px; padding-inline: 10px; scroll-padding-inline: 10px; }
+}
+@media (max-width: 640px) {
+  /* The feed bar stacks on phones, but it still wrapped, so each row sized itself to its
+     widest content and the filter chips pushed the page wider. One line stretches to fit. */
+  body.app-shell .social-bar { flex-wrap: nowrap; }
+  body.app-shell .ffeed__filters { min-width: 0; }
+}
+@media (max-width: 480px) {
+  /* Friends / Following / Find people: three equal parts that can shrink, not three
+     fixed-width pills that pushed the page 56px wider at 320px. */
+  body.app-shell .social-switch { width: 100%; }
+  body.app-shell .social-switch__btn { flex: 1 1 0; gap: 4px; min-height: 44px; min-width: 0; padding: 0 8px; white-space: nowrap; }
+  body.app-shell .social-switch__count { flex: none; }
+
+  /* Journal month switcher: three buttons with a 100px minimum did not fit in 300px. */
+  body.app-shell .activity-diary__controls { width: 100%; }
+  body.app-shell .activity-diary__controls .action-btn { flex: 1 1 0; margin: 0; min-height: 44px; min-width: 0; padding-inline: 8px; }
+
+  /* "Recommendation Postcards" is one long word at 32px. */
+  body.app-shell .postcards-hero h2 { font-size: 1.7rem; overflow-wrap: anywhere; }
+  body.app-shell .postcards-hero > div { min-width: 0; }
+}
+
+/* ---------- Add anything ---------- */
+@media (max-width: 680px) {
+  /* The intro paragraph pushed the first match below the fold of a 667px screen. */
+  body.app-shell .quick-capture-header { padding: 14px 16px 12px; }
+  body.app-shell .quick-capture-header h2 { font-size: 1.55rem; margin: 2px 0 0; }
+  body.app-shell .quick-capture-header p:not(.quick-capture-eyebrow) { display: none; }
+  body.app-shell .quick-capture-header .modal-close { height: 44px; min-height: 44px; min-width: 44px; width: 44px; }
+  body.app-shell .quick-capture-body { display: flex; flex-direction: column; padding: 14px 16px 24px; }
+  /* The body scrolls; its parts keep their height instead of squeezing into each other. */
+  body.app-shell .quick-capture-body > * { flex-shrink: 0; }
+
+  /* Media type chips: one swipeable row of readable pills. They shrank into
+     circles with the emoji stacked over the word. */
+  body.app-shell .quick-capture-controls { gap: 10px; margin-top: 12px; width: 100%; }
+  body.app-shell .quick-capture-categories { margin-inline: -16px; padding: 0 16px 4px; scroll-padding-inline: 16px; scrollbar-width: none; width: calc(100% + 32px); }
+  body.app-shell .quick-capture-categories::-webkit-scrollbar { display: none; }
+  body.app-shell .quick-capture-categories button { flex: none; font-size: .82rem; min-height: 40px; padding: 0 14px; white-space: nowrap; }
+
+  /* "Add as" sits on one row: label, then the choice. */
+  body.app-shell .quick-capture-intent { align-items: center; display: flex; flex-direction: row; font-size: .82rem; gap: 10px; width: 100%; }
+  body.app-shell .quick-capture-intent > span { flex: none; }
+  body.app-shell .quick-capture-intent select { flex: 1 1 auto; margin: 0; min-height: 44px; min-width: 0; width: auto; }
+
+  /* Matches come straight after the search. Typing a title yourself moves under them,
+     where you look when nothing matched. */
+  body.app-shell .quick-capture-shared { order: -1; }
+  body.app-shell .quick-capture-status { order: 1; padding-top: 12px; }
+  body.app-shell .quick-capture-results { order: 2; }
+  body.app-shell .quick-capture-manual { border-bottom: 0; border-top: 1px solid var(--border); margin-top: 18px; order: 3; padding: 14px 0 0; }
+  body.app-shell .quick-capture-manual span { font-size: .8rem; }
+  body.app-shell .quick-capture-manual button { margin-left: -8px; min-height: 44px; padding: 8px; }
+
+  /* One-tap cards (dashboard/lazy/quick-capture.js): bigger cover, readable details. */
+  body.app-shell .quick-capture-result.quick-capture-result--shared { gap: 12px; grid-template-columns: 48px minmax(0, 1fr) auto; padding: 10px; }
+  body.app-shell .quick-capture-result--shared .quick-capture-result__image { height: 66px; width: 48px; }
+  body.app-shell .quick-capture-result__copy strong { font-size: .95rem; }
+  body.app-shell .quick-capture-result__copy small { font-size: .8rem; }
+  body.app-shell .quick-capture-result__buttons button { font-size: .85rem; }
+  body.app-shell .quick-capture-group h3 { font-size: .9rem; }
+}
+
+/* ---------- Taller taps ---------- */
+@media (max-width: 760px) {
+  /* Shelf cards: the title link was 21px tall and the rating button 28px. Padding with a
+     matching negative margin makes them easier to hit without moving anything. */
+  body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="title"] a {
+    display: inline-block;
+    margin-block: -8px;
+    padding-block: 8px;
+  }
+  body.app-shell.library-view-shelf .library-section:not(#lv) .library-table .library-quick-rate,
+  body.app-shell .library-section:not(#lv) .library-table .library-quick-rate { margin-block: -4px; min-height: 36px; }
+
+  /* Notifications: "See your badges" and the dismiss cross. */
+  body.app-shell .notification-action-btn { align-items: center; display: inline-flex; min-height: 40px; }
+  body.app-shell .notification-dismiss { min-height: 40px; min-width: 40px; }
+
+  /* Friends feed: names and titles are links. */
+  body.app-shell .ffeed-card__name { margin-block: -8px; padding-block: 8px; }
+  body.app-shell a.ffeed-card__title { display: inline-block; margin-block: -6px; padding-block: 6px; }
+
+  /* Journal: "Open library" sat 9px from "Remove entry", both 25px tall. */
+  body.app-shell .activity-entry__actions { gap: 4px 16px; }
+  body.app-shell :is(.activity-entry__open, .activity-entry__delete) { font-size: .84rem; min-height: 40px; padding: 8px 4px; }
+  body.app-shell .activity-entry__open { margin-left: -4px; }
+
+  /* Home welcome strip: "This week: 6 updates from friends". */
+  body.app-shell .home-hero__news-link { min-height: 40px; }
+
+  /* Statistics: "How this is counted" and the Tasteprint shelf picks. */
+  body.app-shell .time-spent summary { padding-block: 10px; }
+  body.app-shell .tasteprint__category { font-size: .86rem; min-height: 40px; padding: 8px 13px; }
+  body.app-shell .tasteprint__category small { font-size: .78rem; }
+  body.app-shell .tasteprint__name-choice { font-size: .86rem; min-height: 40px; }
+
+  /* Tasteprint share card: the 13px "include this" boxes in each insight's corner. */
+  body.app-shell .tasteprint-card__insight input { height: 22px; right: 8px; top: 8px; width: 22px; }
+  body.app-shell .tasteprint-card__insight label { padding-right: 26px; }
+
+  /* Settings: one-line checkbox rows were 22px tall. */
+  body.app-shell .profile-settings__check { min-height: 40px; }
+  body.app-shell .profile-settings__check input { flex: none; height: 20px; width: 20px; }
+
+  /* Finish moment: "This is a personal favorite". */
+  body.app-shell .completion-ritual-modal__favorite { align-items: center; display: flex; gap: 10px; min-height: 44px; }
+  body.app-shell .completion-ritual-modal__favorite input { flex: none; height: 20px; margin: 0; width: 20px; }
+
+  /* Lone links at the end of a card, and the footer logo. */
+  body.app-shell :is(.social-talk__link, .activity-recap__year a) { display: inline-block; margin-block: -10px; padding-block: 10px; }
+  body.app-shell .app-footer__brand { margin-block: -9px; padding-block: 9px; }
+
+  /* Postcards: the nine shelf checkboxes. */
+  body.app-shell #recommendationRequestForm label:has(> input[type="checkbox"]) { align-items: center; display: inline-flex; gap: 8px; min-height: 40px; }
+
+  /* Editing a library entry: real-size checkboxes. */
+  body.app-shell .library-table tr:has(input, textarea, select) input[type="checkbox"] { accent-color: var(--accent-solid, #7c3aed); height: 26px; margin: 4px 0; width: 26px; }
+}
+
+/* ---------- Editing a library entry on a phone ---------- */
+/* Save and Cancel sit at the bottom of a form two screens long; keep them in reach
+   above the bottom bar while the entry is open. */
+@media (max-width: 760px) {
+  body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] {
+    background: var(--card-bg);
+    border-top: 1px solid var(--border);
+    bottom: 0;
+    box-shadow: 0 -10px 24px -14px rgba(0, 0, 0, .5);
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    position: sticky;
+    z-index: 4;
+  }
+  body.has-app-dock .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] .action-btn { flex: 1 1 0; margin: 0; min-height: 46px; }
+}
+
+/* ---------- Settings: Copy link and Copy code ---------- */
+/* The two pill buttons beside the profile link and the supporter code were 30px tall
+   (Nov 21 sweep). Their row is a wrapping flex line, so a taller button only makes that
+   row taller; nothing overlaps. */
+@media (max-width: 760px) {
+  body.app-shell .profile-settings__copy { align-items: center; display: inline-flex; font-size: .86rem; min-height: 44px; padding: 0 16px; }
+}

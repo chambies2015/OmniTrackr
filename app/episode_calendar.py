@@ -218,8 +218,8 @@ async def refresh_show(db: Session, client, category: str, title: str, year: Opt
         data = await FETCHERS[category](client, " ".join(title.split()), year, today)
     except asyncio.CancelledError:
         raise
-    except Exception:
-        await run_in_threadpool(title_metadata.store, db, key, None, "error")
+    except Exception as error:
+        await run_in_threadpool(title_metadata.store, db, key, title_metadata.problem(error), "error")
         return
     await run_in_threadpool(title_metadata.store, db, key, data, _status_of(data))
 
@@ -299,9 +299,13 @@ def _event(category: str, item, schedule: dict, episode: dict, link: str) -> dic
     return event
 
 
-def _member_episodes(db: Session, user: models.User, today: date):
-    """(category, item, schedule, episode, link) for a member's unfinished shows, from the cache only."""
-    shows = member_shows(db, user.id)
+def _member_episodes(db: Session, user: models.User, today: date, shows: Optional[list] = None):
+    """(category, item, schedule, episode, link) for a member's unfinished shows, from the cache only.
+
+    ``shows`` is member_shows() when the caller already read it (the home card does, for the stale check too).
+    """
+    if shows is None:
+        shows = member_shows(db, user.id)
     schedules = cached_schedules(db, [airing_key(category, item.title, item.year) for category, item in shows])
     base = app_url()
     for category, item in shows:
@@ -405,10 +409,15 @@ def _fetched(db: Session, keys: list[str]) -> dict[str, tuple[str, datetime]]:
     return found
 
 
-def _stale_shows(db: Session, user_ids: list[int]) -> list[tuple[str, str, Optional[int]]]:
+def _stale_shows(db: Session, user_ids: list[int],
+                 known: Optional[dict[int, list]] = None) -> list[tuple[str, str, Optional[int]]]:
+    """Shows of these members whose cached schedule is missing or old. ``known`` maps a user id to
+    member_shows() already read for them, so a caller that has the list doesn't load it twice."""
     shows = {}
+    known = known or {}
     for user_id in user_ids:
-        for category, item in member_shows(db, user_id):
+        member = known[user_id] if user_id in known else member_shows(db, user_id)
+        for category, item in member:
             shows.setdefault(airing_key(category, item.title, item.year), (category, item.title, item.year))
     # One cache read per 500 shows, not one per show: the sweep covers every subscriber every half hour.
     fetched = _fetched(db, list(shows))

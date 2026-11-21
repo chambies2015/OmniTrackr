@@ -22,6 +22,7 @@ from ..site_chrome import apply_site_chrome, view_switch
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter()
+SHOP_LINK_CATEGORIES = {"movies", "games"}
 
 CATEGORY_MODELS = {
     "movies": models.Movie,
@@ -76,7 +77,9 @@ def _render(title: str, description: str, canonical: str, content: str, *, index
                              .replace("<!--SITE_NAV:release-radar-->", f"<!--SITE_NAV:{nav}-->", 1))
     extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' + head
     if refresh:
-        extra_head += '<meta http-equiv="refresh" content="45">'
+        # Not <meta http-equiv="refresh">: a timed reload nobody can stop fails WCAG 2.2.1.
+        # release-radar.js checks again after 45 s and puts a "Stop checking" button beside the status.
+        extra_head += '<meta name="omnitrackr-recheck" content="45">'
     structured_html = ""
     if structured:
         payload = json.dumps(structured, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
@@ -190,7 +193,9 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
         if item.get("source_url") else ""
     )
     creator = (item["save"].get("director") or "") if category == "movies" else ""
-    buy = affiliate.links_html(category, item["title"], creator)
+    # A TV or anime premiere is an episode on a channel or service, not something to buy, so a
+    # shop link there is noise next to every card. Films and games can be pre-ordered or bought.
+    buy = affiliate.links_html(category, item["title"], creator) if category in SHOP_LINK_CATEGORIES else ""
     search = " ".join([item["title"], item.get("alt_title", ""), *item["genres"], *item["platforms"], *item["details"]])
     add = (
         f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'
@@ -253,7 +258,7 @@ def _status_message(entry: Optional[dict], category: str) -> str:
     label = radar.CATEGORY_LABELS[category].lower()
     if entry is None:
         return (f'<div class="radar-status" role="status"><strong>Gathering {escape(label)} right now.</strong> '
-                'This page refreshes itself in under a minute, or reload whenever you like.</div>')
+                'This page checks again in under a minute, or reload whenever you like.</div>')
     if entry.get("error") == "unavailable":
         return f'<div class="radar-status" role="status">{escape(radar.CATEGORY_LABELS[category])} listings are not available right now.</div>'
     if entry.get("error") and not entry.get("items"):
@@ -475,7 +480,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         + _guide_note()
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
-    indexable = total >= MIN_INDEXABLE_ITEMS
+    indexable = radar.INDEX_OVERVIEW and total >= MIN_INDEXABLE_ITEMS
     title = f"{windows['movies'].label} releases: movies, TV, anime and games"
     description = "Upcoming movie releases, TV premieres, this season's anime and new video games in one calendar, with one-click tracking."
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])

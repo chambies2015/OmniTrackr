@@ -7,7 +7,7 @@ import os
 from urllib.parse import urlsplit
 
 from starlette.concurrency import run_in_threadpool
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
 
@@ -48,33 +48,54 @@ NOINDEX_PREFIXES = (
     "/year-in-review",
 )
 PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
-PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png|/widgets|/widget/(?:stats|recent|favorites)\.png|/match(?:/card\.png)?)?/?$")
+PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png|/widgets|/widget/(?:stats|recent|favorites|now|signature|badge)\.(?:png|svg)|/match(?:/card\.png)?)?/?$")
 # Shared Year in Review links carry a random token that could contain a scanned word.
 PUBLIC_RECAP_PATH = re.compile(r"^/recap/[A-Za-z0-9_-]{8,32}(?:/(?:card|story)\.png)?/?$")
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+# The middlewares below are plain ASGI classes rather than BaseHTTPMiddleware: each
+# BaseHTTPMiddleware layer runs the rest of the app in a separate task with its own
+# streams, which cost about 0.3 ms on every request (the home screen alone makes ~40).
+
+
+class SecurityHeadersMiddleware:
     """Add security headers to all responses."""
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        request = Request(scope)
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                message.setdefault("headers", [])
+                self.apply(request, message["status"], MutableHeaders(scope=message))
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+    @staticmethod
+    def apply(request: Request, status_code: int, headers: MutableHeaders) -> None:
+        headers["X-Content-Type-Options"] = "nosniff"
+        headers["X-Frame-Options"] = "DENY"
+        headers["X-XSS-Protection"] = "1; mode=block"
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
-        
-        if "Content-Security-Policy" not in response.headers:
-            response.headers["Content-Security-Policy"] = build_csp()
+        if "Content-Security-Policy" not in headers:
+            headers["Content-Security-Policy"] = build_csp()
         
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         
         if request.url.path.startswith("/auth/"):
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-            response.headers["Pragma"] = "no-cache"
-            response.headers["Expires"] = "0"
+            headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            headers["Pragma"] = "no-cache"
+            headers["Expires"] = "0"
 
         if request.url.path.startswith((
             "/account/",
@@ -102,7 +123,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "/tv-shows/",
             "/video-games/",
         )):
-            response.headers["Cache-Control"] = "private, no-store"
+            headers["Cache-Control"] = "private, no-store"
 
         review_path = request.url.path.rstrip("/")
         review_save_api = review_path.startswith("/api/public/reviews/") and review_path.endswith(("/save-preview", "/save"))
@@ -110,27 +131,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         collection_save = review_path.startswith("/collections/public/") and review_path.endswith(("/save-preview", "/save", "/copy"))
         if review_save_api or review_save_page or collection_save:
             # Include authentication and validation failures before a route runs.
-            response.headers["Cache-Control"] = "private, no-store"
-            response.headers["X-Robots-Tag"] = "noindex, follow"
+            headers["Cache-Control"] = "private, no-store"
+            headers["X-Robots-Tag"] = "noindex, follow"
 
         path = request.url.path
         if (path.startswith("/static/") and not path.startswith("/static/profile_pictures/")
-                and response.status_code == 200 and "cache-control" not in response.headers):
+                and status_code == 200 and "cache-control" not in headers):
             # Versioned assets (?v=...) never change, so browsers can keep them for a year;
             # unversioned ones are rechecked daily.
             # Font files are never edited in place (a new cut gets a new file name).
             versioned = "v=" in request.url.query or path.startswith("/static/fonts/")
-            response.headers["Cache-Control"] = (
+            headers["Cache-Control"] = (
                 "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
             )
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
-            response.headers["X-Robots-Tag"] = "noindex, nofollow"
-
-        return response
+            headers["X-Robots-Tag"] = "noindex, nofollow"
 
 
-class BotFilterMiddleware(BaseHTTPMiddleware):
+class BotFilterMiddleware:
     """Filter out obvious bot/scanner requests."""
     
     # Suspicious paths that bots commonly scan
@@ -231,7 +250,21 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         "dirbuster", "gobuster", "dirb", "wfuzz",
     ]
     
-    async def dispatch(self, request: Request, call_next):
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        response = self.blocked_response(Request(scope))
+        if response is not None:
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+    def blocked_response(self, request: Request):
+        """A 404 for an obvious scanner request, or None to let the request through."""
         path = request.url.path.lower()
         user_agent = request.headers.get("user-agent", "").lower()
         client_ip = request.client.host if request.client else "unknown"
@@ -242,11 +275,11 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         reason = ""
         
         if path in PUBLIC_WELL_KNOWN_PATHS:
-            return await call_next(request)
+            return None
         if PUBLIC_PROFILE_PATH.match(request.url.path) or PUBLIC_RECAP_PATH.match(request.url.path):
             # /u/<username> pages: a username such as "admin_fan" would otherwise
             # trip the substring scan. The route validates the name itself.
-            return await call_next(request)
+            return None
 
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
            any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
@@ -269,8 +302,7 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
                 status_code=404,
                 headers={"X-Robots-Tag": "noindex, nofollow"}
             )
-        
-        return await call_next(request)
+        return None
 
 
 
@@ -294,11 +326,23 @@ def _browser_origin(value: str, *, referer: bool = False) -> str | None:
         return None
 
 
-class CSRFProtectionMiddleware(BaseHTTPMiddleware):
+class CSRFProtectionMiddleware:
     """Reject browser writes from untrusted sites; native API clients still work."""
-    async def dispatch(self, request: Request, call_next):
-        if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
-            return await call_next(request)
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] in ("GET", "HEAD", "OPTIONS", "TRACE"):
+            await self.app(scope, receive, send)
+            return
+        if not self.allowed(Request(scope)):
+            response = StarletteResponse('{"detail":"Cross-site request rejected"}', status_code=403, media_type="application/json")
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    def allowed(request: Request) -> bool:
         origin = request.headers.get("origin")
         referer = request.headers.get("referer")
         trusted = {_browser_origin(str(request.base_url))}
@@ -316,9 +360,7 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             allowed = _browser_origin(referer, referer=True) in trusted
         else:
             allowed = request.headers.get("sec-fetch-site", "").lower() != "cross-site"
-        if not allowed:
-            return StarletteResponse('{"detail":"Cross-site request rejected"}', status_code=403, media_type="application/json")
-        return await call_next(request)
+        return allowed
 
 
 def _protected_upload_path(path: str) -> bool:
@@ -411,3 +453,39 @@ class RequestBodyLimitMiddleware:
             pass
         if exceeded:
             await response(scope, receive, send)
+
+
+class RateLimitMiddleware:
+    """slowapi's middleware, minus a route walk on every request when it has nothing to check.
+
+    SlowAPIMiddleware looks up the matching route for each request by trying every route
+    in the app (about 700 pattern matches here, roughly half of a small request's
+    server time) so it can apply app-wide default limits. OmniTrackr sets no default or
+    application limits: every limit is a @limiter.limit on its own route, and those
+    decorators check themselves when the route runs. With nothing app-wide to apply the
+    lookup can only end in "let it through", so this skips it. If default or
+    application limits are ever configured, requests go through slowapi's own
+    middleware exactly as before.
+    """
+
+    def __init__(self, app):
+        from slowapi.middleware import SlowAPIMiddleware
+
+        self.app = app
+        self.full = SlowAPIMiddleware(app)
+
+    @staticmethod
+    def has_global_limits(limiter) -> bool:
+        return bool(
+            getattr(limiter, "_default_limits", None)
+            or getattr(limiter, "_application_limits", None)
+            or getattr(limiter, "_in_memory_fallback", None)
+        )
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            limiter = getattr(scope["app"].state, "limiter", None)
+            if limiter is None or not limiter.enabled or not self.has_global_limits(limiter):
+                await self.app(scope, receive, send)
+                return
+        await self.full(scope, receive, send)

@@ -1,7 +1,7 @@
 """Taste Match: compare libraries with a friend, privacy-aware, and save a friend's favorite."""
 from datetime import datetime
 
-from app import crud, models, taste_match
+from app import dashboard_assets, crud, models, taste_match
 from app.auth import AUTH_COOKIE_NAME
 from tests.test_title_pages import member
 
@@ -162,5 +162,7 @@ def test_dashboard_wires_the_panel(client):
     client.cookies.set(AUTH_COOKIE_NAME, "x")
     page = client.get("/").text
     assert 'id="friendTasteMatch"' in page
-    assert "/static/taste-match.js?v=" in page and "/static/taste-match.css?v=" in page
+    assert "/static/taste-match.js?v=" in page
+    # Signed-in pages get their stylesheets as one bundled file (app/dashboard_assets.py).
+    assert any(href.startswith("/static/taste-match.css?v=") for href in dashboard_assets.page_stylesheets(page))
     assert client.get("/static/taste-match.js").status_code == 200

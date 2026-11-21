@@ -21,9 +21,11 @@ import asyncio
 import json
 import os
 import re
+import time
 import unicodedata
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -44,7 +46,7 @@ MATCHER_UPDATED = datetime(2026, 10, 31)
 WIKIDATA_HINTS = {
     "movie": ("film",),
     "tv": ("television series", "tv series", "television program", "web series", "miniseries", "sitcom", "drama series"),
-    "anime": ("anime", "animated television series", "animated series"),
+    "anime": ("anime", "animated television series", "animated series"),  # films: see _describes
     "game": ("video game",),
     "book": ("novel", "book", "novella", "memoir", "short story collection", "non-fiction"),
     "manga": ("manga", "manhwa", "manhua", "webtoon", "comic series", "comic book series"),
@@ -56,7 +58,7 @@ WIKIDATA_HINTS = {
 WIKIDATA_EXCLUDE = {
     "movie": ("film series", "franchise", "soundtrack", "novel", "video game"),
     "tv": ("episode", "season of"),
-    "anime": ("episode", "season of", "film"),
+    "anime": ("episode", "season of", "film"),  # except anime films, see _describes
     "game": ("series", "franchise", "soundtrack"),
     "book": ("film", "series of", "television"),
     "manga": ("anime", "film", "episode", "chapter", "television", "video game"),
@@ -98,6 +100,16 @@ def _https(url) -> Optional[str]:
     return None
 
 
+def _minutes(number: float, unit) -> str:
+    """A Wikidata duration as "N min". Albums are often stored in seconds (OK Computer: 3201)."""
+    unit = str(unit or "")
+    if unit.endswith("/Q11574"):
+        number /= 60
+    elif unit.endswith("/Q25235"):
+        number *= 60
+    return f"{round(number)} min"
+
+
 def _strip_html(text: Optional[str]) -> str:
     if not text:
         return ""
@@ -128,10 +140,38 @@ class SourceUnavailable(Exception):
     """A source was rate limited or down, which says nothing about whether it knows the title."""
 
 
+# A source that answered 429 is left alone until its Retry-After passes. Wikimedia counts
+# every call made while it is limiting us, so asking again straight away only extends the
+# wait, and one title page makes several calls in a row.
+_COOLDOWN: dict[str, float] = {}
+COOLDOWN_DEFAULT = 30.0
+COOLDOWN_MAX = 300.0
+
+
+def clear_cooldowns() -> None:
+    _COOLDOWN.clear()
+
+
+def _retry_after(response) -> float:
+    headers = getattr(response, "headers", None) or {}
+    try:
+        seconds = float(headers.get("retry-after") or headers.get("Retry-After") or COOLDOWN_DEFAULT)
+    except (TypeError, ValueError):
+        seconds = COOLDOWN_DEFAULT  # An HTTP date: rare enough that the default will do.
+    return min(max(seconds, 1.0), COOLDOWN_MAX)
+
+
 async def _get_json(client, url: str, params: Optional[dict] = None):
+    host = urlparse(url).netloc
+    waiting = _COOLDOWN.get(host, 0.0) - time.monotonic()
+    if waiting > 0:
+        raise SourceUnavailable(f"{host} asked us to wait {round(waiting)} more seconds")
     response = await client.get(url, params=params, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
-    if response.status_code == 429 or response.status_code >= 500:
-        raise SourceUnavailable(f"{url} answered {response.status_code}")
+    if response.status_code == 429:
+        _COOLDOWN[host] = time.monotonic() + _retry_after(response)
+        raise SourceUnavailable(f"{host} answered 429 (rate limited)")
+    if response.status_code >= 500:
+        raise SourceUnavailable(f"{host} answered {response.status_code}")
     if response.status_code != 200:
         return None
     return response.json()
@@ -156,12 +196,21 @@ def _years_in(text: str) -> set[int]:
 def _describes(category: str, description: str, year: Optional[int]) -> bool:
     """Whether a Wikidata or Wikipedia short description fits this kind of title (and year, when it names one)."""
     description = (description or "").casefold()
-    if not any(hint in description for hint in WIKIDATA_HINTS[category]):
+    if category == "anime" and _anime_film(description):
+        pass  # Members track Your Name. and Spirited Away as anime; Wikidata calls them animated films.
+    elif not any(hint in description for hint in WIKIDATA_HINTS[category]):
         return False
-    if any(bad in description for bad in WIKIDATA_EXCLUDE[category]):
+    elif any(bad in description for bad in WIKIDATA_EXCLUDE[category]):
         return False
     years = _years_in(description)
     return not (year and years and not any(abs(found - year) <= 1 for found in years))
+
+
+def _anime_film(description: str) -> bool:
+    """A Japanese animated film ("2016 Japanese animated film"), not a film series or a live-action remake."""
+    if "film series" in description or "live-action" in description or "live action" in description:
+        return False
+    return "anime film" in description or ("animated film" in description and "japanese" in description)
 
 
 async def _wikidata_find(client, category: str, title: str, year: Optional[int]) -> Optional[str]:
@@ -192,7 +241,7 @@ async def _wikidata_find(client, category: str, title: str, year: Optional[int])
 WIKIPEDIA_QUALIFIERS = {
     "movie": ("{year} film", "film"),
     "tv": ("{year} TV series", "TV series"),
-    "anime": ("{year} TV series", "TV series"),
+    "anime": ("{year} TV series", "TV series", "{year} film", "film"),
     "game": ("{year} video game", "video game"),
     "book": ("novel",),
     "audiobook": ("novel",),
@@ -207,13 +256,11 @@ async def _wikipedia_find(client, category: str, title: str, year: Optional[int]
 
     "Superman" brings back fifty comics, characters and older films before the 2025 one.
     """
-    from urllib.parse import quote
     for qualifier in WIKIPEDIA_QUALIFIERS.get(category, ()):
         if "{year}" in qualifier and not year:
             continue
         page = f"{title} ({qualifier.format(year=year)})"
-        data = await _get_json(client, "https://en.wikipedia.org/api/rest_v1/page/summary/"
-                                       + quote(page.replace(" ", "_"), safe=""))
+        data = await _get_json(client, _summary_url(page))
         if not data or data.get("type") != "standard" or not data.get("wikibase_item"):
             continue
         if not _title_matches(title, (data.get("title") or "").rpartition(" (")[0]):
@@ -221,6 +268,37 @@ async def _wikipedia_find(client, category: str, title: str, year: Optional[int]
         if _describes(category, data.get("description") or "", year):
             return data["wikibase_item"]
     return None
+
+
+def _summary_url(page_title: str) -> str:
+    from urllib.parse import quote
+    return "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(page_title.replace(" ", "_"), safe="")
+
+
+def _article_name(page_title: str) -> str:
+    """ "Superman (2025 film)" -> "Superman"; a title without a qualifier stays as it is."""
+    page_title = page_title or ""
+    return page_title.rpartition(" (")[0] if page_title.endswith(")") and " (" in page_title else page_title
+
+
+async def wikipedia_article(client, category: str, title: str, year: Optional[int]) -> dict:
+    """The title's Wikipedia overview found without Wikidata, for when Wikidata is rate limiting us.
+
+    Tries the plain article first, then the disambiguated names ("Title (2025 film)"). The
+    article's short description has to fit the kind of title and its year, as it does for
+    Wikidata matches.
+    """
+    pages = [title] + [f"{title} ({qualifier.format(year=year)})" for qualifier in WIKIPEDIA_QUALIFIERS.get(category, ())
+                       if year or "{year}" not in qualifier]
+    for page in pages:
+        data = await _get_json(client, _summary_url(page))
+        if not data or data.get("type") != "standard" or not data.get("extract"):
+            continue
+        if not _title_matches(title, _article_name(data.get("title") or "")):
+            continue
+        if _describes(category, data.get("description") or "", year):
+            return _summary_from(data, data.get("title") or page)
+    return {}
 
 
 def _claims(entity: dict, prop: str) -> list:
@@ -304,7 +382,7 @@ async def wikidata_facts(client, category: str, qid: str) -> dict:
                     number = float(value["amount"])
                 except ValueError:
                     continue
-                values.append(f"{int(number)} min" if kind == "minutes" else str(int(number)))
+                values.append(_minutes(number, value.get("unit")) if kind == "minutes" else str(int(number)))
         if values:
             raw_facts.append((label, kind, values))
 
@@ -355,10 +433,14 @@ async def wikidata_facts(client, category: str, qid: str) -> dict:
 
 
 async def wikipedia_summary(client, page_title: str) -> dict:
-    from urllib.parse import quote
-    data = await _get_json(client, f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(page_title.replace(' ', '_'), safe='')}")
+    data = await _get_json(client, _summary_url(page_title))
     if not data or data.get("type") == "disambiguation" or not data.get("extract"):
         return {}
+    return _summary_from(data, page_title)
+
+
+def _summary_from(data: dict, page_title: str) -> dict:
+    from urllib.parse import quote
     return {
         "description": data["extract"].strip(),
         "short_description": data.get("description") or "",
@@ -680,12 +762,18 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
 async def _fetch_once(client, category: str, title: str, year: Optional[int], creator: Optional[str],
                       troubles: list) -> dict:
     async def wiki_part():
-        qid = await _wikidata_find(client, category, title, year)
-        if not qid:
-            qid = await _wikipedia_find(client, category, title, year)
-        if not qid:
-            return {}
-        facts = await wikidata_facts(client, category, qid)
+        try:
+            qid = await _wikidata_find(client, category, title, year)
+            if not qid:
+                qid = await _wikipedia_find(client, category, title, year)
+            if not qid:
+                return {}
+            facts = await wikidata_facts(client, category, qid)
+        except Exception as error:  # Rate limited (SourceUnavailable), timed out or unreachable.
+            # Wikidata is rate limiting us. Wikipedia answers separately, so the page can
+            # still have its overview; the facts follow when the partial result is refreshed.
+            troubles.append(error)
+            return {"wikipedia": await wikipedia_article(client, category, title, year)}
         summary = await wikipedia_summary(client, facts["wikipedia_title"]) if facts.get("wikipedia_title") else {}
         return {"wikidata": facts, "wikipedia": summary}
 
@@ -799,6 +887,20 @@ def cached(db: Session, key: str, freshness: Optional[dict] = None) -> tuple[Opt
     return data, fresh
 
 
+def problem(error: Optional[BaseException], wait: Optional[float] = None) -> dict:
+    """What a failed or empty lookup saves in place of facts, so Site stats can say why.
+
+    Only "ok" rows are ever read as facts; every reader filters on status first.
+    """
+    if error is None:
+        reason = "No source had this title"
+    elif isinstance(error, asyncio.TimeoutError):
+        reason = f"Sources took longer than {wait:g} s" if wait else "Sources took too long"
+    else:
+        reason = (str(error) or type(error).__name__)
+    return {"reason": " ".join(reason.split())[:200]}
+
+
 def store(db: Session, key: str, data: Optional[dict], status: str) -> None:
     row = db.query(models.TitleMetadata).filter_by(key=key).first()
     payload = json.dumps(data) if data else None
@@ -842,11 +944,11 @@ async def get_or_fetch(db: Session, client, category: str, normalized_title: str
         await run_in_threadpool(db.rollback)
         try:
             result = await asyncio.wait_for(fetch(client, category, display_title, year, creator), timeout=wait)
-            await run_in_threadpool(store, db, key, result or None, "ok" if result else "miss")
+            await run_in_threadpool(store, db, key, result or problem(None), "ok" if result else "miss")
             return result or data
-        except Exception:
+        except Exception as error:
             # Includes SourceUnavailable: a rate-limited source is tried again in hours, not days.
-            await run_in_threadpool(store, db, key, None, "error")
+            await run_in_threadpool(store, db, key, problem(error, wait), "error")
             return data
         finally:
             _locks.pop(key, None)

@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
+from .. import affiliate, models, pick, review_spoilers, supporters, text_limits, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -27,8 +27,9 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261031-sweep-1"
-JS_VERSION = "20261025-title-refresh-1"
+CSS_VERSION = "20261103-where-1"
+JS_VERSION = "20261121-text-limits-1"
+DETAIL_CSS_VERSION = "20261120-a11y-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
@@ -37,7 +38,7 @@ KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "
                 "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
-FRIEND_RECS_VERSION = "20261030-audiobooks-1"
+FRIEND_RECS_VERSION = "20261121-sweep-f-1"
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read",
                   "manga": "read", "podcast": "heard", "audiobook": "heard"}
@@ -115,6 +116,32 @@ def _genres(metadata: dict) -> list[str]:
     return cleaned[:6]
 
 
+# Wikidata genre labels name the format too ("Action anime and manga"). The hero chips sit
+# under a format pill already, so they keep the genre word and drop the format.
+CHIP_SUFFIXES = (" anime and manga", " manga", " anime", " video game", " game")
+CHIPS_SHOWN = 4
+
+
+CHIP_MAX_CHARS = 28
+
+
+def _genre_chips(metadata: dict) -> list[str]:
+    chips: list[str] = []
+    for genre in _genres(metadata):
+        text = genre
+        # Open Library subjects read like shelf marks ("Dune (Imaginary place)", "Fiction, science
+        # fiction, general"); they stay in the facts but make poor chips.
+        if "(" in text or "," in text or len(text) > CHIP_MAX_CHARS:
+            continue
+        for suffix in CHIP_SUFFIXES:
+            if text.casefold().endswith(suffix) and len(text) > len(suffix) + 2:
+                text = text[: -len(suffix)]
+                break
+        if text.casefold() not in {chip.casefold() for chip in chips}:
+            chips.append(text)
+    return chips[:CHIPS_SHOWN]
+
+
 def _metadata_creator(kind: str, summary: dict) -> Optional[str]:
     return summary.get("creator")
 
@@ -147,7 +174,8 @@ async def _load(request: Request, db: Session, kind: str, slug: str):
     metadata = await title_metadata.get_or_fetch(
         db, client, kind, group.normalized, group.title, group.year, _metadata_creator(kind, summary))
     summary["where"] = await where_to_watch.get_or_fetch(
-        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4)
+        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4,
+        creator=_metadata_creator(kind, summary))
     return group, summary, metadata
 
 
@@ -215,7 +243,7 @@ def _trailer_html(group, metadata: dict) -> str:
         return ""
     return (
         '<section class="title-section" aria-labelledby="trailer-title"><h2 id="trailer-title">Trailer</h2>'
-        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer">'
+        f'<button type="button" class="title-trailer" data-youtube-id="{_e(video)}" aria-label="Play the {_e(group.title)} trailer. Plays from YouTube (privacy-enhanced mode)">'
         f'<img src="https://i.ytimg.com/vi/{_e(video)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360">'
         '<span class="title-trailer__play" aria-hidden="true">▶</span>'
         '<span class="title-trailer__note">Plays from YouTube (privacy-enhanced mode)</span></button></section>'
@@ -244,7 +272,8 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
         rows.append(("Ended", _pretty_date(metadata["end_date"])))
     if summary.get("creator") and group.kind in CREATOR_LABEL and not any(f["label"] == CREATOR_LABEL[group.kind] for f in metadata.get("facts") or []):
         rows.append((CREATOR_LABEL[group.kind], summary["creator"]))
-    rows += [(fact["label"], fact["value"]) for fact in metadata.get("facts") or []]
+    skip = {"Starring"} if summary.get("cast_shown") else set()
+    rows += [(fact["label"], fact["value"]) for fact in metadata.get("facts") or [] if fact["label"] not in skip]
     if _genres(metadata):
         rows.append(("Genres", ", ".join(_genres(metadata))))
     description = ""
@@ -268,8 +297,15 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
         return ""
     overview_html = f'<p class="title-overview">{overview}</p>' if overview else ""
     text = f'<div class="title-description">{overview_html}{description}</div>' if overview or description else ""
+    cast = summary.get("cast_nested") or ""
+    if cast:
+        # The cast fills the space under a short description, beside the facts card.
+        text = f'<div class="title-about__main">{text}{cast}</div>'
     facts_html = f'<dl class="title-facts">{facts}</dl>' if facts else ""
-    return (f'<section class="title-section title-about" aria-labelledby="about-title"><h2 id="about-title">About {_e(group.title)}</h2>'
+    # Without a cast to sit beside it, a long facts card left an empty column under a short
+    # description; then the facts go under the text as a grid instead.
+    layout = "" if cast else " title-about--flat"
+    return (f'<section class="title-section title-about{layout}" aria-labelledby="about-title"><h2 id="about-title">About {_e(group.title)}</h2>'
             f'{text}{facts_html}</section>')
 
 
@@ -287,40 +323,95 @@ def _fact_value_html(kind: str, label: str, value, links: dict) -> str:
     return ", ".join(f'<a href="{_e(links[name])}">{_e(name)}</a>' if name in links else _e(name) for name in names)
 
 
-WHERE_HEADINGS = {"game": "Where to play {title}"}
+def _where_chip(provider: dict, rel: str = "noopener nofollow", offers: tuple = ()) -> str:
+    logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
+            if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
+    tags = ('<span class="title-where__offers">' + "".join(f"<small>{_e(offer)}</small>" for offer in offers) + "</span>"
+            if offers else "")
+    inner = f'{logo}<span class="title-where__label"><span class="title-where__name">{_e(provider["name"])}</span>{tags}</span>'
+    if provider.get("url"):
+        return f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="{rel}">{inner}</a></li>'
+    return f'<li><span class="title-where__provider">{inner}</span></li>'
+
+
+MERGED_OFFERS = ("Rent", "Buy")
+
+
+def _where_groups(groups: list) -> list[tuple[str, list[tuple[dict, tuple]]]]:
+    """The provider groups as the section lists them: (heading, [(provider, offers)]).
+
+    TMDB lists most stores twice, under Rent and again under Buy. Those two groups become
+    one "Rent or buy" list with each store once and what it offers beside its name, which
+    halves the list for most films without dropping anything.
+    """
+    labels = [entry["label"] for entry in groups]
+    if not all(label in labels for label in MERGED_OFFERS):
+        return [(entry["label"], [(provider, ()) for provider in entry["providers"]]) for entry in groups]
+    merged: dict[str, tuple[dict, list]] = {}
+    for entry in groups:
+        if entry["label"] in MERGED_OFFERS:
+            for provider in entry["providers"]:
+                merged.setdefault(provider["name"].casefold(), (provider, []))[1].append(entry["label"])
+    shown, placed = [], False
+    for entry in groups:
+        if entry["label"] not in MERGED_OFFERS:
+            shown.append((entry["label"], [(provider, ()) for provider in entry["providers"]]))
+        elif not placed:
+            shown.append(("Rent or buy", [(provider, tuple(offers)) for provider, offers in merged.values()]))
+            placed = True
+    return shown
 
 
 def _where_html(group, summary: dict) -> str:
-    """Services that stream, rent, sell or first aired the title, with the credits the data needs."""
+    """Services that stream, sell, lend or first aired the title, with the credits the data needs.
+
+    Amazon links (when the Associates tag is set) and search links on other services are
+    added here at render time; they are never cached as if we had checked them.
+    """
     where = summary.get("where") or {}
-    if not where.get("groups"):
+    creator = summary.get("creator") or ""
+    buy = affiliate.links_for(group.kind, group.title, creator)
+    lookups = where_to_watch.searches(group.kind, group.title, creator)
+    if not where.get("groups") and not buy and not lookups:
         return ""
     rows = []
-    for entry in where["groups"]:
-        chips = []
-        for provider in entry["providers"]:
-            logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
-                    if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
-            inner = f'{logo}<span>{_e(provider["name"])}</span>'
-            chips.append(f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="noopener nofollow">{inner}</a></li>'
-                         if provider.get("url") else f'<li><span class="title-where__provider">{inner}</span></li>')
-        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{"".join(chips)}</ul></div>')
-    heading = WHERE_HEADINGS.get(group.kind, "Where to watch {title}").format(title=group.title)
+    for label, providers in _where_groups(where.get("groups") or []):
+        chips = "".join(_where_chip(provider, offers=offers) for provider, offers in providers)
+        rows.append(f'<div class="title-where__group"><h3>{_e(label)}</h3><ul>{chips}</ul></div>')
+    if buy:
+        chips = "".join(_where_chip({"name": link["merchant"], "url": link["url"]}, "sponsored noopener") for link in buy)
+        rows.append(f'<div class="title-where__group title-where__group--buy"><h3>Buy a copy</h3><ul>{chips}</ul></div>')
+    heading = where_to_watch.heading(group.kind, group.title)
+    searches = ""
+    if lookups:
+        links = "".join(f'<li><a href="{_e(link["url"])}" target="_blank" rel="noopener nofollow">{_e(link["name"])} ↗</a></li>'
+                        for link in lookups)
+        searches = (f'<div class="title-where__search"><h3>Search other services</h3><ul>{links}</ul>'
+                    f'<p class="title-where__note">These open a search on each site, so check the result is the right one.</p></div>')
     notes = []
     if where.get("region"):
         checked = _pretty_date(where.get("fetched")) or where.get("fetched") or ""
         notes.append(f'<p class="title-where__note">Showing {_e(where["region"])} availability, checked {_e(checked)}. Services change their catalogues often.</p>')
+    checked = ""
+    if not where.get("region") and where.get("groups") and where.get("fetched") and group.kind not in where_to_watch.VIDEO_KINDS:
+        checked = f'Checked {_e(_pretty_date(where["fetched"]) or where["fetched"])}. '
     credits = where.get("credits") or []
     if credits:
-        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' for c in credits)
+        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' if c.get("url") else _e(c["name"])
+                          for c in credits)
         tmdb = " This product uses the TMDB API but is not endorsed or certified by TMDB." if where.get("justwatch") else ""
-        notes.append(f'<p class="title-where__note">Data from {named}.{tmdb}</p>')
+        notes.append(f'<p class="title-where__note">{checked}Data from {named}.{tmdb}</p>')
+    elif checked:
+        notes.append(f'<p class="title-where__note">{checked.strip()}</p>')
+    if buy:
+        notes.append(affiliate.disclosure_html("title-where__note"))
+    groups_html = f'<div class="title-where__groups">{"".join(rows)}</div>' if rows else ""
     more = ""
     if group.kind in where_to_watch.VIDEO_KINDS:
         more = (f'<a class="title-where__more" href="{_e(where.get("link") or where_to_watch.justwatch_search(group.title))}" '
                 f'target="_blank" rel="noopener nofollow">Compare every service{" on JustWatch" if not where.get("link") else ""} ↗</a>')
     return (f'<section class="title-section title-where" aria-labelledby="where-title"><h2 id="where-title">{_e(heading)}</h2>'
-            f'<div class="title-where__groups">{"".join(rows)}</div>{more}'
+            f'{groups_html}{more}{searches}'
             f'{"".join(notes)}</section>')
 
 
@@ -367,14 +458,61 @@ def _report_html(review: dict) -> str:
 
 
 
-def _community_html(group, summary: dict) -> str:
+def _scorecard_cta(group, signed_in: bool) -> str:
+    if signed_in:
+        return ('<div class="title-scorecard__cta"><span>Your rating counts toward this score.</span>'
+                '<a class="site-btn site-btn--ghost site-btn--sm" href="#write-review">Rate and review it</a></div>')
+    return ('<div class="title-scorecard__cta"><span>Rate it in a free library and your score counts here too.</span>'
+            '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-title-signup>Start your free library</a></div>')
+
+
+def _scorecard_html(group, summary: dict, signed_in: bool) -> str:
+    """Everything members think of the title in one card: the score, how the ratings split,
+    how many track and finished it, and the verdict in words.
+
+    Until three members rate it there is no score to show (nobody's single rating goes on
+    display), so the card says how close it is instead of showing empty numbers.
+    """
     verb = VERBS[group.kind]
-    tiles = [f'<div><strong>{_e(summary["members"])}</strong><span>member{"s" if summary["members"] != 1 else ""} tracking it</span></div>',
-             f'<div><strong>{_e(summary["finished"])}</strong><span>have {verb} it</span></div>']
-    if summary.get("average_rating") is not None:
-        tiles.append(f'<div><strong>{_e(summary["average_rating"])}/10</strong><span>average member rating</span></div>')
-    else:
-        tiles.append(f'<div><strong>{_e(summary["rated"])}</strong><span>member rating{"s" if summary["rated"] != 1 else ""}</span></div>')
+    members, finished, rated = summary["members"], summary["finished"], summary["rated"]
+    average = summary.get("average_rating")
+    plural = "s" if members != 1 else ""
+    if average is None:
+        needed = title_pages.MIN_RATINGS_SHOWN
+        tracking = f"{members} member{plural} tracking it so far"
+        if finished:
+            tracking += f", and {finished} {'has' if finished == 1 else 'have'} {verb} it"
+        return (
+            f'<div class="title-scorecard title-scorecard--early">'
+            f'<div class="title-scorecard__score" style="--score:{round(100 * min(rated, needed) / needed)}">'
+            f'<span class="title-scorecard__ring" aria-hidden="true"><strong>{_e(min(rated, needed))}<small>/{needed}</small></strong></span>'
+            f'<span class="title-scorecard__label"><b>Member score</b><small>{_e(rated)} of {needed} ratings in</small></span></div>'
+            f'<div class="title-scorecard__early"><p><strong>Early days for {_e(group.title)}.</strong> {_e(tracking)}. '
+            f'The member score appears once {needed} members rate it, so no one person\'s rating is ever on show.</p>'
+            f'{_scorecard_cta(group, signed_in)}</div></div>')
+    score = (f'<div class="title-scorecard__score" style="--score:{_e(round(float(average) * 10))}">'
+             f'<span class="title-scorecard__ring" aria-hidden="true"><strong>{_e(average)}<small>/10</small></strong></span>'
+             f'<span class="title-scorecard__label"><b>Member score</b><small>average member rating, from {_e(rated)} ratings</small>')
+    rank = summary.get("chart_rank")
+    if rank:
+        score += (f'<a class="title-scorecard__rank" href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">'
+                  f'#{_e(rank["rank"])} of {_e(rank["of"])} {_e(_plural(group.kind))} <span aria-hidden="true">→</span></a>')
+    score += '</span></div>'
+    facts = [f'<div><dt>Tracking</dt><dd><b>{_e(members)}</b> member{plural} tracking it</dd></div>']
+    if members >= title_pages.INDEX_MIN_MEMBERS:
+        share = _percent(finished, members)
+        facts.append(f'<div><dt>Finished</dt><dd><b>{share}%</b> of them have {_e(verb)} it'
+                     f'<span class="title-scorecard__bar" aria-hidden="true"><span style="--w:{share}%"></span></span></dd></div>')
+    if summary.get("recent_members"):
+        facts.append(f'<div><dt>Lately</dt><dd><b>{_e(summary["recent_members"])}</b> added it in the last {title_pages.RECENT_DAYS} days</dd></div>')
+    spread = _spread_html(group, summary)
+    spread_html = f'<div class="title-scorecard__spread">{spread}</div>' if spread else ""
+    return (f'<div class="title-scorecard{" title-scorecard--spread" if spread else ""}">{score}{spread_html}'
+            f'<dl class="title-scorecard__facts">{"".join(facts)}</dl>'
+            f'<div class="title-scorecard__foot">{_verdict_html(group, summary)}{_scorecard_cta(group, signed_in)}</div></div>')
+
+
+def _community_html(group, summary: dict, signed_in: bool = False) -> str:
     cards = [_review_card_html(review, top=index == 0) for index, review in enumerate(summary["reviews"][:REVIEWS_SHOWN])]
     if cards:
         reviews = f'<div class="title-reviews">{"".join(cards[:REVIEWS_OPEN])}</div>'
@@ -382,12 +520,13 @@ def _community_html(group, summary: dict) -> str:
         if more > 0:
             reviews += (f'<details class="title-reviews-more"><summary>Show {more} more review{"s" if more != 1 else ""}</summary>'
                         f'<div class="title-reviews">{"".join(cards[REVIEWS_OPEN:])}</div></details>')
+        reviews = f'<h3 class="title-subhead">Member reviews</h3>{reviews}'
     else:
-        reviews = (f'<p class="title-empty">No public reviews yet. <a href="#write-review">Be the first to review '
-                   f'{_e(group.title)}</a>.</p>')
-    return (f'<section class="title-section" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
-            f'{_verdict_html(group, summary)}<div class="title-stats">{"".join(tiles)}</div>{_spread_html(group, summary)}'
-            f'<h3 class="title-subhead">Member reviews</h3>{reviews}</section>')
+        # No written reviews yet: the review prompt further down asks for the first one,
+        # so this section stays about the numbers instead of opening on an empty state.
+        reviews = ""
+    return (f'<section class="title-section title-community" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
+            f'{_scorecard_html(group, summary, signed_in)}{reviews}</section>')
 
 
 def _rank_html(group, summary: dict) -> str:
@@ -456,56 +595,6 @@ def _verdict_html(group, summary: dict) -> str:
             f'<p>{_e(" ".join(sentences))}</p></div>')
 
 
-GLANCE_FACTS = ("Running time", "Episode length", "Episodes", "Seasons", "Average playtime", "Pages", "Length",
-                "Tracks", "Studio", "Network", "Platforms")
-
-
-def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
-    """The sidebar summary: member numbers first, then the few facts people check before starting."""
-    rows = []
-    average = summary.get("average_rating")
-    if average is not None:
-        rows.append(f'<div class="title-glance__score" style="--score:{_e(round(float(average) * 10))}">'
-                    f'<span class="title-glance__ring" aria-hidden="true"><strong>{_e(average)}</strong></span>'
-                    f'<span><b>Member score</b><small>{_e(summary["rated"])} ratings out of 10</small></span></div>')
-    members, finished = summary["members"], summary["finished"]
-    if members >= title_pages.INDEX_MIN_MEMBERS:
-        share = _percent(finished, members)
-        rows.append(f'<div class="title-glance__meter"><span><b>{share}%</b> have {_e(VERBS[group.kind])} it</span>'
-                    f'<span class="title-glance__bar"><span style="--w:{share}%"></span></span>'
-                    f'<small>{_e(finished)} of {_e(members)} members tracking it</small></div>')
-    facts = []
-    rank = summary.get("chart_rank")
-    if rank:
-        facts.append(("Member chart", f'<a href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">#{_e(rank["rank"])} of {_e(rank["of"])} {_e(_plural(group.kind))}</a>'))
-    if summary.get("recent_members"):
-        facts.append(("Recently added", f'{_e(summary["recent_members"])} members in the last {title_pages.RECENT_DAYS} days'))
-    release = _pretty_date(metadata.get("release_date")) or (str(group.year) if group.year else None)
-    if release:
-        facts.append(("Released" if group.kind not in ("tv", "anime") else "Premiered", _e(release)))
-    if summary.get("creator") and group.kind in CREATOR_LABEL:
-        facts.append((CREATOR_LABEL[group.kind], _e(summary["creator"])))
-    found = {fact["label"]: fact["value"] for fact in metadata.get("facts") or [] if fact.get("value")}
-    facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
-    services = where_to_watch.names(summary.get("where"))
-    if services:
-        facts.append(("Where to play" if group.kind == "game" else "Where to watch",
-                      f'<a href="#where-title">{_e(", ".join(services))}</a>'))
-    if _genres(metadata):
-        facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
-    if not rows and not facts:
-        return ""
-    fact_html = "".join(f"<div><dt>{_e(label)}</dt><dd>{value}</dd></div>" for label, value in facts)
-    if signed_in:
-        cta = ('<a class="site-btn site-btn--ghost title-glance__cta" href="#write-review">Rate and review it</a>')
-    else:
-        cta = (f'<div class="title-glance__join"><strong>Track {_e(group.title)} with OmniTrackr</strong>'
-               '<p>One free library for movies, shows, anime, games, music and books, with ratings, reviews and friends.</p>'
-               '<a class="site-btn site-btn--primary title-glance__cta" href="/#signup">Start your free library</a></div>')
-    return (f'<aside class="title-glance" aria-labelledby="glance-title"><h2 id="glance-title">At a glance</h2>'
-            f'{"".join(rows)}{f"<dl>{fact_html}</dl>" if fact_html else ""}{cta}</aside>')
-
-
 def _by_creator_html(group, summary: dict) -> str:
     items = summary.get("by_creator") or []
     creator = summary.get("creator")
@@ -515,7 +604,7 @@ def _by_creator_html(group, summary: dict) -> str:
     more = (f'<a href="{_e(link)}">Every {_e(creator)} title, ranked <span aria-hidden="true">→</span></a>' if link else "")
     return (f'<section class="title-section" aria-labelledby="creator-title"><div class="title-section__head">'
             f'<h2 id="creator-title">More from {_e(creator)}</h2>{more}</div>'
-            f'<div class="title-related-grid">{_related_cards(items)}</div></section>')
+            f'{_rail(_related_cards(items))}</section>')
 
 
 def _section_nav(sections: list[tuple[str, str, str]]) -> str:
@@ -523,11 +612,15 @@ def _section_nav(sections: list[tuple[str, str, str]]) -> str:
     links = "".join(f'<a href="#{_e(anchor)}">{_e(label)}</a>' for html, anchor, label in sections if html)
     if links.count("<a ") < 3:
         return ""
-    return f'<nav class="title-tabs" aria-label="On this page"><div class="site-wrap title-tabs__inner">{links}</div></nav>'
+    return f'<nav class="title-tabs__inner" aria-label="On this page">{links}</nav>'
 
 
 def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
-    """The prompt (and, for members, the form) that turns a visitor into the next reviewer."""
+    """The prompt (and, for members, the form) that turns a visitor into the next reviewer.
+
+    When nobody has started a discussion yet, the empty discussions box folds into this
+    panel as a second way in, instead of a second empty section further down.
+    """
     verb = VERBS[group.kind]
     first = not summary["reviews"]
     heading = f"Be the first to review {group.title}" if first else f"Add your review of {group.title}"
@@ -545,7 +638,7 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
             f'<form class="title-write__form" data-title-review data-title-kind="{_e(group.kind)}" data-title-slug="{_e(slug)}"'
             f'{take_attr} novalidate>'
             '<label class="title-write__label" for="titleReviewText">Your review</label>'
-            f'<textarea id="titleReviewText" name="review" rows="6" maxlength="10000" required '
+            f'<textarea id="titleReviewText" name="review" rows="6" maxlength="{text_limits.REVIEW_MAX}" required '
             f'placeholder="What stayed with you? Who would you recommend it to?"></textarea>'
             '<p class="title-write__meter" id="titleReviewMeter" aria-live="polite"></p>'
             '<div class="title-write__row">'
@@ -565,8 +658,21 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
         action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" rel="nofollow" href="{_e(signin)}">Sign in to write a review</a>'
                   '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div>'
                   '<p class="title-write__note">Free, and your library stays private unless you choose to share a review.</p>')
-    return (f'<section class="title-section title-write" id="write-review" aria-labelledby="write-review-title">'
-            f'<h2 id="write-review-title">{_e(heading)}</h2>{asked}<p class="title-write__lead">{_e(lead)}</p>{action}</section>')
+    talk = ""
+    board = summary.get("empty_board")
+    if board:
+        from .. import discussion_hub
+        starters = "".join(f'<li><a href="{_e(board)}?opener={index}#start">{_e(item["subject"])}</a></li>'
+                           for index, item in enumerate(discussion_hub.openers(group.kind, group.title)[:3]))
+        talk = (f'<div class="title-write__talk" id="discussions-title"><h3>Or start a discussion</h3>'
+                f'<p>Nobody has started a discussion about {_e(group.title)} yet. Ask a question, share a theory, '
+                'or pick a scene to talk about. Members who track it hear when you do.</p>'
+                f'<ul class="disc-starter-links">{starters}</ul>'
+                f'<a class="site-btn site-btn--ghost" href="{_e(board)}#start">Start a discussion</a></div>')
+    return (f'<section class="title-section title-write{" title-write--talk" if talk else ""}" id="write-review" '
+            f'aria-labelledby="write-review-title"><div class="title-write__review">'
+            f'<h2 id="write-review-title">{_e(heading)}</h2>{asked}<p class="title-write__lead">{_e(lead)}</p>{action}</div>'
+            f'{talk}</section>')
 
 
 # ---------------------------------------------------------------- overview and quick answers
@@ -680,6 +786,23 @@ def _minutes_phrase(value: str) -> Optional[str]:
     return f"{minutes} minutes ({clock})"
 
 
+def _binge_link(group, guide_only: bool = False) -> str:
+    """A link that opens the binge calculator on this title, or its own guide when one is written."""
+    from urllib.parse import urlencode
+    from .. import binge_calculator
+    slug = binge_calculator.for_title(group.kind, group.title, group.year)
+    if slug:
+        return (f' There is a <a href="{binge_calculator.path(slug)}">part-by-part breakdown and planner</a> '
+                'for it in the binge calculator.')
+    if guide_only:
+        return ""
+    query = urlencode({"lookup": group.kind, "title": group.title, **({"year": group.year} if group.year else {})})
+    # nofollow: every title page links here with its own query, and each one is just the
+    # calculator hub (canonical /binge-calculator) with a different title filled in.
+    return (f' <a href="{binge_calculator.BASE_PATH}?{_e(query)}" rel="nofollow">Work out when you would finish</a> '
+            'in the binge calculator.')
+
+
 def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
     """(question, text, html) about how long the title takes, or empty strings."""
     kind, title, facts = group.kind, group.title, _facts(metadata)
@@ -687,7 +810,7 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         length = _minutes_phrase(facts.get("Running time") or facts.get("Length"))
         tracks = f" across {facts['Tracks']} tracks" if kind == "album" and facts.get("Tracks") else ""
         text = f"{title} runs {length}{tracks}."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group, guide_only=True) if kind == "movie" else "")
     if kind in ("tv", "anime"):
         parts = []
         if facts.get("Seasons", "").isdigit():
@@ -699,14 +822,14 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         each = facts.get("Episode length", "")
         each = each.removesuffix(".").removesuffix(" per ep").strip()
         text = f"{title} has {_join(parts)}" + (f", about {each} each" if each else "") + "."
-        html = (_e(text) + ' Work out a full binge, with breaks, in the <a href="/binge-calculator">binge calculator</a>.')
+        html = _e(text) + _binge_link(group)
         return f"How many episodes does {title} have?", text, html
     if kind == "game" and facts.get("Average playtime"):
         text = f"Players spend about {facts['Average playtime']} on {title} on average, according to RAWG."
         return f"How long does it take to beat {title}?", text, _e(text)
     if kind in ("book", "audiobook") and facts.get("Pages", "").isdigit():
         text = f"{title} is about {facts['Pages']} pages long in print."
-        return f"How long is {title}?", text, _e(text)
+        return f"How long is {title}?", text, _e(text) + (_binge_link(group) if kind == "book" else "")
     if kind == "manga" and (facts.get("Volumes") or facts.get("Chapters")):
         parts = [f"{facts[label]} {label.lower()}" for label in ("Volumes", "Chapters") if facts.get(label)]
         text = f"{title} runs {_join(parts)}" + (f" and is {facts['Status'].lower()}" if facts.get("Status") else "") + "."
@@ -736,6 +859,20 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
             lines.append(f"get it on {_join(names)}")
         elif label == "Originally aired on":
             lines.append(f"find it on {_join(names)}, where it first aired")
+        elif label == "Listen on":
+            lines.append(f"listen on {_join(names)}")
+        elif label == "Listen free on":
+            lines.append(f"listen free on {_join(names)}")
+        elif label == "Any podcast app":
+            lines.append("add its RSS feed to any podcast app")
+        elif label == "Buy or listen on":
+            lines.append(f"get it on {_join(names)}")
+        elif label == "Read free":
+            lines.append(f"read it free on {_join(names)}")
+        elif label == "Borrow free":
+            lines.append(f"borrow it free from {_join(names)}")
+        elif label == "Read officially on":
+            lines.append(f"read it officially on {_join(names)}")
     if not lines:
         return "", "", ""
     region = f" in the {where['region']}" if where.get("region") == "US" else (f" in {where['region']}" if where.get("region") else "")
@@ -743,7 +880,7 @@ def _where_answer(group, summary: dict) -> tuple[str, str, str]:
     text = text[:1].upper() + text[1:]
     if where.get("fetched"):
         text += f" Checked {_pretty_date(where['fetched'])}."
-    verb = "play" if group.kind == "game" else "watch"
+    verb = where_to_watch.verb(group.kind) + (" to" if group.kind in where_to_watch.LISTEN_KINDS else "")
     return f"Where can I {verb} {title}?", text, _e(text) + ' <a href="#where-title">See every option</a>.'
 
 
@@ -809,6 +946,24 @@ def _order_answer(group) -> tuple[str, str, str]:
     return f"Where does {group.title} fit in the {guide['name']} order?", text, html
 
 
+def _essential_answer(group) -> tuple[str, str, str]:
+    """For a title on one of the Essential 100 lists: where it sits there, and why it made it."""
+    from .. import essentials
+    try:
+        item = essentials.for_title(group.kind, group.title, getattr(group, "year", None))
+    except Exception:
+        return "", "", ""
+    if item is None:
+        return "", "", ""
+    data = essentials.get(item["format"])
+    reason = essentials.first_sentence(item["why"])
+    # The lists run in date order, so the number is a place on the list, not a rank.
+    text = (f"Yes. {group.title} is on OmniTrackr's list of the essential 100 {data['noun']}, number {item['number']} "
+            f"of 100 in date order. {reason}")
+    html = (_e(text) + f' <a href="{_e(essentials.anchor_url(item))}">See it on the list</a>.')
+    return f"Is {group.title} one of the essential {data['noun']}?", text, html
+
+
 def _when_answer(group, metadata: dict) -> tuple[str, str, str]:
     release = _pretty_date(metadata.get("release_date"))
     if not release:
@@ -830,15 +985,24 @@ FAQ_MIN = 3
 def _faq(group, summary: dict, metadata: dict) -> list[tuple[str, str, str]]:
     """Questions people search about a title, answered from its facts and member data. Empty unless there are a few."""
     answers = [_where_answer(group, summary), _length_answer(group, metadata), _worth_answer(group, summary),
-               _when_answer(group, metadata), _order_answer(group), _next_answer(group, summary)]
+               _when_answer(group, metadata), _order_answer(group), _essential_answer(group), _next_answer(group, summary)]
     answers = [answer for answer in answers if answer[0] and answer[1]]
     return answers if len(answers) >= FAQ_MIN else []
 
 
+FAQ_OPEN = 2
+
+
 def _faq_html(group, faq: list) -> str:
+    """Quick answers as a list that folds: the first couple open, the rest a tap away.
+
+    The answers stay in the page either way (and in the FAQPage data), so search engines
+    and screen readers get all of them; the fold only keeps the page short on phones.
+    """
     if not faq:
         return ""
-    items = "".join(f'<div class="title-faq__item"><h3>{_e(question)}</h3><p>{html}</p></div>' for question, _, html in faq)
+    items = "".join(f'<details class="title-faq__item"{" open" if index < FAQ_OPEN else ""}><summary><h3>{_e(question)}</h3></summary>'
+                    f'<p>{html}</p></details>' for index, (question, _, html) in enumerate(faq))
     return (f'<section class="title-section title-faq" aria-labelledby="faq-title"><h2 id="faq-title">{_e(group.title)}: quick answers</h2>'
             f'<div class="title-faq__list">{items}</div></section>')
 
@@ -850,15 +1014,15 @@ def _similar_html(group, summary: dict) -> str:
     cards = ""
     for item in items:
         art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
-               else f'<span>{_e(item["title"][:1].upper())}</span>')
+               else _mini_cover(item["title"]))
         year = f' · {item["year"]}' if item.get("year") else ""
-        cards += (f'<a class="title-related" href="{_e(item["url"])}"><span class="title-related__art">{art}</span>'
+        cards += (f'<a class="title-related" href="{_e(item["url"])}" data-kind="{_e(group.kind)}"><span class="title-related__art">{art}</span>'
                   f'<strong>{_e(item["title"])}</strong><small>{_e(", ".join(item["shared"][:3]))}{_e(year)}</small></a>')
     return (f'<section class="title-section" aria-labelledby="similar-title"><div class="title-section__head">'
             f'<h2 id="similar-title">{_e(KIND_PLURALS[group.kind])} like {_e(group.title)}</h2>'
             f'<a href="/titles/{_e(group.kind)}">Top-rated {_e(_plural(group.kind))} <span aria-hidden="true">→</span></a></div>'
             f'<p class="title-section__lead">Matched on shared genres among the {_e(_plural(group.kind))} OmniTrackr members track.</p>'
-            f'<div class="title-related-grid">{cards}</div></section>')
+            f'{_rail(cards)}</section>')
 
 
 def _collections_html(summary: dict) -> str:
@@ -869,13 +1033,32 @@ def _collections_html(summary: dict) -> str:
     return f'<section class="title-section" aria-labelledby="collections-title"><h2 id="collections-title">In public collections</h2><div class="title-collections">{cards}</div></section>'
 
 
+def _cover_html(group, kind_label: str, creator: Optional[str]) -> str:
+    """A stand-in cover for titles with no art: the name set like a cover in the format's colour.
+
+    The hero used to show one big letter in an empty box here, which looked like a broken image.
+    """
+    by = f'<span class="title-cover__by">{_e(creator)}</span>' if creator else ""
+    return (f'<div class="title-hero__poster title-hero__poster--empty title-cover" style="--cover-hue:{_hue(group.title)}" aria-hidden="true">'
+            f'<span class="title-cover__kind">{_e(kind_label)}</span><strong class="title-cover__name">{_e(group.title)}</strong>{by}</div>')
+
+
+def _mini_cover(title: str) -> str:
+    return f'<span class="title-cover title-cover--mini" style="--cover-hue:{_hue(title)}"><b>{_e(title)}</b></span>'
+
+
+def _rail(cards: str) -> str:
+    """A row of posters that scrolls sideways; title-page.js adds the arrow buttons on wide screens."""
+    return f'<div class="title-rail" data-title-rail><div class="title-related-grid">{cards}</div></div>'
+
+
 def _related_cards(items: list) -> str:
     cards = ""
     for item in items:
         art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
-               else f'<span>{_e(item["title"][:1].upper())}</span>')
+               else _mini_cover(item["title"]))
         year = f' · {item["year"]}' if item.get("year") else ""
-        cards += (f'<a class="title-related" href="{_e(item["url"])}"><span class="title-related__art">{art}</span>'
+        cards += (f'<a class="title-related" href="{_e(item["url"])}" data-kind="{_e(item.get("kind") or "")}"><span class="title-related__art">{art}</span>'
                   f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)}</small></a>')
     return cards
 
@@ -884,7 +1067,7 @@ def _related_html(summary: dict) -> str:
     if not summary["related"]:
         return ""
     cards = _related_cards(summary["related"])
-    return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2><div class="title-related-grid">{cards}</div></section>'
+    return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2>{_rail(cards)}</section>'
 
 
 def _if_you_liked_html(group) -> str:
@@ -942,11 +1125,215 @@ def _sources_html(metadata: dict) -> str:
             'member data is aggregated from OmniTrackr libraries and never identifies who tracks a title.</p>')
 
 
+# ---------------------------------------------------------------- cast and crew, join band (Nov 15 2026)
+
+CREW_ROLE_LABELS = {"Director": "Director", "Creator": "Created by", "Writer": "Writer", "Cast": "Cast",
+                    "Author": "Author", "Mangaka": "Mangaka", "Host": "Host", "Artist": "Artist"}
+CAST_HEADINGS = {"movie": "Cast and crew", "tv": "Cast and crew", "anime": "Who made it", "book": "Who wrote it",
+                 "manga": "Who made it", "podcast": "Who hosts it", "album": "Who made it", "game": "Who made it",
+                 "audiobook": "Who wrote it"}
+CAST_MIN = 3
+CAST_MAX = 12
+
+
+def _initials(name: str) -> str:
+    words = [word for word in re.split(r"[\s.-]+", name) if word and word[0].isalnum()]
+    if not words:
+        return "?"
+    return (words[0][0] + (words[-1][0] if len(words) > 1 else "")).upper()
+
+
+def _hue(name: str) -> int:
+    """A steady colour per name, so the same person looks the same on every page."""
+    return sum(ord(ch) * (index + 1) for index, ch in enumerate(name.casefold())) % 360
+
+
+def _crew(group, summary: dict, metadata: dict) -> list[tuple[str, str]]:
+    """(name, roles) for the people credited on the title, crew first, then cast in billing order."""
+    from ..people_pages import PERSON, credits_in, split_names
+    found: dict[str, list[str]] = {}
+    creator = summary.get("creator")
+    credits = credits_in(group.kind, metadata)
+    if creator and group.kind in CREATOR_LABEL:
+        # "Phil Lord, Christopher Miller" is two people, the same way the credits and the people
+        # page links split it, so a pair of directors doesn't also get a card for the pair.
+        credited = {name for _, _, name in credits}
+        for name in split_names(creator, CREATOR_LABEL[group.kind]):
+            if name not in credited:
+                found.setdefault(name, [CREATOR_LABEL[group.kind]])
+    for entity, role, name in credits:
+        if entity != PERSON:
+            continue
+        label = CREW_ROLE_LABELS.get(role, role)
+        found.setdefault(name, [])
+        if label not in found[name]:
+            found[name].append(label)
+    crew = [(name, roles) for name, roles in found.items() if roles != ["Cast"]]
+    cast = [(name, roles) for name, roles in found.items() if roles == ["Cast"]]
+    return (crew + cast)[:CAST_MAX]
+
+
+def _cast_html(group, summary: dict, metadata: dict, nested: bool = False) -> str:
+    people = _crew(group, summary, metadata)
+    if len(people) < CAST_MIN:
+        return ""
+    links = summary.get("credit_links") or {}
+    cards = []
+    for name, roles in people:
+        face = (f'<span class="title-person__face" style="--hue:{_hue(name)}" aria-hidden="true">{_e(_initials(name))}</span>')
+        inner = f'{face}<span class="title-person__text"><strong>{_e(name)}</strong><small>{_e(", ".join(roles))}</small></span>'
+        cards.append(f'<li><a class="title-person" href="{_e(links[name])}">{inner}</a></li>' if name in links
+                     else f'<li><span class="title-person">{inner}</span></li>')
+    note = ('<p class="title-section__lead">Names with a page of their own are linked, with everything else they made '
+            'that OmniTrackr members track.</p>' if links else "")
+    heading = _e(CAST_HEADINGS.get(group.kind, "Cast and crew"))
+    if nested:  # inside "About", under the description
+        return (f'<div class="title-cast title-cast--nested"><h3 id="cast-title">{heading}</h3>{note}'
+                f'<ul class="title-cast__list">{"".join(cards)}</ul></div>')
+    return (f'<section class="title-section title-cast" aria-labelledby="cast-title"><h2 id="cast-title">'
+            f'{heading}</h2>{note}<ul class="title-cast__list">{"".join(cards)}</ul></section>')
+
+
+def _join_band_html(group, summary: dict, image: Optional[str]) -> str:
+    """For visitors without an account: what an OmniTrackr library is, between the answers and the next picks."""
+    covers = [image] if image else []
+    for item in (summary.get("related") or []) + (summary.get("by_creator") or []) + (summary.get("similar") or []):
+        if item.get("image") and item["image"] not in covers:
+            covers.append(item["image"])
+        if len(covers) == 4:
+            break
+    stack = ""
+    if len(covers) >= 3:
+        stack = ('<div class="title-join__stack" aria-hidden="true">'
+                 + "".join(f'<img src="{_e(cover)}" alt="" width="120" height="180" loading="lazy" decoding="async">' for cover in covers)
+                 + '</div>')
+    verb = {"game": "play", "book": "read", "manga": "read", "album": "hear", "podcast": "listen to",
+            "audiobook": "listen to"}.get(group.kind, "watch")
+    return (f'<section class="title-join{" title-join--stack" if stack else ""}" aria-labelledby="join-title">{stack}'
+            '<div class="title-join__copy"><p class="title-join__kicker">Free account</p>'
+            f'<h2 id="join-title">Keep {_e(group.title)} on a list that goes everywhere with you</h2>'
+            f'<ul class="title-join__points"><li>Save what you want to {_e(verb)} next, mark what you finished, rate it out of 10.</li>'
+            '<li>Movies, shows, anime, games, books, manga, music, podcasts and audiobooks in one library.</li>'
+            '<li>Bring your history over from Letterboxd, Goodreads, MyAnimeList, Steam and more.</li></ul>'
+            '<div class="title-join__actions"><a class="site-btn site-btn--primary" href="/#signup" data-title-signup>Create a free account</a>'
+            f'<button type="button" class="site-btn site-btn--ghost" data-join-save>Save {_e(group.title)} first</button></div>'
+            '<p class="title-join__note">Your library stays private unless you choose to share it.</p></div></section>')
+
+
+# ---------------------------------------------------------------- hero (Nov 2026 redesign)
+
+def _length_fact(kind: str, metadata: dict) -> Optional[str]:
+    """The one length people check first: running time, episodes, pages, playtime."""
+    facts = _facts(metadata)
+    if kind in ("movie", "album") and (facts.get("Running time") or facts.get("Length")):
+        return facts.get("Running time") or facts.get("Length")
+    if kind in ("tv", "anime"):
+        if facts.get("Seasons", "").isdigit() and facts["Seasons"] != "1":
+            return f"{facts['Seasons']} seasons"
+        if facts.get("Episodes", "").isdigit():
+            return f"{facts['Episodes']} episode{'s' if facts['Episodes'] != '1' else ''}"
+    if kind == "game" and facts.get("Average playtime"):
+        return f"{facts['Average playtime']} to play"
+    if kind in ("book", "audiobook") and facts.get("Pages", "").isdigit():
+        return f"{facts['Pages']} pages"
+    if kind == "manga" and facts.get("Volumes"):
+        return f"{facts['Volumes']} volumes"
+    return None
+
+
+LOGO_FILE = re.compile(r"(?:^|[/_%-])(?:logo|wordmark|logotype)(?:[._%-]|$)", re.I)
+
+
+def _poster_image(metadata: dict, summary: dict) -> Optional[str]:
+    """The cover to show. Wikipedia sometimes only has the series logo, and a member's cover beats a cropped logo."""
+    poster = metadata.get("poster")
+    if poster and summary.get("image") and LOGO_FILE.search(poster.split("?", 1)[0].rsplit("/", 1)[-1]):
+        return summary["image"]
+    return poster or summary.get("image")
+
+
+def _lead_repeats_kicker(lead: str, group, summary: dict) -> bool:
+    """Wikidata leads like "2001 film by Hayao Miyazaki" only repeat the line above the title."""
+    creator, text = (summary.get("creator") or "").casefold(), lead.casefold()
+    return bool(creator) and creator in text and (not group.year or str(group.year) in text) and len(lead) <= 80
+
+
+def _kicker_html(group, summary: dict, metadata: dict, kind_label: str) -> str:
+    release = _pretty_date(metadata.get("release_date")) or (str(group.year) if group.year else None)
+    rest = [(part, "") for part in (release, _length_fact(group.kind, metadata)) if part]
+    if summary.get("creator"):
+        rest.append((summary["creator"], ' class="title-hero__credit"'))
+    items = "".join(f'<span{attrs}>{_e(part)}</span>' for part, attrs in rest)
+    return f'<p class="title-hero__meta"><span class="title-hero__kind">{_e(kind_label)}</span>{items}</p>'
+
+
+def _where_teaser_html(group, summary: dict) -> str:
+    """One line in the hero saying where the title is, linked to the full section below."""
+    groups = (summary.get("where") or {}).get("groups") or []
+    if not groups:
+        return ""
+    first = groups[0]
+    providers = first["providers"][:3]
+    logos = "".join(
+        f'<img src="{_e(p["logo"])}" alt="" width="28" height="28" loading="lazy" decoding="async">' if p.get("logo")
+        else f'<span class="title-where__mono" aria-hidden="true">{_e(p["name"][:1].upper())}</span>'
+        for p in providers)
+    names = _join([p["name"] for p in providers])
+    # Count each service once: Apple TV under both Rent and Buy is one more place, not two.
+    shown = {p["name"].casefold() for p in providers}
+    extra = len({p["name"].casefold() for entry in groups for p in entry["providers"]} - shown)
+    more = f'<span class="title-hero__where-more">+{extra} more</span>' if extra > 0 else ""
+    return (f'<a class="title-hero__where" href="#where-title"><span class="title-hero__where-logos" aria-hidden="true">{logos}</span>'
+            f'<span class="title-hero__where-text"><small>{_e(where_to_watch.heading(group.kind))} · {_e(first["label"])}</small>'
+            f'<strong>{_e(names)}</strong></span>{more}<span class="title-hero__where-go" aria-hidden="true">→</span></a>')
+
+
+def _hero_backdrop(group, summary: dict, metadata: dict, image: Optional[str]) -> tuple[str, bool]:
+    """(html, wide): a real wide still when we have one, otherwise the poster as a soft colour wash."""
+    wide = where_to_watch.backdrop_urls(summary.get("where"))
+    if wide:
+        return (f'<img class="title-hero__backdrop" src="{_e(wide["w1280"])}" fetchpriority="high" '
+                f'srcset="{_e(wide["w780"])} 780w, {_e(wide["w1280"])} 1280w" sizes="100vw" alt="" aria-hidden="true">'), True
+    backdrop = metadata.get("backdrop") or image
+    if not backdrop:
+        return "", False
+    # Game backdrops are screenshots, so they are wide too; elsewhere it is usually the poster again.
+    shot = group.kind == "game" and bool(metadata.get("backdrop")) and metadata.get("backdrop") != image
+    return (f'<img class="title-hero__backdrop" src="{_e(backdrop)}" alt="" aria-hidden="true" decoding="async" '
+            'fetchpriority="low">'), shot
+
+
+def _share_actions(share: str, recommend: str, ask: str) -> str:
+    """Members get three ways to pass a title on; they share one "Share" menu instead of three
+    buttons, which kept the hero's own actions (add, reviews, trailer) on one row."""
+    if not recommend and not ask:
+        return share
+    items = share.replace('class="site-btn site-btn--ghost"', 'class="title-more__item"', 1).replace(">Share<", ">Copy or send the link<", 1)
+    items += recommend.replace('class="site-btn site-btn--ghost"', 'class="title-more__item"', 1)
+    items += ask.replace('class="site-btn site-btn--ghost"', 'class="title-more__item"', 1)
+    return (f'<details class="title-more"><summary class="site-btn site-btn--ghost">Share</summary>'
+            f'<div class="title-more__menu">{items}</div></details>')
+
+
+def _tabs_html(nav: str, group, image: Optional[str], signed_in: bool) -> str:
+    """The sticky "on this page" bar, with a save button that appears once the hero scrolls away."""
+    if not nav:
+        return ""
+    thumb = f'<img src="{_e(image)}" alt="" width="28" height="42" loading="lazy" decoding="async">' if image else ""
+    label = "Add to my library" if signed_in else "Save to my list"
+    join = "" if signed_in else '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-dock-join hidden>Join free</a>'
+    return (f'<div class="title-tabs"><div class="site-wrap title-tabs__bar">{nav}'
+            f'<div class="title-tabs__cta" data-title-dock hidden>{thumb}<span class="title-tabs__name">{_e(group.title)}</span>'
+            f'<button type="button" class="site-btn site-btn--primary site-btn--sm" data-dock-save>{label}</button>'
+            f'{join}'
+            '</div></div></div>')
+
+
 def render(group, summary: dict, metadata: Optional[dict], indexable: bool, signed_in: bool, take=None) -> str:
     metadata = metadata or {}
     kind_label = title_pages.KINDS[group.kind][3]
     canonical = SITE_URL + group.path
-    image = metadata.get("poster") or summary.get("image")
+    image = _poster_image(metadata, summary)
     year = f" ({group.year})" if group.year else ""
     page_title = f"{group.title}{year}: reviews, trailer and details | OmniTrackr"
     lead = metadata.get("short_description") or ""
@@ -958,44 +1345,57 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     streaming = where_to_watch.stream_names(summary.get("where"), limit=2)
     if streaming and group.kind in where_to_watch.VIDEO_KINDS:
         description_bits.append("where to watch it (" + " and ".join(streaming) + ")")
+    elif streaming and group.kind in where_to_watch.LISTEN_KINDS + where_to_watch.READ_KINDS:
+        description_bits.append(f"where to {where_to_watch.verb(group.kind)} it (" + " and ".join(streaming) + ")")
     if metadata.get("trailer"):
         description_bits.append("trailer")
     meta_description = _excerpt(", ".join(description_bits) + ".", 158)
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     poster = (f'<img class="title-hero__poster" src="{_e(image)}" alt="{_e(group.title)} poster" width="300" height="450" fetchpriority="high">'
-              if image else f'<div class="title-hero__poster title-hero__poster--empty" aria-hidden="true">{_e(group.title[:1].upper())}</div>')
-    backdrop = metadata.get("backdrop") or image
-    backdrop_html = f'<img class="title-hero__backdrop" src="{_e(backdrop)}" alt="" aria-hidden="true">' if backdrop else ""
-    genres = "".join(f'<span class="site-chip">{_e(g)}</span>' for g in _genres(metadata)[:4])
-    release = _pretty_date(metadata.get("release_date"))
-    meta_line = " · ".join(filter(None, [kind_label, release or (str(group.year) if group.year else None),
-                                         summary.get("creator")]))
+              if image else _cover_html(group, kind_label, summary.get("creator")))
+    backdrop_html, wide = _hero_backdrop(group, summary, metadata, image)
+    hero_lead = "" if _lead_repeats_kicker(lead, group, summary) else lead
+    genres = "".join(f'<span class="site-chip">{_e(g)}</span>' for g in _genre_chips(metadata))
     track = ('<button type="button" class="site-btn site-btn--primary" data-title-add '
              f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}">Add to my library</button>'
              if signed_in else
              ('<button type="button" class="site-btn site-btn--primary" data-guest-save aria-pressed="false" '
               f'data-guest-kind="{_e(group.kind)}" data-guest-slug="{_e(group.path.rsplit("/", 1)[1])}" '
-              f'data-guest-title="{_e(group.title)}">Save to my list</button>'
-              '<a class="site-btn site-btn--ghost" href="/#signup">Create free account</a>'))
+              f'data-guest-title="{_e(group.title)}">Save to my list</button>'))
     ask = (f'<button type="button" class="site-btn site-btn--ghost" id="ask-friend" data-take-ask '
            f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}" '
            f'data-take-title="{_e(group.title)}">Ask a friend for their take</button>' if signed_in else "")
     recommend = (f'<button type="button" class="site-btn site-btn--ghost" data-friend-rec-open '
                  f'data-rec-kind="{_e(group.kind)}" data-rec-slug="{_e(group.path.rsplit("/", 1)[1])}" '
                  f'data-rec-title="{_e(group.title)}">Recommend to a friend</button>' if signed_in else "")
+    share_button = (f'<button type="button" class="site-btn site-btn--ghost" data-share '
+                    f'data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button>')
+    join = ('' if signed_in else '<p class="title-hero__join">Saving works without an account. '
+            '<a href="/#signup">Create free account</a> and your list moves into a library you can rate, review and share.</p>')
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
+    trailer_button = ('<a class="site-btn site-btn--ghost title-hero__trailer" href="#trailer-title" data-trailer-jump>'
+                      '<span aria-hidden="true">▶</span> Trailer</a>' if metadata.get("trailer") else "")
     faq = _faq(group, summary, metadata)
-    # Our own content first: member reviews and stats, then collections and "also track".
+    summary["cast_nested"] = _cast_html(group, summary, metadata, nested=True)
+    summary["cast_shown"] = bool(summary["cast_nested"])
+    about = _about_html(group, summary, metadata)
+    # With no About section to sit in, the cast gets a section of its own.
+    cast = "" if about else _cast_html(group, summary, metadata)
+    # Chapters in the order a visitor decides: what members think, where to get it and what it
+    # looks like, what it is and who made it, quick answers, then a way to join in and what to try next.
+    # Member reviews and numbers stay first: they are the part of the page nobody else has.
     sections = [
-        (_community_html(group, summary), "community-title", "Reviews"),
+        (_community_html(group, summary, signed_in), "community-title", "Reviews"),
+        (_where_html(group, summary), "where-title", where_to_watch.heading(group.kind)),
+        (_trailer_html(group, metadata), "trailer-title", "Trailer"),
+        (about, "about-title", "About"),
+        (cast or (summary["cast_nested"] and "nested"), "cast-title", CAST_HEADINGS.get(group.kind, "Cast and crew")),
+        (_faq_html(group, faq), "faq-title", "Quick answers"),
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
         (summary.get("discussions_html", ""), "discussions-title", "Discussions"),
-        (_trailer_html(group, metadata), "trailer-title", "Trailer"),
-        (_where_html(group, summary), "where-title", "Where to play" if group.kind == "game" else "Where to watch"),
-        (_about_html(group, summary, metadata), "about-title", "About"),
-        (_faq_html(group, faq), "faq-title", "Quick answers"),
+        ("" if signed_in else _join_band_html(group, summary, image), "join-title", "Join"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
         (_in_order_html(group), "in-order-title", "Series order"),
         (_collections_html(summary), "collections-title", "Collections"),
@@ -1005,9 +1405,27 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_gallery_html(group, metadata), "gallery-title", "Screenshots" if group.kind == "game" else "Images"),
         (_tracks_html(metadata), "tracks-title", "Track list"),
     ]
-    body = "".join(html for html, _, _ in sections)
-    nav = _section_nav([section for section in sections if section[1] != "write-review"])
-    glance = _glance_html(group, summary, metadata, signed_in)
+    html_of = {anchor: html for html, anchor, _ in sections}
+    paired = bool(html_of["where-title"] and html_of["trailer-title"])
+    # First come the member numbers, plus the review prompt while nobody has written one,
+    # so the first thing under the numbers is the invitation to add the first review.
+    lead_anchors = ["community-title"] + ([] if summary["reviews"] else ["write-review", "discussions-title"])
+    lead = "".join(html_of[anchor] for anchor in lead_anchors)
+    body = ""
+    for html, anchor, _ in sections:
+        if anchor in lead_anchors or (anchor == "trailer-title" and paired) or (anchor == "cast-title" and not cast):
+            continue
+        if anchor == "where-title" and paired:
+            # Where to get it and the trailer sit side by side on wide screens.
+            html = f'<div class="title-pair">{html}{html_of["trailer-title"]}</div>'
+        body += html
+    # Tabs follow the order on the page. An empty board lives inside the review panel, under the same
+    # anchor. A paired trailer shares the "where to watch" stop, which keeps the bar short.
+    ordered = sorted(sections, key=lambda section: section[1] not in lead_anchors)
+    nav_sections = [("talk", anchor, label) if anchor == "discussions-title" and summary.get("empty_board") else (html, anchor, label)
+                    for html, anchor, label in ordered
+                    if anchor not in ("write-review", "join-title") and not (paired and anchor == "trailer-title")]
+    nav = _tabs_html(_section_nav(nav_sections), group, image, signed_in)
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
                  if indexable and not signed_in and title_pages.is_ad_eligible(summary, metadata) else "")
@@ -1031,40 +1449,49 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
+  <link rel="stylesheet" href="/static/title-detail.css?v={DETAIL_CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
-  <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
-  <script src="/static/share.js?v=20261004-share-1" defer></script>
+  <link rel="stylesheet" href="/static/discussions.css?v=20261120-a11y-1">
+  <script src="/static/share.js?v=20261120-share-menu-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261031-browse-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261121-phone-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image, faq)}
 </head>
-<body class="site title-page">
+<body class="site title-page title-detail" data-title-kind="{_e(group.kind)}">
   <!--SITE_NAV:-->
   <main>
-    <section class="title-hero">
-      {backdrop_html}
+    <section class="title-hero title-hero--{'wide' if wide else 'wash'}">
+      <div class="title-hero__media" aria-hidden="true">{backdrop_html}</div>
       <div class="site-wrap title-hero__inner">
-        {poster}
-        <div class="title-hero__copy">
+        <div class="title-hero__art">{poster}</div>
+        <div class="title-hero__head">
           <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> <a href="/titles/{_e(group.kind)}">{_e(KIND_PLURALS[group.kind])}</a></nav>
+          {_kicker_html(group, summary, metadata, kind_label)}
           <h1>{_e(group.title)}{f' <span class="title-hero__year">{_e(group.year)}</span>' if group.year else ''}</h1>
-          <p class="title-hero__meta">{_e(meta_line)}</p>
+        </div>
+        <div class="title-hero__copy">
           {_rank_html(group, summary)}
-          {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
-          <div class="title-hero__chips">{genres}</div>
+          {f'<p class="title-hero__lead">{_e(hero_lead[:1].upper() + hero_lead[1:])}</p>' if hero_lead else ''}
+          <div class="title-hero__chips"{' role="group" aria-label="Genres" tabindex="0"' if genres else ''}>{genres}</div>
           {_scores_html(summary, metadata)}
-          <div class="title-hero__actions">{track}{reviews_link}{recommend}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
+          {_where_teaser_html(group, summary)}
+          <div class="title-hero__actions">{track}{reviews_link}{trailer_button}{_share_actions(share_button, recommend, ask)}</div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
+          {join}
           {_links_html(metadata)}
         </div>
       </div>
     </section>
     {nav}
-    <div class="site-wrap title-body{' title-body--glance' if glance else ''}">
-      {glance}
-      <div class="title-main">
+    <div class="site-wrap title-body">
+      <div class="title-top">
+        <div class="title-main title-main--lead">
+          {lead}
+        </div>
+      </div>
+      <div class="title-main title-main--rest">
         {body}
       </div>
       {_sources_html(metadata)}
@@ -1100,7 +1527,10 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
         summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
         summary["trending_rank"] = trending.rank_of(db, kind, group.path)
         from .title_discussions import title_section_html
-        summary["discussions_html"] = title_section_html(db, group)
+        summary["discussions_html"] = title_section_html(db, group, when_empty=False)
+        if not summary["discussions_html"]:
+            from ..title_discussions import board_path
+            summary["empty_board"] = board_path(group.kind, group.path.rsplit("/", 1)[1])
         from .. import people_pages
         try:
             summary["credit_links"] = people_pages.title_links(db, kind, metadata, summary.get("creator"),
@@ -1166,13 +1596,15 @@ def add_title(kind: str, slug: str, response: Response, user=Depends(get_current
 
 
 class TitleReview(BaseModel):
-    review: str = Field(..., min_length=1, max_length=10000)
+    # The length limit is checked against the saved review (text_limits), so a review
+    # written before the limit existed can still be edited from this page.
+    review: str = Field(..., min_length=1)
     rating: Optional[float] = Field(None, ge=0, le=10)
     public: bool = True
     # None leaves an existing spoiler flag alone (older pages that predate the checkbox).
     spoilers: Optional[bool] = None
     # The review text the composer loaded; a mismatch means it was edited elsewhere since.
-    expected_review: str = Field("", max_length=10000)
+    expected_review: str = ""
     # Present when the member arrived through a friend's "what did you think?" link.
     take: Optional[str] = Field(None, max_length=64)
 
@@ -1266,6 +1698,7 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     item = _own_item(db, user, group)
     if item is not None and (item.review or "").strip() != payload.expected_review.strip():
         raise HTTPException(409, "Your review for this title changed somewhere else. Reload the page to see the latest version.")
+    text_limits.check_value("review", payload.review, item.review if item is not None else None)
     state = "existing"
     if item is None:
         state, item = add_group_to_library(db, user, group)
@@ -1328,15 +1761,44 @@ def import_guest_list(
             # An OmniTrackr Daily answer no member tracks yet.
             from .. import daily
             curated = daily.find_answer(item.kind, item.slug)
+        browsed = None
         if group is None and curated is None:
+            # A manga, podcast or audiobook saved from a browse shelf (or its chart). Checked before the
+            # "In order" guides because a shelf entry carries more details (volumes, host) for the same title.
+            from .. import browse
+            browsed = browse.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
             # An entry saved from an "In order" guide that no member tracks yet.
             from .. import in_order
             curated = in_order.find(item.kind, item.slug)
-        browsed = None
-        if group is None and curated is None:
-            # A manga, podcast or audiobook saved from a browse shelf (or its chart).
-            from .. import browse
-            browsed = browse.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A manga, podcast or audiobook saved from one of the guides beside the holiday hub or a best-of list.
+            from .. import best_of, seasonal
+            browsed = seasonal.find_extra(item.kind, item.slug) or best_of.find_extra(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A series saved from a "how long does it take" guide that no member tracks yet.
+            from .. import binge_calculator
+            curated = binge_calculator.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
+            # A pick saved from an opened door of the December advent calendar.
+            from .. import advent_calendar
+            door = advent_calendar.find(item.kind, item.slug)
+            if door is not None and "browse_kind" in door:
+                browsed = (door["browse_kind"], door)
+            else:
+                curated = door
+        if group is None and curated is None and browsed is None:
+            # A title saved with "Want to" on one of the Essential 100 lists.
+            from .. import essentials
+            essential = essentials.find(item.kind, item.slug)
+            if essential is not None and "browse_kind" in essential:
+                browsed = (essential["browse_kind"], essential)
+            else:
+                curated = essential
+        if group is None and curated is None and browsed is None:
+            # A pick saved from a Discover trail or monthly edition.
+            from ..discover_catalog import find_guest_pick
+            curated = find_guest_pick(item.kind, item.slug)
         if group is None and curated is None and browsed is None:
             missing += 1
             continue
@@ -1362,7 +1824,7 @@ async def where_to_watch_lookup(request: Request, response: Response,
                                 title: str = Query(..., min_length=1, max_length=300),
                                 year: Optional[int] = Query(None, ge=1800, le=2200),
                                 user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Where a library title streams or sells, for the member's own rows (works for private libraries too)."""
+    """Where a library title streams, sells or lends, for the member's own rows (works for private libraries too)."""
     response.headers["Cache-Control"] = "private, no-store"
     if kind not in where_to_watch.KINDS:
         raise HTTPException(404, "Not available for this kind of title")
@@ -1382,6 +1844,10 @@ async def where_to_watch_lookup(request: Request, response: Response,
         "credits": where.get("credits") or [],
         "tmdb_notice": bool(where.get("justwatch")),
         "more": (where.get("link") or where_to_watch.justwatch_search(display)) if kind in where_to_watch.VIDEO_KINDS else None,
+        "heading": where_to_watch.heading(kind),
+        "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
+        "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
+        "searches": where_to_watch.searches(kind, display),
     }
 
 
@@ -1514,8 +1980,11 @@ def _chart_entry_html(entry: dict) -> str:
     if entry.get("quote"):
         q = entry["quote"]
         who = (f'<a href="{_e(q["profile_url"])}">{_e(q["username"])}</a>' if q.get("profile_url") else _e(q["username"]))
+        # Short reviews have no page of their own (it would be a 404), so they link to the title's reviews.
+        more = (f'<a href="{_e(q["url"])}">full review</a>' if q.get("standalone")
+                else f'<a href="{_e(entry["url"])}#community-title">more reviews</a>')
         quote = (f'<blockquote class="title-chart__quote"><p>“{_e(q["text"])}”</p>'
-                 f'<footer>{who} · <a href="{_e(q["url"])}">full review</a></footer></blockquote>')
+                 f'<footer>{who} · {more}</footer></blockquote>')
     return (f'<li class="title-chart__entry" id="rank-{entry["rank"]}">'
             f'<span class="title-chart__rank" aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>'
             f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'
@@ -1653,6 +2122,8 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
     groups = {kind: title_pages.find_many(db, kind, [c["url"].rsplit("/", 1)[1] for c in candidates if c["kind"] == kind],
                                           reviewed_only=True)
               for kind in title_pages.KINDS}
+    editors = title_pages.editor_id_set(db)
+    context = title_pages.review_context(db, [group for found in groups.values() for group in found.values()])
     for candidate in candidates:
         if candidate["url"] in seen or len(paths) >= limit:
             continue
@@ -1660,7 +2131,7 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
         group = groups[candidate["kind"]].get(candidate["url"].rsplit("/", 1)[1])
         if group is None:
             continue
-        summary = title_pages.summarize(db, group, page_sections=False)
+        summary = title_pages.summarize(db, group, page_sections=False, editors=editors, review_context=context)
         metadata, _ = title_metadata.cached(db, title_metadata.cache_key(group.kind, group.normalized, group.year))
         if title_pages.is_indexable(summary, metadata):
             paths.append(group.path)

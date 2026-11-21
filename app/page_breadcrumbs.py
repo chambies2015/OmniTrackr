@@ -25,6 +25,7 @@ HUBS = {
     "/if-you-liked": "If you liked",
     "/in-order": "Franchises in order",
     "/best-of": "Best of the year",
+    "/essentials": "The Essential 100",
     "/new-releases": "Release guides",
     "/daily": "OmniTrackr Daily",
     "/new-this-week/archive": "New this week",
@@ -38,13 +39,31 @@ HUBS = {
     "/people": "People",
     "/studios": "Studios",
     "/guides": "Guides",
+    "/awards": "Awards season",
     "/holidays": "Holiday picks",
+    "/holidays/gifts": "Gift guide",
+    "/holidays/black-friday": "Black Friday",
+    "/holidays/christmas": "Christmas 2026",
+    "/holidays/thanksgiving": "Thanksgiving weekend",
+    "/holidays/reading-and-listening": "Reading and listening",
+    "/holidays/advent-calendar": "Advent calendar",
     "/halloween": "Halloween picks",
+    "/valentines-day": "Valentine's Day picks",
+    "/binge-calculator": "Binge calculator",
+}
+# The written-guide hubs are sections of the guide library, so their trail runs
+# Home > Guides > hub > guide. Exact paths only: their own pages nest under them as usual.
+HUB_PARENTS = {
+    hub: "/guides" for hub in (
+        "/discover", "/if-you-liked", "/in-order", "/best-of", "/essentials", "/new-releases",
+        "/awards", "/holidays", "/halloween", "/valentines-day", "/binge-calculator",
+    )
 }
 PARENTS = {
     "/new-this-week/": "/new-this-week/archive",
     "/collections/public/": "/collections/explore",
     "/daily/archive": "/daily",
+    "/new-year-challenge/": "/challenges",
 }
 
 _CANONICAL = re.compile(r'<link rel="canonical" href="(https://[^"]+)"', re.I)
@@ -59,6 +78,10 @@ def _page_name(html: str) -> Optional[str]:
     if not match:
         return None
     name = _SUFFIX.sub("", " ".join(unescape(match.group(1)).split()))
+    # "How long to watch Breaking Bad? About 49 hours" reads as the question alone.
+    question, mark, _ = name.partition("? ")
+    if mark and len(question.split()) >= 3:
+        return question + "?"
     # "Movies like Interstellar: 7 to watch, play..." reads as "Movies like Interstellar".
     head, sep, _ = name.partition(": ")
     if sep and len(name) > 40 and len(head.split()) >= 2:
@@ -67,6 +90,8 @@ def _page_name(html: str) -> Optional[str]:
 
 
 def _parent(path: str) -> Optional[str]:
+    if path in HUB_PARENTS:
+        return HUB_PARENTS[path]
     for prefix, hub in PARENTS.items():
         if path.startswith(prefix) and path != hub:
             return hub

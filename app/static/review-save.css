@@ -38,5 +38,5 @@
 .review-save-eyebrow { color: var(--site-teal); }
 .review-save-back, .review-save-more a { color: var(--site-violet-soft); }
 .review-save-preview { background: rgba(11, 10, 24, .6); border-color: var(--site-border); }
-.review-save-actions button, .review-save-primary { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
+.review-save-actions button, .review-save-primary { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
 .review-save-actions .review-save-secondary { background: var(--site-surface); border-color: var(--site-border-strong); box-shadow: none; color: var(--site-text); }

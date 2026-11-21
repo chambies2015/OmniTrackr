@@ -40,7 +40,8 @@ def test_members_pin_titles_in_order_and_they_lead_the_profile(client, db_sessio
     assert [item["title"] for item in response.json()["showcase"]] == ["Dune", "Meh Movie"]
     page = client.get("/u/pinner").text
     assert page.index('id="profile-showcase"') < page.index('id="profile-stats"')
-    assert page.index(">Dune</strong>") < page.index(">Meh Movie</strong>")
+    # The first pin is the spotlight; the rest follow it in order.
+    assert page.index(">Dune</a></h3>") < page.index(">Meh Movie</strong>")
     settings = client.get("/api/profile/settings", headers=headers_for(user)).json()
     assert settings["showcase_limit"] == 3 and [i["title"] for i in settings["showcase"]] == ["Dune", "Meh Movie"]
 

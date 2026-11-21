@@ -97,10 +97,10 @@ def page(canonical, title, robots="index, follow, max-image-preview:large", extr
 
 @pytest.mark.parametrize("path, title, names", [
     ("/if-you-liked/interstellar", "Movies like Interstellar: 7 to watch, play, read and hear next | OmniTrackr",
-     ["Home", "If you liked", "Movies like Interstellar"]),
-    ("/in-order", "Franchises in order: what to watch, read and play first | OmniTrackr", ["Home", "Franchises in order"]),
+     ["Home", "Guides", "If you liked", "Movies like Interstellar"]),
+    ("/in-order", "Franchises in order: what to watch, read and play first | OmniTrackr", ["Home", "Guides", "Franchises in order"]),
     ("/best-of/2026/movies", "Best movies of 2026 so far: 8 films worth your evening | OmniTrackr",
-     ["Home", "Best of the year", "Best movies of 2026 so far"]),
+     ["Home", "Guides", "Best of the year", "Best movies of 2026 so far"]),
     ("/new-this-week/2026-10-19", "New releases for the week of October 19 to 25, 2026 | OmniTrackr",
      ["Home", "New this week", "New releases for the week of October 19 to 25, 2026"]),
     ("/collections/public/3", "Cozy Games for Slow Evenings | OmniTrackr Collection",
@@ -109,7 +109,7 @@ def page(canonical, title, robots="index, follow, max-image-preview:large", extr
      ["Home", "OmniTrackr Daily", "OmniTrackr Daily archive"]),
     ("/reviews?category=movie", "Movie Reviews &amp; Ratings - OmniTrackr", ["Home", "Reviews", "Movie Reviews & Ratings"]),
     ("/discover/monthly/september-2026", "September 2026: Begin small | Discover | OmniTrackr",
-     ["Home", "Discover", "September 2026: Begin small"]),
+     ["Home", "Guides", "Discover", "September 2026: Begin small"]),
 ])
 def test_breadcrumbs_follow_the_section_hubs(path, title, names):
     out = page_breadcrumbs.add_breadcrumbs(page("https://omnitrackr.xyz" + path, title))
@@ -146,11 +146,11 @@ def test_indexed_pages_carry_one_breadcrumb_trail(client, path):
 
 # Sign-up prompt
 
+# /best-of asks once through its own "How many of these have you seen?" card (tests/test_best_of.py).
 @pytest.mark.parametrize("path, heading", [
     ("/discover", "Keep the ones that catch your eye"),
     ("/in-order", "Keep your place in the series"),
     ("/if-you-liked", "Keep the ones that catch your eye"),
-    ("/best-of", "Keep the ones that catch your eye"),
     ("/guides", "Try it with your own list"),
 ])
 def test_hubs_ask_signed_out_readers_to_join(client, path, heading):

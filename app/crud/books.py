@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
 
-from .. import models, schemas
+from .. import models, schemas, text_limits
 
 
 def get_books(
@@ -56,6 +56,8 @@ def update_book(db: Session, user_id: int, book_id: int, book_update: schemas.Bo
     if db_book is None:
         return None
     update_dict = book_update.model_dump(exclude_unset=True)
+    # Text saved before the limits stays editable; it just can't grow past them.
+    text_limits.check_update(db_book, update_dict)
     
     allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'review_public', 'cover_art_url'}
     for field, value in update_dict.items():

@@ -1,4 +1,4 @@
-"""Seasonal hubs (/halloween, /holidays): hand-written picks by level, member progress and the dashboard card (Oct 2026)."""
+"""Seasonal hubs (/halloween, /holidays, /valentines-day): hand-written picks by level, member progress and the dashboard card (Oct 2026)."""
 import re
 from datetime import date
 from pathlib import Path
@@ -49,9 +49,10 @@ def test_every_season_is_complete_and_substantial():
         seen = set()
         for shelf in entry["shelves"]:
             assert re.fullmatch(r"[a-z0-9-]{1,40}", shelf["key"])
-            # One pick in every format OmniTrackr tracks, per shelf.
-            # The seasonal guides are written for the six original formats; manga, podcasts and audiobooks came later.
-            assert sorted(item["kind"] for item in shelf["picks"]) == sorted(k for k in title_pages.KINDS if k not in {"manga", "podcast", "audiobook"})
+            # One pick in every format OmniTrackr tracks, per shelf. Halloween and the holidays were written for the
+            # six original formats (manga, podcasts and audiobooks came later); the Valentine's hub covers all nine.
+            formats = title_pages.KINDS if slug == "valentines" else [k for k in title_pages.KINDS if k not in {"manga", "podcast", "audiobook"}]
+            assert sorted(item["kind"] for item in shelf["picks"]) == sorted(formats), (slug, shelf["key"])
             for item in shelf["picks"]:
                 assert 1 <= item["level"] <= 5 and 1800 < item["year"] < 2030
                 assert item["title"] and item["time"] and item["why"] and item["note"] and item["caveat"]
@@ -244,6 +245,25 @@ def test_holiday_related_links_follow_the_calendar():
     assert 'href="/challenges/' in november and "December 2026 challenge" not in november
     december = _related("holidays", HOLIDAYS, date(2026, 12, 10))
     assert "November 2026 challenge" in december and "December 2026 challenge" in december
+
+
+def test_a_season_keeps_its_own_year_after_it_ends():
+    assert seasonal.season_year(HOLIDAYS, date(2026, 12, 31)) == 2026
+    assert seasonal.season_year(HOLIDAYS, date(2027, 1, 1)) == 2026
+    assert seasonal.season_year(HOLIDAYS, date(2027, 11, 3)) == 2027
+    assert seasonal.season_year(HALLOWEEN, date(2026, 11, 20)) == 2026
+    assert seasonal.season_year(HALLOWEEN, date(2027, 9, 30)) == 2026
+
+
+def test_holiday_hub_says_2026_on_new_years_day():
+    from app.routers.seasonal import _companion_related, _related, hub_content
+    html = hub_content("holidays", HOLIDAYS, {}, False, date(2027, 1, 1))
+    assert "SEASONAL · HOLIDAY 2026</p>" in html and "HOLIDAY 2027" not in html
+    # Its related cards still point at the 2026 editions and challenges, not at months that haven't come.
+    related = _related("holidays", HOLIDAYS, date(2027, 1, 1))
+    assert "December 2026 challenge" in related and "2027-" not in related
+    companion = _companion_related("thanksgiving", seasonal.companion("thanksgiving"), date(2027, 1, 1))
+    assert "November 2026 challenge" in companion
 
 
 def test_member_adds_holiday_picks_and_the_card_shows_them(authenticated_client, db_session, monkeypatch):

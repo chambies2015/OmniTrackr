@@ -78,6 +78,20 @@
       link.append(name, tagline);
       shelves.appendChild(link);
     });
+    // Pages beside the hub, such as the holiday gift guide.
+    (data.links || []).forEach(extra => {
+      const href = extra && safePath(extra.path);
+      if (!href) return;
+      const link = document.createElement('a');
+      link.className = 'season-card__shelf season-card__shelf--extra';
+      link.href = href;
+      const name = document.createElement('strong');
+      name.textContent = String(extra.name || '');
+      const tagline = document.createElement('span');
+      tagline.textContent = String(extra.tagline || '');
+      link.append(name, tagline);
+      shelves.appendChild(link);
+    });
     section.hidden = false;
   }
 

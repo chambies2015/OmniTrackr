@@ -53,8 +53,11 @@ function switchTab(tabName) {
     window.OmniFriendFeed?.load();
     window.OmniTitleOrigins?.loadRecommenders();
     window.OmniFollowing?.load();
+    window.OmniPeople?.open();
   } else if (tabName === 'activity') {
     loadActivityJournal();
+  } else if (tabName === 'for-you') {
+    window.OmniPicks?.load();
   } else if (tabName === 'recommendations') {
     loadRecommendationPostcards();
   } else if (tabName === 'collections') {
@@ -146,7 +149,7 @@ async function loadMovies() {
         // Display cached poster or fetch new one
         if (movie.poster_url) {
           displayMoviePoster(movie.id, movie.poster_url, movie.title);
-        } else {
+        } else if (shouldLookUpCover('movies', movie.id, movie.title, movie.year)) {
           // API keys are now proxied through backend
           fetchMoviePoster(movie.id, movie.title, movie.year);
         }
@@ -195,10 +198,7 @@ async function fetchMoviePoster(id, title, year) {
       try {
         const result = await existingPromise;
         if (result && result.posterUrl) {
-          displayMoviePoster(id, result.posterUrl, result.normalizedTitle || title);
-          if (result.normalizedTitle) {
-            updateMovieRowMetadata(id, result.normalizedTitle);
-          }
+          displayMoviePoster(id, result.posterUrl, title);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -269,14 +269,12 @@ async function fetchMoviePoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
-      await saveMoviePosterUrl(id, data.Poster, normalizedTitle);
-      displayMoviePoster(id, data.Poster, normalizedTitle || title);
-      if (normalizedTitle) {
-        updateMovieRowMetadata(id, normalizedTitle);
-      }
+      // OMDb looked up the member's own title (and year), so its poster is theirs; OMDb's
+      // spelling of the title is never saved over what the member typed.
+      await saveMoviePosterUrl(id, data.Poster);
+      displayMoviePoster(id, data.Poster, title);
 
-      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      const result = { posterUrl: data.Poster };
       posterFetchQueue.set(cacheKey, Promise.resolve(result));
       return result;
     }
@@ -292,10 +290,9 @@ async function fetchMoviePoster(id, title, year) {
   }
 }
 
-async function saveMoviePosterUrl(id, posterUrl, normalizedTitle) {
+async function saveMoviePosterUrl(id, posterUrl) {
   try {
     const updateData = { poster_url: posterUrl };
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/movies/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -303,15 +300,6 @@ async function saveMoviePosterUrl(id, posterUrl, normalizedTitle) {
     });
   } catch (err) {
     console.error('Error saving poster URL:', err);
-  }
-}
-
-function updateMovieRowMetadata(id, normalizedTitle) {
-  const row = document.querySelector(`#movie-poster-${id}`)?.closest('tr');
-  if (!row || row === editingRowElement) return;
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -464,7 +452,7 @@ async function loadTVShows() {
         // Display cached poster or fetch new one
         if (tvShow.poster_url) {
           displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
-        } else {
+        } else if (shouldLookUpCover('tv-shows', tvShow.id, tvShow.title, tvShow.year)) {
           // API keys are now proxied through backend
           fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
         }
@@ -535,7 +523,7 @@ async function loadAnime() {
         // Display cached poster or fetch new one
         if (animeItem.poster_url) {
           displayAnimePoster(animeItem.id, animeItem.poster_url, animeItem.title);
-        } else {
+        } else if (shouldLookUpCover('anime', animeItem.id, animeItem.title, animeItem.year)) {
           // API keys are now proxied through backend
           fetchAnimePoster(animeItem.id, animeItem.title, animeItem.year);
         }
@@ -612,10 +600,7 @@ async function fetchTVPoster(id, title, year) {
       try {
         const result = await existingPromise;
         if (result && result.posterUrl) {
-          displayTVPoster(id, result.posterUrl, result.normalizedTitle || title);
-          if (result.normalizedTitle) {
-            updateTVRowMetadata(id, result.normalizedTitle);
-          }
+          displayTVPoster(id, result.posterUrl, title);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -686,14 +671,12 @@ async function fetchTVPoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
-      await saveTVPosterUrl(id, data.Poster, normalizedTitle);
-      displayTVPoster(id, data.Poster, normalizedTitle || title);
-      if (normalizedTitle) {
-        updateTVRowMetadata(id, normalizedTitle);
-      }
+      // OMDb looked up the member's own title (and year), so its poster is theirs; OMDb's
+      // spelling of the title is never saved over what the member typed.
+      await saveTVPosterUrl(id, data.Poster);
+      displayTVPoster(id, data.Poster, title);
 
-      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      const result = { posterUrl: data.Poster };
       posterFetchQueue.set(cacheKey, Promise.resolve(result));
       return result;
     }
@@ -709,10 +692,9 @@ async function fetchTVPoster(id, title, year) {
   }
 }
 
-async function saveTVPosterUrl(id, posterUrl, normalizedTitle) {
+async function saveTVPosterUrl(id, posterUrl) {
   try {
     const updateData = { poster_url: posterUrl };
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -720,15 +702,6 @@ async function saveTVPosterUrl(id, posterUrl, normalizedTitle) {
     });
   } catch (err) {
     console.error('Error saving TV show poster URL:', err);
-  }
-}
-
-function updateTVRowMetadata(id, normalizedTitle) {
-  const row = document.querySelector(`#tv-poster-${id}`)?.closest('tr');
-  if (!row) return;
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -741,10 +714,7 @@ async function fetchAnimePoster(id, title, year) {
       try {
         const result = await existingPromise;
         if (result && result.posterUrl) {
-          displayAnimePoster(id, result.posterUrl, result.normalizedTitle || title);
-          if (result.normalizedTitle) {
-            updateAnimeRowMetadata(id, result.normalizedTitle);
-          }
+          displayAnimePoster(id, result.posterUrl, title);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -757,7 +727,8 @@ async function fetchAnimePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const proxyUrl = `${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}`;
+    // A few hits, so the match below can pass over a sequel or a different show.
+    const proxyUrl = `${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}&limit=5`;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -805,22 +776,22 @@ async function fetchAnimePoster(id, title, year) {
       return;
     }
 
-    if (data && data.data && data.data.length > 0) {
-      const anime = data.data[0];
-      const posterUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || null;
-      const normalizedTitle = anime.title_english || anime.title || null;
+    // Jikan is a free-text search, so its first hit can be another show entirely.
+    const withArt = (data && Array.isArray(data.data) ? data.data : [])
+      .filter(entry => entry && (entry.images?.jpg?.large_image_url || entry.images?.jpg?.image_url));
+    const anime = pickTitleMatch(withArt, title, entry => [
+      entry.title, entry.title_english, entry.title_japanese,
+      ...(Array.isArray(entry.title_synonyms) ? entry.title_synonyms : []),
+      ...(Array.isArray(entry.titles) ? entry.titles.map(t => t && t.title) : []),
+    ], entry => entry.year || entry.aired?.prop?.from?.year || null, year);
+    if (anime) {
+      const posterUrl = anime.images.jpg.large_image_url || anime.images.jpg.image_url;
+      await saveAnimePosterUrl(id, posterUrl);
+      displayAnimePoster(id, posterUrl, title);
 
-      if (posterUrl) {
-        await saveAnimePosterUrl(id, posterUrl, normalizedTitle);
-        displayAnimePoster(id, posterUrl, normalizedTitle || title);
-        if (normalizedTitle) {
-          updateAnimeRowMetadata(id, normalizedTitle);
-        }
-
-        const result = { posterUrl: posterUrl, normalizedTitle: normalizedTitle };
-        posterFetchQueue.set(cacheKey, Promise.resolve(result));
-        return result;
-      }
+      const result = { posterUrl: posterUrl };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching anime poster:', err);
@@ -834,10 +805,9 @@ async function fetchAnimePoster(id, title, year) {
   }
 }
 
-async function saveAnimePosterUrl(id, posterUrl, normalizedTitle) {
+async function saveAnimePosterUrl(id, posterUrl) {
   try {
     const updateData = { poster_url: posterUrl };
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/anime/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -845,15 +815,6 @@ async function saveAnimePosterUrl(id, posterUrl, normalizedTitle) {
     });
   } catch (err) {
     console.error('Error saving anime poster URL:', err);
-  }
-}
-
-function updateAnimeRowMetadata(id, normalizedTitle) {
-  const row = document.querySelector(`#anime-poster-${id}`)?.closest('tr');
-  if (!row) return;
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -914,9 +875,9 @@ async function loadVideoGames() {
 
         if (game.cover_art_url) {
           displayVideoGamePoster(game.id, game.cover_art_url, game.title);
-        } else {
+        } else if (shouldLookUpCover('video-games', game.id, game.title)) {
           // API keys are now proxied through backend
-          fetchVideoGameMetadata(game.id, game.title);
+          fetchVideoGameMetadata(game.id, game.title, { genres: game.genres, release_date: game.release_date, rawg_link: game.rawg_link });
         }
       });
     }
@@ -961,38 +922,29 @@ function syncEditButtonData(row, selector, values) {
   });
 }
 
-function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle) {
+function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate) {
   const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
   if (!row || row === editingRowElement) return;
   syncEditButtonData(row, '.edit-video-game-btn', {
-    gameTitle: normalizedTitle,
     gameGenres: genres,
     gameReleaseDate: releaseDate ? String(releaseDate).split('T')[0] : '',
   });
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
-  }
 
   if (releaseDate && row.cells[2]) {
     const date = new Date(releaseDate);
     row.cells[2].textContent = date.toLocaleDateString();
   }
 
-  if (row.cells[3]) {
-    row.cells[3].textContent = genres || '';
+  if (genres && row.cells[3]) {
+    row.cells[3].textContent = genres;
   }
 
-  if (row.cells[6]) {
-    if (safeHttpUrl(rawgLink)) {
-      row.cells[6].innerHTML = `<a href="${escapeHtml(safeHttpUrl(rawgLink))}" target="_blank" rel="noopener noreferrer">View on RAWG</a>`;
-    } else {
-      row.cells[6].textContent = '';
-    }
+  if (row.cells[6] && safeHttpUrl(rawgLink)) {
+    row.cells[6].innerHTML = `<a href="${escapeHtml(safeHttpUrl(rawgLink))}" target="_blank" rel="noopener noreferrer">View on RAWG</a>`;
   }
 }
 
-async function fetchVideoGameMetadata(id, title) {
+async function fetchVideoGameMetadata(id, title, existing = {}) {
   // Create unique key for deduplication
   const cacheKey = `video-game-${title}`;
 
@@ -1004,9 +956,7 @@ async function fetchVideoGameMetadata(id, title) {
       try {
         const result = await existingPromise;
         if (result && result.cover_art_url) {
-          displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
-          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
-          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+          await applyVideoGameMetadata(id, title, existing, result);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -1076,21 +1026,18 @@ async function fetchVideoGameMetadata(id, title) {
         console.warn(`RAWG API error for "${title}": ${data.error}`);
         return null;
       }
-      if (data && data.results && data.results.length > 0) {
-        const game = data.results[0];
-        const coverArtUrl = game.background_image || null;
-        const genres = game.genres ? game.genres.map(g => g.name).join(', ') : null;
-        const rawgLink = game.slug ? `https://rawg.io/games/${game.slug}` : null;
-        const releaseDate = game.released || null;
-        const normalizedTitle = game.name || null;
-
-        if (coverArtUrl) {
-          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle);
-          displayVideoGamePoster(id, coverArtUrl, normalizedTitle || title);
-          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle);
-
-          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate, normalized_title: normalizedTitle };
-        }
+      // RAWG is a free-text search too: only a game named like the member's counts.
+      const withArt = (data && Array.isArray(data.results) ? data.results : []).filter(entry => entry && entry.background_image);
+      const game = pickTitleMatch(withArt, title, entry => [entry.name]);
+      if (game) {
+        const result = {
+          cover_art_url: game.background_image,
+          genres: Array.isArray(game.genres) ? game.genres.map(g => g.name).join(', ') || null : null,
+          rawg_link: game.slug ? `https://rawg.io/games/${game.slug}` : null,
+          release_date: game.released || null,
+        };
+        await applyVideoGameMetadata(id, title, existing, result);
+        return result;
       }
       return null;
     } catch (err) {
@@ -1107,9 +1054,7 @@ async function fetchVideoGameMetadata(id, title) {
     try {
       const result = await existingPromise;
       if (result && result.cover_art_url) {
-        displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
-        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
-        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+        await applyVideoGameMetadata(id, title, existing, result);
       }
     } catch (err) {
       // Ignore errors from other fetch
@@ -1133,13 +1078,23 @@ async function fetchVideoGameMetadata(id, title) {
   }
 }
 
-async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle) {
+// Save and show a matched game's cover. Genres, release date and RAWG link only fill
+// blanks, and the member's title is never touched.
+async function applyVideoGameMetadata(id, title, existing, result) {
+  const genres = existing?.genres ? null : result.genres;
+  const rawgLink = existing?.rawg_link ? null : result.rawg_link;
+  const releaseDate = existing?.release_date ? null : result.release_date;
+  await saveVideoGameMetadata(id, result.cover_art_url, genres, rawgLink, releaseDate);
+  displayVideoGamePoster(id, result.cover_art_url, title);
+  updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate);
+}
+
+async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
     if (genres) updateData.genres = genres;
     if (rawgLink) updateData.rawg_link = rawgLink;
     if (releaseDate) updateData.release_date = releaseDate;
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1289,8 +1244,8 @@ async function loadMusic() {
 
         if (item.cover_art_url) {
           displayMusicPoster(item.id, item.cover_art_url, item.title);
-        } else {
-          fetchMusicMetadata(item.id, item.title, item.artist);
+        } else if (shouldLookUpCover('music', item.id, item.title, item.artist)) {
+          fetchMusicMetadata(item.id, item.title, item.artist, { year: item.year, genre: item.genre });
         }
       });
     }
@@ -1325,7 +1280,85 @@ function displayMusicPoster(id, posterUrl, title = null) {
   }
 }
 
-async function fetchMusicMetadata(id, title, artist) {
+/* Cover lookups run unattended for every row without art, and a search's first
+   hit is often a different record ("Blonde" came back as "Moon River - Single").
+   So a lookup only takes a hit whose title and artist/author agree with what the
+   member saved, and it only ever fills the cover plus a blank year or genre: the
+   member's own title and artist/author are never rewritten. */
+function normalizeCoverMatchText(value) {
+  const raw = String(value ?? '').trim();
+  const text = raw
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/^(the|a|an) (?=\S)/, '');
+  // Titles made only of symbols (Ed Sheeran's "÷") still compare as typed.
+  return text || raw.toLowerCase();
+}
+
+function coverMatchTitle(value) {
+  let text = String(value ?? '').trim().replace(/\s+-\s+(single|ep)$/i, '');
+  // "(Deluxe Edition)", "[Remastered]" and other trailing tags name the same record.
+  let previous;
+  do {
+    previous = text;
+    text = text.replace(/\s*[([][^()[\]]*[)\]]$/, '').trim();
+  } while (text && text !== previous);
+  return normalizeCoverMatchText(text);
+}
+
+function coverCreatorsMatch(wanted, creators) {
+  const want = normalizeCoverMatchText(wanted);
+  if (!want) return false;
+  const wantTokens = want.split(' ');
+  return (creators || []).some((creator) => {
+    const have = normalizeCoverMatchText(creator);
+    if (!have) return false;
+    if (have.replace(/ /g, '') === want.replace(/ /g, '')) return true;
+    const haveTokens = have.split(' ');
+    // "Beyonce" matches "Beyonce & JAY-Z"; "Tolkien" matches "J.R.R. Tolkien".
+    const within = (small, big) => small.some(token => token.length >= 3) && small.every(token => big.includes(token));
+    return within(wantTokens, haveTokens) || within(haveTokens, wantTokens);
+  });
+}
+
+function coverTitlesMatch(wanted, candidate, allowSubtitle) {
+  const want = coverMatchTitle(wanted);
+  if (!want) return false;
+  if (coverMatchTitle(candidate) === want) return true;
+  if (!allowSubtitle) return false;
+  // "Sapiens" vs "Sapiens: A Brief History of Humankind", only once the creator agrees.
+  const main = text => coverMatchTitle(String(text ?? '').split(/:\s|\s[-–—]\s/)[0]);
+  return main(candidate) === want || coverMatchTitle(candidate) === main(wanted);
+}
+
+// For kinds with no creator to check (anime, games): the first result one of whose
+// names is the member's title. Exact names win over subtitle matches ("Frieren" and
+// "Frieren: Beyond Journey's End"), and a hit from the member's year wins a tie.
+function pickTitleMatch(results, title, names, yearOf = null, year = null) {
+  const list = (results || []).filter(Boolean);
+  const byYear = hits => (year && yearOf ? hits.find(hit => Number(yearOf(hit)) === Number(year)) : null) || hits[0] || null;
+  const matching = subtitle => list.filter(entry => (names(entry) || []).some(name => name && coverTitlesMatch(title, name, subtitle)));
+  return byYear(matching(false)) || byYear(matching(true));
+}
+
+// The first search result that is confidently the member's record, or null.
+function pickConfidentCoverMatch(results, title, creator, describe) {
+  const hasCreator = Boolean(String(creator ?? '').trim());
+  const candidates = (results || []).filter(Boolean).map((entry) => ({entry, ...describe(entry)}));
+  // A full album or book beats a single or EP of the same name.
+  const isShort = candidate => /\s-\s(single|ep)\s*$/i.test(String(candidate.title ?? ''));
+  const ordered = candidates.filter(c => !isShort(c)).concat(candidates.filter(isShort));
+  const match = ordered.find((candidate) => {
+    if (hasCreator && !coverCreatorsMatch(creator, candidate.creators)) return false;
+    return coverTitlesMatch(title, candidate.title, hasCreator);
+  });
+  return match ? match.entry : null;
+}
+
+async function fetchMusicMetadata(id, title, artist, existing = {}) {
   const cacheKey = `music-${title}-${artist}`;
   const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
   const current = () => row && row !== editingRowElement
@@ -1394,18 +1427,15 @@ async function fetchMusicMetadata(id, title, artist) {
             console.warn(`iTunes API error for "${title}": ${data.errorMessage}`);
             return null;
           }
-          if (data && data.results && data.results.length > 0) {
-            const album = data.results[0];
-            const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
-            const normalizedTitle = album.collectionName || album.trackName || null;
-            const albumArtist = album.artistName || null;
-            const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
-            const albumGenres = album.primaryGenreName || null;
-
-            if (coverArtUrl) {
-
-              return { cover_art_url: coverArtUrl, artist: albumArtist, year: albumYear, genre: albumGenres, normalized_title: normalizedTitle };
-            }
+          const album = pickConfidentCoverMatch(data && data.results, title, artist, entry => ({
+            title: entry.collectionName || entry.trackName,
+            creators: [entry.artistName],
+          }));
+          const coverArtUrl = album ? (album.artworkUrl100 || album.artworkUrl60 || null) : null;
+          if (coverArtUrl) {
+            const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0], 10) || null : null;
+            const albumGenre = album.primaryGenreName || null;
+            return { cover_art_url: coverArtUrl, year: albumYear, genre: albumGenre };
           }
           return null;
         } catch (err) {
@@ -1425,26 +1455,24 @@ async function fetchMusicMetadata(id, title, artist) {
   try {
     const result = await pending;
     if (!result?.cover_art_url || !current()) return;
-    await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+    // Year and genre only fill blanks; title and artist stay exactly as the member saved them.
+    const year = existing?.year ? null : result.year;
+    const genre = existing?.genre ? null : result.genre;
+    await saveMusicMetadata(id, result.cover_art_url, year, genre);
     if (!current()) return;
-    displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
-    updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+    displayMusicPoster(id, result.cover_art_url, title);
+    updateMusicRowMetadata(id, null, year, genre);
   } catch (error) { console.error('Error fetching music metadata:', error); }
 }
 
-function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
+function updateMusicRowMetadata(id, artist, year, genre) {
   const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
   if (!row || row === editingRowElement) return;
   syncEditButtonData(row, '.edit-music-btn', {
-    musicTitle: normalizedTitle,
     musicArtist: artist,
     musicYear: year,
     musicGenre: genre,
   });
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
-  }
 
   if (artist && row.cells[2]) {
     row.cells[2].textContent = artist;
@@ -1459,13 +1487,11 @@ function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   }
 }
 
-async function saveMusicMetadata(id, coverArtUrl, artist, year, genre, normalizedTitle) {
+async function saveMusicMetadata(id, coverArtUrl, year, genre) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
-    if (artist) updateData.artist = artist;
     if (year) updateData.year = year;
     if (genre) updateData.genre = genre;
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/music/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1618,8 +1644,8 @@ async function loadBooks() {
 
         if (book.cover_art_url) {
           displayBookPoster(book.id, book.cover_art_url, book.title);
-        } else {
-          fetchBookMetadata(book.id, book.title, book.author);
+        } else if (shouldLookUpCover('books', book.id, book.title, book.author)) {
+          fetchBookMetadata(book.id, book.title, book.author, { year: book.year, genre: book.genre });
         }
       });
     }
@@ -1654,7 +1680,7 @@ function displayBookPoster(id, posterUrl, title = null) {
   }
 }
 
-async function fetchBookMetadata(id, title, author) {
+async function fetchBookMetadata(id, title, author, existing = {}) {
   const cacheKey = `book-${title}-${author}`;
   const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
   const current = () => row && row !== editingRowElement
@@ -1715,19 +1741,19 @@ async function fetchBookMetadata(id, title, author) {
             return null;
           }
 
-          if (data && data.docs && data.docs.length > 0) {
-            const book = data.docs[0];
-            const coverId = book.cover_i || book.isbn?.[0] || null;
-            const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
-            const normalizedTitle = book.title || null;
-            const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : null;
+          // Only editions with art are worth matching; a bare record has no cover to give.
+          const withArt = (data && Array.isArray(data.docs) ? data.docs : []).filter(doc => doc && (doc.cover_i || doc.isbn?.[0]));
+          const book = pickConfidentCoverMatch(withArt, title, author, doc => ({
+            title: doc.title,
+            creators: Array.isArray(doc.author_name) ? doc.author_name : [],
+          }));
+          if (book) {
+            const coverArtUrl = book.cover_i
+              ? `https://covers.openlibrary.org/b/id/${encodeURIComponent(book.cover_i)}-L.jpg`
+              : `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(book.isbn[0])}-L.jpg`;
             const bookYear = book.first_publish_year || book.publish_year?.[0] || null;
-            const bookGenres = book.subject ? book.subject.slice(0, 3).join(', ') : null;
-
-            if (coverArtUrl) {
-
-              return { cover_art_url: coverArtUrl, author: bookAuthor, year: bookYear, genre: bookGenres, normalized_title: normalizedTitle };
-            }
+            const bookGenres = Array.isArray(book.subject) ? book.subject.slice(0, 3).join(', ') : null;
+            return { cover_art_url: coverArtUrl, year: bookYear, genre: bookGenres };
           }
           return null;
         } catch (err) {
@@ -1747,26 +1773,24 @@ async function fetchBookMetadata(id, title, author) {
   try {
     const result = await pending;
     if (!result?.cover_art_url || !current()) return;
-    await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+    // Year and genre only fill blanks; title and author stay exactly as the member saved them.
+    const year = existing?.year ? null : result.year;
+    const genre = existing?.genre ? null : result.genre;
+    await saveBookMetadata(id, result.cover_art_url, year, genre);
     if (!current()) return;
-    displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
-    updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+    displayBookPoster(id, result.cover_art_url, title);
+    updateBookRowMetadata(id, null, year, genre);
   } catch (error) { console.error('Error fetching book metadata:', error); }
 }
 
-function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
+function updateBookRowMetadata(id, author, year, genre) {
   const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
   if (!row || row === editingRowElement) return;
   syncEditButtonData(row, '.edit-book-btn', {
-    bookTitle: normalizedTitle,
     bookAuthor: author,
     bookYear: year,
     bookGenre: genre,
   });
-
-  if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = normalizedTitle;
-  }
 
   if (author && row.cells[2]) {
     row.cells[2].textContent = author;
@@ -1781,13 +1805,11 @@ function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   }
 }
 
-async function saveBookMetadata(id, coverArtUrl, author, year, genre, normalizedTitle) {
+async function saveBookMetadata(id, coverArtUrl, year, genre) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
-    if (author) updateData.author = author;
     if (year) updateData.year = year;
     if (genre) updateData.genre = genre;
-    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/books/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2598,6 +2620,51 @@ document.getElementById('videoGameTitle').addEventListener('keypress', function(
   }
 });
 
+// Every other way to add a title (the start page, picks, guides, Add anything) says when it is
+// already in the library. The add forms saved a second copy without a word, and the copy then
+// counted twice in stats, badges and the year recap. Say so once; pressing Add again saves it anyway.
+function libraryTitleKey(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function libraryItemYear(item) {
+  if (Number.isInteger(item?.year)) return item.year;
+  const fromDate = parseInt(String(item?.release_date || '').slice(0, 4), 10);
+  return Number.isInteger(fromDate) && fromDate > 0 ? fromDate : null;
+}
+
+async function confirmNotAlreadyInLibrary(form, endpoint, title, year, noun, status) {
+  const wanted = libraryTitleKey(title);
+  const wantedYear = Number.isInteger(year) && year > 0 ? year : null;
+  const key = `${wanted}|${wantedYear ?? ''}`;
+  if (!form || !wanted) return true;
+  if (form.dataset.duplicateOk === key) {
+    delete form.dataset.duplicateOk;
+    return true;
+  }
+  let items = [];
+  try {
+    const response = await authenticatedFetch(`${API_BASE}${endpoint}?search=${encodeURIComponent(title)}`);
+    if (!response || !response.ok) return true;
+    const data = await response.json();
+    items = Array.isArray(data) ? data : [];
+  } catch (error) {
+    return true; // the save itself reports a lost connection or an expired session
+  }
+  const match = items.find(item => {
+    if (libraryTitleKey(item?.title) !== wanted) return false;
+    const itemYear = libraryItemYear(item);
+    return wantedYear === null || itemYear === null || itemYear === wantedYear;
+  });
+  if (!match) return true;
+  form.dataset.duplicateOk = key;
+  const matchYear = libraryItemYear(match);
+  const message = `${match.title}${matchYear ? ` (${matchYear})` : ''} is already in your ${noun}. Press Add again if you want a second copy.`;
+  if (status) status.textContent = message;
+  else showNotice(message);
+  return false;
+}
+
 document.getElementById('addMovieForm').onsubmit = async function (e) {
   e.preventDefault();
   const titleInput = document.getElementById('movieTitle');
@@ -2645,6 +2712,8 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     movie.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addMovieForm'), '/movies/', title, year, 'movies', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2705,6 +2774,8 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
     tvShow.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addTVShowForm'), '/tv-shows/', title, year, 'TV shows', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/tv-shows/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2716,6 +2787,7 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
       delete titleInput.dataset.posterUrl;
     }
     loadTVShows();
+    if (!tvShow.watched) window.OmniStayPosted?.afterSave('tv-shows', title);
   } else {
     const errorData = await response.json().catch(() => ({}));
     showNotice(apiErrorText(errorData, 'Could not add that TV show. Please try again.'));
@@ -2765,6 +2837,8 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     anime.poster_url = titleInput.dataset.posterUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addAnimeForm'), '/anime/', title, year, 'anime', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/anime/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2777,6 +2851,7 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     }
     toggleCollapsible('animeForm');
     loadAnime();
+    if (!anime.watched) window.OmniStayPosted?.afterSave('anime', title);
   } else {
     const errorData = await response.json().catch(() => ({}));
     showNotice(apiErrorText(errorData, 'Could not add that anime. Please try again.'));
@@ -2816,6 +2891,8 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
     videoGame.rawg_link = titleInput.dataset.rawgLink;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addVideoGameForm'), '/video-games/', title, libraryItemYear(videoGame), 'games', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/video-games/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2899,6 +2976,8 @@ document.getElementById('addMusicForm').onsubmit = async function (e) {
     music.cover_art_url = titleInput.dataset.coverArtUrl;
   }
   
+  if (typeof confirmNotAlreadyInLibrary === 'function'
+    && !(await confirmNotAlreadyInLibrary(document.getElementById('addMusicForm'), '/music/', title, year, 'music', null))) return;
   const response = await authenticatedFetch(`${API_BASE}/music/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2995,6 +3074,8 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your book…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/books/', title, year, 'books', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/books/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3081,6 +3162,8 @@ document.getElementById('addMangaForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your manga…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/manga/', title, year, 'manga', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/manga/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3164,6 +3247,8 @@ document.getElementById('addPodcastForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your podcast…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/podcasts/', title, year, 'podcasts', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/podcasts/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3255,6 +3340,8 @@ document.getElementById('addAudiobookForm').onsubmit = async function (e) {
   if (submit) submit.disabled = true;
   status.textContent = 'Saving your audiobook…';
   try {
+    if (typeof confirmNotAlreadyInLibrary === 'function'
+      && !(await confirmNotAlreadyInLibrary(form, '/audiobooks/', title, year, 'audiobooks', status))) return;
     const response = await authenticatedFetch(`${API_BASE}/audiobooks/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3310,6 +3397,7 @@ function enhanceLibraryCards(tableId) {
         let hash = 0;
         for (const char of name) hash = (hash * 31 + char.codePointAt(0)) % 997;
         cell.style.setProperty('--cover-shift', String((hash % 61) - 30));
+        drawLibraryCover(cell, row.cells[1]?.firstChild?.textContent.trim() || name);
       }
       cell.querySelectorAll('input, textarea, select').forEach(input => {
         if (!input.hasAttribute('aria-label')) input.setAttribute('aria-label', cell.dataset.label);
@@ -3341,9 +3429,33 @@ function enhanceLibraryCards(tableId) {
     window.OmniFriendRecs?.decorate(actions, row);
     window.OmniLibraryTags?.decorate(row, tableId);
     window.OmniTitleOrigins?.decorate(row, tableId);
+    window.OmniLibraryQuick?.decorate(row, tableId);
     syncNextUpButtons(actions);
     groupRowActions(actions);
   });
+}
+
+// A title without art gets a drawn cover in Shelf (library-view.css): its name set in
+// the format's colour, with the hue and type size Discover and the title pages use
+// for the same title (app/explore_art.py hue and word_width). Attributes and custom
+// properties only: the cell stays empty, so a poster that loads later replaces it.
+const DRAWN_COVER_NARROW = new Set("ijlrtfI.,'!:;|");
+const DRAWN_COVER_WIDE = new Set('MWmw');
+function drawLibraryCover(cell, title) {
+  const name = String(title || '').trim();
+  if (!cell || !name) return;
+  let hue = 0;
+  Array.from(name.toLowerCase()).forEach((char, index) => { hue = (hue + char.codePointAt(0) * (index + 1)) % 360; });
+  // Letter widths in twentieths, so the sum is exact and rounds like Python's.
+  const letter = char => (DRAWN_COVER_NARROW.has(char) ? 11 : DRAWN_COVER_WIDE.has(char) ? 29
+    : char !== char.toLowerCase() ? 26 : 20);
+  const longest = Math.max(1, ...name.split(/\s+/).map(word => Number((Array.from(word).reduce((sum, char) => sum + letter(char), 0) / 20).toFixed(1))));
+  const length = Array.from(name).length;
+  // Long words get smaller type so they fit on one line; long titles shrink so they fit the cover.
+  const size = Math.min(12.5, 118 / longest, length > 30 ? 12.5 * Math.sqrt(30 / length) : 12.5);
+  cell.dataset.coverTitle = name.length > 120 ? `${name.slice(0, 117)}…` : name;
+  cell.style.setProperty('--x-hue', String(hue));
+  cell.style.setProperty('--cover-fs', `${size.toFixed(2)}cqi`);
 }
 
 // Keep Edit visible and tuck the other row actions into a small "More" menu.
@@ -3376,7 +3488,10 @@ function groupRowActions(cell) {
     const left = Math.min(window.innerWidth - width - 8, Math.max(8, box.right - width));
     const below = box.bottom + 6;
     const height = panel.offsetHeight || 180;
-    const top = below + height > window.innerHeight - 8 ? Math.max(8, box.top - height - 6) : below;
+    // On phones the bottom dock covers the last 70 px of the screen: open upwards before reaching it.
+    const dock = document.getElementById('appDock')?.getBoundingClientRect();
+    const floor = dock && dock.height && dock.top < window.innerHeight ? dock.top : window.innerHeight;
+    const top = below + height > floor - 8 ? Math.max(8, box.top - height - 6) : below;
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
   };
@@ -3408,35 +3523,22 @@ document.addEventListener('keydown', event => {
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  // Library edits since the last visit should show here: drop cached numbers so the
+  // overview and the open format are both read again.
+  Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
+  renderStatsPage();
+  loadTimeSpent();
   loadMonthlyReplay();
   loadTasteprint(false);
-  loadTimeSpent();
-  // Library edits since the last visit should show here: drop cached numbers and
-  // reload any section that is already open.
-  Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
-  let insightsOpen = false;
-  Object.entries({
-    'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
-    'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts',
-    audiobooks: 'audiobooks',
-  }).forEach(([category, idPrefix]) => {
-    const content = document.getElementById(`${idPrefix}StatsContent`);
-    if (!content || !isElementShown(content)) return;
-    if (category === 'library-insights') insightsOpen = true;
-    loadCategoryStatistics(category);
-  });
-  if (!insightsOpen) {
-    toggleCategoryAccordion('library-insights');
-  }
 }
 
 const categoryStatsCache = {};
 
 
-/* List or Shelf: how the six built-in libraries are laid out on wide screens.
-   The choice is a body class and this browser's preference; rows, edit mode
-   and every row handler stay exactly as library.js renders them. Phones keep
-   their card layout either way. */
+/* List or Shelf: how the built-in libraries are laid out. The choice is a body
+   class and this browser's preference (Shelf until the member picks); rows, edit
+   mode and every row handler stay exactly as library.js renders them. On phones
+   List is the card layout and Shelf is two or three covers a row. */
 (function () {
   const KEY = 'omnitrackr_library_view';
   const VIEWS = ['list', 'shelf'];
@@ -3444,9 +3546,10 @@ const categoryStatsCache = {};
   function saved() {
     try {
       const value = localStorage.getItem(KEY);
-      return VIEWS.includes(value) ? value : 'list';
+      // Members who never picked a layout get the covers; anyone who chose List keeps it.
+      return VIEWS.includes(value) ? value : 'shelf';
     } catch (_) {
-      return 'list';
+      return 'shelf';
     }
   }
 

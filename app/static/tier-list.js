@@ -4,14 +4,26 @@
 // (GET /api/tier-list/library). Everything is drawn with textContent only. The
 // exported picture is drawn on a canvas, with posters fetched through the
 // same-origin /api/tier-list/image proxy so the canvas can be saved.
+// Nov 2026: a ranked board can become a link (/api/tier-list/shares). The edit
+// key for each link this browser made waits in localStorage (LINKS_KEY), so a
+// visitor without an account can update or delete it, and signing up claims it.
+// Opening /tier-list?remix=<token> starts the same titles unranked and shows how
+// closely the new ranking agrees with the original.
 (function () {
   'use strict';
 
   const KEY = 'omnitrackr_tier_list';
+  const LINKS_KEY = 'omnitrackr_tier_links';
+  const MAX_LINKS = 30;
+  const MIN_SHARED = 3;
+  const TOKEN = /^[A-Za-z0-9_-]{16,32}$/;
   const TIERS = ['S', 'A', 'B', 'C', 'D'];
   const TIER_COLORS = { S: '#f472b6', A: '#fb923c', B: '#facc15', C: '#4ade80', D: '#60a5fa' };
-  const KINDS = new Set(['movie', 'tv', 'anime', 'game', 'album', 'book']);
-  const KIND_LABELS = { movie: 'Movie', tv: 'TV show', anime: 'Anime', game: 'Video game', album: 'Album', book: 'Book' };
+  const KIND_LABELS = {
+    movie: 'Movie', tv: 'TV show', anime: 'Anime', game: 'Video game', album: 'Album', book: 'Book',
+    manga: 'Manga', podcast: 'Podcast', audiobook: 'Audiobook',
+  };
+  const KINDS = new Set(Object.keys(KIND_LABELS));
   const SLUG = /^[a-z0-9-]{1,130}$/;
   const MAX_ITEMS = 150;
   const MAX_LABEL = 24;
@@ -48,7 +60,62 @@
   function emptyState() {
     const tiers = {};
     TIERS.forEach(tier => { tiers[tier] = []; });
-    return { name: 'My tier list', labels: Object.assign({}, ...TIERS.map(t => ({ [t]: t }))), tiers, pool: [], items: {}, next: 1 };
+    return {
+      name: 'My tier list', labels: Object.assign({}, ...TIERS.map(t => ({ [t]: t }))), tiers, pool: [], items: {}, next: 1,
+      link: null, template: null, source: null,
+    };
+  }
+
+  function titleKey(item) {
+    return `${String(item.title || '').toLowerCase()}|${item.kind || ''}|${item.year || 0}`;
+  }
+
+  // The shared list a board was started from: who made it and where each title sat.
+  function cleanSource(raw) {
+    if (!raw || typeof raw !== 'object' || typeof raw.token !== 'string' || !TOKEN.test(raw.token)) return null;
+    const ranks = {};
+    if (raw.ranks && typeof raw.ranks === 'object') {
+      Object.keys(raw.ranks).slice(0, MAX_ITEMS).forEach(key => {
+        const value = raw.ranks[key];
+        if (typeof key === 'string' && key.length < 260 && Number.isInteger(value) && value >= 0 && value < TIERS.length) ranks[key] = value;
+      });
+    }
+    return {
+      token: raw.token,
+      name: typeof raw.name === 'string' ? raw.name.slice(0, 80) : 'their tier list',
+      by: typeof raw.by === 'string' ? raw.by.slice(0, 60) : '',
+      ranks,
+    };
+  }
+
+  function sourceFromShare(data) {
+    const ranks = {};
+    TIERS.forEach((tier, index) => ((data.tiers && data.tiers[tier]) || []).forEach(raw => {
+      const item = cleanItem(raw);
+      if (item) ranks[titleKey(item)] = index;
+    }));
+    return cleanSource({ token: data.token, name: data.name, by: data.by, ranks });
+  }
+
+  // How a board compares with the shared list it was started from.
+  function agreement(state) {
+    const result = { compared: 0, same: 0, close: 0, score: 0, apart: [] };
+    const source = state.source;
+    if (!source) return result;
+    TIERS.forEach((tier, index) => state.tiers[tier].forEach(id => {
+      const item = state.items[id];
+      const theirs = item ? source.ranks[titleKey(item)] : undefined;
+      if (theirs === undefined) return;
+      result.compared += 1;
+      const gap = Math.abs(theirs - index);
+      if (gap === 0) result.same += 1;
+      else if (gap === 1) result.close += 1;
+      else result.apart.push({ title: item.title, mine: tier, theirs: TIERS[theirs], gap });
+    }));
+    result.apart.sort((a, b) => b.gap - a.gap);
+    result.apart = result.apart.slice(0, 2);
+    result.score = result.compared ? Math.round(((result.same + result.close * 0.5) / result.compared) * 100) : 0;
+    return result;
   }
 
   function normalizeState(raw) {
@@ -76,6 +143,9 @@
     });
     state.pool = take(raw.pool);
     state.next = Math.max(Number.isInteger(raw.next) ? raw.next : 1, used.size + 1);
+    if (typeof raw.link === 'string' && TOKEN.test(raw.link)) state.link = raw.link;
+    if (typeof raw.template === 'string' && /^[a-z0-9-]{1,60}$/.test(raw.template)) state.template = raw.template;
+    state.source = cleanSource(raw.source);
     return state;
   }
 
@@ -134,7 +204,8 @@
 
   function fromTemplate(template, name) {
     const state = emptyState();
-    state.name = (name || template.name || 'My tier list').slice(0, 80);
+    state.name = (name || template.board || template.name || 'My tier list').slice(0, 80);
+    if (typeof template.key === 'string' && /^[a-z0-9-]{1,60}$/.test(template.key)) state.template = template.key;
     (template.items || []).forEach(item => addItem(state, item, item.tier));
     return state;
   }
@@ -153,6 +224,50 @@
       if (count(state)) localStorage.setItem(KEY, JSON.stringify(state));
       else localStorage.removeItem(KEY);
     } catch (error) { /* private mode: the board still works until the tab closes */ }
+  }
+
+  // Links this browser made: [{ token, key, name, at, claimed }], newest first.
+  function readLinks() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LINKS_KEY));
+      return (Array.isArray(raw) ? raw : []).filter(link => link && typeof link.token === 'string' && TOKEN.test(link.token)
+        && (link.key === null || (typeof link.key === 'string' && link.key.length <= 80))).slice(0, MAX_LINKS);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function writeLinks(links) {
+    try {
+      if (links.length) localStorage.setItem(LINKS_KEY, JSON.stringify(links.slice(0, MAX_LINKS)));
+      else localStorage.removeItem(LINKS_KEY);
+    } catch (error) { /* the link still works; this browser just forgets it can edit it */ }
+  }
+
+  function rememberLink(link) {
+    const links = readLinks().filter(entry => entry.token !== link.token);
+    links.unshift({ token: link.token, key: link.key || null, name: String(link.name || '').slice(0, 80), at: Date.now(), claimed: !!link.claimed });
+    writeLinks(links);
+  }
+
+  function forgetLink(token) {
+    writeLinks(readLinks().filter(entry => entry.token !== token));
+  }
+
+  function linkKey(token) {
+    const found = readLinks().find(entry => entry.token === token);
+    return found ? found.key : null;
+  }
+
+  // What a link stores: the ranked titles only (the "not ranked yet" pool stays private).
+  function sharePayload(state) {
+    const tiers = {};
+    TIERS.forEach(tier => {
+      tiers[tier] = state.tiers[tier].map(id => state.items[id]).filter(Boolean)
+        .map(item => ({ title: item.title, kind: item.kind, year: item.year, slug: item.slug, image: item.image }));
+    });
+    return { name: state.name, labels: Object.assign({}, state.labels), tiers, template: state.template || null,
+      source: state.source ? state.source.token : null };
   }
 
   // ---- Export image --------------------------------------------------------
@@ -278,7 +393,8 @@
     ctx.fillText('Made with OmniTrackr', EXPORT.pad, layout.height - 26);
     ctx.fillStyle = '#8b90a8';
     ctx.textAlign = 'right';
-    ctx.fillText('omnitrackr.xyz/tier-list', EXPORT.width - EXPORT.pad, layout.height - 26);
+    ctx.fillText(state.link ? `omnitrackr.xyz/tier-list/s/${state.link}` : 'omnitrackr.xyz/tier-list',
+      EXPORT.width - EXPORT.pad, layout.height - 26);
     ctx.textAlign = 'left';
     return canvas;
   }
@@ -310,10 +426,19 @@
     const preview = tool.querySelector('[data-tier-preview]');
     const shareButton = tool.querySelector('[data-tier-share]');
     const cta = tool.querySelector('[data-tier-cta]');
+    const compareNode = tool.querySelector('[data-tier-compare]');
+    const linkButton = tool.querySelector('[data-tier-link]');
+    const linkReady = tool.querySelector('[data-tier-link-ready]');
+    const linkUrl = tool.querySelector('[data-tier-link-url]');
+    const linkOpen = tool.querySelector('[data-tier-link-open]');
+    const linkShare = tool.querySelector('[data-tier-link-share]');
+    const linkNote = tool.querySelector('[data-tier-link-note]');
+    const signedIn = tool.dataset.signedIn === 'true';
     let state = load() || emptyState();
     let selected = null;
-    let templates = null;
     let lastBlob = null;
+    let syncTimer = null;
+    let linkBusy = false;
 
     function say(text) { if (status) status.textContent = text; }
 
@@ -321,6 +446,160 @@
       save(state);
       lastBlob = null;
       if (shareButton) shareButton.hidden = true;
+      if (state.link) {
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(syncLink, 1200);
+      }
+    }
+
+    async function api(path, options = {}) {
+      const init = { method: options.method || 'GET', credentials: 'same-origin', headers: {} };
+      if (options.body !== undefined) {
+        init.headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(options.body);
+      }
+      const response = await fetch(path, init);
+      const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(typeof data.detail === 'string' ? data.detail
+          : (response.status === 429 ? 'Slow down a little and try again in a minute.' : 'Something went wrong. Please try again.'));
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function linkAddress(token) {
+      return `${window.location.origin}/tier-list/s/${token}`;
+    }
+
+    function renderLinkBox() {
+      if (!linkButton) return;
+      const token = state.link;
+      linkButton.hidden = !!token;
+      linkButton.disabled = linkBusy;
+      if (linkReady) linkReady.hidden = !token;
+      if (!token) return;
+      if (linkUrl) linkUrl.value = linkAddress(token);
+      if (linkOpen) linkOpen.href = `/tier-list/s/${token}`;
+      if (linkShare) linkShare.hidden = !(navigator.share);
+      if (linkNote && !linkNote.dataset.busy) {
+        linkNote.replaceChildren();
+        if (ranked(state) < MIN_SHARED) {
+          linkNote.textContent = `Your link keeps the last version with at least ${MIN_SHARED} ranked titles.`;
+        } else if (signedIn) {
+          linkNote.textContent = 'Anyone with the link can see this board. Changes you make here update it, and your links are listed below.';
+        } else {
+          linkNote.appendChild(document.createTextNode('Anyone with the link can see this board, and changes you make here update it. '
+            + 'Links made without an account stay up for 30 days. '));
+          const join = element('a', '', 'Create a free account');
+          join.href = '/?next=%2Ftier-list#signup';
+          join.dataset.tierSignup = '';
+          linkNote.appendChild(join);
+          linkNote.appendChild(document.createTextNode(' to keep it for good.'));
+        }
+      }
+    }
+
+    function linkNoteSay(text) {
+      if (!linkNote) return;
+      linkNote.dataset.busy = '1';
+      linkNote.textContent = text;
+      setTimeout(() => { delete linkNote.dataset.busy; renderLinkBox(); }, 2600);
+    }
+
+    async function makeLink() {
+      if (ranked(state) < MIN_SHARED) { say(`Put at least ${MIN_SHARED} titles in tiers, then make your link.`); return; }
+      if (linkBusy) return;
+      linkBusy = true;
+      renderLinkBox();
+      say('Making your link…');
+      try {
+        const made = await api('/api/tier-list/shares', { method: 'POST', body: sharePayload(state) });
+        rememberLink({ token: made.token, key: made.key, name: state.name, claimed: made.member });
+        state.link = made.token;
+        save(state);
+        say('Your link is ready. Copy it, or open it to see what friends will see.');
+        renderLinkBox();
+        if (linkUrl) { linkUrl.focus(); linkUrl.select(); }
+        refreshMine();
+      } catch (error) {
+        say(error.message);
+      } finally {
+        linkBusy = false;
+        renderLinkBox();
+      }
+    }
+
+    async function syncLink() {
+      const token = state.link;
+      if (!token || ranked(state) < MIN_SHARED) { renderLinkBox(); return; }
+      const key = linkKey(token);
+      try {
+        await api(`/api/tier-list/shares/${token}`, { method: 'PUT', body: Object.assign(sharePayload(state), { key }) });
+        linkNoteSay('Link updated.');
+      } catch (error) {
+        if (error.status === 404 || error.status === 403) {
+          // Deleted, expired or not ours to change: this board needs a new link.
+          if (error.status === 404) forgetLink(token);
+          state.link = null;
+          save(state);
+          renderLinkBox();
+          say(error.status === 404 ? 'That link has ended. Make a new one to share this board.' : error.message);
+        } else {
+          linkNoteSay('Could not update the link just now. It will try again after your next change.');
+        }
+      }
+    }
+
+    async function copyLink() {
+      if (!state.link) return;
+      const address = linkAddress(state.link);
+      try {
+        await navigator.clipboard.writeText(address);
+        linkNoteSay('Copied. Paste it anywhere.');
+      } catch (error) {
+        if (linkUrl) { linkUrl.focus(); linkUrl.select(); }
+        linkNoteSay('Press Ctrl+C (or ⌘C) to copy the selected link.');
+      }
+    }
+
+    async function shareLink() {
+      if (!state.link || !navigator.share) return;
+      try {
+        await navigator.share({ title: state.name, text: `My ${state.name} tier list. Rank them yourself and see if we agree:`, url: linkAddress(state.link) });
+        report('share_clicked');
+      } catch (error) { /* share sheet closed */ }
+    }
+
+    function renderCompare() {
+      if (!compareNode) return;
+      const source = state.source;
+      const result = agreement(state);
+      compareNode.hidden = !source;
+      if (!source) return;
+      compareNode.replaceChildren();
+      const who = source.by && !/^(someone|an OmniTrackr member)/.test(source.by) ? source.by : 'the person who made it';
+      const head = element('p', 'tl-compare__head');
+      const original = element('a', '', source.name);
+      original.href = `/tier-list/s/${source.token}`;
+      if (result.compared < MIN_SHARED) {
+        head.append('You are ranking the titles from ', original, `. Place ${MIN_SHARED} or more and you will see how closely you agree with ${who}.`);
+        compareNode.appendChild(head);
+        return;
+      }
+      const score = element('strong', 'tl-compare__score', `${result.score}%`);
+      head.append(score, ` agreement with ${who} on `, original, '.');
+      compareNode.appendChild(head);
+      const detail = `${result.same} of ${result.compared} in the same tier, ${result.close} one tier apart.`;
+      compareNode.appendChild(element('p', 'tl-compare__detail', detail));
+      if (result.apart.length) {
+        const split = result.apart.map(entry => `${entry.title} (you ${state.labels[entry.mine] || entry.mine}, them ${entry.theirs})`).join('; ');
+        compareNode.appendChild(element('p', 'tl-compare__detail', `Biggest split: ${split}.`));
+      }
+      if (!state.pool.length && !state.link) {
+        compareNode.appendChild(element('p', 'tl-compare__detail', 'All ranked. Get a share link below and send yours back.'));
+      }
     }
 
     function tile(id) {
@@ -372,6 +651,8 @@
       if (nameInput && document.activeElement !== nameInput) nameInput.value = state.name;
       if (cta) cta.hidden = !ranked(state);
       renderMoveBar();
+      renderCompare();
+      renderLinkBox();
     }
 
     function renderMoveBar() {
@@ -441,7 +722,9 @@
       } else if (target.hasAttribute('data-tier-share')) {
         shareImage();
       } else if (target.hasAttribute('data-tier-clear')) {
-        if (count(state) && !window.confirm('Clear this tier list and start over?')) return;
+        if (count(state) && !window.confirm(state.link ? 'Clear this board and start over? Your link keeps the board as it is now.'
+          : 'Clear this tier list and start over?')) return;
+        clearTimeout(syncTimer);
         state = emptyState();
         selected = null;
         persist();
@@ -450,6 +733,12 @@
         say('Cleared.');
       } else if (target.hasAttribute('data-tier-save-guest')) {
         saveToGuestList();
+      } else if (target.hasAttribute('data-tier-link')) {
+        makeLink();
+      } else if (target.hasAttribute('data-tier-link-copy')) {
+        copyLink();
+      } else if (target.hasAttribute('data-tier-link-share')) {
+        shareLink();
       } else if (target.dataset.tierAdd !== undefined) {
         const result = searchResults[Number(target.dataset.tierAdd)];
         if (result) addAndAnnounce(result);
@@ -552,30 +841,151 @@
     document.addEventListener('pointercancel', event => endDrag(event, true));
 
     // ---- Sources ----
-    async function getTemplates() {
-      if (templates) return templates;
-      const response = await fetch('/api/tier-list/templates', { credentials: 'same-origin' });
-      if (!response.ok) throw new Error(String(response.status));
-      const data = await response.json();
-      templates = Array.isArray(data.templates) ? data.templates : [];
-      return templates;
+    async function getTemplate(key) {
+      const data = await api(`/api/tier-list/templates?key=${encodeURIComponent(key)}`);
+      return (Array.isArray(data.templates) ? data.templates : []).find(entry => entry.key === key) || null;
+    }
+
+    function replaceBoard(next) {
+      clearTimeout(syncTimer);
+      state = next;
+      selected = null;
+      save(state);
+      lastBlob = null;
+      if (shareButton) shareButton.hidden = true;
+      if (preview) preview.hidden = true;
+      render();
+    }
+
+    function scrollToBoard() {
+      const wrap = tool.querySelector('.tl-board-wrap');
+      if (wrap && wrap.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     async function startTemplate(key) {
       try {
-        const template = (await getTemplates()).find(entry => entry.key === key);
+        const template = await getTemplate(key);
         if (!template) { say('That set is not available right now.'); return; }
         if (count(state) && !window.confirm(`Start “${template.name}”? This replaces your current board.`)) return;
-        state = fromTemplate(template);
-        selected = null;
-        persist();
-        render();
+        replaceBoard(fromTemplate(template));
+        report('tier_list_template_started');
         say(`${count(state)} titles are waiting below the board. Drag or tap each one into a tier.`);
-        const wrap = tool.querySelector('.tl-board-wrap');
-        if (wrap && wrap.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        scrollToBoard();
       } catch (error) {
         say('Could not load that set. Check your connection and try again.');
       }
+    }
+
+    // /tier-list?remix=<token>: the same titles as someone's shared list, unranked.
+    async function startRemix(token) {
+      try {
+        const data = await api(`/api/tier-list/shares/${token}`);
+        if (state.source && state.source.token === token && count(state)) {
+          say('Your take on this list is below. Keep ranking.');
+          return;
+        }
+        if (count(state) && !window.confirm(`Rank the titles from “${data.name}”? This replaces your current board.`)) return;
+        const next = emptyState();
+        next.name = `My take: ${data.name}`.slice(0, 80);
+        next.template = typeof data.template === 'string' ? data.template : null;
+        TIERS.forEach(tier => (data.tiers[tier] || []).forEach(item => addItem(next, item)));
+        next.source = sourceFromShare(data);
+        next.labels = Object.assign({}, next.labels, data.labels || {});
+        replaceBoard(next);
+        report('tier_list_remix_started');
+        say(`${count(state)} titles from “${data.name}” are waiting below the board. Rank them your way.`);
+        scrollToBoard();
+      } catch (error) {
+        say(error.status === 404 ? 'That tier list link has ended, so its titles could not be loaded.' : error.message);
+      }
+    }
+
+    // /tier-list?edit=<token>: put a shared list back on the board to change it.
+    async function startEdit(token) {
+      if (state.link === token) { say('This is the board behind your link. Changes you make update it.'); return; }
+      try {
+        const data = await api(`/api/tier-list/shares/${token}`);
+        if (!signedIn && !linkKey(token)) { say('Only the browser or account that made this link can change it.'); return; }
+        if (count(state) && !window.confirm(`Load “${data.name}” to edit it? This replaces your current board.`)) return;
+        const next = emptyState();
+        next.name = data.name;
+        next.template = typeof data.template === 'string' ? data.template : null;
+        next.labels = Object.assign({}, next.labels, data.labels || {});
+        TIERS.forEach(tier => (data.tiers[tier] || []).forEach(item => addItem(next, item, tier)));
+        next.link = token;
+        replaceBoard(next);
+        say('Your shared board is loaded. Changes you make update the link.');
+        scrollToBoard();
+      } catch (error) {
+        say(error.status === 404 ? 'That tier list link has ended.' : error.message);
+      }
+    }
+
+    // Starting-set filter inside "Browse all".
+    const setFilter = tool.querySelector('[data-tier-set-filter]');
+    if (setFilter) {
+      setFilter.addEventListener('input', () => {
+        const query = setFilter.value.trim().toLowerCase();
+        let shown = 0;
+        tool.querySelectorAll('[data-tier-set-group]').forEach(group => {
+          let inGroup = 0;
+          group.querySelectorAll('[data-tier-set-name]').forEach(link => {
+            const match = !query || link.dataset.tierSetName.includes(query);
+            link.parentElement.hidden = !match;
+            if (match) inGroup += 1;
+          });
+          group.hidden = !inGroup;
+          shown += inGroup;
+        });
+        const none = tool.querySelector('[data-tier-set-none]');
+        if (none) none.hidden = shown > 0;
+      });
+    }
+
+    // Members: links made here before signing up move into the account, then the list of links.
+    const mineNode = document.querySelector('[data-tier-mine]');
+    const mineList = mineNode && mineNode.querySelector('[data-tier-mine-list]');
+    async function claimLinks() {
+      const waiting = readLinks().filter(link => link.key && !link.claimed);
+      if (!signedIn || !waiting.length) return;
+      try {
+        const result = await api('/api/tier-list/shares/claim', { method: 'POST', body: { links: waiting.map(link => ({ token: link.token, key: link.key })) } });
+        writeLinks(readLinks().map(link => (waiting.some(entry => entry.token === link.token) ? Object.assign({}, link, { claimed: true }) : link)));
+        if (result.claimed) say(`${result.claimed} tier list link${result.claimed === 1 ? '' : 's'} you made before signing up ${result.claimed === 1 ? 'is' : 'are'} now in your account, with no expiry.`);
+      } catch (error) { /* tried again next visit */ }
+    }
+
+    async function refreshMine() {
+      if (!signedIn || !mineList) return;
+      try {
+        const data = await api('/api/tier-list/shares/mine');
+        const links = Array.isArray(data.links) ? data.links : [];
+        mineNode.hidden = !links.length;
+        mineList.replaceChildren(...links.map(link => {
+          const row = element('li', 'tl-mine__item');
+          const name = element('a', 'tl-mine__name', link.name);
+          name.href = link.path;
+          const facts = [`${link.count} titles`];
+          if (link.views) facts.push(`opened ${link.views} time${link.views === 1 ? '' : 's'}`);
+          if (link.remixes) facts.push(`${link.remixes} ranked it themselves`);
+          const meta = element('span', 'tl-mine__meta', facts.join(' · '));
+          const edit = element('a', 'tl-mine__action', 'Edit');
+          edit.href = `/tier-list?edit=${link.token}`;
+          const remove = element('button', 'tl-mine__action', 'Delete');
+          remove.type = 'button';
+          remove.addEventListener('click', async () => {
+            if (!window.confirm(`Delete the link for “${link.name}”? Anyone who has it will see that it has ended.`)) return;
+            try {
+              await api(`/api/tier-list/shares/${link.token}`, { method: 'DELETE', body: { key: linkKey(link.token) } });
+              forgetLink(link.token);
+              if (state.link === link.token) { state.link = null; save(state); renderLinkBox(); }
+              refreshMine();
+            } catch (error) { say(error.message); }
+          });
+          row.append(name, meta, edit, remove);
+          return row;
+        }));
+      } catch (error) { /* the list is a convenience */ }
     }
 
     const searchForm = tool.querySelector('[data-tier-search]');
@@ -725,14 +1135,69 @@
 
     render();
     const key = tool.dataset.template;
-    if (key && (!count(state))) startTemplate(key);
+    const remix = tool.dataset.remix;
+    const edit = tool.dataset.edit;
+    if (edit && TOKEN.test(edit)) startEdit(edit);
+    else if (remix && TOKEN.test(remix)) startRemix(remix);
+    else if (key && (!count(state))) startTemplate(key);
     else if (key) say('Your saved board is below. Choose the set again to start it fresh.');
+    if (signedIn) claimLinks().then(refreshMine);
   }
 
-  const api = { emptyState, normalizeState, addItem, moveItem, removeItem, fromTemplate, cleanItem, exportLayout, fileName, TIERS, MAX_ITEMS };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  // The page a shared link opens (/tier-list/s/<token>).
+  function initShared() {
+    const page = document.getElementById('tierShare');
+    if (!page) return;
+    const token = page.dataset.token;
+    const status = page.querySelector('[data-tier-status]');
+    const say = text => { if (status) status.textContent = text; };
+    const address = `${window.location.origin}/tier-list/s/${token}`;
+    const owner = page.querySelector('[data-tier-owner]');
+    const key = linkKey(token);
+    if (owner && page.dataset.owner !== 'true' && key) owner.hidden = false;
+    const shareButton = page.querySelector('[data-tier-shared-share]');
+    if (shareButton) shareButton.hidden = !navigator.share;
+    page.addEventListener('click', async event => {
+      const target = event.target.closest ? event.target.closest('button, a') : null;
+      if (!target) return;
+      if (target.hasAttribute('data-tier-shared-copy')) {
+        try { await navigator.clipboard.writeText(address); say('Link copied.'); } catch (error) { say(address); }
+      } else if (target.hasAttribute('data-tier-shared-share')) {
+        try {
+          await navigator.share({ title: document.title, text: 'Rank these yourself and see if we agree:', url: address });
+          report('share_clicked');
+        } catch (error) { /* share sheet closed */ }
+      } else if (target.hasAttribute('data-tier-shared-delete')) {
+        if (!window.confirm('Delete this link? Anyone who has it will see that it has ended.')) return;
+        try {
+          const response = await fetch(`/api/tier-list/shares/${token}`, {
+            method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }),
+          });
+          if (!response.ok && response.status !== 404) throw new Error(String(response.status));
+          forgetLink(token);
+          window.location.href = '/tier-list';
+        } catch (error) {
+          say('Could not delete the link. Try again in a moment.');
+        }
+      }
+    });
+  }
+
+  function trackSignup() {
+    document.addEventListener('click', event => {
+      const target = event.target.closest ? event.target.closest('[data-tier-signup]') : null;
+      if (target) report('tier_list_signup_clicked');
+    });
+  }
+
+  const exported = {
+    emptyState, normalizeState, addItem, moveItem, removeItem, fromTemplate, cleanItem, exportLayout, fileName,
+    agreement, sourceFromShare, sharePayload, titleKey, TIERS, MAX_ITEMS,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document !== 'undefined' && document.addEventListener) {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
+    const start = () => { init(); initShared(); trackSignup(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
   }
 })();

@@ -1,4 +1,4 @@
-/* Seasonal hubs (/halloween, /holidays). Builds on discover.css and if-you-liked.css.
+/* Seasonal hubs (/halloween, /holidays, /valentines-day). Builds on discover.css and if-you-liked.css.
    Each season sets its colors on [data-season-theme]; the layout is shared. */
 .sn-hub {
   --sn-accent: #2dd4bf;
@@ -20,6 +20,14 @@
   --sn-glow: rgba(251, 191, 36, .18);
   --sn-berry: #f87171;
   --sn-pine: #22c55e;
+}
+
+.sn-hub[data-season-theme="valentine"] {
+  --sn-accent: #fb7185;
+  --sn-accent-soft: #fecdd3;
+  --sn-accent-ink: #2a0610;
+  --sn-glow: rgba(244, 63, 94, .2);
+  --sn-plum: #c084fc;
 }
 
 .sn-hub .eyebrow { color: var(--sn-accent); }
@@ -45,7 +53,7 @@
   width: 180px;
   z-index: 0;
 }
-.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-hero__moon { display: none; }
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]):not([data-season-theme="valentine"]) .sn-hero__moon { display: none; }
 
 /* Holiday hero: the same corner holds a wreath of lights, with a light fall of snow across the header. */
 .sn-hub[data-season-theme="holiday"] .sn-hero__moon {
@@ -80,6 +88,33 @@
   z-index: 0;
 }
 
+/* Valentine's hero: the corner holds a heart, with a scatter of small pink lights across the header. */
+.sn-hub[data-season-theme="valentine"] .sn-hero__moon {
+  aspect-ratio: 1.1 / 1;
+  background: radial-gradient(circle at 34% 30%, #ffe4e6 0, #fda4af 26%, #f43f5e 64%, #9f1239 100%);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(50% 23.9%, 50% 23.3%, 50.3% 21.8%, 50.9% 19.3%, 52% 16.2%, 53.8% 12.7%, 56.2% 9.1%, 59.4% 5.8%, 63.3% 3%, 67.7% 1%, 72.5% 0%, 77.5% 0.1%, 82.5% 1.4%, 87.2% 3.7%, 91.5% 7.1%, 95.1% 11.4%, 97.8% 16.3%, 99.4% 21.7%, 100% 27.3%, 99.4% 33.1%, 97.8% 38.8%, 95.1% 44.5%, 91.5% 49.9%, 87.2% 55.1%, 82.5% 60.2%, 77.5% 65.1%, 72.5% 69.8%, 67.7% 74.4%, 63.3% 78.8%, 59.4% 83.1%, 56.3% 87.1%, 53.8% 90.7%, 52% 93.8%, 50.9% 96.4%, 50.3% 98.4%, 50% 99.6%, 50% 100%, 50% 99.6%, 49.7% 98.4%, 49.1% 96.4%, 48% 93.8%, 46.2% 90.7%, 43.7% 87.1%, 40.6% 83.1%, 36.7% 78.8%, 32.3% 74.4%, 27.5% 69.8%, 22.5% 65.1%, 17.5% 60.2%, 12.8% 55.1%, 8.5% 49.9%, 4.9% 44.5%, 2.2% 38.8%, 0.6% 33.1%, 0% 27.3%, 0.6% 21.7%, 2.2% 16.3%, 4.9% 11.4%, 8.5% 7.1%, 12.8% 3.7%, 17.5% 1.4%, 22.5% 0.1%, 27.5% 0%, 32.3% 1%, 36.7% 3%, 40.6% 5.8%, 43.8% 9.1%, 46.2% 12.7%, 48% 16.2%, 49.1% 19.3%, 49.7% 21.8%, 50% 23.3%);
+  height: auto;
+  opacity: .34;
+}
+.sn-hub[data-season-theme="valentine"] .sn-hero::before {
+  background-image:
+    radial-gradient(circle at 23% 31%, rgba(253, 164, 175, .55) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 71% 64%, rgba(216, 180, 254, .4) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 12%, rgba(253, 164, 175, .45) 0 2px, transparent 3px),
+    radial-gradient(circle at 86% 83%, rgba(255, 255, 255, .3) 0 1px, transparent 2px);
+  background-size: 137px 149px, 89px 103px, 211px 197px, 61px 71px;
+  content: "";
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  opacity: .5;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
 /* Fright meter: five marks, filled up to the level. */
 .sn-fright { align-items: center; color: #e7e3f7; display: flex; flex-wrap: wrap; font-size: .88rem; gap: 6px 10px; margin: 2px 0 0; }
 .sn-fright__marks { display: inline-flex; gap: 4px; }
@@ -90,6 +125,9 @@
 .sn-hub[data-season-theme="holiday"] .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); }
 .sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on { background: var(--sn-accent); box-shadow: 0 0 10px rgba(251, 191, 36, .55); }
 .sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); box-shadow: 0 0 10px rgba(248, 113, 113, .55); }
+.sn-hub[data-season-theme="valentine"] .sn-fright__mark { border-radius: 0; clip-path: polygon(50% 23.9%, 50% 23.3%, 50.3% 21.8%, 50.9% 19.3%, 52% 16.2%, 53.8% 12.7%, 56.2% 9.1%, 59.4% 5.8%, 63.3% 3%, 67.7% 1%, 72.5% 0%, 77.5% 0.1%, 82.5% 1.4%, 87.2% 3.7%, 91.5% 7.1%, 95.1% 11.4%, 97.8% 16.3%, 99.4% 21.7%, 100% 27.3%, 99.4% 33.1%, 97.8% 38.8%, 95.1% 44.5%, 91.5% 49.9%, 87.2% 55.1%, 82.5% 60.2%, 77.5% 65.1%, 72.5% 69.8%, 67.7% 74.4%, 63.3% 78.8%, 59.4% 83.1%, 56.3% 87.1%, 53.8% 90.7%, 52% 93.8%, 50.9% 96.4%, 50.3% 98.4%, 50% 99.6%, 50% 100%, 50% 99.6%, 49.7% 98.4%, 49.1% 96.4%, 48% 93.8%, 46.2% 90.7%, 43.7% 87.1%, 40.6% 83.1%, 36.7% 78.8%, 32.3% 74.4%, 27.5% 69.8%, 22.5% 65.1%, 17.5% 60.2%, 12.8% 55.1%, 8.5% 49.9%, 4.9% 44.5%, 2.2% 38.8%, 0.6% 33.1%, 0% 27.3%, 0.6% 21.7%, 2.2% 16.3%, 4.9% 11.4%, 8.5% 7.1%, 12.8% 3.7%, 17.5% 1.4%, 22.5% 0.1%, 27.5% 0%, 32.3% 1%, 36.7% 3%, 40.6% 5.8%, 43.8% 9.1%, 46.2% 12.7%, 48% 16.2%, 49.1% 19.3%, 49.7% 21.8%, 50% 23.3%); height: 12px; width: 13px; }
+.sn-hub[data-season-theme="valentine"] .sn-fright__mark--on { box-shadow: none; }
+.sn-hub[data-season-theme="valentine"] .sn-fright--5 .sn-fright__mark--on { background: #f43f5e; }
 
 .sn-scale { margin: 36px 0 44px; }
 .sn-scale__list { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
@@ -132,7 +170,8 @@
   justify-content: center;
 }
 .sn-hub[data-season-theme="holiday"] .sn-pick__art--letter { background: linear-gradient(160deg, rgba(220, 38, 38, .45), rgba(21, 128, 61, .55)); }
-.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-pick__art--letter { background: rgba(124, 58, 237, .35); }
+.sn-hub[data-season-theme="valentine"] .sn-pick__art--letter { background: linear-gradient(160deg, rgba(244, 63, 94, .5), rgba(126, 34, 206, .5)); }
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]):not([data-season-theme="valentine"]) .sn-pick__art--letter { background: rgba(124, 58, 237, .35); }
 .sn-pick .eyebrow { margin-bottom: 6px; }
 .sn-pick h3 { color: #fff; font-family: var(--site-display); font-size: 1.35rem; line-height: 1.3; margin: 0 0 6px; }
 .sn-pick__time { color: #c3c8dd !important; font-size: .88rem; margin: 6px 0 0; }
@@ -149,6 +188,35 @@
 .sn-pick__link { font-size: .92rem; }
 .sn-pick__status { font-size: .9rem; margin: 8px 0 0; min-height: 1em; }
 
+/* New releases (Christmas guide, Valentine's hub): a date line on a pick, the dated calendar and the sources list. */
+.sn-pick__release { color: var(--sn-accent-soft); font-size: .88rem; font-weight: 700; margin: 4px 0 0; }
+.sn-calendar { margin-top: 56px; scroll-margin-top: 80px; }
+.sn-calendar__intro { max-width: 800px; }
+.sn-calendar__intro p { color: #d7dbee; }
+.sn-calendar__month { color: var(--sn-accent-soft); font-size: 1.1rem; letter-spacing: .02em; margin: 28px 0 10px; }
+.sn-calendar__list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.sn-calendar__row { align-items: flex-start; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; display: flex; gap: 16px; padding: 14px 16px; }
+.sn-calendar__date { background: rgba(255, 255, 255, .06); border-radius: 10px; flex: 0 0 64px; padding: 6px 0; text-align: center; }
+.sn-calendar__date span { color: var(--site-muted); display: block; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sn-calendar__date strong { color: #fff; display: block; font-size: 1rem; }
+.sn-calendar__body { min-width: 0; }
+.sn-calendar__body p { margin: 0; }
+.sn-calendar__title { color: #fff; }
+.sn-calendar__title a { color: #fff; text-decoration-color: var(--sn-accent); text-underline-offset: 3px; }
+.sn-calendar__format, .sn-calendar__out { border-radius: 999px; display: inline-block; font-size: .74rem; font-weight: 700; margin-left: 4px; padding: 2px 8px; vertical-align: 2px; }
+.sn-calendar__format { border: 1px solid var(--site-border-strong); color: #d7dbee; }
+.sn-calendar__out { background: var(--sn-accent); color: var(--sn-accent-ink); }
+.sn-calendar__where { color: var(--sn-accent-soft); font-size: .9rem; font-weight: 700; margin-top: 2px !important; }
+.sn-calendar__note { color: #d7dbee; font-size: .95rem; margin-top: 4px !important; }
+/* The reading layout sets long text in serif; a calendar row's title and service stay in the UI font. */
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p { font-size: 1rem; line-height: 1.55; }
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__title,
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__where { font-family: var(--site-font); }
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__where { font-size: .9rem; }
+.sn-calendar__format, .sn-calendar__out { font-family: var(--site-font); }
+.sn-sources { margin: 10px 0 18px; padding-left: 20px; }
+.sn-sources li { margin: 6px 0; overflow-wrap: anywhere; }
+
 /* Plan your night and questions. */
 .sn-plan, .sn-faq { margin-top: 56px; }
 .sn-nights { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
@@ -160,13 +228,39 @@
 .sn-faq__item summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 12px 0; }
 .sn-faq__item p { margin: 0 0 14px; }
 
+/* Guides beside a hub (/holidays/thanksgiving, /holidays/reading-and-listening): the shelves as a numbered run. */
+.sn-companion__parent { color: var(--site-muted); font-size: .95rem; margin: 20px 0 0; }
+.sn-companion__parent a { color: var(--sn-accent-soft); }
+.sn-days { counter-reset: sn-day; display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 30px 0 40px; padding: 0; }
+.sn-days li { counter-increment: sn-day; }
+.sn-days a {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  color: var(--site-text);
+  display: block;
+  height: 100%;
+  min-height: 44px;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+.sn-days a::before { color: var(--sn-accent); content: counter(sn-day, decimal-leading-zero); display: block; font-size: .8rem; font-weight: 800; letter-spacing: .08em; }
+.sn-days a:hover { border-color: var(--sn-accent); }
+.sn-days a:focus-visible { outline: 3px solid var(--sn-accent); outline-offset: 3px; }
+.sn-days span { color: var(--site-muted); display: block; font-size: .78rem; font-weight: 700; letter-spacing: .06em; margin-top: 6px; text-transform: uppercase; }
+.sn-days strong { display: block; font-size: 1.02rem; margin-top: 2px; }
+
 @media (max-width: 900px) {
+  .sn-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sn-scale__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sn-picks, .sn-nights { grid-template-columns: 1fr; }
   .sn-hero__moon { height: 110px; opacity: .22; top: 24px; width: 110px; }
+  .sn-hub[data-season-theme="valentine"] .sn-hero__moon { height: auto; opacity: .24; }
 }
 @media (max-width: 520px) {
   .sn-scale__list { grid-template-columns: 1fr; }
+  .sn-calendar__row { gap: 12px; padding: 12px; }
+  .sn-calendar__date { flex-basis: 54px; }
   .sn-pick__art { flex-basis: 56px; width: 56px; }
 }
 @media (prefers-reduced-motion: reduce) {

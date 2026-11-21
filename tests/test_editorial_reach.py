@@ -3,14 +3,16 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app import daily, editorial_index, site_chrome, title_search
-from app import new_releases
+from app import awards_data, daily, editorial_index, site_chrome, title_search
+from app import binge_calculator, essentials, new_releases
+from app.binge_guides import GUIDES as BINGE_GUIDES
 from app.discover_catalog import published_editions
 from app.best_of_guides import GUIDES as BEST_OF_GUIDES
 from app.discover_guides import GUIDES as DISCOVER_GUIDES
 from app.if_you_liked_guides import GUIDES as LIKED_GUIDES
 from app.in_order_guides import GUIDES as ORDER_GUIDES
 from app.seasonal_guides import SEASONS
+from app.holiday_guides import GUIDES as HOLIDAY_GUIDES
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +39,7 @@ def header(html):
 
 def test_editorial_index_lists_every_guide_newest_first():
     pieces = editorial_index.entries()
-    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs, best-of lists, release guides
+    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + 2 + len(HOLIDAY_GUIDES) + len(BEST_OF_GUIDES) + len(new_releases.published()) + 1 + len(awards_data.SHOWS) + sum(1 for guide in BINGE_GUIDES.values() if binge_calculator.is_indexable(guide)) + len(essentials.lists())  # + monthly editions, seasonal hubs, the gift and Black Friday guides, the guides beside the holiday hub, best-of lists, release guides, the awards calendar and its shows, the indexable binge guides, the Essential 100 lists
     dates = [piece["updated"] for piece in pieces]
     assert dates == sorted(dates, reverse=True)
     latest = editorial_index.latest(6)

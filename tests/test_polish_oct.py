@@ -27,7 +27,7 @@ def test_active_tabs_meet_contrast():
         lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
         return 1.05 / (lum + 0.05)
     assert ratio("#7c3aed") >= 4.5 > ratio("#8b5cf6")
-    assert ".showcase-tabs .active { background: #7c3aed" in Path("app/static/public-landing.css").read_text(encoding="utf-8")
+    assert '.lp-showcase__tab[aria-selected="true"] { background: #7c3aed' in Path("app/static/public-landing.css").read_text(encoding="utf-8")
     assert 'a[aria-current="page"] { background: #7c3aed' in Path("app/static/release-radar.css").read_text(encoding="utf-8")
 
 

@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from sqlalchemy import event
 
-from app import auth, models
+from app import auth, models, review_quality
 from app.routers import reviews
 
 
@@ -145,7 +145,7 @@ def test_ssr_first_page_exactly_matches_feed_and_hydrates_empty(client, db_sessi
     assert "No matching reviews yet" in empty and "/static/ad-loader.js" not in page
 
 
-def test_directory_requires_standalone_content_before_indexing(client, db_session, members):
+def test_directory_requires_standalone_content_before_indexing(client, db_session, members, monkeypatch):
     author, _ = members
     empty = client.get("/reviews")
     assert empty.status_code == 200
@@ -168,7 +168,12 @@ def test_directory_requires_standalone_content_before_indexing(client, db_sessio
     assert '<meta name="robots" content="index, follow, max-image-preview:large">' in qualified.text
     assert "x-robots-tag" not in qualified.headers
     assert "/static/ad-loader.js" not in qualified.text
+    # Three movie reviews make /reviews worth indexing, but the movie listing would repeat it.
+    assert client.get("/reviews?category=movie").headers["x-robots-tag"] == "noindex, follow"
+    assert "/reviews?category=movie</loc>" not in client.get("/sitemap.xml").text
+    monkeypatch.setattr(review_quality, "MIN_INDEXED_CATEGORY_REVIEWS", 3)
     assert client.get("/reviews?category=movie").headers.get("x-robots-tag") is None
+    assert "/reviews?category=movie</loc>" in client.get("/sitemap.xml").text
     assert client.get("/reviews?category=book").headers["x-robots-tag"] == "noindex, follow"
 
 

@@ -112,13 +112,28 @@ def _source_link(label: str, url: str) -> str:
             f' <span class="muted">({_e(host.removeprefix("www."))})</span></li>')
 
 
-def _section_id(section: dict) -> str:
-    return "section-" + section["format"]
+DEFAULT_METHOD = ("Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. Most of these "
+                  "releases were not out when we wrote about them, so read this as a guide to what is worth "
+                  "planning around. We picked from the dated releases on the calendars and studio announcements listed below, left out "
+                  "anything without a firm date, and chose the ones we would point a friend towards, with an honest note on who "
+                  "should wait for reviews. The opinions are ours.")
+
+
+def _method(entry: dict) -> str:
+    """How the picks were chosen: the guide's own paragraphs, or the standard note."""
+    return _paragraphs(entry.get("method") or [DEFAULT_METHOD])
+
+
+def _count_line(entry: dict, total: int) -> str:
+    sections = len(entry["sections"])
+    if entry.get("focus"):
+        return f"{total} {new_releases.focus_words(entry)[0]} picks in {sections} groups."
+    return f"{total} releases across {sections} formats."
 
 
 def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     reviewed = entry["reviewed"]
-    jump = [f'<a href="#{_section_id(section)}">{_e(new_releases.FORMAT_LABELS[section["format"]])}</a>'
+    jump = [f'<a href="#{new_releases.section_id(section)}">{_e(new_releases.section_label(section))}</a>'
             for section in entry["sections"]]
     if entry["also"]:
         jump.append('<a href="#also">Also on the calendar</a>')
@@ -127,20 +142,20 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today:
     parts = [
         '<article class="trail-guide yl-guide bo-guide nr-guide">',
         f'<header class="hero hero--guide"><a href="{new_releases.BASE_PATH}">← Every release guide</a>',
-        f'<p class="eyebrow">RELEASE GUIDE · {_e(entry["period"].upper())}</p>',
+        f'<p class="eyebrow">{_e(entry.get("eyebrow", "RELEASE GUIDE"))} · {_e(entry["period"].upper())}</p>',
         f'<h1>{_e(entry["name"])}</h1><p class="guide-deck">{_e(entry["summary"])}</p>',
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Checked ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time></p>',
         f'<nav class="guide-jump" aria-label="On this page">{"".join(jump)}</nav></header>',
         f'<div class="guide-intro">{_paragraphs(entry["lead"])}</div>',
-        f'<p class="nr-count">{total} releases across {len(entry["sections"])} formats. Each one says when and where it '
+        f'<p class="nr-count">{_count_line(entry, total)} Each one says when and where it '
         'comes out, why it is on our list, what to catch up on first, and one thing to know before you commit.'
         + ('' if signed_in else ' Save any of them to a list, no account needed, and we will keep it for you if you sign up.') + '</p>',
     ]
     for section in entry["sections"]:
-        label = new_releases.FORMAT_LABELS[section["format"]]
-        parts.append(f'<section id="{_section_id(section)}" class="nr-section" aria-labelledby="{_section_id(section)}-heading">'
-                     f'<p class="eyebrow">{_e(label.upper())}</p><h2 id="{_section_id(section)}-heading">{_e(section["heading"])}</h2>'
+        label = new_releases.section_label(section)
+        parts.append(f'<section id="{new_releases.section_id(section)}" class="nr-section" aria-labelledby="{new_releases.section_id(section)}-heading">'
+                     f'<p class="eyebrow">{_e(label.upper())}</p><h2 id="{new_releases.section_id(section)}-heading">{_e(section["heading"])}</h2>'
                      f'<div class="yl-section-intro">{_paragraphs(section["intro"])}</div><div class="picks yl-picks">')
         for item in section["picks"]:
             parts.append(_pick_html(item, details, signed_in, today))
@@ -170,11 +185,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today:
         '</div></section>',
         '<section id="method" class="guide-sources yl-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        '<p>Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. Most of these '
-        'releases were not out when we wrote about them, so read this as a guide to what is worth '
-        'planning around. We picked from the dated releases on the calendars and studio announcements listed below, left out '
-        'anything without a firm date, and chose the ones we would point a friend towards, with an honest note on who '
-        'should wait for reviews. The opinions are ours.</p>',
+        _method(entry),
         '<p>Nothing here is sponsored, and nobody paid to be included. Dates are for the US unless we say otherwise, and '
         'they can change; when one moves, we update the page and the date at the top. Links in the list go to OmniTrackr '
         'title pages, not shops.</p>',
@@ -203,20 +214,94 @@ def _structured(slug: str, entry: dict) -> dict:
     }
 
 
+# Written for the hub: what a release date means in each format, and when it pays to wait. These are
+# the habits of each industry that explain most surprises; anything that changes often (a studio's
+# window, a service's drop time) is described as usual practice, not a rule.
+HUB_DATES = (
+    '<section class="editorial hub-notes" id="reading-a-release-date" aria-labelledby="nr-dates-heading">'
+    '<h2 id="nr-dates-heading">How to read a release date</h2>'
+    '<p>A date on a release calendar means something slightly different in every format. A few habits of each '
+    'industry explain most of the surprises.</p>'
+    '<h3>Films</h3>'
+    '<p>In the US and the UK most films open in cinemas on a Friday. A festival premiere can come months earlier, '
+    'and a limited release may play in a few cities for a week or two before it reaches everyone else. After the '
+    'cinema run, studio films usually go to paid digital rental or purchase first and to a subscription service '
+    'later. The gap depends on the studio and on how well the film is doing, from a few weeks to several months, so '
+    'a film that is "out" may not be anywhere you can watch it at home yet.</p>'
+    '<h3>TV</h3>'
+    '<p>Streaming services release a season in one of three ways: all at once, one episode a week, or a premiere of '
+    'two or three episodes followed by weekly ones. The release pattern matters as much as the date if you want to '
+    'binge. Most Netflix originals arrive at midnight Pacific time, which is 3 a.m. on the US East Coast and, for most '
+    'of the year, 8 a.m. in the UK. Broadcast and cable shows premiere in their evening slot and often reach a '
+    'streaming service the next day.</p>'
+    '<h3>Anime</h3>'
+    '<p>Japanese TV anime runs in four seasons named after the month they begin: winter (January), spring (April), '
+    'summer (July) and fall (October). One season, or cour, is usually 12 or 13 episodes. A two-cour show runs for '
+    'about 24 episodes over two seasons, sometimes with a break of a season or more between the halves. Most new '
+    'shows are simulcast, streamed outside Japan within hours of the Japanese broadcast. Japan is 13 to 17 hours '
+    'ahead of the mainland US, so a late-night slot listed for a Sunday in Japan often appears on Saturday there.</p>'
+    '<h3>Games</h3>'
+    '<p>Big game dates move more than any other kind. Delays of several months are common, and a window such as '
+    '"spring" is a statement of intent rather than a date. Many publishers sell a dearer edition that unlocks a few '
+    'days early, and digital copies can usually be downloaded ahead so you can play the moment the game unlocks. '
+    'That moment differs: some games go live at the same instant worldwide, others at midnight in each region. Early '
+    'access is something else again: an unfinished game sold while it is still being made, sometimes for years, with '
+    'a full 1.0 release later.</p>'
+    '<h3>Books and manga</h3>'
+    '<p>The US and UK editions of one book can come from different publishers on different days, sometimes weeks '
+    'apart. New books in the US usually go on sale on a Tuesday and in the UK on a Thursday. A novel normally arrives '
+    'in hardback with the ebook and audiobook on the same day, and the paperback about a year later. Manga volumes '
+    'collect chapters that ran first in a magazine. The English edition of a volume usually follows the Japanese one by '
+    'months or years, although some publishers, such as Shueisha with Manga Plus and Viz with its Shonen Jump app, put '
+    'new chapters out in English on the day they appear in Japan.</p>'
+    '<h3>Music, podcasts and audiobooks</h3>'
+    '<p>Since 2015 new albums have come out worldwide on Fridays, at midnight local time in most countries. Podcasts '
+    'publish whenever their makers upload, and a narrative show\'s season premiere is usually followed by an episode a '
+    'week. The audiobook of a new book normally comes out with the print edition, but some arrive later, or first as '
+    'an exclusive on one service.</p>'
+    '</section>'
+)
+
+HUB_WAIT = (
+    '<section class="editorial hub-notes" id="day-one-or-wait" aria-labelledby="nr-wait-heading">'
+    '<h2 id="nr-wait-heading">Day one, or wait?</h2>'
+    '<p>Some releases are better early. A film you want to see with a full cinema, a show everyone is talking about '
+    'week by week, and an online game while the most people are playing it all lose something if you arrive late.</p>'
+    '<p>Others reward patience. Large games often get important fixes in their first weeks, and the version you play a '
+    'month later can be noticeably better than the launch. When no reviews have appeared by release day, that is '
+    'reason enough to wait a few days and read them. Prices drop too: most games and box sets are cheaper within a '
+    'year, and the <a href="/holidays/black-friday">Black Friday guide</a> says which formats tend to go on sale and '
+    'which rarely do. Every pick in these guides says who should go on day one and who can wait.</p>'
+    '</section>'
+)
+
+
 @router.get(new_releases.BASE_PATH, include_in_schema=False)
 def release_guides_index():
     today = _today()
     live = new_releases.published(today)
     current = new_releases.current(today)
     cards = []
-    for slug, entry in live.items():
+    # This month's guide first, then the other all-format guides, then one-format guides such as an anime season.
+    # Within each group, guides still to come run in calendar order (winter before spring), and guides whose
+    # stretch has ended follow, newest first.
+    day = today.isoformat()
+
+    def hub_order(pair):
+        slug, entry = pair
+        ended = entry["ends"] < day
+        return (slug != current, bool(entry.get("focus")), ended, "" if ended else entry["starts"])
+
+    ordered = sorted(live.items(), key=hub_order)
+    for slug, entry in ordered:
         titles = " · ".join(item["title"] for item in new_releases.picks(entry)[:4])
-        label = "This month" if slug == current else entry["period"]
+        label = "This month" if slug == current else entry.get("hub_label", entry["period"])
+        noun = new_releases.focus_words(entry)[1]
         cards.append(
             f'<li><a class="yl-card bo-card" href="{_e(new_releases.path(slug))}">'
-            f'<span class="yl-card__art"><span class="yl-card__initial" aria-hidden="true">{_e(entry["period"][:1])}</span></span>'
+            f'<span class="yl-card__art"><span class="yl-card__initial" aria-hidden="true">{_e(entry.get("hub_label", entry["period"])[:1])}</span></span>'
             f'<span class="yl-card__text"><span class="nr-card__label">{_e(label)}</span><strong>{_e(entry["name"])}</strong>'
-            f'<span>{len(new_releases.picks(entry))} releases, including {_e(titles)}</span></span></a></li>'
+            f'<span>{len(new_releases.picks(entry))} {_e(noun)}, including {_e(titles)}</span></span></a></li>'
         )
     content = (
         '<header class="hero"><p class="eyebrow">RELEASE GUIDES</p><h1>What is coming out, and what is worth it</h1>'
@@ -233,6 +318,7 @@ def release_guides_index():
         '<a href="/release-radar">Release Radar</a>. For the year\'s releases that have already proved themselves, see '
         '<a href="/best-of">the best of 2026</a>, and for older picks to fill the gaps, '
         '<a href="/discover">Discover</a> and the <a href="/if-you-liked">If you liked</a> guides.</p></section>'
+        + HUB_DATES + HUB_WAIT
     )
     structured = {
         "@context": "https://schema.org", "@type": "CollectionPage", "name": HUB_TITLE, "description": HUB_DESCRIPTION,

@@ -278,6 +278,8 @@
       shelfPeople.delete(category);
       recommenders.stale = true;
       state.dialog.close();
+      // The home screen's challenge card counts titles a person recommended (April 2027).
+      window.dispatchEvent(new CustomEvent('omnitrackr:title-origin-saved', { detail: { category, id } }));
       // Reload the shelf: the line under the title changes, and a title can leave a filtered view.
       reload(category);
     } catch (error) {
@@ -406,5 +408,11 @@
   }
   window.addEventListener('pagehide', () => { if (editor?.dialog.open) editor.dialog.close(); });
 
-  window.OmniTitleOrigins = { remember, decorate, renderFilters, reset, loadRecommenders };
+  // Open the editor for a title that isn't on screen, e.g. from the challenge card.
+  function open(category, id, title, trigger) {
+    if (!SHELF_NAMES[category] || !Number.isInteger(id) || id <= 0) return false;
+    openEditor(category, id, String(title || 'this title'), trigger || null);
+    return true;
+  }
+  window.OmniTitleOrigins = { remember, decorate, renderFilters, reset, loadRecommenders, open };
 })();

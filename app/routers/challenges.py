@@ -44,7 +44,7 @@ def _completed_entry_or_404(db: Session, user: models.User, month: str | None = 
 # ---------------------------------------------------------------- member API
 
 @router.get("/api/challenge")
-def current_challenge(response: Response, user: models.User = Depends(get_current_user),
+def current_challenge(request: Request, response: Response, user: models.User = Depends(get_current_user),
                       db: Session = Depends(get_db)):
     _no_store(response)
     return challenges.payload(db, user)
@@ -69,7 +69,7 @@ def leave_challenge(request: Request, response: Response, user: models.User = De
 
 
 @router.post("/api/challenge/seen")
-def challenge_seen(response: Response, user: models.User = Depends(get_current_user),
+def challenge_seen(request: Request, response: Response, user: models.User = Depends(get_current_user),
                    db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     """The member dismissed the dashboard celebration."""
     _no_store(response)
@@ -88,7 +88,7 @@ def share_challenge(request: Request, response: Response, user: models.User = De
 
 
 @router.delete("/api/challenge/share")
-def unshare_challenge(response: Response, user: models.User = Depends(get_current_user),
+def unshare_challenge(request: Request, response: Response, user: models.User = Depends(get_current_user),
                       db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     _no_store(response)
     entry = _completed_entry_or_404(db, user, month)
@@ -115,16 +115,50 @@ def _counts_line(counts: dict) -> str:
     return f'<p class="challenge-count">{_e(line)}.</p>'
 
 
-def _edition_section(step: dict) -> str:
+STEP_WORDS = {1: "one", 2: "two", 3: "three", 4: "four"}
+PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
+
+
+def _with_other(item: dict) -> str:
+    """", with the book" after a pick whose edition names its version in another format, ", in the shadow
+    of Rumours" after one that names its maker's best-known work, ", taught at Harvard" after one that
+    says where it has been taught, ", a deal with a chained god" after one that names who a bargain is with,
+    ", told by a grandfather" after one that names its storyteller, or ", by way of a microwave" after one that
+    names its time machine."""
+    teller = (item.get("teller") or {}).get("who")
+    if teller:
+        return f", told by {_e(teller)}"
+    machine = (item.get("machine") or {}).get("what")
+    if machine:
+        return f", by way of {_e(machine)}"
+    deal = (item.get("bargain") or {}).get("with")
+    if deal:
+        return f", a deal with {_e(deal)}"
+    where = (item.get("classroom") or {}).get("where")
+    if where:
+        return f", taught {_e(where)}"
+    shadow = (item.get("shadow") or {}).get("title")
+    if shadow:
+        return f", in the shadow of {_e(shadow)}"
+    other = (item.get("other") or {}).get("category")
+    if other not in CATEGORIES:
+        return ""
+    label = CATEGORIES[other][1]
+    return f", with the {_e(label if label == 'TV show' else label.lower())}"
+
+
+def _edition_section(step: dict, number: int = 1) -> str:
     slug = step.get("edition")
     edition = published_editions().get(slug)
     if not edition:
         return ""
     items = "".join(
-        f'<li><strong>{_e(item["title"])}</strong> <span class="muted">{_e(CATEGORIES[item["category"]][1])}</span></li>'
+        f'<li><strong>{_e(item["title"])}</strong> <span class="muted">{_e(CATEGORIES[item["category"]][1])}{_with_other(item)}</span></li>'
         for item in edition["items"]
     )
-    return (f'<section class="editorial challenge-edition"><h2>The six picks that count for step one</h2>'
+    picks = PICK_WORDS.get(len(edition["items"]), str(len(edition["items"])))
+    return (f'<section class="editorial challenge-edition"><h2>The {picks} picks that count for step '
+            f'{STEP_WORDS.get(number, number)}</h2>'
             f'<p>{_e(edition["guide"])}</p><ul>{items}</ul>'
             f'<p><a href="/discover/monthly/{_e(slug)}">Read the full {_e(edition["name"])} edition →</a></p></section>')
 
@@ -138,6 +172,14 @@ def _companion_section(challenge: dict) -> str:
     return (f'<section class="editorial challenge-edition"><h2>Reading for the month</h2>'
             f'<p>{_e(edition["intro"])}</p>'
             f'<p><a href="/discover/monthly/{_e(slug)}">Read the {_e(edition["name"])} edition →</a></p></section>')
+
+
+def _links_section(links, heading: str = "Elsewhere on OmniTrackr this month") -> str:
+    """Pages a challenge points to instead of repeating them, such as the holiday guides in December."""
+    rows = "".join(f'<li><a href="{_e(href)}">{_e(label)}</a></li>' for label, href in links or ()
+                   if isinstance(href, str) and href.startswith("/") and not href.startswith("//"))
+    return (f'<section class="editorial challenge-links"><h2>{_e(heading)}</h2><ul>{rows}</ul></section>'
+            if rows else "")
 
 
 def _cta(month: str, current: bool) -> str:
@@ -191,6 +233,54 @@ def _structured(name: str, description: str, path: str, published: str) -> dict:
     }
 
 
+def _new_year_feature() -> str:
+    """The yearly challenge, from its opening day until the year it covers ends."""
+    from .. import new_year_challenge
+    from ..new_year_challenge_guide import GUIDES
+    year = new_year_challenge.current_year()
+    if year is None or year not in GUIDES or not new_year_challenge.is_open(year):
+        return ""
+    guide = GUIDES[year]
+    when = ("UNDERWAY" if new_year_challenge.has_started(year)
+            else f"STARTS JANUARY 1 · {new_year_challenge.days_until_start(year)} DAYS TO GO")
+    return (f'<section class="monthly-feature"><div><p class="eyebrow">THE YEAR AHEAD · {_e(when)}</p>'
+            f'<h2>{_e(guide["title"])}</h2><p>{_e(guide["lead"])}</p></div>'
+            f'<a class="button" href="{_e(new_year_challenge.path(year))}">Make your pledge →</a></section>')
+
+
+# Written for the hub: how to set a challenge of your own with the same shape as the monthly ones.
+OWN_CHALLENGE = (
+    '<section class="editorial hub-notes" id="make-your-own" aria-labelledby="own-challenge-heading">'
+    '<h2 id="own-challenge-heading">Make a challenge of your own</h2>'
+    '<p>The monthly challenges are small on purpose, and the same shape works for a challenge built around your own '
+    'backlog: three steps, one month, and nothing that asks you to watch, read or play more than you normally would. '
+    'The steps should change what you pick, not how much. Some that work well:</p>'
+    '<ul>'
+    '<li><strong>Finish what you started.</strong> Choose three things already in progress and either finish or drop '
+    'each one. Dropping counts. The pile gets smaller either way, and the guilt goes with it.</li>'
+    '<li><strong>One decade.</strong> Spend a month in a single decade across formats: a 1970s film, an album from the '
+    'same years and a novel written then. Side by side, they show what the decade looked and sounded like.</li>'
+    '<li><strong>Follow one person.</strong> Pick a director, author, composer or studio and finish three of their works '
+    'in the order they were made. You see the habits form and the ideas they kept coming back to.</li>'
+    '<li><strong>Somewhere new.</strong> Three titles from a country whose films, books or games you rarely see. Subtitles '
+    'and translations open up most of the world.</li>'
+    '<li><strong>Short things only.</strong> Films under 100 minutes, novellas, albums under 40 minutes and games you can '
+    'finish in an evening. Good for a busy month, and a reminder that length is not the same as weight.</li>'
+    '<li><strong>The one you keep being told about.</strong> Finish the thing a friend has been recommending for years, '
+    'then tell them what you thought. It is the only step on this list that comes with a conversation.</li>'
+    '</ul>'
+    '<h3>Getting the size right</h3>'
+    '<p>Look at how many titles you finished last month and set the challenge at that number or just below it. A '
+    'challenge you can only meet by giving up sleep is a backlog with a deadline. If a step turns out to be wrong for '
+    'the month you are having, change it. Nobody is checking.</p>'
+    '<h3>Keeping track</h3>'
+    '<p>In an OmniTrackr library you can tag each title with the challenge\'s name and filter by that tag, which turns '
+    'the month into a list you can look back on. Your Year in Review counts what you finished whether or not it was '
+    'part of a challenge.</p>'
+    '</section>'
+)
+
+
 @router.get("/challenges", include_in_schema=False)
 def challenges_index(db: Session = Depends(get_db)):
     from .discover import page
@@ -206,9 +296,10 @@ def challenges_index(db: Session = Depends(get_db)):
                    f'<a class="button" href="/challenges/{_e(challenges.slug_for(current))}">Read this month\'s guide →</a></section>')
     content = (
         '<header class="hero"><p class="eyebrow">ONE SMALL CHALLENGE A MONTH</p><h1>Monthly challenges</h1>'
-        '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, music and books. They are written to '
+        '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, books, music, manga, podcasts and audiobooks. They are written to '
         'nudge you toward something new. None of them asks you to watch more than usual. Join from your dashboard, and your progress fills in from '
         'what you already track.</p></header>'
+        + _new_year_feature()
         + feature
         + _archive(current if feature else "")
         + '<section class="editorial"><h2>Why challenges, and why monthly</h2>'
@@ -218,8 +309,9 @@ def challenges_index(db: Session = Depends(get_db)):
         '<p>Challenges are private and opt-in. There are no streaks to protect and no ranking of members. When you complete one, '
         'you can share a card that shows the challenge and the steps, never the titles you finished.</p></section>'
         + _how_it_counts()
+        + OWN_CHALLENGE
     )
-    description = "A small, opt-in challenge every month across movies, TV, anime, games, music and books, with a written guide."
+    description = "A small, opt-in challenge every month across movies, TV, anime, games, music, books, manga, podcasts and audiobooks, with a written guide."
     structured = {
         "@context": "https://schema.org", "@type": "CollectionPage",
         "name": "Monthly challenges", "url": challenges.SITE_URL + "/challenges",
@@ -249,7 +341,8 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         f'<p>{_e(step["detail"])}</p></article>'
         for index, step in enumerate(challenge["steps"], 1)
     )
-    edition = "".join(_edition_section(step) for step in challenge["steps"] if step["kind"] == "edition") + _companion_section(challenge)
+    edition = "".join(_edition_section(step, index) for index, step in enumerate(challenge["steps"], 1)
+                      if step["kind"] == "edition") + _companion_section(challenge)
     reflection = (f'<section class="editorial"><h2>Something to think about</h2><p>{_e(challenge["reflection"])}</p></section>'
                   if challenge.get("reflection") else "")
     content = (
@@ -259,7 +352,8 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         + f'{_counts_line(challenges.public_counts(db, month))}</header>'
         f'<section class="editorial challenge-intro">{_paragraphs(challenge["intro"])}</section>'
         f'<div class="picks challenge-steps">{step_cards}</div>'
-        + edition + _how_it_counts() + reflection + _cta(month, current) + _archive(month) + _method(challenge["published"])
+        + edition + _how_it_counts() + reflection + _links_section(challenge.get("links"))
+        + _cta(month, current) + _archive(month) + _method(challenge["published"])
     )
     path = f"/challenges/{slug}"
     name = f"{label} challenge: {challenge['name']}"
@@ -295,19 +389,19 @@ def shared_challenge_page(token: str, request: Request, db: Session = Depends(ge
     guide = (f'<p><a href="/challenges/{_e(challenges.slug_for(entry.month))}">Read the challenge guide</a></p>'
              if challenges.is_curated(entry.month) and entry.month in challenges.public_months() else "")
     cta = ('<section class="profile-cta site-card"><div><h2>Take this month\'s challenge</h2>'
-           '<p>Three small steps across movies, shows, anime, games, music and books, filled in from what you already track.</p>'
+           '<p>Three small steps a month across nine formats, from movies and books to manga, podcasts and audiobooks, filled in from what you already track.</p>'
            f'{guide}</div>'
            + ('<a class="site-btn site-btn--primary" href="/#challenge">Open your challenge</a>' if signed_in
               else '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a>')
            + '</section>')
     html = _page(
         title=f"{title} · OmniTrackr",
-        description=f"{title} on OmniTrackr, the free tracker for movies, shows, anime, games, music and books.",
+        description=f"{title} on OmniTrackr, the free tracker for movies, TV, anime, games, music, books, manga, podcasts and audiobooks.",
         canonical=canonical,
         card_url=f"{canonical}/card.png",
         eyebrow=f"Monthly challenge · {challenges.month_label(entry.month)}",
         heading=title,
-        lead="Tracked on OmniTrackr, the free tracker for movies, shows, anime, games, music and books.",
+        lead="Tracked on OmniTrackr, the free tracker for movies, TV, anime, games, music, books, manga, podcasts and audiobooks.",
         actions=(f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
                  f'data-share-title="{_e(title)}">Share</button>'),
         body=body + cta,

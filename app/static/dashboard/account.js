@@ -897,6 +897,9 @@ async function saveEmailPreference(change) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'Could not save that. Please try again.');
     showEmailPreferences(data);
+    if ('enabled' in change) {
+      try { document.dispatchEvent(new CustomEvent('omni:weekly-email', { detail: { enabled: Boolean(data.enabled), from: 'account' } })); } catch (error) { /* old browsers */ }
+    }
     if (status && 'enabled' in change) {
       status.textContent = data.enabled ? 'Weekly email on. Every one has a one-click unsubscribe.' : 'Weekly email off.';
     } else if (status) {
@@ -909,6 +912,12 @@ async function saveEmailPreference(change) {
     toggles.forEach(toggle => { if (toggle) toggle.disabled = toggle.dataset.unavailable === 'true'; });
   }
 }
+
+// Turned on from another place on the page (the weekly email preview, the home card): show it here too.
+document.addEventListener('omni:weekly-email', event => {
+  if (!event.detail || event.detail.from === 'account') return;
+  loadEmailPreferences();
+});
 
 document.addEventListener('change', event => {
   if (event.target.id === 'weeklyEmailToggle') saveEmailPreference({ enabled: event.target.checked });
@@ -959,7 +968,12 @@ async function loadFriendsList() {
       const friendsList = document.getElementById('friendsList');
 
       if (friends.length === 0) {
-        friendsList.innerHTML = '<p class="no-friends">No friends yet</p>';
+        // Empty friends panel: the taste test is the easiest way to bring someone in.
+        friendsList.innerHTML = '<div class="friends-empty" data-invite-box>'
+          + '<p class="no-friends">No friends yet</p>'
+          + '<p class="friends-empty__lead">Send someone a taste test: they rate a few things you\'ve rated and see how close your taste is. If they join, you\'re friends.</p>'
+          + '<button type="button" class="action-btn" data-action="share-friend-invite" data-invite-test="on">Send a taste test</button>'
+          + '<p class="friends-empty__status" data-invite-status role="status" aria-live="polite"></p></div>';
         return;
       }
 
@@ -983,18 +997,42 @@ window.openFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'flex';
 }
 
-// "Friend not on OmniTrackr yet?": share the member's reusable /join link.
+// "Friend not on OmniTrackr yet?": share the member's reusable /join link, as a taste test
+// (data-invite-test="on") or a plain invite ("off"). Buttons without it leave the link as it is.
+function inviteTestChoice(button) {
+  const choice = button && button.dataset ? button.dataset.inviteTest : '';
+  return choice === 'on' ? true : choice === 'off' ? false : undefined;
+}
+
+function inviteShareMessage(data, shared) {
+  if (data.taste_test) {
+    return shared ? 'Taste test sent. You\'ll get a notification when they join.'
+      : 'Taste test link copied. Paste it in a message to your friend.';
+  }
+  const extra = data.taste_test_ready === false && data.rated_needed
+    ? ` Rate ${data.rated_needed} more ${data.rated_needed === 1 ? 'title' : 'titles'} and your link can open on a taste test.` : '';
+  return (shared ? 'Invite sent. You will get a notification when they join.' : 'Invite link copied. Paste it in a message to your friend.') + extra;
+}
+
 async function shareFriendInvite(button) {
-  const status = document.getElementById('friendInviteStatus');
+  const box = button && button.closest ? button.closest('[data-invite-box]') : null;
+  const status = (box && box.querySelector('[data-invite-status]')) || document.getElementById('friendInviteStatus');
   if (button) button.disabled = true;
   try {
-    const response = await authenticatedFetch(`${API_BASE}/api/friends/invite-link`, { method: 'POST' });
+    const choice = inviteTestChoice(button);
+    const init = { method: 'POST' };
+    if (choice !== undefined) {
+      init.headers = { 'Content-Type': 'application/json' };
+      init.body = JSON.stringify({ taste_test: choice });
+    }
+    const response = await authenticatedFetch(`${API_BASE}/api/friends/invite-link`, init);
     const data = await response.json().catch(() => ({}));
     if (!response.ok || typeof data.url !== 'string') throw new Error(data.detail || 'Could not create your invite link. Please try again.');
+    const title = data.taste_test ? 'How close is our taste?' : 'Join me on OmniTrackr';
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join me on OmniTrackr', text: data.text, url: data.url });
-        if (status) status.textContent = 'Invite sent. You will get a notification when they join.';
+        await navigator.share({ title, text: data.text, url: data.url });
+        if (status) status.textContent = inviteShareMessage(data, true);
         return;
       } catch (error) {
         if (error && error.name === 'AbortError') return;
@@ -1002,7 +1040,7 @@ async function shareFriendInvite(button) {
     }
     try {
       await navigator.clipboard.writeText(`${data.text} ${data.url}`);
-      if (status) status.textContent = 'Invite link copied. Paste it in a message to your friend.';
+      if (status) status.textContent = inviteShareMessage(data, false);
     } catch (error) {
       if (status) status.textContent = `Copy this link and send it to your friend: ${data.url}`;
     }

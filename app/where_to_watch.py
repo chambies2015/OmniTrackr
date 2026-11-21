@@ -9,8 +9,21 @@ Sources, all best-effort with short timeouts like title_metadata:
 * Jikan / MyAnimeList for an anime's official streaming services.
 * RAWG for the stores that sell a game (needs RAWG_API_KEY, like its facts).
 
-The TVmaze, MyAnimeList and RAWG ids come from the title's cached facts, so this
-adds at most a couple of requests per title per week.
+Where to listen or read, with no keys needed:
+
+* Apple Music, Apple Podcasts and Apple Books, from the link already in the facts.
+* Deezer's public search for albums.
+* The iTunes lookup for a podcast's RSS feed. Overcast and Pocket Casts open any
+  show by its Apple id, so those links come from the same id.
+* Open Library for books you can read or borrow free.
+* MangaDex's list of official English releases (we link only the publisher,
+  never MangaDex itself) and MyAnimeList's external links for manga.
+
+The TVmaze, MyAnimeList, RAWG and Apple ids come from the title's cached facts,
+so this adds at most a couple of requests per title per week.
+
+Search links (Spotify, Libby, Bookshop.org and so on) are built from the title
+when the page renders and are never stored, so they don't claim a title is there.
 
 WATCH_REGION (default "US") picks the country for TMDB results and the JustWatch
 search link.
@@ -22,7 +35,7 @@ import os
 import re
 from datetime import datetime, timedelta
 from typing import Optional
-from urllib.parse import quote_plus
+from urllib.parse import quote, quote_plus
 
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -31,11 +44,16 @@ from . import title_metadata
 from .title_metadata import HEADERS, TIMEOUT, _https, _norm, _title_matches
 
 VIDEO_KINDS = ("movie", "tv", "anime")
-KINDS = VIDEO_KINDS + ("game",)
+LISTEN_KINDS = ("album", "podcast", "audiobook")
+READ_KINDS = ("book", "manga")
+KINDS = VIDEO_KINDS + ("game",) + LISTEN_KINDS + READ_KINDS
 # Streaming catalogues change often, so this refreshes sooner than the 30-day facts.
 FRESH = {"ok": timedelta(days=7), "miss": timedelta(days=3), "error": timedelta(hours=6)}
 TMDB_API = "https://api.themoviedb.org/3"
 TMDB_LOGO = "https://image.tmdb.org/t/p/w92"
+# Wide stills for the title page hero. The path is stored; sizes are picked at render time.
+TMDB_BACKDROP = "https://image.tmdb.org/t/p/{size}{path}"
+BACKDROP_SIZES = ("w780", "w1280")
 LOGO_PATH = re.compile(r"^/[A-Za-z0-9_-]{1,64}\.(?:jpg|png|svg)$")
 STORE_DOMAIN = re.compile(r"^[a-z0-9.-]{3,80}\.[a-z]{2,10}$")
 # TMDB offer type -> heading, in the order people care about.
@@ -57,11 +75,52 @@ def tmdb_enabled() -> bool:
 
 
 def verb(kind: str) -> str:
-    return "play" if kind == "game" else "watch"
+    if kind == "game":
+        return "play"
+    if kind in LISTEN_KINDS:
+        return "listen"
+    return "read" if kind in READ_KINDS else "watch"
+
+
+def heading(kind: str, title: str = "") -> str:
+    """"Where to watch", "Where to listen to Kid A" and so on."""
+    base = f"Where to {verb(kind)}"
+    if not title:
+        return base
+    return f"{base} to {title}" if kind in LISTEN_KINDS else f"{base} {title}"
 
 
 def justwatch_search(title: str) -> str:
     return f"https://www.justwatch.com/{region().lower()}/search?q={quote_plus((title or '').strip()[:150])}"
+
+
+# kind -> [(name, url template)]. {q} is the search text encoded for a query string, {p} for a path.
+SEARCHES = {
+    "album": (("Spotify", "https://open.spotify.com/search/{p}"),
+              ("YouTube Music", "https://music.youtube.com/search?q={q}"),
+              ("Bandcamp", "https://bandcamp.com/search?q={q}&item_type=a")),
+    "podcast": (("Spotify", "https://open.spotify.com/search/{p}/podcasts"),
+                ("YouTube", "https://www.youtube.com/results?search_query={q}+podcast")),
+    "audiobook": (("Libby (free with a library card)", "https://www.overdrive.com/search?q={q}"),
+                  ("Libro.fm", "https://libro.fm/search?q={q}"),
+                  ("Spotify", "https://open.spotify.com/search/{p}/audiobooks")),
+    "book": (("Libby (free with a library card)", "https://www.overdrive.com/search?q={q}"),
+             ("Bookshop.org", "https://bookshop.org/search?keywords={q}"),
+             ("WorldCat (find a library copy)", "https://search.worldcat.org/search?q={q}")),
+    "manga": (("BOOK☆WALKER", "https://global.bookwalker.jp/search/?word={q}"),
+              ("Libby (free with a library card)", "https://www.overdrive.com/search?q={q}")),
+}
+
+
+def searches(kind: str, title: str, creator: str = "") -> list[dict]:
+    """Search links on other services. Built from the title, so they make no promise it's there."""
+    title = re.sub(r"\s+", " ", title or "").strip()[:150]
+    if kind not in SEARCHES or not title:
+        return []
+    creator = re.sub(r"\s+", " ", creator or "").strip()[:80]
+    text = f"{title} {creator}" if creator and kind in ("album", "book", "audiobook") else title
+    return [{"name": name, "url": template.format(q=quote_plus(text), p=quote(text, safe=""))}
+            for name, template in SEARCHES[kind]]
 
 
 async def _get(client, url: str, params: Optional[dict] = None, headers: Optional[dict] = None):
@@ -101,14 +160,27 @@ def _tmdb_auth() -> tuple[dict, dict]:
     return {"api_key": key}, {}
 
 
-async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadata: dict) -> Optional[tuple[str, int]]:
+def _backdrop_path(result: dict) -> Optional[str]:
+    path = result.get("backdrop_path") if isinstance(result, dict) else None
+    return path if isinstance(path, str) and LOGO_PATH.match(path) and not path.endswith(".svg") else None
+
+
+def backdrop_urls(where: Optional[dict]) -> dict:
+    """{"w780": url, "w1280": url} for the title's TMDB backdrop, or {} when there isn't one."""
+    path = (where or {}).get("backdrop")
+    if not isinstance(path, str) or not LOGO_PATH.match(path) or path.endswith(".svg"):
+        return {}
+    return {size: TMDB_BACKDROP.format(size=size, path=path) for size in BACKDROP_SIZES}
+
+
+async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadata: dict) -> Optional[tuple[str, int, Optional[str]]]:
     params, headers = _tmdb_auth()
     imdb = _source_url(metadata, r"imdb\.com/title/(tt\d{5,10})/")
     if imdb:
         data = await _get(client, f"{TMDB_API}/find/{imdb.group(1)}", {**params, "external_source": "imdb_id"}, headers) or {}
         for media, field in (("movie", "movie_results"), ("tv", "tv_results")):
             if data.get(field) and isinstance(data[field][0].get("id"), int):
-                return media, data[field][0]["id"]
+                return media, data[field][0]["id"], _backdrop_path(data[field][0])
     order = {"movie": ("movie",), "tv": ("tv",), "anime": ("tv", "movie")}[kind]
     for media in order:
         query = {**params, "query": title[:150]}
@@ -121,9 +193,10 @@ async def _tmdb_find(client, kind: str, title: str, year: Optional[int], metadat
                 [result.get("name"), result.get("original_name")]
             if isinstance(result.get("id"), int) and any(_title_matches(title, name or "") for name in names):
                 exact = any(_norm(name or "") == _norm(title) for name in names)
-                matches.append((not exact, len(matches), result["id"]))
+                matches.append((not exact, len(matches), result["id"], _backdrop_path(result)))
         if matches:
-            return media, min(matches)[2]
+            best = min(matches)
+            return media, best[2], best[3]
     return None
 
 
@@ -133,7 +206,7 @@ async def tmdb_providers(client, kind: str, title: str, year: Optional[int], met
     found = await _tmdb_find(client, kind, title, year, metadata)
     if not found:
         return {}
-    media, tmdb_id = found
+    media, tmdb_id, backdrop = found
     params, headers = _tmdb_auth()
     data = await _get(client, f"{TMDB_API}/{media}/{tmdb_id}/watch/providers", params, headers) or {}
     offers = (data.get("results") or {}).get(region()) or {}
@@ -153,7 +226,7 @@ async def tmdb_providers(client, kind: str, title: str, year: Optional[int], met
             groups.append({"label": label, "providers": providers[:GROUP_LIMIT]})
     if not groups:
         return {}
-    return {"groups": groups, "link": link, "justwatch": True}
+    return {"groups": groups, "link": link, "justwatch": True, **({"backdrop": backdrop} if backdrop else {})}
 
 
 # ---------------------------------------------------------------- free sources
@@ -215,6 +288,170 @@ async def rawg_stores(client, metadata: dict) -> dict:
             "credit": {"name": "RAWG", "url": f"https://rawg.io/games/{match.group(1)}"}}
 
 
+# ---------------------------------------------------------------- where to listen or read
+
+APPLE_LINK = re.compile(r"^(https://(?:music|podcasts|books|itunes)\.apple\.com/[^?#\s]{1,300})")
+APPLE_NAMES = {"album": "Apple Music", "podcast": "Apple Podcasts", "audiobook": "Apple Books"}
+# Sites that publish manga officially in English. MangaDex and MyAnimeList also list
+# fan sites, so a link is shown only when its host is one of these.
+OFFICIAL_READERS = {
+    "viz.com": "VIZ", "mangaplus.shueisha.co.jp": "MANGA Plus", "kodansha.us": "Kodansha",
+    "kmanga.kodansha.com": "K MANGA", "yenpress.com": "Yen Press", "sevenseasentertainment.com": "Seven Seas",
+    "darkhorse.com": "Dark Horse", "comikey.com": "Comikey", "azuki.co": "Azuki", "inkr.com": "INKR",
+    "webtoons.com": "WEBTOON", "tapas.io": "Tapas", "global.bookwalker.jp": "BOOK☆WALKER",
+    "j-novel.club": "J-Novel Club", "square-enix-books.com": "Square Enix Manga", "tokyopop.com": "TOKYOPOP",
+    "ghostshipmanga.com": "Ghost Ship", "denpa.pub": "Denpa", "verticalcomics.com": "Vertical",
+}
+
+
+def _apple(metadata: dict, kind: str) -> Optional[dict]:
+    """The Apple Music / Podcasts / Books page the facts already link to, minus tracking params."""
+    for entry in (metadata.get("links") or []) + (metadata.get("sources") or []):
+        match = APPLE_LINK.match(str(entry.get("url") or ""))
+        if match:
+            return _provider(APPLE_NAMES[kind], match.group(1))
+    return None
+
+
+def _same_creator(wanted: Optional[str], found: str) -> bool:
+    a, b = _norm(wanted or ""), _norm(found or "")
+    return not a or (bool(b) and (a in b or b in a))
+
+
+def _reader(url: Optional[str]) -> Optional[str]:
+    host = re.sub(r"^https://", "", url or "").split("/")[0].split(":")[0].lower()
+    host = host[4:] if host.startswith("www.") else host
+    for domain, name in OFFICIAL_READERS.items():
+        if host == domain or host.endswith("." + domain):
+            return name
+    return None
+
+
+async def album_services(client, metadata: dict, title: str, creator: Optional[str]) -> dict:
+    providers = [p for p in (_apple(metadata, "album"),) if p]
+    query = f'album:"{title[:150]}"' + (f' artist:"{creator[:80]}"' if creator else "")
+    deezer = None
+    try:
+        data = await _get(client, "https://api.deezer.com/search/album", {"q": query, "limit": 8}) or {}
+    except Exception:
+        data = {}
+    for result in data.get("data") or []:
+        link = _https(result.get("link"))
+        if (link and link.startswith("https://www.deezer.com/") and _title_matches(title, result.get("title") or "")
+                and _same_creator(creator, (result.get("artist") or {}).get("name") or "")):
+            deezer = _provider("Deezer", link)
+            break
+    if deezer:
+        providers.append(deezer)
+    if not providers:
+        return {}
+    result = {"groups": [{"label": "Listen on", "providers": providers}]}
+    if deezer:
+        result["credits"] = [{"name": "Deezer", "url": "https://www.deezer.com/"}]
+    return result
+
+
+async def podcast_apps(client, metadata: dict) -> dict:
+    apple = _apple(metadata, "podcast")
+    match = re.search(r"/id(\d{3,12})$", (apple or {}).get("url", ""))
+    if not match:
+        return {}
+    show_id = match.group(1)
+    groups = [{"label": "Listen free on", "providers": [
+        apple,
+        {"name": "Overcast", "url": f"https://overcast.fm/itunes{show_id}"},
+        {"name": "Pocket Casts", "url": f"https://pca.st/itunes/{show_id}"},
+    ]}]
+    try:
+        data = await _get(client, "https://itunes.apple.com/lookup", {"id": show_id}) or {}
+    except Exception:
+        data = {}
+    for entry in data.get("results") or []:
+        feed = entry.get("feedUrl")
+        # Plain-http feeds stay out: rewriting them to https could point at nothing.
+        if str(entry.get("collectionId")) == show_id and isinstance(feed, str) and feed.startswith("https://") and len(feed) < 500:
+            groups.append({"label": "Any podcast app", "providers": [{"name": "RSS feed", "url": feed}]})
+            break
+    return {"groups": groups}
+
+
+async def audiobook_stores(client, metadata: dict) -> dict:
+    apple = _apple(metadata, "audiobook")
+    return {"groups": [{"label": "Buy or listen on", "providers": [apple]}]} if apple else {}
+
+
+async def openlibrary_reads(client, metadata: dict, title: str, creator: Optional[str]) -> dict:
+    work = _source_url(metadata, r"openlibrary\.org(/works/OL\d{1,12}W)")
+    params = {"title": title[:150], "limit": 6, "fields": "key,title,ebook_access,lending_edition_s"}
+    if creator:
+        params["author"] = creator[:80]
+    data = await _get(client, "https://openlibrary.org/search.json", params) or {}
+    docs = [d for d in data.get("docs") or [] if isinstance(d, dict)]
+    doc = (next((d for d in docs if work and d.get("key") == work.group(1)), None)
+           or next((d for d in docs if _title_matches(title, d.get("title") or "")), None))
+    if not doc or doc.get("ebook_access") not in ("public", "borrowable"):
+        return {}
+    edition, key = str(doc.get("lending_edition_s") or ""), str(doc.get("key") or "")
+    if re.fullmatch(r"OL\d{1,12}M", edition):
+        url = f"https://openlibrary.org/books/{edition}"
+    elif re.fullmatch(r"/works/OL\d{1,12}W", key):
+        url = f"https://openlibrary.org{key}"
+    else:
+        return {}
+    label = "Read free" if doc["ebook_access"] == "public" else "Borrow free"
+    return {"groups": [{"label": label, "providers": [{"name": "Open Library", "url": url}]}],
+            "credits": [{"name": "Open Library", "url": "https://openlibrary.org/"}]}
+
+
+async def _mangadex_english(client, metadata: dict, title: str) -> list[dict]:
+    mal = _source_url(metadata, r"myanimelist\.net/manga/(\d{1,9})(?:/|$)")
+    data = await _get(client, "https://api.mangadex.org/manga", {"title": title[:150], "limit": 8}) or {}
+    for entry in data.get("data") or []:
+        attrs = entry.get("attributes") or {}
+        links = attrs.get("links") or {}
+        names = list((attrs.get("title") or {}).values()) + [v for alt in attrs.get("altTitles") or [] for v in alt.values()]
+        if mal:
+            matched = str(links.get("mal") or "") == mal.group(1)
+        else:
+            matched = any(_norm(str(name)) == _norm(title) for name in names)
+        if matched:
+            url = _https(links.get("engtl"))
+            name = _reader(url)
+            return [{"name": name, "url": url}] if name else []
+    return []
+
+
+async def _jikan_manga_readers(client, metadata: dict) -> list[dict]:
+    mal = _source_url(metadata, r"myanimelist\.net/manga/(\d{1,9})(?:/|$)")
+    if not mal:
+        return []
+    data = await _get(client, f"https://api.jikan.moe/v4/manga/{mal.group(1)}/external") or {}
+    found = []
+    for entry in data.get("data") or []:
+        url = _https(entry.get("url"))
+        name = _reader(url)
+        if name:
+            found.append({"name": name, "url": url})
+    return found
+
+
+async def manga_readers(client, metadata: dict, title: str) -> dict:
+    mangadex, jikan = await asyncio.gather(_safe(_mangadex_english(client, metadata, title)),
+                                           _safe(_jikan_manga_readers(client, metadata)))
+    providers = []
+    for provider in list(mangadex or []) + list(jikan or []):
+        if all(p["name"] != provider["name"] for p in providers):
+            providers.append(provider)
+    if not providers:
+        return {}
+    credits = []
+    if mangadex:
+        credits.append({"name": "MangaDex"})  # Named, not linked: most of that site is fan translations.
+    if jikan:
+        credits.append({"name": "MyAnimeList", "url": "https://myanimelist.net/"})
+    return {"groups": [{"label": "Read officially on", "providers": providers[:GROUP_LIMIT]}], "credits": credits}
+
+
 # ---------------------------------------------------------------- assembly
 
 async def _safe(coro):
@@ -224,13 +461,32 @@ async def _safe(coro):
         return {}
 
 
-async def fetch(client, kind: str, title: str, year: Optional[int], metadata: Optional[dict]) -> dict:
+CREATOR_FACTS = ("Artist", "Author", "Host")
+
+
+def _creator(metadata: dict, creator: Optional[str]) -> Optional[str]:
+    if creator and creator.strip():
+        return creator.strip()
+    for fact in metadata.get("facts") or []:
+        if fact.get("label") in CREATOR_FACTS and fact.get("value"):
+            return str(fact["value"]).split(",")[0].strip() or None
+    return None
+
+
+async def fetch(client, kind: str, title: str, year: Optional[int], metadata: Optional[dict],
+                creator: Optional[str] = None) -> dict:
     """Everything we can find for one title. Returns {} when no source knows it."""
     if kind not in KINDS:
         return {}
     metadata = metadata or {}
+    creator = _creator(metadata, creator)
     free = {"tv": lambda: tvmaze_home(client, metadata), "anime": lambda: jikan_streams(client, metadata),
-            "game": lambda: rawg_stores(client, metadata)}.get(kind)
+            "game": lambda: rawg_stores(client, metadata),
+            "album": lambda: album_services(client, metadata, title, creator),
+            "podcast": lambda: podcast_apps(client, metadata),
+            "audiobook": lambda: audiobook_stores(client, metadata),
+            "book": lambda: openlibrary_reads(client, metadata, title, creator),
+            "manga": lambda: manga_readers(client, metadata, title)}.get(kind)
     tmdb, extra = await asyncio.gather(
         _safe(tmdb_providers(client, kind, title, year, metadata)),
         _safe(free()) if free else asyncio.sleep(0, result={}),
@@ -253,6 +509,7 @@ async def fetch(client, kind: str, title: str, year: Optional[int], metadata: Op
         credits.append({"name": "MyAnimeList", "url": "https://myanimelist.net/"})
     if extra.get("credit"):
         credits.append(extra["credit"])
+    credits += extra.get("credits") or []
     return {
         "v": 1,
         "kind": kind,
@@ -260,6 +517,7 @@ async def fetch(client, kind: str, title: str, year: Optional[int], metadata: Op
         "groups": groups,
         "link": tmdb.get("link"),
         "justwatch": bool(tmdb.get("justwatch")),
+        **({"backdrop": tmdb["backdrop"]} if tmdb.get("backdrop") else {}),
         "credits": credits,
         "fetched": datetime.utcnow().strftime("%Y-%m-%d"),
     }
@@ -273,7 +531,8 @@ _locks: dict[str, asyncio.Lock] = {}
 
 
 async def get_or_fetch(db: Session, client, kind: str, normalized_title: str, display_title: str,
-                       year: Optional[int], metadata: Optional[dict], wait: float = 5.0) -> Optional[dict]:
+                       year: Optional[int], metadata: Optional[dict], wait: float = 5.0,
+                       creator: Optional[str] = None) -> Optional[dict]:
     if kind not in KINDS:
         return None
     key = cache_key(kind, normalized_title, year)
@@ -286,7 +545,7 @@ async def get_or_fetch(db: Session, client, kind: str, normalized_title: str, di
     async with lock:
         await run_in_threadpool(db.rollback)
         try:
-            result = await asyncio.wait_for(fetch(client, kind, display_title, year, metadata), timeout=wait)
+            result = await asyncio.wait_for(fetch(client, kind, display_title, year, metadata, creator), timeout=wait)
             await run_in_threadpool(title_metadata.store, db, key, result or None, "ok" if result else "miss")
             return result or data
         except Exception:
@@ -308,6 +567,7 @@ def names(where: Optional[dict], limit: int = 3) -> list[str]:
 
 def stream_names(where: Optional[dict], limit: int = 3) -> list[str]:
     for group in (where or {}).get("groups") or []:
-        if group["label"] in ("Stream", "Official streams", "Made for", "Free", "Free with ads"):
+        if group["label"] in ("Stream", "Official streams", "Made for", "Free", "Free with ads",
+                              "Listen on", "Listen free on", "Read free", "Read officially on"):
             return [p["name"] for p in group["providers"][:limit]]
     return []

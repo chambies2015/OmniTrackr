@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import episodes, models, schemas, title_origins
+from .. import episodes, image_sizes, models, schemas, title_origins
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -30,7 +30,8 @@ NO_STORE = {"Cache-Control": "private, no-store"}
 TAG_MAX_LENGTH = 32
 TAGS_PER_ITEM = 10
 VIEWS_PER_SHELF = 12
-SORTS = {"", "rating-asc", "rating-desc", "year-asc", "year-desc", "release_date-asc", "release_date-desc"}
+SORTS = {"", "rating-asc", "rating-desc", "year-asc", "year-desc", "release_date-asc", "release_date-desc",
+         "title-asc", "title-desc", "added-desc", "added-asc", "length-asc", "length-desc"}
 
 
 def clean_tag(raw: str) -> str:
@@ -70,6 +71,13 @@ def tag_counts(db: Session, user_id: int, category: str | None = None) -> list[d
     return [{"label": label, "count": count} for _, label, count in rows]
 
 
+def _search_image(url) -> str | None:
+    """A cover for the Ctrl+K results; only http(s) links, like everywhere else covers are shown."""
+    if isinstance(url, str) and url.startswith(("https://", "http://")) and url != "N/A" and len(url) < 1000:
+        return image_sizes.sized(url, 100)
+    return None
+
+
 @router.get("/search")
 def search_library(
     response: Response,
@@ -89,16 +97,17 @@ def search_library(
         title = func.lower(model.title)
         rank = case((title == needle, 0), (title.startswith(needle, autoescape=True), 1),
                     (title.contains(needle, autoescape=True), 2), else_=3)
-        rows = db.query(model.id, model.title, getattr(model, done), rank.label("rank")).filter(
+        image = model.poster_url if hasattr(model, "poster_url") else model.cover_art_url
+        rows = db.query(model.id, model.title, getattr(model, done), rank.label("rank"), image).filter(
             model.user_id == current_user.id,
             or_(*(func.lower(cast(field, String)).contains(needle, autoescape=True) for field in fields)),
         ).order_by(rank, title, model.id).limit(8).all()
-        for item_id, item_title, completed, score in rows:
+        for item_id, item_title, completed, score, cover in rows:
             statuses = {"watched": ("Not watched", "Watched"), "played": ("Not played", "Played"),
                         "listened": ("Not listened", "Listened"), "read": ("Not read", "Read")}
             status = "In progress" if category in {"tv-shows", "anime"} and not completed else statuses[done][bool(completed)]
             matches.append({"id": item_id, "tab": category, "label": label, "title": item_title,
-                            "status": status, "score": score})
+                            "status": status, "score": score, "image": _search_image(cover)})
     matches.sort(key=lambda item: (item["score"], item["title"].lower(), item["tab"], item["id"]))
     return [{key: value for key, value in item.items() if key != "score"} for item in matches[:8]]
 
@@ -171,10 +180,18 @@ def library_page(
     if focus_id is not None:
         query = query.order_by(case((model.id == focus_id, 0), else_=1))
     sort_field = "release_date" if category == "video-games" and sort_by == "year" else sort_by
-    if sort_field in {"rating", "year", "release_date"} and hasattr(model, sort_field):
+    if category == "audiobooks" and sort_by == "length":
+        sort_field = "length_hours"
+    if sort_field in {"rating", "year", "release_date", "length_hours"} and hasattr(model, sort_field):
         column = getattr(model, sort_field)
         # Unrated or undated titles go last both ways, as on Postgres a plain DESC lists NULLs first.
         query = query.order_by((column.desc() if order.lower() == "desc" else column.asc()).nullslast())
+    elif sort_field == "title":
+        title = func.lower(func.coalesce(model.title, ""))
+        query = query.order_by(title.desc() if order.lower() == "desc" else title.asc())
+    elif sort_field == "added" and order.lower() == "desc":
+        # Row ids grow as titles are added, and they cover rows from before added_at existed.
+        query = query.order_by(model.id.desc())
     # Stable tie breaking prevents missing/duplicated rows on adjacent pages.
     query = query.order_by(model.id)
     offset = min(offset, ((total - 1) // limit) * limit) if total else 0

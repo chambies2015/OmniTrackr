@@ -96,9 +96,15 @@ def recap_api(year: int, response: Response, user: models.User = Depends(get_cur
 
 @router.get("/api/year-in-review-season")
 def recap_season(response: Response, user: models.User = Depends(get_current_user)):
-    """Which recap the dashboard should promote right now, if any (December and January)."""
+    """Which recap the dashboard should promote right now, if any (December and January).
+
+    Nothing for a member who joined after that year ended: in January, someone who signed up
+    on New Year's Day has no year to look back on, and their recap page would be empty."""
     response.headers["Cache-Control"] = "private, no-store"
     year = year_in_review.season_year()
+    joined = getattr(user, "created_at", None)
+    if year and joined is not None and joined.year > year:
+        year = None
     return {"year": year, "url": f"/year-in-review/{year}" if year else None}
 
 
@@ -549,7 +555,7 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
                 f'<h2 id="recap-support">Thank you for supporting OmniTrackr</h2>'
                 f'<p>Your Ko-fi support{_e(since)} helped pay for the hosting behind this recap, your library and '
                 f'everything else you used in {year}. It keeps every tracking feature free for everyone.</p>'
-                '<p><a class="site-btn site-btn--ghost" href="/supporters">See what supporters get</a></p></section>')
+                '<p><a class="site-btn site-btn--ghost" href="/supporters?from=recap">See what supporters get</a></p></section>')
     if supporter is not None:
         heading = f"Thanks for supporting OmniTrackr in {year}"
         lead = (f"Your Ko-fi support helped keep OmniTrackr running this year. If you'd like your badge back "
@@ -569,7 +575,27 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
             f'<code>{code}</code> into the Ko-fi message, and the badge finds your account.</p>'
             f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{kofi}" target="_blank" '
             'rel="noopener noreferrer" data-recap-kofi>Support on Ko-fi ↗</a>'
-            '<a class="site-btn site-btn--ghost" href="/supporters">How supporting works</a></p></section>')
+            '<a class="site-btn site-btn--ghost" href="/supporters?from=recap">How supporting works</a></p></section>')
+
+
+def _next_year_box(db: Session, user: models.User, year: int) -> str:
+    """On last year's recap, while the next New Year challenge takes pledges: a link to it."""
+    from .. import new_year_challenge
+    upcoming = year + 1
+    if not new_year_challenge.is_open(upcoming):
+        return ""
+    href = _e(new_year_challenge.path(upcoming) + "#pledge")
+    if new_year_challenge.get(db, user.id, upcoming) is not None:
+        heading, lead, label = (f"You're in for {upcoming}", "Your pledge is set. Check your numbers against this "
+                                "recap, and raise or lower them while the year is young.", "See your pledge")
+    else:
+        heading, lead, label = (f"Pick what you'll finish in {upcoming}",
+                                f"The {upcoming} challenge form shows your {year} counts next to each format, so you can "
+                                "start from this year. Each number becomes a yearly goal you can change any time.",
+                                "Make your pledge")
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-next-year">'
+            f'<h2 id="recap-next-year">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
 
 
 def _summary(recap: dict) -> str:
@@ -639,7 +665,8 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box + ("" if recap.get("is_empty") else _support_box(db, user, year)),
+        body=_body(recap, private=True) + share_box + _next_year_box(db, user, year)
+        + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),
     )

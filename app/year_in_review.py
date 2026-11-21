@@ -19,6 +19,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from . import models
+from .user_columns import PRIVATE, ensure_loaded
 
 # Library category -> (model, plural label, done field, completion verb, privacy flag on the user)
 CATEGORIES = {
@@ -92,6 +93,8 @@ def available_years(user: models.User, today: Optional[date] = None) -> list[int
 
 
 def _visible(user: models.User, public: bool) -> list[str]:
+    if public:
+        ensure_loaded(user, PRIVATE)
     return [key for key, details in CATEGORIES.items() if not (public and getattr(user, details[4], False))]
 
 
@@ -100,7 +103,37 @@ def _title_key(category: str, item_id, title: str) -> tuple:
     # key both by title then so one finish still counts once.
     if item_id is not None and item_id > 0:
         return (category, item_id)
-    return (category, " ".join((title or "").lower().split()))
+    return (category, _plain_title(title))
+
+
+def _plain_title(title: str) -> str:
+    return " ".join((title or "").lower().split())
+
+
+def fold_deleted_copies(finished: dict[tuple, dict]) -> dict[tuple, dict]:
+    """Count a removed copy's finish under the copy still in the library.
+
+    A removed title is keyed by its name (see _title_key). When the same title is
+    still in the library, say a duplicate was added by mistake and then deleted,
+    both finishes are one title: keep the live row, carrying over a favourite,
+    reflection or rating the removed copy had. Changes and returns ``finished``.
+    """
+    live: dict[tuple, tuple] = {}
+    for key, row in finished.items():
+        if not isinstance(key[1], str):
+            live.setdefault((row["category"], _plain_title(row.get("title"))), key)
+    for key in [key for key in finished if isinstance(key[1], str)]:
+        target = live.get(key)
+        if target is None:
+            continue
+        gone = finished.pop(key)
+        kept = finished[target]
+        for field, value in gone.items():
+            if isinstance(value, bool):
+                kept[field] = bool(kept.get(field)) or value
+            elif kept.get(field) is None:
+                kept[field] = value
+    return finished
 
 
 def _year_bounds(year: int) -> tuple[datetime, datetime]:
@@ -109,20 +142,38 @@ def _year_bounds(year: int) -> tuple[datetime, datetime]:
 
 def _finishes(db: Session, user_id: int, year: int, visible: list[str]) -> tuple[list, dict[tuple, dict]]:
     """(journal entries, finished titles) for the year; each title counts once, however many times it was logged."""
-    start, end = _year_bounds(year)
-    entries = db.query(models.ActivityEntry).filter(
-        models.ActivityEntry.user_id == user_id,
-        models.ActivityEntry.occurred_at >= start,
-        models.ActivityEntry.occurred_at < end,
-        models.ActivityEntry.category.in_(visible),
-    ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).all()
-    moments = db.query(models.CompletionMoment).filter(
-        models.CompletionMoment.user_id == user_id,
-        models.CompletionMoment.completed_at >= start,
-        models.CompletionMoment.completed_at < end,
-        models.CompletionMoment.category.in_(visible),
-    ).order_by(models.CompletionMoment.completed_at.asc()).all()
+    return _finishes_for(db, {user_id: visible}, year)[user_id]
 
+
+def _finishes_for(db: Session, visible_by_user: dict[int, list[str]], year: int) -> dict[int, tuple[list, dict[tuple, dict]]]:
+    """_finishes() for several members in two queries (the friends section used to ask twice per friend)."""
+    start, end = _year_bounds(year)
+    user_ids = list(visible_by_user)
+    categories = sorted({category for visible in visible_by_user.values() for category in visible})
+    entries_by_user: dict[int, list] = {user_id: [] for user_id in user_ids}
+    moments_by_user: dict[int, list] = {user_id: [] for user_id in user_ids}
+    if user_ids and categories:
+        for entry in db.query(models.ActivityEntry).filter(
+            models.ActivityEntry.user_id.in_(user_ids),
+            models.ActivityEntry.occurred_at >= start,
+            models.ActivityEntry.occurred_at < end,
+            models.ActivityEntry.category.in_(categories),
+        ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).all():
+            if entry.category in visible_by_user[entry.user_id]:
+                entries_by_user[entry.user_id].append(entry)
+        for moment in db.query(models.CompletionMoment).filter(
+            models.CompletionMoment.user_id.in_(user_ids),
+            models.CompletionMoment.completed_at >= start,
+            models.CompletionMoment.completed_at < end,
+            models.CompletionMoment.category.in_(categories),
+        ).order_by(models.CompletionMoment.completed_at.asc()).all():
+            if moment.category in visible_by_user[moment.user_id]:
+                moments_by_user[moment.user_id].append(moment)
+    return {user_id: (entries_by_user[user_id], _finished_titles(entries_by_user[user_id], moments_by_user[user_id]))
+            for user_id in user_ids}
+
+
+def _finished_titles(entries: list, moments: list) -> dict[tuple, dict]:
     finished: dict[tuple, dict] = {}
     for entry in entries:
         if entry.action != "completed":
@@ -143,7 +194,7 @@ def _finishes(db: Session, user_id: int, year: int, visible: list[str]) -> tuple
             row["item_id"] = moment.item_id
         if row["rating"] is None:
             row["rating"] = moment.rating
-    return entries, finished
+    return fold_deleted_copies(finished)
 
 
 def finished_counts(db: Session, user_id: int, year: int) -> dict[str, int]:
@@ -471,11 +522,16 @@ def _friends(db: Session, user: models.User, year: int, finished: dict, visible:
     for row in sorted(finished.values(), key=lambda row: row["finished_at"]):
         mine.setdefault((row["category"], " ".join((row["title"] or "").casefold().split())), row)
     matches = []
+    shared_by_friend = {}
     for friend in friends:
         shared = [key for key in visible if not getattr(friend, CATEGORIES[key][4], False)]
-        if not shared:
+        if shared:
+            shared_by_friend[friend.id] = shared
+    their_finishes = _finishes_for(db, shared_by_friend, year)
+    for friend in friends:
+        if friend.id not in shared_by_friend:
             continue
-        _, theirs = _finishes(db, friend.id, year, shared)
+        _, theirs = their_finishes[friend.id]
         common = [mine[key] for key in (
             (row["category"], " ".join((row["title"] or "").casefold().split())) for row in theirs.values()
         ) if key in mine]

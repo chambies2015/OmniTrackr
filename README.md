@@ -160,7 +160,7 @@ Current security measures include:
 
 - Password hashing with bcrypt.
 - JWT-based auth with production-only secure cookie behavior.
-- Required production `SECRET_KEY`.
+- Required private signing key (`SECRET_KEY`).
 - Required production `DATABASE_URL`.
 - Production CORS guard against wildcard origins.
 - Security headers and CSP middleware.
@@ -188,12 +188,12 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Create a `.env` file. For local SQLite development, this is enough:
+Generate a key once with `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Put the result in the `SECRET_KEY` field of your local `.env` file and keep it across restarts.
 
 ```env
 ENVIRONMENT=development
 DATABASE_URL=sqlite:///./movies.db
-SECRET_KEY=replace-with-a-local-development-secret
+SECRET_KEY=
 APP_URL=http://localhost:8000
 SITE_URL=http://localhost:8000
 ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
@@ -219,7 +219,7 @@ Core:
 | --- | --- | --- |
 | `ENVIRONMENT` | Recommended | Use `production` on Render and `development` locally. |
 | `DATABASE_URL` | Required in production | PostgreSQL URL in production, SQLite URL locally. |
-| `SECRET_KEY` | Required in production | JWT and signed-token secret. |
+| `SECRET_KEY` | Required | Private, persistent signing key of at least 32 bytes. Changing it invalidates sessions, signed links, authenticator setups and their recovery codes. |
 | `APP_URL` | Recommended | Base URL used in email links. |
 | `SITE_URL` | Recommended | Public site URL for sitemap, reviews, and SEO output. |
 | `SITE_DOMAIN` | Optional | Domain used in seller/ads metadata. |
@@ -259,6 +259,8 @@ Phone and browser notifications (Web Push; nothing to set up, members turn them 
 | `VAPID_PRIVATE_KEY` | Optional. The site's push signing key, as a PEM or a base64url P-256 scalar. When unset, a key is made on first use and kept in the `web_push_keys` table, which is all one server needs. Browsers tie every subscription to this key, so once members have turned notifications on it must not change. |
 | `VAPID_SUBJECT` | Optional. A `mailto:` or `https://` address push services can contact about the sender. Defaults to `mailto:` + `MAIL_FROM`. |
 | `WEB_PUSH` | Optional. `off` stops all pushes (the bell keeps working). |
+
+The December advent calendar (`/holidays/advent-calendar`) opens door 1 on December 1. `ADVENT_CALENDAR_OPENS=YYYY-MM-DD` moves door 1 to another day in the same year (the other doors follow a day apart), for trying it on the live site before December; leave it unset otherwise.
 
 External metadata:
 

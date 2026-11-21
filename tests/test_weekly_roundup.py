@@ -168,10 +168,17 @@ def test_write_up_names_specifics_and_compares_weeks():
     past = " ".join(roundup.category_paragraphs("games", roundup.releases(payload, "games"), {}, "past"))
     assert "was Games Title 0" in past and "PlayStation 5" in past
     assert roundup.writeup_words(payload, previous, "current") >= roundup.MIN_INDEX_WORDS
-    assert roundup.is_indexable(payload, WEEK, TODAY)
+    # Generated roundups stay out of search unless the switch is turned back on.
+    assert not roundup.is_indexable(payload, WEEK, TODAY)
 
 
-def test_thin_weeks_stay_out_of_the_index():
+def test_the_index_switch_still_applies_the_thresholds(monkeypatch):
+    monkeypatch.setattr(roundup, "INDEX_ROUNDUPS", True)
+    assert roundup.is_indexable(_payload(), WEEK, TODAY)
+
+
+def test_thin_weeks_stay_out_of_the_index(monkeypatch):
+    monkeypatch.setattr(roundup, "INDEX_ROUNDUPS", True)
     thin = _payload(2)
     assert not roundup.is_indexable(thin, WEEK, TODAY)  # 8 releases
     one_format = _payload(6)
@@ -202,7 +209,18 @@ def test_week_page_renders_releases_write_up_and_links(client, fixtures):
     assert "ad-loader.js" not in html
 
 
+def test_roundups_stay_out_of_search_by_default(client, fixtures, monkeypatch):
+    monkeypatch.setattr(roundup, "MIN_INDEX_RELEASES", 3)
+    monkeypatch.setattr(roundup, "MIN_INDEX_WORDS", 40)
+    html = client.get("/new-this-week/2026-09-28").text
+    assert 'content="noindex, follow"' in html and "Digger" in html
+    assert 'content="noindex, follow"' in client.get("/new-this-week/archive").text
+    sitemap = client.get("/sitemap.xml").text
+    assert "/new-this-week" not in sitemap
+
+
 def test_week_page_is_indexed_and_in_the_sitemap_once_it_has_enough(client, fixtures, monkeypatch):
+    monkeypatch.setattr(roundup, "INDEX_ROUNDUPS", True)
     monkeypatch.setattr(roundup, "MIN_INDEX_RELEASES", 3)
     monkeypatch.setattr(roundup, "MIN_INDEX_WORDS", 40)
     html = client.get("/new-this-week/2026-09-28").text

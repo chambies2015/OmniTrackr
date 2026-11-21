@@ -236,7 +236,7 @@ def test_google_sign_in_asks_for_the_code_too(client, google, db_session, test_u
     client.headers = {}
     client.cookies.clear()
 
-    response = _sign_in(client, google, email="test@example.com", sub="2002")
+    response = _sign_in(client, google, email="test@example.com", hd="example.com", sub="2002")
     assert response.status_code == 303
     assert response.headers["location"] == "/?two_factor=1#landing-auth"
     assert auth.AUTH_COOKIE_NAME not in response.cookies

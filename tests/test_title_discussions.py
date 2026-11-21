@@ -47,7 +47,8 @@ def test_title_page_invites_the_first_discussion(client, db_session):
     _setup(db_session)
     html = client.get(TITLE).text
     assert 'id="discussions-title"' in html and "Nobody has started a discussion about Interstellar yet" in html
-    assert f'href="{BOARD}#start">Start the first discussion</a>' in html
+    # Since Nov 15 2026 an empty board folds into the review panel instead of its own empty section.
+    assert f'href="{BOARD}#start">Start a discussion</a>' in html and 'class="title-write__talk" id="discussions-title"' in html
     assert '<a href="#discussions-title">Discussions</a>' in html
 
 
@@ -93,7 +94,7 @@ def test_long_threads_are_indexed_and_in_the_sitemap(client, db_session):
     started = _start(client, body="\n\n".join([LONG_REVIEW, LONG_REVIEW.replace("Interstellar", "It"), LONG_REVIEW.lower()]))
     _as(client, None)
     page = client.get(started["url"]).text
-    assert 'content="index, follow"' in page
+    assert 'content="index, follow, max-image-preview:large"' in page
     assert title_discussions.sitemap_paths(db_session)[0][0] == started["url"]
 
 

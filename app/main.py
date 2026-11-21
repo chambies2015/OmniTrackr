@@ -13,9 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
-from starlette.middleware.gzip import GZipMiddleware
 from slowapi import Limiter
-from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session, undefer
 
@@ -27,9 +25,11 @@ from .reader_pages import enhance as enhance_reader_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
-from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
+from .compression import CompressionMiddleware
+from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware, RateLimitMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from .html_finish import HtmlFinishMiddleware
+from .slash_redirects import PermanentSlashRedirectMiddleware
 from . import digest as digest_emails
 from . import funnel, start_flow
 from .dependencies import get_db, get_current_user, get_optional_current_user
@@ -126,6 +126,22 @@ async def lifespan(application: FastAPI):
     welcome_task = None
     if welcome_emails.enabled_for_process():
         welcome_task = asyncio.create_task(welcome_emails.welcome_loop(application))
+    from . import check_in
+    check_in_task = None
+    if check_in.enabled_for_process():
+        check_in_task = asyncio.create_task(check_in.check_in_loop(application))
+    from . import week_one
+    week_one_task = None
+    if week_one.emails_enabled():
+        week_one_task = asyncio.create_task(week_one.week_one_loop(application))
+    from . import backlog_draw
+    backlog_draw_task = None
+    if backlog_draw.emails_enabled():
+        backlog_draw_task = asyncio.create_task(backlog_draw.backlog_draw_loop(application))
+    from . import your_week
+    your_week_task = None
+    if your_week.emails_enabled():
+        your_week_task = asyncio.create_task(your_week.your_week_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -143,7 +159,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task):
+                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -161,21 +177,14 @@ app = FastAPI(
 )
 
 def client_address(request: Request) -> str:
-    """The visitor's address for rate limits.
+    """The visitor's address for rate limits (see visitor_identity.client_address).
 
     On Render every request reaches the app from an internal load balancer, so
-    limits keyed on the socket address were shared by all visitors (for example
-    five sign-ups a minute for the whole site). Render sits behind Cloudflare,
-    which sets True-Client-IP / CF-Connecting-IP to the real visitor and
-    overwrites any value a client sends. Those headers are trusted only when
-    running on Render (RENDER=true, set by Render itself).
+    limits keyed on the socket address were shared by all visitors. The header
+    rules live in visitor_identity so report counting uses the same address.
     """
-    if os.getenv("RENDER", "").lower() == "true":
-        for header in ("true-client-ip", "cf-connecting-ip"):
-            value = (request.headers.get(header) or "").strip()
-            if value:
-                return value[:64]
-    return get_remote_address(request)
+    from .visitor_identity import client_address as visitor_address
+    return visitor_address(request)
 
 
 if os.getenv("TESTING", "").lower() == "true":
@@ -196,12 +205,13 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(UploadAuthenticationMiddleware)
 app.add_middleware(CSRFProtectionMiddleware)
-# Inside GZip so it sees plain HTML: poster-sized game covers and breadcrumb data.
+# Inside compression so it sees plain HTML: poster-sized game covers and breadcrumb data.
+app.add_middleware(PermanentSlashRedirectMiddleware)
 app.add_middleware(HtmlFinishMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(CompressionMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
-app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
@@ -363,6 +373,26 @@ def savebar_signup_html(google: bool) -> str:
             '<span><span class="lp-savebar__wide">Continue with </span>Google</span></a>' + email)
 
 
+HOME_CTA_COPY = {
+    "tour": ("That could be your library by tonight.", "Free, private until you share it, and you can export everything whenever you like."),
+    "tools": ("Keep what you find.", "Your picks, polls and plans save to one library, across all nine formats."),
+}
+
+
+def home_cta_html(google: bool, where: str) -> str:
+    """A sign-up row between homepage sections; data-home-cta says which one was pressed."""
+    title, note = HOME_CTA_COPY[where]
+    google_button = (f'<a class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup data-home-cta="{where}">'
+                     f'{GOOGLE_G_SVG}<span>Continue with Google</span></a>') if google else ""
+    email_label = "Sign up with email" if google else "Create a free account"
+    email_class = "lp-btn--ghost" if google else "lp-btn--primary"
+    return (
+        f'<div class="lp-cta lp-cta--{where}"><div class="lp-cta__copy"><p class="lp-cta__title">{title}</p><p class="lp-cta__note">{note}</p></div>'
+        f'<div class="lp-cta__actions">{google_button}'
+        f'<button type="button" class="lp-btn {email_class}" data-action="show-register-form" data-home-cta="{where}">{email_label}</button></div></div>'
+    )
+
+
 def season_link_html() -> str:
     """The seasonal hub tile in the homepage's no-account row: the running season, else the next one."""
     from datetime import datetime
@@ -387,7 +417,8 @@ def _warm_homepage_sections() -> None:
     large library). Run inline, it stalled every other request while it ran.
     """
     from . import guest_picks, landing_proof
-    for section in (guest_picks.homepage_section, landing_proof.homepage_section, landing_proof.hero_section):
+    for section in (guest_picks.homepage_section, landing_proof.homepage_section, landing_proof.hero_section,
+                    landing_proof.pulse_section):
         try:
             section()
         except Exception:
@@ -442,14 +473,41 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 hero_proof = ""  # The homepage never depends on this line.
             page = page.replace("<!--HERO_PROOF-->", hero_proof, 1)
+        if "<!--HOME_PULSE-->" in page:
+            try:
+                from . import landing_proof
+                pulse = landing_proof.pulse_section()
+            except Exception:
+                pulse = ""  # The homepage never depends on this band.
+            page = page.replace("<!--HOME_PULSE-->", pulse, 1)
+        for marker, build in (("<!--HOME_IMPORT-->", "import_section"), ("<!--HOME_TOOLS-->", "tools_section")):
+            if marker in page:
+                try:
+                    from . import landing_sections
+                    block = (landing_sections.tools_section(season_link_html()) if build == "tools_section"
+                             else landing_sections.import_section())
+                except Exception:
+                    block = ""  # The homepage never depends on these sections.
+                page = page.replace(marker, block, 1)
         if "<!--SEASON_LINK-->" in page:
             page = page.replace("<!--SEASON_LINK-->", season_link_html(), 1)
         from . import google_signin
         google = google_signin.configured()
+        for where in HOME_CTA_COPY:
+            page = page.replace(f"<!--HOME_CTA:{where}-->", home_cta_html(google, where), 1)
         for form, label in (("login", "Log in with Google"), ("register", "Sign up with Google")):
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
         page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)
         page = page.replace("<!--SAVEBAR_SIGNUP-->", savebar_signup_html(google), 1)
+        if "<!--HERO_STAGE-->" in page and "<!--/HERO_STAGE-->" in page:
+            try:
+                from . import guest_picks
+                stage = guest_picks.hero_stage()
+            except Exception:
+                stage = ""  # Keep the vortex.
+            start, end = page.index("<!--HERO_STAGE-->"), page.index("<!--/HERO_STAGE-->")
+            fallback = page[start + len("<!--HERO_STAGE-->"):end]
+            page = page[:start] + (stage or fallback) + page[end + len("<!--/HERO_STAGE-->"):]
         if "<!--HERO_QUICK_PICKS-->" in page:
             try:
                 from . import guest_picks
@@ -475,7 +533,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         '<html lang="en" data-public-shell="true">',
         1,
     )
-    public_head = public_head.replace('  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>\n', "", 1)
+    public_head = public_head.replace('  <script src="./preauth.js?v=20261120-settle-1"></script>\n', "", 1)
     public_tail = html[scripts_start:].replace(
         '  <script src="./app.js"></script>',
         '  <script src="/static/public-landing.js" defer></script>',
@@ -584,6 +642,14 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+        elif route.path == "/auth/verify-email" and 'GET' in route.methods:
+            # The page calls this once for each emailed link that is opened. It was the one
+            # step of signing up that anyone could call as often as they liked.
+            bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+        elif route.path == "/auth/verify-code" and 'POST' in route.methods:
+            # Ten wrong codes stop an account's code for good (routers/auth.py); this keeps
+            # one visitor from trying many accounts quickly.
+            bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:
@@ -639,6 +705,8 @@ app.include_router(podcasts.router)
 app.include_router(audiobooks.router)
 rate_limited_return_deck = limiter.limit("30/minute")(statistics.get_return_deck)
 rate_limited_return_engagement = limiter.limit("10/minute")(statistics.record_return_deck_engagement)
+# The welcome strip runs about 20 queries and refreshes after edits and when the tab comes back.
+rate_limited_home_summary = limiter.limit("60/minute")(statistics.get_home_summary)
 for route in statistics.router.routes:
     if not hasattr(route, "path") or not hasattr(route, "methods"):
         continue
@@ -646,6 +714,8 @@ for route in statistics.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_return_deck)
     elif route.path == "/statistics/return-deck/engagement" and "POST" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_return_engagement)
+    elif route.path == "/statistics/home/" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_home_summary)
 app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
@@ -653,6 +723,9 @@ app.include_router(activity.router)
 for route in progress.router.routes:
     if getattr(route, "path", None) == "/progress/{category}/{item_id}/episodes":
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/progress/{category}/{item_id}/episode-notes":
+        # Rating a run of episodes is many quick taps; this only stops scripts.
+        bind_rate_limited_endpoint(route, limiter.limit("120/minute")(route.endpoint))
 app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
@@ -684,6 +757,16 @@ for route in collections.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_collection_helpful)
     elif route.path == "/collections/public/{collection_id}/report" and "POST" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_collection_report)
+    elif route.path == "/collections/link/{token}" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path == "/collections/link/{token}/report" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("2/hour")(route.endpoint))
+    elif route.path.endswith("/card.png") and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path.endswith("/entries/{entry_id}/library") and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif route.path == "/collections/{collection_id}/link" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, limiter.limit("20/hour")(route.endpoint))
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(release_radar.router)
@@ -756,6 +839,11 @@ for route in site_stats.router.routes:
     elif getattr(route, "path", None) == "/api/visit":
         bind_rate_limited_endpoint(route, rate_limited_page_visit)
 app.include_router(site_stats.router)
+# The full weekly email preview builds the whole email on every load (nothing cached), so it is limited.
+rate_limited_weekly_preview_page = limiter.limit("20/minute")(for_you.weekly_preview)
+for route in for_you.router.routes:
+    if getattr(route, "path", None) == "/email/weekly/preview":
+        bind_rate_limited_endpoint(route, rate_limited_weekly_preview_page)
 app.include_router(for_you.router)
 rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
 rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
@@ -778,16 +866,29 @@ rate_limited_discussion_start = limiter.limit("10/hour")(title_discussions.start
 rate_limited_discussion_reply = limiter.limit("30/minute")(title_discussions.add_reply)
 rate_limited_discussion_edit = limiter.limit("30/minute")(title_discussions.edit_post)
 rate_limited_discussion_report = limiter.limit("20/hour")(title_discussions.report_post)
+# The friends feed rail asks on each Friends tab open; it reads the member's whole recent library.
+rate_limited_discussion_summary = limiter.limit("30/minute")(title_discussions.talk_summary)
+rate_limited_discussion_list = limiter.limit("60/minute")(title_discussions.list_threads)
+rate_limited_discussion_delete = limiter.limit("30/minute")(title_discussions.delete_thread)
+rate_limited_discussion_moderate = limiter.limit("60/minute")(title_discussions.moderate_post)
 for route in title_discussions.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
     if path == "/api/titles/{kind}/{slug}/discussions" and "POST" in methods:
         bind_rate_limited_endpoint(route, rate_limited_discussion_start)
+    elif path == "/api/titles/{kind}/{slug}/discussions" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_list)
+    elif path == "/api/discussions/{thread_id}" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_delete)
+    elif path == "/api/discussions/{thread_id}/moderate":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_moderate)
     elif path == "/api/discussions/{thread_id}/replies":
         bind_rate_limited_endpoint(route, rate_limited_discussion_reply)
     elif path == "/api/discussions/{thread_id}" and "PATCH" in methods:
         bind_rate_limited_endpoint(route, rate_limited_discussion_edit)
     elif path == "/api/discussions/{thread_id}/report":
         bind_rate_limited_endpoint(route, rate_limited_discussion_report)
+    elif path == "/api/discussions/summary":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_summary)
 # Before titles.router: its /titles/{kind}/{slug} route must not shadow the board pages.
 app.include_router(title_discussions.router)
 app.include_router(titles.router)
@@ -795,6 +896,78 @@ from .routers import trending as trending_router
 app.include_router(trending_router.router)
 from .routers import people as people_router
 app.include_router(people_router.router)
+from .routers import support_asks as support_asks_router
+# The dashboard note and the /supporters counters are a click at a time.
+for route in support_asks_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/support/event":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path in ("/api/support-ask/seen", "/api/support-ask/answer", "/api/support-ask/settings"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(support_asks_router.router)
+from .routers import stay_posted as stay_posted_router
+# The "stay posted" card and the note after saving a show are a click at a time.
+for route in stay_posted_router.router.routes:
+    path = getattr(route, "path", None)
+    if path in ("/api/stay-posted/seen", "/api/stay-posted/answer", "/api/stay-posted/after-save"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/stay-posted":
+        # The home screen asks at most once a minute per tab.
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+app.include_router(stay_posted_router.router)
+from .routers import week_one as week_one_router
+# The first-week card: one read per home refresh, and buttons pressed a click at a time.
+for route in week_one_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/week-one":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path and path.startswith("/api/week-one/"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(week_one_router.router)
+from .routers import backlog_draw as backlog_draw_router
+# Draw from your backlog: one read per home refresh, and buttons pressed a click at a time.
+for route in backlog_draw_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/backlog-draw":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path and path.startswith("/api/backlog-draw/"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(backlog_draw_router.router)
+from .routers import your_week as your_week_router
+# Your week: one read per home refresh, and buttons pressed a click at a time.
+for route in your_week_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/your-week":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path and path.startswith("/api/your-week/"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+app.include_router(your_week_router.router)
+from .routers import weekly_preview as weekly_preview_router
+# The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
+for route in weekly_preview_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/weekly-email/preview":
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/weekly-email/copy":
+        bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+app.include_router(weekly_preview_router.router)
+from .routers import check_in as check_in_router
+# The emailed check-in page works without signing in: the signed link is the key, so it is limited per address.
+for route in check_in_router.router.routes:
+    if getattr(route, "path", None) == "/check-in/{token}":
+        methods = getattr(route, "methods", set())
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute" if "POST" in methods else "60/minute")(route.endpoint))
+app.include_router(check_in_router.router)
+from .routers import site_search as site_search_router
+# The header search and Ctrl+K call /api/search as people type, like /api/titles/search.
+rate_limited_site_search = {
+    "/api/search": limiter.limit("60/minute")(site_search_router.search_api),
+    "/search": limiter.limit("60/minute")(site_search_router.search_page),
+}
+for route in site_search_router.router.routes:
+    if getattr(route, "path", None) in rate_limited_site_search:
+        bind_rate_limited_endpoint(route, rate_limited_site_search[route.path])
+app.include_router(site_search_router.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
 rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)
@@ -814,12 +987,32 @@ from .routers import profile_widgets as profile_widgets_router
 # Widgets are embedded on other sites and fetched through their image proxies, so allow more.
 rate_limited_widget = limiter.limit("120/minute")(profile_widgets_router.widget)
 rate_limited_widget_by_id = limiter.limit("120/minute")(profile_widgets_router.widget_by_id)
+rate_limited_widget_svg = limiter.limit("120/minute")(profile_widgets_router.widget_svg)
+rate_limited_widget_svg_by_id = limiter.limit("120/minute")(profile_widgets_router.widget_svg_by_id)
+# Copy-button counts and the Settings panel: a person presses these a few times, never hundreds.
+rate_limited_widget_event = limiter.limit("30/minute")(profile_widgets_router.widget_event)
+rate_limited_my_widgets = limiter.limit("30/minute")(profile_widgets_router.my_widgets)
+WIDGET_ROUTE_LIMITS = {
+    "/u/{handle}/widget/{kind}.png": rate_limited_widget,
+    "/u/id/{user_id:database_id}/widget/{kind}.png": rate_limited_widget_by_id,
+    "/u/{handle}/widget/{kind}.svg": rate_limited_widget_svg,
+    "/u/id/{user_id:database_id}/widget/{kind}.svg": rate_limited_widget_svg_by_id,
+    "/api/widgets/event": rate_limited_widget_event,
+    "/api/profile/widgets": rate_limited_my_widgets,
+}
 for route in profile_widgets_router.router.routes:
-    if getattr(route, "path", None) == "/u/{handle}/widget/{kind}.png":
-        bind_rate_limited_endpoint(route, rate_limited_widget)
-    elif getattr(route, "path", None) == "/u/id/{user_id:database_id}/widget/{kind}.png":
-        bind_rate_limited_endpoint(route, rate_limited_widget_by_id)
+    if getattr(route, "path", None) in WIDGET_ROUTE_LIMITS:
+        bind_rate_limited_endpoint(route, WIDGET_ROUTE_LIMITS[route.path])
 app.include_router(profile_widgets_router.router)
+# Each share can ask Spotify, YouTube or OMDb for a title, so it gets the same limit as the metadata search.
+for route in pwa.router.routes:
+    if getattr(route, "path", None) == "/share" and "GET" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/api/app/event" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif getattr(route, "path", None) == "/api/app/status" and "GET" in getattr(route, "methods", set()):
+        # Asked once a day per browser by pwa.js; a database read for signed-in members.
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:
@@ -828,6 +1021,9 @@ for route in supporters.router.routes:
     # Each claim can send an email to an address the member typed.
     elif getattr(route, "path", None) == "/api/supporter/claim" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("6/hour")(route.endpoint))
+    # Saving supporter settings (accent, banner, frame, app theme) is a click at a time.
+    elif getattr(route, "path", None) == "/api/supporter" and "PUT" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(supporters.router)
 
 rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
@@ -861,6 +1057,9 @@ for route in invites.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_invite_accept)
     elif path == "/join/{token}":
         bind_rate_limited_endpoint(route, rate_limited_join_page)
+    elif path == "/api/friends/invite/{token}/guess":
+        # Anyone holding the link can score answers, like /api/taste-match/u/{owner_id}/guess.
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(invites.router)
 
 from .routers import goals as goals_router
@@ -889,6 +1088,10 @@ rate_limited_challenge_leave = limiter.limit("30/minute")(challenges_router.leav
 rate_limited_challenge_share = limiter.limit("20/minute")(challenges_router.share_challenge)
 rate_limited_challenge_page = limiter.limit("60/minute")(challenges_router.shared_challenge_page)
 rate_limited_challenge_card = limiter.limit("30/minute")(challenges_router.shared_challenge_card)
+# The card loads once per home screen; March 2027's "format you hardly ever finish" step adds up to 20 queries to it.
+rate_limited_challenge_state = limiter.limit("60/minute")(challenges_router.current_challenge)
+rate_limited_challenge_seen = limiter.limit("30/minute")(challenges_router.challenge_seen)
+rate_limited_challenge_unshare = limiter.limit("20/minute")(challenges_router.unshare_challenge)
 for route in challenges_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
     if path == "/api/challenge/join" and "POST" in methods:
@@ -897,11 +1100,69 @@ for route in challenges_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_challenge_leave)
     elif path == "/api/challenge/share" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_challenge_share)
+    elif path == "/api/challenge/share" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_unshare)
+    elif path == "/api/challenge" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_state)
+    elif path == "/api/challenge/seen" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_seen)
     elif path == "/challenge/{token}":
         bind_rate_limited_endpoint(route, rate_limited_challenge_page)
     elif path == "/challenge/{token}/card.png":
         bind_rate_limited_endpoint(route, rate_limited_challenge_card)
 app.include_router(challenges_router.router)
+
+from .routers import new_year_challenge as new_year_challenge_router
+# The card loads with the dashboard; the state call reads two years of finishes.
+rate_limited_pledge_home_card = limiter.limit("60/minute")(new_year_challenge_router.challenge_card)
+rate_limited_pledge_state = limiter.limit("60/minute")(new_year_challenge_router.challenge_state)
+rate_limited_pledge_save = limiter.limit("30/minute")(new_year_challenge_router.make_pledge)
+rate_limited_pledge_leave = limiter.limit("30/minute")(new_year_challenge_router.leave_pledge)
+rate_limited_pledge_share = limiter.limit("20/minute")(new_year_challenge_router.share_pledge)
+rate_limited_pledge_unshare = limiter.limit("20/minute")(new_year_challenge_router.unshare_pledge)
+rate_limited_pledge_page = limiter.limit("60/minute")(new_year_challenge_router.shared_pledge_page)
+rate_limited_pledge_card = limiter.limit("30/minute")(new_year_challenge_router.shared_pledge_card)
+for route in new_year_challenge_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/new-year-challenge" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_home_card)
+    elif path == "/api/new-year-challenge/{year}" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_state)
+    elif path == "/api/new-year-challenge/{year}/pledge" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_save)
+    elif path == "/api/new-year-challenge/{year}/pledge" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_leave)
+    elif path == "/api/new-year-challenge/{year}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_share)
+    elif path == "/api/new-year-challenge/{year}/share" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_pledge_unshare)
+    elif path == "/pledge/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_pledge_page)
+    elif path == "/pledge/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_pledge_card)
+app.include_router(new_year_challenge_router.router)
+
+from .routers import awards as awards_router
+# Awards season ballots. The card loads with the dashboard; a ballot saves one click at a time.
+AWARDS_LIMITS = {
+    ("/api/awards/card", "GET"): ("60/minute", awards_router.ballot_card),
+    ("/api/awards/{slug}", "GET"): ("60/minute", awards_router.ballot_state),
+    ("/api/awards/{slug}/ballot", "PUT"): ("120/minute", awards_router.save_ballot),
+    ("/api/awards/{slug}/ballot", "DELETE"): ("20/minute", awards_router.clear_ballot),
+    ("/api/awards/{slug}/follow", "PUT"): ("20/minute", awards_router.follow_show),
+    ("/api/awards/{slug}/share", "PUT"): ("20/minute", awards_router.share_ballot),
+    ("/api/awards/{slug}/share", "DELETE"): ("20/minute", awards_router.unshare_ballot),
+    ("/api/awards/{slug}/add", "POST"): ("60/minute", awards_router.add_nominee),
+    ("/api/awards/{slug}/results", "PUT"): ("120/minute", awards_router.mark_winner),
+    ("/ballot/{token}", "GET"): ("60/minute", awards_router.shared_ballot_page),
+    ("/ballot/{token}/card.png", "GET"): ("30/minute", awards_router.shared_ballot_card),
+}
+for route in awards_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    for (limited_path, method), (rate, endpoint) in AWARDS_LIMITS.items():
+        if path == limited_path and method in methods:
+            bind_rate_limited_endpoint(route, limiter.limit(rate)(endpoint))
+app.include_router(awards_router.router)
 
 from .routers import badges as badges_router
 rate_limited_badges_list = limiter.limit("120/minute")(badges_router.list_badges)
@@ -942,6 +1203,8 @@ from .routers import start as start_router
 rate_limited_start_save = limiter.limit("90/minute")(start_router.start_save)
 rate_limited_start_art = limiter.limit("60/minute")(start_router.start_art)
 rate_limited_start_undo = limiter.limit("30/minute")(start_router.start_undo)
+# Each format chip on the poster wall reloads the deck.
+rate_limited_start_deck = limiter.limit("60/minute")(start_router.start_deck)
 for route in start_router.router.routes:
     path = getattr(route, "path", None)
     if path == "/api/start/save":
@@ -950,25 +1213,67 @@ for route in start_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_start_art)
     elif path == "/api/start/undo":
         bind_rate_limited_endpoint(route, rate_limited_start_undo)
+    elif path == "/api/start/deck":
+        bind_rate_limited_endpoint(route, rate_limited_start_deck)
+    elif path in ("/api/start/state", "/api/start/step"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(start_router.router)
 
 from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)
 
 from .routers import best_of as best_of_router
+# Same limit as /api/pick/add, which saves the other six formats from these lists.
+rate_limited_best_of_add = limiter.limit("30/minute")(best_of_router.best_of_add)
+for route in best_of_router.router.routes:
+    if getattr(route, "path", None) == "/api/best-of/add":
+        bind_rate_limited_endpoint(route, rate_limited_best_of_add)
 app.include_router(best_of_router.router)
+
+from .routers import essentials as essentials_router
+# Ticking through a list of 100 is quick work, so saves get the start wall's limit.
+ESSENTIALS_LIMITS = {"/api/essentials/save": "90/minute", "/api/essentials/undo": "30/minute",
+                     "/api/essentials/import": "10/minute",
+                     # Every count has its own card, drawn on first ask, so a run of new counts costs real CPU.
+                     "/essentials/score/{counts}/card.png": "30/minute", "/essentials/{fmt}/score/{done}/card.png": "30/minute"}
+for route in essentials_router.router.routes:
+    limit = ESSENTIALS_LIMITS.get(getattr(route, "path", None))
+    if limit:
+        bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(essentials_router.router)
 from .routers import new_releases as new_releases_router
 app.include_router(new_releases_router.router)
 
 from .routers import tonight as tonight_router
 rate_limited_tonight_create = limiter.limit("10/minute")(tonight_router.create_poll)
 rate_limited_tonight_vote = limiter.limit("30/minute")(tonight_router.vote_poll)
+TONIGHT_OTHER_LIMITS = {
+    "/api/tonight": {"GET": "60/minute"},
+    "/api/tonight/suggestions": {"GET": "30/minute"},
+    "/api/tonight/{token}": {"GET": "120/minute", "DELETE": "20/minute"},
+    "/api/tonight/{token}/vote": {"DELETE": "30/minute"},
+    "/api/tonight/{token}/close": {"POST": "20/minute"},
+}
 for route in tonight_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set()) or set()
     if path == "/api/tonight" and "POST" in methods:
         bind_rate_limited_endpoint(route, rate_limited_tonight_create)
     elif path == "/api/tonight/{token}/vote" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_tonight_vote)
+    elif path == "/tonight/{token}/card.png":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif path == "/api/tonight/{token}/where":
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path in ("/api/tonight/{token}/again", "/api/tonight/{token}/keep"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+    elif path == "/api/tonight/starters":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    else:
+        # The October routes. An open poll page reloads its results every 20 seconds, so the
+        # read limit leaves room for a few tabs on one connection.
+        for method, rate in TONIGHT_OTHER_LIMITS.get(path, {}).items():
+            if method in methods:
+                bind_rate_limited_endpoint(route, limiter.limit(rate)(route.endpoint))
 app.include_router(tonight_router.router)
 
 from .routers import weekly_roundup as weekly_roundup_router
@@ -996,10 +1301,59 @@ for route in seasonal_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_seasonal_add)
 app.include_router(seasonal_router.router)
 
+from .routers import gift_guide as gift_guide_router
+# The claim routes need no account, so they are limited per address. The member routes match the seasonal hub's.
+GIFT_GUIDE_LIMITS = {
+    ("/api/gift-list/items", "POST"): "60/minute",
+    ("/api/gift-list/link", "POST"): "10/hour",
+    ("/api/gift-list", "GET"): "60/minute",
+    ("/api/gift-list", "PATCH"): "30/minute",
+    ("/api/gift-list/items/{item_id}", "PATCH"): "60/minute",
+    ("/api/gift-list/items/{item_id}", "DELETE"): "60/minute",
+    ("/api/gifts/{token}/items/{item_id}/claim", "POST"): "20/minute",
+    ("/api/gifts/{token}/items/{item_id}/unclaim", "POST"): "20/minute",
+}
+for route in gift_guide_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = GIFT_GUIDE_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(gift_guide_router.router)
+
+from .routers import advent_calendar as advent_calendar_router
+# The card loads with the dashboard; a door opens with one tap.
+ADVENT_LIMITS = {
+    ("/api/advent-calendar", "GET"): "60/minute",
+    ("/api/advent-calendar/{year}", "GET"): "60/minute",
+    ("/api/advent-calendar/{year}/open", "POST"): "60/minute",
+    ("/api/advent-calendar/{year}/doors/{day}/add", "POST"): "30/minute",
+    ("/api/advent-calendar/{year}/reminder", "PUT"): "20/minute",
+    ("/holidays/advent-calendar/{year}/{day}", "GET"): "60/minute",
+    ("/holidays/advent-calendar/{year}/{day}/card.png", "GET"): "30/minute",
+}
+for route in advent_calendar_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = ADVENT_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(advent_calendar_router.router)
+
+from .routers import deals_guide as deals_guide_router
+app.include_router(deals_guide_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
 rate_limited_tier_image = limiter.limit("240/minute")(tier_list_router.tier_list_image)
+TIER_SHARE_LIMITS = {
+    "/api/tier-list/shares": {"POST": "10/minute;60/day"},
+    "/api/tier-list/shares/mine": {"GET": "30/minute"},
+    "/api/tier-list/shares/claim": {"POST": "10/minute"},
+    "/api/tier-list/shares/{token}": {"GET": "60/minute", "PUT": "40/minute", "DELETE": "20/minute"},
+    "/tier-list/s/{token}/card.png": {"GET": "30/minute"},
+    # Every open of a shared page that isn't the maker's counts a view (a write), so the page has a limit too.
+    "/tier-list/s/{token}": {"GET": "60/minute"},
+}
 for route in tier_list_router.router.routes:
     path = getattr(route, "path", None)
     if path == "/api/tier-list/templates":
@@ -1008,6 +1362,14 @@ for route in tier_list_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_tier_library)
     elif path == "/api/tier-list/image":
         bind_rate_limited_endpoint(route, rate_limited_tier_image)
+    else:
+        # Shared tier lists (Nov 2026). Making a link works without an account, so it has a daily cap as well.
+        methods = getattr(route, "methods", set()) or set()
+        rate = TIER_SHARE_LIMITS.get(path, {})
+        for method in methods:
+            if method in rate:
+                bind_rate_limited_endpoint(route, limiter.limit(rate[method])(route.endpoint))
+                break
 app.include_router(tier_list_router.router)
 
 from .routers import daily as daily_router
@@ -1136,12 +1498,54 @@ for route in follows_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_remove_follower)
 app.include_router(follows_router.router)
 
+from .routers import find_people as find_people_router
+# Each suggestions request reads the member's whole library and builds a few profiles.
+rate_limited_find_people = {
+    ("/api/people/suggestions", "GET"): limiter.limit("30/minute")(find_people_router.people_suggestions),
+    ("/api/people/rail", "GET"): limiter.limit("30/minute")(find_people_router.people_rail),
+    ("/api/people/dismiss/{user_id:database_id}", "POST"): limiter.limit("60/minute")(find_people_router.dismiss),
+    ("/api/people/dismiss/{user_id:database_id}", "DELETE"): limiter.limit("60/minute")(find_people_router.undismiss),
+    ("/api/people/event", "POST"): limiter.limit("30/minute")(find_people_router.people_event),
+}
+for route in find_people_router.router.routes:
+    for method in getattr(route, "methods", set()):
+        limited = rate_limited_find_people.get((getattr(route, "path", None), method))
+        if limited is not None:
+            bind_rate_limited_endpoint(route, limited)
+app.include_router(find_people_router.router)
+
 from .routers import binge_calculator as binge_calculator_router
-rate_limited_binge_length = limiter.limit("60/minute")(binge_calculator_router.binge_length)
+rate_limited_binge = {
+    "/api/binge-calculator/length": limiter.limit("60/minute")(binge_calculator_router.binge_length),
+    # These read (or add to) the member's whole library, so they get limits like the other library reads.
+    "/api/binge-calculator/mine": limiter.limit("30/minute")(binge_calculator_router.binge_mine),
+    "/api/binge-calculator/{slug}/progress": limiter.limit("60/minute")(binge_calculator_router.binge_progress),
+    "/api/binge-calculator/{slug}/add": limiter.limit("20/minute")(binge_calculator_router.binge_add),
+}
+rate_limited_binge_length = rate_limited_binge["/api/binge-calculator/length"]
 for route in binge_calculator_router.router.routes:
-    if getattr(route, "path", None) == "/api/binge-calculator/length":
-        bind_rate_limited_endpoint(route, rate_limited_binge_length)
+    if getattr(route, "path", None) in rate_limited_binge:
+        bind_rate_limited_endpoint(route, rate_limited_binge[route.path])
 app.include_router(binge_calculator_router.router)
+
+from .routers import review_inbox as review_inbox_router
+rate_limited_review_inbox = {
+    # The list reads every private review a member has, so it gets a limit like the writes.
+    "/api/review-inbox": limiter.limit("30/minute")(review_inbox_router.list_reviews),
+    "/api/review-inbox/share": limiter.limit("30/minute")(review_inbox_router.share_review),
+    "/api/review-inbox/keep": limiter.limit("30/minute")(review_inbox_router.keep_review),
+    "/api/review-inbox/undo": limiter.limit("30/minute")(review_inbox_router.undo_answer),
+}
+for route in review_inbox_router.router.routes:
+    if getattr(route, "path", None) in rate_limited_review_inbox:
+        bind_rate_limited_endpoint(route, rate_limited_review_inbox[route.path])
+app.include_router(review_inbox_router.router)
+
+from .routers import home_today as home_today_router
+for route in home_today_router.router.routes:
+    if getattr(route, "path", None) == "/api/home/today":
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(home_today_router.today))
+app.include_router(home_today_router.router)
 
 
 @app.get("/", tags=["root"])
@@ -1164,6 +1568,7 @@ async def read_root(request: Request):
             else:
                 _, dashboard_version = dashboard_assets.bundle()
                 html = html.replace('src="./app.js"', f'src="./app.js?v={dashboard_version}"', 1)
+                html = dashboard_assets.bundle_stylesheets(html)
                 # Signed-in pages show the Friends button; drawing it from the start keeps
                 # the toolbar from re-wrapping (and the page from shifting) once scripts run.
                 html = html.replace('aria-controls="friendsSidebar" hidden>', 'aria-controls="friendsSidebar">', 1)
@@ -1204,7 +1609,11 @@ async def advertising_page(request: Request):
 
 @app.get("/content-quality", tags=["public"])
 async def content_quality_page(request: Request):
-    response = strict_template_response("content_quality.html", request)
+    from . import editorial_index
+    response = strict_template_response("content_quality.html", request, {
+        "<!--EDITOR_SENTENCE-->": editorial_index.editor_label(),
+        "<!--GUIDE_LEDGER-->": editorial_index.ledger_html(),
+    })
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
@@ -1238,7 +1647,10 @@ async def faq_page(request: Request):
 
 @app.get("/guides", tags=["public"])
 async def guides_page(request: Request):
-    response = strict_template_response("guides.html", request)
+    from . import guide_library
+    # ?format=anime opens the library filtered to one format; the canonical link stays /guides.
+    response = strict_template_response("guides.html", request,
+                                        guide_library.replacements(request.query_params.get("format")))
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

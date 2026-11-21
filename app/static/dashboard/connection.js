@@ -14,9 +14,15 @@
     bar = document.createElement('div');
     bar.id = 'connectionBar';
     bar.className = 'connection-bar';
-    bar.setAttribute('role', 'status');
     bar.hidden = true;
+    // Screen readers skip a live region that is created or un-hidden together with its
+    // text, so the message goes into a status box that sits in the page from the start.
+    bar.status = document.createElement('div');
+    bar.status.className = 'sr-only';
+    bar.status.setAttribute('role', 'status');
+    bar.setAttribute('aria-hidden', 'true');
     document.body.appendChild(bar);
+    document.body.appendChild(bar.status);
     return bar;
   }
 
@@ -24,6 +30,7 @@
     const node = ensureBar();
     clearTimeout(hideTimer);
     node.textContent = text;
+    node.status.textContent = text;
     node.dataset.tone = tone;
     node.hidden = false;
   }
@@ -54,11 +61,15 @@
     if (!wentOffline) return;
     wentOffline = false;
     show('Back online.', 'online');
-    hideTimer = setTimeout(() => { if (bar) bar.hidden = true; }, 2500);
+    hideTimer = setTimeout(() => { if (bar) { bar.hidden = true; bar.status.textContent = ''; } }, 2500);
     refreshAfterReconnect();
   }
 
   if (typeof window.addEventListener !== 'function') return;
+  try {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureBar, { once: true });
+    else ensureBar();
+  } catch (_) { /* created on first use instead */ }
   window.addEventListener('offline', goneOffline);
   window.addEventListener('online', backOnline);
   // Opened with no signal (for example from the home screen icon on a train).

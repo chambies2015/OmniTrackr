@@ -50,6 +50,26 @@
     }
   }
 
+  // ---- Still gathering: check again, with a way to stop (WCAG 2.2.1) --------
+  const recheck = document.querySelector('meta[name="omnitrackr-recheck"]');
+  const seconds = recheck ? Number(recheck.getAttribute('content')) : 0;
+  if (seconds > 0) {
+    const timer = window.setTimeout(() => window.location.reload(), seconds * 1000);
+    const status = document.querySelector('.radar-status');
+    if (status) {
+      const stop = document.createElement('button');
+      stop.type = 'button';
+      stop.className = 'radar-status__stop';
+      stop.textContent = 'Stop checking';
+      stop.addEventListener('click', () => {
+        window.clearTimeout(timer);
+        stop.remove();
+        status.append(' Stopped. Reload whenever you like.');
+      });
+      status.append(' ', stop);
+    }
+  }
+
   // ---- Filters ------------------------------------------------------------
   const filters = document.getElementById('radar-filters');
   const list = document.getElementById('radar-list');

@@ -171,7 +171,7 @@ def test_profiles_with_original_reviews_are_indexable_and_in_sitemap(client, db_
     enable(db_session, user)
     response = client.get("/u/writer")
     assert "x-robots-tag" not in response.headers
-    assert '<meta name="robots" content="index, follow">' in response.text
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
     assert "/u/writer" in public_profiles.sitemap_paths(db_session)
     assert "/u/writer</loc>" in client.get("/sitemap.xml").text
 
@@ -299,6 +299,9 @@ def test_owner_sees_edit_hint_and_others_do_not(client, db_session):
     token = auth.create_user_access_token(a)
     client.cookies.set(auth.AUTH_COOKIE_NAME, token)
     assert "This is your public profile" in client.get("/u/owner1").text
+    a.hashed_password = auth.get_password_hash("a newly chosen password")
+    db_session.commit()
+    assert "This is your public profile" not in client.get("/u/owner1").text
     client.cookies.set(auth.AUTH_COOKIE_NAME, auth.create_user_access_token(b))
     page = client.get("/u/owner1")
     assert "This is your public profile" not in page.text

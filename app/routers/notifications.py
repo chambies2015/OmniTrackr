@@ -50,6 +50,8 @@ class PushSubscriptionIn(BaseModel):
     keys: PushKeys
     # The device's IANA time zone (e.g. "America/Chicago"), so quiet hours follow the member's clock.
     time_zone: Optional[str] = Field(default=None, max_length=64)
+    # Which button turned this device on (counted anonymously in Site stats); unknown places are ignored.
+    source: Optional[str] = Field(default=None, max_length=16)
 
 
 class PushSettingsIn(BaseModel):
@@ -85,6 +87,7 @@ def save_push_subscription(body: PushSubscriptionIn, current_user: models.User =
         if pref is None or pref.time_zone != body.time_zone:
             web_push.save_settings(db, current_user.id, time_zone=body.time_zone)
     if fresh:
+        web_push.record_turned_on(body.source)
         # A confirmation in the bell, which is also pushed so the member sees it work right away.
         db.add(models.Notification(user_id=current_user.id, type="push_enabled", link="/",
                                    message="Notifications are on for this device. You can turn them off from the bell."))

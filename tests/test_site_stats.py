@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from starlette.requests import Request
 
-from app import admin_access, dashboard_assets, models, site_traffic
+from app import admin_access, dashboard_assets, models, site_traffic, web_push
 from app.site_traffic import TrafficRecorder, classify_device, should_count, traffic_source
 from tests.conftest import TestingSessionLocal
 
@@ -163,15 +163,19 @@ def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated
     response = authenticated_client.get("/api/site-stats/overview?days=30")
     assert response.status_code == 200
     growth = response.json()["growth"]
-    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
+    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1,
+                                 "taste_tests": 0}
     assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
     assert growth["weekly_email"]["subscribers"] == 1 and growth["weekly_email"]["new"] == 1
     assert growth["weekly_email"]["opted_out"] == 0 and growth["weekly_email"]["emailed"] == 0
     assert [row["place"] for row in growth["weekly_email"]["opted_in_by_place"]] == [
-        "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email"]
+        "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email",
+        "the home screen card", "the note after saving a show",
+        "a preview of their own email", "the copy they sent themselves"]
     assert growth["takes"] == {"asked": 1, "answered": 1}
+    no_places = [{"place": label, "count": 0} for label in web_push.SOURCES.values()]
     assert growth["push"] == {"members": 0, "devices": 0, "new_devices": 0, "reached_7d": 0, "sent": 0,
-                              "sent_by_kind": [], "away_reminders": 0}
+                              "sent_by_kind": [], "away_reminders": 0, "on_by_place": no_places}
     # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
     assert "growthinvite" not in response.text and "growth-2" not in response.text
     assert "growthfriend" not in str(growth)
@@ -447,5 +451,6 @@ def test_overview_growth_counts_devices_and_pushes_sent(authenticated_client, ad
     growth = authenticated_client.get("/api/site-stats/overview?days=30").json()["growth"]
     assert growth["push"] == {"members": 1, "devices": 2, "new_devices": 1, "reached_7d": 1, "sent": 7,
                               "sent_by_kind": [{"kind": "New episode out", "count": 5}, {"kind": "Out today", "count": 2}],
-                              "away_reminders": 1}
+                              "away_reminders": 1,
+                              "on_by_place": [{"place": label, "count": 0} for label in web_push.SOURCES.values()]}
     assert "fcm.googleapis.com" not in str(growth)

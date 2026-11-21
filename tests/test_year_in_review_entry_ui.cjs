@@ -122,3 +122,20 @@ test('An empty answer keeps the card hidden', async () => {
   const { nodes } = await runSoFar('2026-11-15T12:00:00', { year: null });
   assert.equal(nodes.yearSoFar.hidden, true);
 });
+
+test('The dashboard asking again right after the first answer reuses it', async () => {
+  const { requests, window } = await runSoFar('2026-11-15T12:00:00', SO_FAR);
+  assert.equal(requests.length, 1);
+  await window.refreshYearSoFar();
+  assert.equal(requests.length, 1);
+  // After an account switch the card asks afresh.
+  window.resetYearSoFar();
+  await window.refreshYearSoFar();
+  assert.equal(requests.length, 2);
+});
+
+test('A failed answer is not reused', async () => {
+  const { requests, window } = await runSoFar('2026-11-15T12:00:00', null);
+  await window.refreshYearSoFar();
+  assert.equal(requests.length, 2);
+});

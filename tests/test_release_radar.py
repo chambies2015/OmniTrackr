@@ -241,18 +241,18 @@ class TestCache:
 # ---------------------------------------------------------------------------
 
 class TestPages:
-    def test_hub_is_complete_indexable_and_escaped(self, client, fixture_radar):
+    def test_hub_is_complete_and_escaped(self, client, fixture_radar):
         response = client.get("/release-radar")
         assert response.status_code == 200
         html = response.text
-        assert '<meta name="robots" content="index, follow, max-image-preview:large">' in html
+        # Out of search since Nov 20 2026 (INDEX_OVERVIEW); test_overview_indexing_switch_still_works covers the switch.
+        assert '<meta name="robots" content="noindex, follow">' in html
         assert "Out in the next two weeks" in html
         for label in ("Movies", "TV premieres", "Anime", "Video games"):
             assert label in html
         assert "<script>alert(1)</script>" not in html
         assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
-        # Indexed (overview with its own guide text) but never monetized: release lists
-        # are mostly third-party data (AdSense "low value content", Oct 2026).
+        # Never monetized: release lists are mostly third-party data (AdSense "low value content", Oct 2026).
         assert "/static/ad-loader.js" not in html
         assert "evil.example" not in html and "javascript:" not in html
         parsed = Elements(html)
@@ -317,7 +317,9 @@ class TestPages:
         response = client.get("/release-radar/tv")
         assert response.status_code == 200
         assert "Gathering tv premieres right now" in response.text
-        assert '<meta http-equiv="refresh" content="45">' in response.text
+        # The script checks again after 45 s and offers "Stop checking"; no timed meta refresh (WCAG 2.2.1).
+        assert '<meta name="omnitrackr-recheck" content="45">' in response.text
+        assert 'http-equiv="refresh"' not in response.text
         assert "noindex" in response.headers["x-robots-tag"]
 
     def test_provider_error_message(self, client, monkeypatch):
@@ -477,6 +479,17 @@ def test_sitemap_lists_only_indexable_radar_pages(client, fixture_radar):
         client.get(path)
     body = client.get("/sitemap.xml").text
     listed = re.findall(r"<loc>https://omnitrackr.xyz(/release-radar[^<]*)</loc>", body)
+    assert listed == []  # the overview is out of search too (INDEX_OVERVIEW, Nov 20 2026)
+    page = client.get("/release-radar")
+    assert '<meta name="robots" content="noindex, follow">' in page.text
+    assert page.headers["x-robots-tag"] == "noindex, follow"
+
+
+def test_overview_indexing_switch_still_works(client, fixture_radar, monkeypatch):
+    monkeypatch.setattr(radar, "INDEX_OVERVIEW", True)
+    client.get("/release-radar")
+    body = client.get("/sitemap.xml").text
+    listed = re.findall(r"<loc>https://omnitrackr.xyz(/release-radar[^<]*)</loc>", body)
     assert listed == ["/release-radar"]  # fixture sections are below the indexable size
     for path in listed:
         response = client.get(path)
@@ -502,12 +515,13 @@ def test_large_category_pages_stay_out_of_index_and_ads(client, monkeypatch):
     assert "/static/ad-loader.js" not in page.text
     body = client.get("/sitemap.xml").text
     assert "/release-radar/tv</loc>" not in body
-    assert "https://omnitrackr.xyz/release-radar</loc>" in body
+    assert "https://omnitrackr.xyz/release-radar</loc>" not in body
 
 
 def test_category_indexing_switch_still_works(client, monkeypatch):
     _plenty_of_tv(monkeypatch)
     monkeypatch.setattr(radar, "INDEX_CATEGORY_PAGES", True)
+    monkeypatch.setattr(radar, "INDEX_OVERVIEW", True)
     monkeypatch.setattr(radar, "RADAR_ADS", True)
     page = client.get("/release-radar/tv")
     assert '<meta name="robots" content="index, follow, max-image-preview:large">' in page.text

@@ -1,8 +1,29 @@
 """
 Tests for email utilities.
 """
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
+
 from app import email
+
+
+@pytest.mark.asyncio
+async def test_credential_mail_errors_keep_message_details_private(monkeypatch, capsys):
+    marker = "private-test-message-content"
+    monkeypatch.setattr(email, "conf", SimpleNamespace(MAIL_USERNAME="", MAIL_PASSWORD=""))
+    assert not await email._deliver_credential_email(marker)
+    assert marker not in capsys.readouterr().out
+    monkeypatch.setattr(email, "conf", SimpleNamespace(MAIL_USERNAME="test", MAIL_PASSWORD="test"))
+    sender = AsyncMock(side_effect=ValueError(marker))
+    monkeypatch.setattr(email, "FastMail", lambda config: SimpleNamespace(send_message=sender))
+    with pytest.raises(RuntimeError, match="Credential email delivery failed") as failure:
+        await email._deliver_credential_email(marker)
+    assert marker not in str(failure.value)
+    assert marker not in capsys.readouterr().out
+    sender.side_effect = None
+    assert await email._deliver_credential_email(marker)
 
 
 class TestEmailTokens:

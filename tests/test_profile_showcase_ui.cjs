@@ -28,3 +28,11 @@ test('the subtitle joins kind, year and rating', () => {
   assert.equal(subtitle({ label: 'Movie', year: 2016, rating: 9 }), 'Movie · 2016 · 9/10');
   assert.equal(subtitle({ label: 'Video game', year: null, rating: null }), 'Video game');
 });
+
+test('a pin note is sent as text, never as a missing value', () => {
+  const { noteText } = load();
+  assert.equal(noteText({ note: 'Play it blind.' }), 'Play it blind.');
+  assert.equal(noteText({ note: null }), '');
+  assert.equal(noteText({}), '');
+  assert.equal(noteText({ note: 42 }), '');
+});

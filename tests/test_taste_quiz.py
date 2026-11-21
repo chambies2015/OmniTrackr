@@ -206,5 +206,8 @@ def test_dashboard_and_sign_up_point_to_the_quiz(authenticated_client):
     assert 'href="/taste-quiz"' in html
     assert "/static/taste-quiz.js?v=" in html
     from pathlib import Path
-    auth_js = (Path(__file__).parents[1] / "app" / "static" / "auth.js").read_text(encoding="utf-8")
-    assert "link.href = '/taste-quiz';" in auth_js
+    # The "check your inbox" step after sign-up offers the quiz while the email arrives.
+    templates = Path(__file__).parents[1] / "app" / "templates"
+    for name in ("public_landing.html", "index.html"):
+        page = (templates / name).read_text(encoding="utf-8")
+        assert 'id="verifySentQuiz" hidden>While you wait, <a href="/taste-quiz">take the 1-minute taste quiz</a>' in page, name

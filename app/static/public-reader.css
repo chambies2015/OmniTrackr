@@ -21,6 +21,8 @@ body.public-reader {
 .public-reader .reader-shell {
   --reader-strong: #fff;
   --reader-card: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .02));
+  --reader-card-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+  --reader-card-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .08), 0 18px 36px -20px rgba(0, 0, 0, .8);
   --reader-row-alt: rgba(255, 255, 255, .025);
   --reader-code-bg: #07060f;
   --reader-link-line: rgba(196, 181, 253, .45);
@@ -43,7 +45,7 @@ body.public-reader {
 
 /* Page header */
 .public-reader :is(.privacy-header, .public-header, .content-header) { background: none; border: 0; margin: 0 0 40px; max-width: 860px; padding: 0; text-align: left; }
-.public-reader :is(.privacy-header, .public-header, .content-header) h1 { -webkit-text-fill-color: currentColor; background: none; color: var(--site-text); font-size: clamp(2.4rem, 5.4vw, 4rem); font-weight: 800; letter-spacing: -.04em; line-height: 1.04; margin: 0 0 20px; }
+.public-reader :is(.privacy-header, .public-header, .content-header) h1 { -webkit-text-fill-color: currentColor; background: none; color: var(--site-text); font-size: clamp(2.4rem, 5.4vw, 4rem); font-weight: 800; letter-spacing: var(--site-display-track, -.032em); line-height: 1.06; margin: 0 0 20px; }
 .public-reader :is(.privacy-header, .public-header, .content-header) p { color: var(--site-soft); font-size: clamp(1.02rem, 1.4vw, 1.15rem); line-height: 1.7; margin: 0 0 14px; }
 .public-reader .reader-kicker,
 .public-reader :is(.privacy-section, .content-section, .public-section) .reader-kicker,
@@ -56,6 +58,8 @@ body.public-reader {
 .public-reader :is(.privacy-section, .content-section, .public-section) h3 { color: var(--site-text); font-size: 1.1rem; line-height: 1.45; margin: 28px 0 10px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) h4 { color: var(--site-text); font-size: 1rem; margin: 20px 0 8px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) :is(p, li) { color: var(--site-soft); font-size: 1.0625rem; }
+/* A long address written out as a link (the GitHub one on /contact) wraps on a 320px phone instead of widening the page. */
+.public-reader :is(.privacy-section, .content-section, .public-section) :is(p, li) a { overflow-wrap: break-word; }
 .public-reader :is(.privacy-section, .content-section, .public-section) p { margin: 0 0 16px; }
 .public-reader :is(.privacy-section, .content-section, .public-section) strong { color: var(--site-text); }
 .public-reader :is(.privacy-section, .content-section, .public-section) :is(ul, ol) { margin: 14px 0 22px; padding-left: 24px; }
@@ -78,8 +82,8 @@ body.public-reader {
 .public-reader .reader-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 14px; }
 .public-reader .reader-actions a { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: 999px; color: var(--site-text); display: inline-flex; font-size: .92rem; font-weight: 600; min-height: 44px; padding: 0 20px; text-decoration: none; }
 .public-reader .reader-actions a:hover { background: var(--site-surface-2); color: var(--reader-strong); }
-.public-reader .reader-actions a:first-child { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border-color: transparent; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
-.public-reader .reader-actions a:first-child:hover { filter: brightness(1.08); }
+.public-reader .reader-actions a:first-child { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); border-color: transparent; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
+.public-reader .reader-actions a:first-child:hover { filter: brightness(1.04); }
 
 /* Callouts and examples */
 .public-reader .reader-note,
@@ -92,7 +96,7 @@ body.public-reader {
 .public-reader .guide-paths { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 26px 0 36px; }
 .public-reader .guide-path { align-items: flex-start; background: var(--reader-card); border: 1px solid var(--site-border); border-radius: var(--site-radius); color: var(--site-text); display: flex; flex-direction: column; min-width: 0; padding: 22px; text-decoration: none; transition: border-color .2s ease, transform .2s ease; }
 .public-reader .guide-path:hover { border-color: var(--reader-hover-line); color: var(--site-text); transform: translateY(-2px); }
-.public-reader .guide-path__number { align-items: center; background: linear-gradient(135deg, var(--site-violet), var(--site-teal)); border-radius: 11px; color: #fff; display: inline-flex; font: 700 .8rem var(--site-display); height: 32px; justify-content: center; margin-bottom: 18px; width: 42px; }
+.public-reader .guide-path__number { align-items: center; background: linear-gradient(135deg, var(--site-cta, #7f4ef0), #0f766e); border-radius: 11px; color: #fff; display: inline-flex; font: 700 .8rem var(--site-display); height: 32px; justify-content: center; margin-bottom: 18px; width: 42px; }
 .public-reader .guide-path :is(h2, h3) { color: var(--site-text); font-size: 1.05rem; line-height: 1.4; margin: 0 0 8px; }
 .public-reader .guide-path p { color: var(--site-muted); font-size: .88rem; line-height: 1.65; margin: 0; }
 
@@ -296,7 +300,20 @@ body.public-reader {
     background-repeat: no-repeat;
     color-scheme: light;
   }
-  html[data-reader]:not([data-theme="dark"]) .public-reader .site-header { background: rgba(11, 10, 24, .96); }
+  /* The header matches the light page instead of sitting on it as a dark band. Its menus,
+     search box and phone sheet read the same tokens, so they turn light with it. */
+  html[data-reader]:not([data-theme="dark"]) .public-reader .site-header {
+    --site-bg-2: #ffffff; --site-bg-3: #ffffff;
+    --site-surface: rgba(30, 20, 80, .04); --site-surface-2: rgba(30, 20, 80, .07);
+    --site-border: rgba(30, 20, 80, .1); --site-border-strong: rgba(30, 20, 80, .18); --site-border-hover: rgba(30, 20, 80, .34);
+    --site-text: #16132b; --site-soft: #39355a; --site-muted: #5b5778; --site-strong: #16132b;
+    --site-violet-soft: #6d28d9; --site-teal: #0f766e;
+    --site-header-bg: rgba(246, 245, 251, .8); --site-header-bg-scrolled: rgba(255, 255, 255, .92);
+    --site-edge: inset 0 1px 0 rgba(255, 255, 255, .7);
+    --site-shadow-pop: 0 24px 60px -22px rgba(30, 20, 80, .4), 0 0 0 1px rgba(30, 20, 80, .03);
+    color-scheme: light;
+  }
+  html[data-reader]:not([data-theme="dark"]) .public-reader .site-header.is-scrolled { box-shadow: 0 14px 30px -22px rgba(30, 20, 80, .45); }
   html[data-reader]:not([data-theme="dark"]) .public-reader .reader-shell {
     --site-bg: #f6f5fb; --site-bg-2: #ffffff; --site-bg-3: #efedf8;
     --site-surface: rgba(30, 20, 80, .035); --site-surface-2: rgba(30, 20, 80, .07);
@@ -307,6 +324,8 @@ body.public-reader {
     --primary: #6d28d9; --secondary: #0f766e;
     --reader-strong: #16132b;
     --reader-card: #ffffff;
+    --reader-card-shadow: 0 1px 2px rgba(30, 20, 80, .05), 0 12px 28px -18px rgba(30, 20, 80, .28);
+    --reader-card-shadow-hover: 0 1px 2px rgba(30, 20, 80, .06), 0 20px 38px -18px rgba(30, 20, 80, .38);
     --reader-row-alt: rgba(30, 20, 80, .025);
     --reader-code-bg: #f1effa;
     --reader-link-line: rgba(109, 40, 217, .4);
@@ -319,7 +338,18 @@ html[data-reader][data-theme="light"] body.public-reader {
   background-repeat: no-repeat;
   color-scheme: light;
 }
-html[data-reader][data-theme="light"] .public-reader .site-header { background: rgba(11, 10, 24, .96); }
+html[data-reader][data-theme="light"] .public-reader .site-header {
+  --site-bg-2: #ffffff; --site-bg-3: #ffffff;
+  --site-surface: rgba(30, 20, 80, .04); --site-surface-2: rgba(30, 20, 80, .07);
+  --site-border: rgba(30, 20, 80, .1); --site-border-strong: rgba(30, 20, 80, .18); --site-border-hover: rgba(30, 20, 80, .34);
+  --site-text: #16132b; --site-soft: #39355a; --site-muted: #5b5778; --site-strong: #16132b;
+  --site-violet-soft: #6d28d9; --site-teal: #0f766e;
+  --site-header-bg: rgba(246, 245, 251, .8); --site-header-bg-scrolled: rgba(255, 255, 255, .92);
+  --site-edge: inset 0 1px 0 rgba(255, 255, 255, .7);
+  --site-shadow-pop: 0 24px 60px -22px rgba(30, 20, 80, .4), 0 0 0 1px rgba(30, 20, 80, .03);
+  color-scheme: light;
+}
+html[data-reader][data-theme="light"] .public-reader .site-header.is-scrolled { box-shadow: 0 14px 30px -22px rgba(30, 20, 80, .45); }
 html[data-reader][data-theme="light"] .public-reader .reader-shell {
   --site-bg: #f6f5fb; --site-bg-2: #ffffff; --site-bg-3: #efedf8;
   --site-surface: rgba(30, 20, 80, .035); --site-surface-2: rgba(30, 20, 80, .07);
@@ -330,9 +360,25 @@ html[data-reader][data-theme="light"] .public-reader .reader-shell {
   --primary: #6d28d9; --secondary: #0f766e;
   --reader-strong: #16132b;
   --reader-card: #ffffff;
+  --reader-card-shadow: 0 1px 2px rgba(30, 20, 80, .05), 0 12px 28px -18px rgba(30, 20, 80, .28);
+  --reader-card-shadow-hover: 0 1px 2px rgba(30, 20, 80, .06), 0 20px 38px -18px rgba(30, 20, 80, .38);
   --reader-row-alt: rgba(30, 20, 80, .025);
   --reader-code-bg: #f1effa;
   --reader-link-line: rgba(109, 40, 217, .4);
   --reader-hover-line: rgba(109, 40, 217, .45);
   color: var(--site-text);
 }
+
+/* Editorial standards: every guide with its last check date */
+.public-reader .guide-ledger { columns: 2 18rem; column-gap: 32px; margin: 8px 0 24px; padding-left: 1.1rem; }
+.public-reader .guide-ledger li { break-inside: avoid; margin: 0 0 10px; }
+.public-reader .guide-ledger .ledger-date { display: block; }
+.public-reader :is(.ledger-date, .ledger-count) { color: var(--site-muted); font-size: .85rem; white-space: nowrap; }
+.public-reader .ledger-count { font-family: var(--site-font); font-weight: 500; margin-left: 6px; }
+
+/* Look refresh (Nov 21 2026): every card gets the same depth, a hairline of light on dark
+   pages and a soft lift on light ones, and linked cards lift a little more on hover. */
+.public-reader :is(.guide-path, .guide-card, .hub-card, .template-card, .sample-card, .use-case-card, .checklist-card, .guideline-card, .visual-card, .faq-topic, .policy-card, .roadmap-card, .directory-card, .contact-info),
+.public-reader .reader-shell .reader-related__card { box-shadow: var(--reader-card-shadow, inset 0 1px 0 rgba(255, 255, 255, .06)); }
+.public-reader :is(.guide-card, .hub-card, .directory-card):hover,
+.public-reader .reader-shell .reader-related__card:hover { box-shadow: var(--reader-card-shadow-hover, inset 0 1px 0 rgba(255, 255, 255, .08)); }

@@ -57,6 +57,13 @@ class TestAffiliateLinks:
         assert on.count("tag=omnitrackr-20") >= 5
         assert "As an Amazon Associate OmniTrackr earns from qualifying purchases" in on
 
+    def test_radar_premieres_carry_no_shop_links(self, client, monkeypatch):
+        install_fixture_providers(today=date(2026, 9, 27), monkeypatch=monkeypatch)
+        monkeypatch.setenv("AMAZON_ASSOCIATES_TAG", "omnitrackr-20")
+        for page in ("/release-radar/tv", "/release-radar/anime"):
+            assert "tag=omnitrackr-20" not in client.get(page).text, page
+        assert "tag=omnitrackr-20" in client.get("/release-radar/movies").text
+
     def test_review_detail_link_is_optional(self, client, db_session, authenticated_client, test_user_data, monkeypatch):
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
         movie = crud.create_movie(db_session, user.id, MovieCreate(

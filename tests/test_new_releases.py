@@ -33,8 +33,15 @@ def test_every_guide_is_complete_and_substantial():
         assert len(entry["lead"]) >= 2 and entry["plan"] and entry["plan_heading"] and len(entry["sources"]) >= 8
         assert words(entry) >= 2500, slug
         formats = [section["format"] for section in entry["sections"]]
-        assert len(formats) == len(set(formats)) >= 4
         assert all(fmt in new_releases.FORMAT_ORDER for fmt in formats)
+        ids = [new_releases.section_id(section) for section in entry["sections"]]
+        assert len(ids) == len(set(ids)), slug
+        if entry.get("focus"):
+            # A one-format guide (an anime season) splits its picks into several groups of that format.
+            assert set(formats) == {entry["focus"]} and len(formats) >= 3, slug
+            assert all(section.get("id") and section.get("label") for section in entry["sections"]), slug
+        else:
+            assert len(formats) == len(set(formats)) >= 4
         for label, url in entry["sources"]:
             assert label and url.startswith("https://")
         for label, href in entry["related"]:
@@ -60,10 +67,28 @@ def test_guides_publish_on_their_date():
     assert new_releases.published(date(2026, 10, 31)) == {}
     live = new_releases.published(date(2026, 11, 1))
     assert set(live) == {"november-2026", "winter-2026-27"}
+    assert "winter-2027-anime" in new_releases.published(date(2026, 11, 4))
+    assert "winter-2027-tv" not in new_releases.published(date(2026, 11, 19))
+    assert "winter-2027-tv" in new_releases.published(date(2026, 11, 20))
+    assert "winter-2027-games" not in new_releases.published(date(2026, 11, 19))
+    assert "winter-2027-games" in new_releases.published(date(2026, 11, 20))
+    for slug in ("winter-2027-movies", "winter-2027-books"):
+        assert slug not in new_releases.published(date(2026, 11, 19))
+        assert slug in new_releases.published(date(2026, 11, 20))
     assert new_releases.current(date(2026, 11, 15)) == "november-2026"
+    # The anime season guide is newer and covers January too, but Release Radar keeps pointing at the all-format guide.
     assert new_releases.current(date(2027, 1, 20)) == "winter-2026-27"
-    # Once every stretch has passed, the newest guide still counts as current.
-    assert new_releases.current(date(2027, 6, 1)) in live
+    assert new_releases.current(date(2027, 3, 20)) != "winter-2027-anime"
+    for slug in ("spring-2027", "spring-2027-movies", "spring-2027-anime", "spring-2027-books"):
+        assert slug not in new_releases.published(date(2026, 11, 20))
+        assert slug in new_releases.published(date(2026, 11, 21))
+    # The spring guide takes over from the winter one on March 1, and the one-format spring guides never do.
+    assert new_releases.current(date(2026, 11, 21)) == "november-2026"
+    assert new_releases.current(date(2027, 2, 28)) == "winter-2026-27"
+    assert new_releases.current(date(2027, 3, 1)) == "spring-2027"
+    assert new_releases.current(date(2027, 4, 20)) == "spring-2027"
+    # Once every stretch has passed, the newest all-format guide still counts as current.
+    assert new_releases.current(date(2027, 7, 1)) == "spring-2027"
 
 
 def test_every_pick_can_be_saved_but_is_only_suggested_once_out():
@@ -95,7 +120,7 @@ def test_guide_page_reads_completely_without_an_account(client):
         assert f'id="{new_releases.anchor_id(item)}"' in html
     assert html.count("Save to my list") == len(new_releases.picks(entry))
     for section in entry["sections"]:
-        assert f'id="section-{section["format"]}"' in html
+        assert f'id="{new_releases.section_id(section)}"' in html
     assert "Also on the calendar" in html and "A plan for the month" in html and "How we chose" in html
     assert "Sources we checked" in html and "with AI assistance" in html
     assert 'href="/in-order/hunger-games"' in html and 'href="/new-releases/winter-2026-27"' in html
@@ -150,3 +175,209 @@ def test_release_radar_points_at_this_months_guide():
     note = _guide_note()
     slug = new_releases.current()
     assert f'href="/new-releases/{slug}"' in note
+
+
+def test_anime_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-anime"]
+    html = client.get("/new-releases/winter-2027-anime").text
+    assert f"<h1>{entry['name']}</h1>" in html and "ANIME SEASON GUIDE" in html
+    for section in entry["sections"]:
+        assert f'id="{new_releases.section_id(section)}"' in html
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{len(new_releases.picks(entry))} anime picks in {len(entry['sections'])} groups." in html
+    # Its own note on how the picks were chosen replaces the standard one.
+    assert entry["method"][0][:60] in html and "left out anything without a firm date" not in html
+    # The broad winter guide links here, and the anime picks from it are not repeated.
+    assert 'href="/new-releases/winter-2027-anime"' in client.get("/new-releases/winter-2026-27").text
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert 'href="/new-releases/winter-2027-anime"' in client.get("/anime-tracker").text
+    # On the hub, this month's all-format guide comes first and the anime guide counts shows, not releases.
+    hub = client.get("/new-releases").text
+    assert hub.index("This month") < hub.index("Winter 2027 anime season")
+    assert f"{len(new_releases.picks(entry))} anime, including Historie" in hub
+
+
+def test_tv_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-tv"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-tv").text
+    assert f"<h1>{entry['name']}</h1>" in html and "TV PREMIERES GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} TV picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html and "left out anything without a firm date" not in html
+    # A month-only date reads as the month, not as the first of it.
+    assert "Out January 2027" in html and "Out January 1<" not in html
+    # Shows already written up in the broad winter guide are only mentioned here, not repeated as picks.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "tv"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("Neuromancer") for title, _ in entry["also"])
+    assert 'href="/new-releases/winter-2027-tv"' in client.get("/tv-show-tracker").text
+    # Never the guide Release Radar points at, and its hub card counts series.
+    assert new_releases.current(date(2027, 1, 20)) != "winter-2027-tv"
+    hub = client.get("/new-releases").text
+    assert f"{total} series, including The Pitt" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 TV premieres<')
+
+
+def test_games_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-games"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-games").text
+    assert f"<h1>{entry['name']}</h1>" in html and "GAMES RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} game picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Two picks only have a month so far.
+    assert html.count("Out March 2027") == 2 and "Out March 1<" not in html
+    # Games already written up in the broad winter guide are only listed here, not repeated as picks.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "game"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("Fable") for title, _ in entry["also"])
+    # A delayed game is named in the list but is not a pick.
+    assert not any("Laufey" in item["title"] for item in new_releases.picks(entry))
+    assert 'href="/new-releases/winter-2027-games"' in client.get("/game-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-games"
+    hub = client.get("/new-releases").text
+    assert f"{total} games, including Stranger Than Heaven" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 games<')
+
+
+def test_movies_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-movies"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-movies").text
+    assert f"<h1>{entry['name']}</h1>" in html and "MOVIES RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} film picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Films already written up in the broad winter guide are only listed here, not repeated as picks.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "movie"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("Narnia") for title, _ in entry["also"])
+    assert 'href="/in-order/godzilla"' in html
+    assert 'href="/new-releases/winter-2027-movies"' in client.get("/movie-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-movies"
+    hub = client.get("/new-releases").text
+    assert f"{total} films, including The Beekeeper 2" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 movies<')
+
+
+def test_books_season_guide_groups_its_picks(client):
+    entry = GUIDES["winter-2027-books"]
+    total = len(new_releases.picks(entry))
+    html = client.get("/new-releases/winter-2027-books").text
+    assert f"<h1>{entry['name']}</h1>" in html and "BOOKS RELEASE GUIDE" in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} book picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Every book has a firm US day, and it is a Tuesday, the usual US publishing day.
+    assert not any(item.get("month_only") for item in new_releases.picks(entry))
+    assert all(date.fromisoformat(item["date"]).weekday() == 1 for item in new_releases.picks(entry))
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2026-27"])
+              if item["kind"] == "book"}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("A Court of Forgotten Melody") for title, _ in entry["also"])
+    assert 'href="/new-releases/winter-2027-books"' in client.get("/book-tracker").text
+    assert new_releases.current(date(2027, 2, 10)) != "winter-2027-books"
+    hub = client.get("/new-releases").text
+    assert f"{total} books, including In One Brief Moment All Eternity" in hub
+    assert hub.index("This month") < hub.index('nr-card__label">Winter 2027 books<')
+
+
+def test_spring_guide_covers_march_to_may(client):
+    entry = GUIDES["spring-2027"]
+    html = client.get("/new-releases/spring-2027").text
+    assert f"<h1>{entry['name']}</h1>" in html
+    total = len(new_releases.picks(entry))
+    formats = {section["format"] for section in entry["sections"]}
+    assert f"{total} releases across {len(formats)} formats." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    # Month-only dates read as the month.
+    assert "Out March 2027" in html and "Out April 2027" in html and "Out March 1<" not in html
+    for path in ("/in-order/zelda", "/in-order/star-wars", "/in-order/final-fantasy-vii", "/in-order/star-trek"):
+        assert f'href="{path}"' in html
+    # It links to the one-format spring guides, which go further into April, May and June.
+    for slug in ("spring-2027-movies", "spring-2027-anime", "spring-2027-books"):
+        assert f'href="/new-releases/{slug}"' in html
+    # The March films were written up in the winter movies guide, so they are only mentioned here.
+    winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2027-movies"])}
+    assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    assert any(title.startswith("The Exorcist: Martyrs") for title, _ in entry["also"])
+    # God of War Laufey left the winter games guide when it was delayed; it is a pick here.
+    assert any(item["title"] == "God of War Laufey" for item in new_releases.picks(entry))
+
+
+@pytest.mark.parametrize("slug, eyebrow, noun, first", [
+    ("spring-2027-movies", "MOVIES RELEASE GUIDE", "film", "John Rambo"),
+    ("spring-2027-anime", "ANIME SEASON GUIDE", "anime", "Kagurabachi"),
+    ("spring-2027-books", "BOOKS RELEASE GUIDE", "book", "Feels Like Falling"),
+])
+def test_spring_season_guides_group_their_picks(client, slug, eyebrow, noun, first):
+    entry = GUIDES[slug]
+    total = len(new_releases.picks(entry))
+    html = client.get(f"/new-releases/{slug}").text
+    assert f"<h1>{entry['name']}</h1>" in html and eyebrow in html
+    for section in entry["sections"]:
+        assert f'href="#{new_releases.section_id(section)}">{section["label"]}</a>' in html
+    assert f"{total} {noun} picks in {len(entry['sections'])} groups." in html
+    assert html.count("Save to my list") == total
+    assert entry["method"][0][:60] in html
+    assert entry["starts"] == "2027-04-01" and entry["ends"] == "2027-06-30"
+    assert new_releases.current(date(2027, 5, 10)) != slug
+    hub = client.get("/new-releases").text
+    assert f"{total} {new_releases.focus_words(entry)[1]}, including {first}" in hub
+    # Upcoming guides run in calendar order on the hub, so this winter's comes before next spring's.
+    winter = GUIDES[slug.replace("spring", "winter")]
+    winter_card = f'nr-card__label">{winter.get("hub_label", winter["period"])}<'
+    spring_card = f'nr-card__label">{entry["hub_label"]}<'
+    assert hub.index("This month") < hub.index(winter_card) < hub.index(spring_card)
+
+
+def test_spring_guides_give_every_title_one_home():
+    # A title written up in one spring guide is only mentioned in the others' "also" lists, so Pick for me and
+    # the save buttons have one place to point to.
+    slugs = ["spring-2027", "spring-2027-movies", "spring-2027-anime", "spring-2027-books",
+             "winter-2026-27", "winter-2027-movies", "winter-2027-anime", "winter-2027-books", "winter-2027-games",
+             "winter-2027-tv"]
+    seen = {}
+    for slug in slugs:
+        for item in new_releases.picks(GUIDES[slug]):
+            key = (item["kind"], title_pages.slugify(item["title"]))
+            assert key not in seen, (slug, seen.get(key), item["title"])
+            seen[key] = slug
+    # Every book pick in the spring books guide comes out on a Tuesday, the usual US publishing day.
+    assert all(date.fromisoformat(item["date"]).weekday() == 1
+               for item in new_releases.picks(GUIDES["spring-2027-books"]))
+    # No anime this far ahead has a day yet, so every anime pick is listed by its month.
+    assert all(item.get("month_only") for item in new_releases.picks(GUIDES["spring-2027-anime"]))
+
+
+def test_trackers_link_to_the_spring_guides(client):
+    assert 'href="/new-releases/spring-2027-anime"' in client.get("/anime-tracker").text
+    assert 'href="/new-releases/spring-2027-movies"' in client.get("/movie-tracker").text
+    assert 'href="/new-releases/spring-2027-books"' in client.get("/book-tracker").text
+    assert 'href="/new-releases/spring-2027"' in client.get("/game-tracker").text
+
+
+def test_season_guide_picks_save_as_themselves():
+    # Pick for me keeps the first copy of a title it sees, so a new film or book must not be shadowed by an
+    # older title of the same name and kind (The Nightingale is also a 2018 film): it would save the wrong year.
+    for slug in ("winter-2027-movies", "winter-2027-books", "spring-2027", "spring-2027-movies", "spring-2027-anime",
+                 "spring-2027-books"):
+        for item in new_releases.picks(GUIDES[slug]):
+            pooled = new_releases.pool_entry(item)
+            assert pooled["year"] == item["year"], (slug, item["title"])
+            assert pooled["out"] == item["date"], (slug, item["title"])

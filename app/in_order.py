@@ -17,7 +17,17 @@ from . import pick, title_pages
 from .in_order_guides import GUIDES
 
 BASE_PATH = "/in-order"
-KIND_ORDER = ("movie", "tv", "anime", "game", "book", "album")
+KIND_ORDER = ("movie", "tv", "anime", "manga", "game", "book", "album")
+
+# The hub groups guides into shelves by the format most of their main entries are in.
+SHELVES = (
+    ("screen", "Films and series", "Cinematic universes, long-running film series and the shows that tie into them."),
+    ("anime", "Anime", "Seasons, films and recaps sorted out, with where the manga picks up."),
+    ("games", "Games", "Release order, story order and which versions to play today."),
+    ("books", "Books", "Publication order against chronological order, and the adaptations worth adding."),
+)
+SHELF_OF_KIND = {"movie": "screen", "tv": "screen", "album": "screen", "anime": "anime", "manga": "anime",
+                 "game": "games", "book": "books"}
 
 
 def path(slug: str) -> str:
@@ -51,16 +61,39 @@ def formats(entry: dict) -> list[str]:
     return [kind for kind in KIND_ORDER if kind in kinds]
 
 
+def shelf(entry: dict) -> str:
+    """The hub shelf a guide sits on: an explicit "shelf" key, else where most of its main entries belong."""
+    if entry.get("shelf"):
+        return entry["shelf"]
+    counts: dict[str, int] = {}
+    for item in core(entry) or entry["entries"]:
+        key = SHELF_OF_KIND[item["kind"]]
+        counts[key] = counts.get(key, 0) + 1
+    # Ties go to the shelf that comes first on the hub.
+    return max((key for key, _, _ in SHELVES if key in counts), key=lambda key: counts[key])
+
+
+def by_shelf() -> list[tuple[str, str, str, list[str]]]:
+    """(shelf key, heading, blurb, guide slugs in catalog order) for every shelf that has a guide."""
+    grouped = {key: [] for key, _, _ in SHELVES}
+    for slug, entry in GUIDES.items():
+        grouped[shelf(entry)].append(slug)
+    return [(key, heading, blurb, grouped[key]) for key, heading, blurb in SHELVES if grouped[key]]
+
+
 def positions(entry: dict, item_id: str) -> list[tuple[str, int]]:
     """(order name, 1-based position) for every order that includes this entry."""
     return [(order["name"], order["ids"].index(item_id) + 1) for order in entry["orders"] if item_id in order["ids"]]
 
 
 def related(slug: str, limit: int = 3) -> list[str]:
-    """Other guides, those sharing a format with this one first, in catalog order."""
+    """Other guides: the same hub shelf first, then any sharing a format, each group starting after this guide."""
     kinds = set(formats(GUIDES[slug]))
-    others = [other for other in GUIDES if other != slug]
-    others.sort(key=lambda other: not kinds & set(formats(GUIDES[other])))
+    home = shelf(GUIDES[slug])
+    catalog = list(GUIDES)
+    here = catalog.index(slug)
+    others = [catalog[(here + step) % len(catalog)] for step in range(1, len(catalog))]
+    others.sort(key=lambda other: (shelf(GUIDES[other]) != home, not kinds & set(formats(GUIDES[other]))))
     return others[:limit]
 
 

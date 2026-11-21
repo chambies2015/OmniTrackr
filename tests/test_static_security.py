@@ -66,12 +66,11 @@ def test_library_insights_frontend_is_wired():
     source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
-    assert 'data-toggle-category-accordion="library-insights"' in template
+    assert 'id="statsOverview"' in template
     assert 'id="libraryInsightsStatsData"' in template
     assert "\u00e2\u2013\u00b6" not in template
-    assert "&#9654;" in template
-    assert "'library-insights': 'insights'" in source
-    assert "displayLibraryInsights(stats)" in source
+    assert "${API_BASE}/statistics/insights/" in source
+    assert "displayLibraryInsights(stats, overall)" in source
 
 
 def test_adsense_loader_respects_authenticated_app_shell():
@@ -226,7 +225,8 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     assert 'class="review-quality-hint"' in source
     assert "const PUBLIC_REVIEW_MIN_CHARS = 80" in source
     assert "setupReviewQualityCounters()" in source
-    assert "getReviewQualityMessage(textarea.value)" in source
+    # The counter also passes the saved length, so an older review past the length limit reads as editable.
+    assert "getReviewQualityMessage(textarea.value, savedLength)" in source
     assert "Search-ready baseline met" in source
     assert "SEARCH_READY_REVIEW_MIN_CHARS = 240" in source
     assert "SEARCH_READY_REVIEW_MIN_WORDS = 35" in source

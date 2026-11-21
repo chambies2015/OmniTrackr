@@ -102,7 +102,8 @@ async def proxy_rawg_api(
 async def proxy_jikan_api(
     request: Request,
     current_user: models.User = Depends(get_current_user),
-    query: str = Query(..., description="Anime title to search", max_length=200)
+    query: str = Query(..., description="Anime title to search", max_length=200),
+    limit: int = Query(1, ge=1, le=10, description="How many matches to return; cover lookups compare a few"),
 ):
     """Proxy endpoint for Jikan API (MyAnimeList). No API key required."""
     if len(query) > 200:
@@ -112,7 +113,7 @@ async def proxy_jikan_api(
         base_url = "https://api.jikan.moe/v4/anime"
         params = {
             "q": query[:200],
-            "limit": 1
+            "limit": limit
         }
         
         response = await request.app.state.external_api_client.get(base_url, params=params)

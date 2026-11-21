@@ -107,6 +107,14 @@ async function importData(fileInput) {
     if (result.views_created || result.views_skipped) {
       message += `\nSaved views: ${result.views_created || 0} restored, ${result.views_skipped || 0} skipped because the name was taken, the shelf was full or the view didn't check out.`;
     }
+    if (result.episode_notes_created || result.episode_notes_skipped) {
+      message += `\nEpisode ratings and notes: ${result.episode_notes_created || 0} restored, ${result.episode_notes_skipped || 0} skipped. Episodes you had already rated keep what you wrote.`;
+    }
+
+    if (result.shortened) {
+      const one = result.shortened === 1;
+      message += `\nShortened to fit: ${result.shortened} ${one ? 'title, name, review or link was' : 'titles, names, reviews or links were'} far past the length limits and ${one ? 'was' : 'were'} cut to size. Text already in your library keeps its full length.`;
+    }
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;

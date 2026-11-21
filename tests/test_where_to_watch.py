@@ -129,11 +129,120 @@ def test_game_stores_from_rawg(monkeypatch):
     assert data["credits"] == [{"name": "RAWG", "url": "https://rawg.io/games/hades"}]
 
 
-def test_books_and_albums_are_skipped():
+def test_unknown_kinds_are_skipped():
     client = FakeClient([])
-    assert asyncio.run(where_to_watch.fetch(client, "book", "Dune", 1965, {})) == {}
-    assert asyncio.run(where_to_watch.get_or_fetch(None, client, "album", "x", "x", None, {})) is None
+    assert asyncio.run(where_to_watch.fetch(client, "person", "Dune", 1965, {})) == {}
+    assert asyncio.run(where_to_watch.get_or_fetch(None, client, "person", "x", "x", None, {})) is None
     assert client.calls == []
+
+
+# ---------------------------------------------------------------- where to listen or read
+
+def test_album_lists_apple_music_and_a_matching_deezer_album():
+    meta = {"facts": [{"label": "Artist", "value": "Radiohead"}],
+            "links": [{"label": "Apple Music", "url": "https://music.apple.com/us/album/ok-computer/1097861387?uo=4"}]}
+    client = FakeClient([(lambda url, params: url == "https://api.deezer.com/search/album"
+                          and params["q"] == 'album:"OK Computer" artist:"Radiohead"', {"data": [
+        {"title": "OK Computer", "link": "https://www.deezer.com/album/1", "artist": {"name": "A Cover Band"}},
+        {"title": "OK Computer OKNOTOK 1997 2017", "link": "https://evil.example/album/2", "artist": {"name": "Radiohead"}},
+        {"title": "OK Computer", "link": "https://www.deezer.com/album/14879699", "artist": {"name": "Radiohead"}}]})])
+    data = asyncio.run(where_to_watch.fetch(client, "album", "OK Computer", 1997, meta))
+    assert data["groups"] == [{"label": "Listen on", "providers": [
+        {"name": "Apple Music", "url": "https://music.apple.com/us/album/ok-computer/1097861387"},
+        {"name": "Deezer", "url": "https://www.deezer.com/album/14879699"}]}]
+    assert [c["name"] for c in data["credits"]] == ["Deezer"] and data["region"] is None
+
+
+def test_album_still_lists_apple_when_deezer_is_down():
+    meta = {"links": [{"label": "Apple Music", "url": "https://music.apple.com/us/album/x/1"}]}
+
+    class Broken(FakeClient):
+        async def get(self, *args, **kwargs):
+            raise RuntimeError("down")
+
+    data = asyncio.run(where_to_watch.fetch(Broken([]), "album", "X", None, meta))
+    assert [p["name"] for p in data["groups"][0]["providers"]] == ["Apple Music"]
+
+
+def test_podcast_apps_come_from_the_apple_id():
+    meta = {"links": [{"label": "Apple Podcasts", "url": "https://podcasts.apple.com/us/podcast/the-daily/id1200361736?uo=4"}]}
+    client = FakeClient([(lambda url, params: url == "https://itunes.apple.com/lookup" and params == {"id": "1200361736"},
+                          {"results": [{"collectionId": 1200361736, "feedUrl": "https://feeds.simplecast.com/Sl5CSM3S"}]})])
+    data = asyncio.run(where_to_watch.fetch(client, "podcast", "The Daily", None, meta))
+    assert data["groups"] == [
+        {"label": "Listen free on", "providers": [
+            {"name": "Apple Podcasts", "url": "https://podcasts.apple.com/us/podcast/the-daily/id1200361736"},
+            {"name": "Overcast", "url": "https://overcast.fm/itunes1200361736"},
+            {"name": "Pocket Casts", "url": "https://pca.st/itunes/1200361736"}]},
+        {"label": "Any podcast app", "providers": [{"name": "RSS feed", "url": "https://feeds.simplecast.com/Sl5CSM3S"}]}]
+
+
+def test_plain_http_podcast_feeds_are_left_out():
+    meta = {"links": [{"label": "Apple Podcasts", "url": "https://podcasts.apple.com/us/podcast/x/id123456"}]}
+    client = FakeClient([(lambda url, params: url == "https://itunes.apple.com/lookup",
+                          {"results": [{"collectionId": 123456, "feedUrl": "http://example.com/feed.xml"}]})])
+    data = asyncio.run(where_to_watch.fetch(client, "podcast", "X", None, meta))
+    assert [g["label"] for g in data["groups"]] == ["Listen free on"]
+
+
+def test_audiobook_links_apple_books_without_any_request():
+    meta = {"links": [{"label": "Apple Books", "url": "https://books.apple.com/us/audiobook/project-hail-mary/id1557519850"}]}
+    client = FakeClient([])
+    data = asyncio.run(where_to_watch.fetch(client, "audiobook", "Project Hail Mary", 2021, meta))
+    assert data["groups"][0] == {"label": "Buy or listen on", "providers": [
+        {"name": "Apple Books", "url": "https://books.apple.com/us/audiobook/project-hail-mary/id1557519850"}]}
+    assert client.calls == []
+
+
+def test_open_library_read_free_and_borrow():
+    meta = {"facts": [{"label": "Author", "value": "Jane Austen, Someone Else"}],
+            "links": [{"label": "Open Library", "url": "https://openlibrary.org/works/OL66554W"}]}
+    client = FakeClient([(lambda url, params: url == "https://openlibrary.org/search.json" and params.get("author") == "Jane Austen",
+                          {"docs": [{"key": "/works/OL1W", "title": "Pride and Prejudice", "ebook_access": "borrowable"},
+                                    {"key": "/works/OL66554W", "title": "Pride and Prejudice", "ebook_access": "public",
+                                     "lending_edition_s": "OL50444320M"}]})])
+    data = asyncio.run(where_to_watch.fetch(client, "book", "Pride and Prejudice", 1813, meta))
+    assert data["groups"] == [{"label": "Read free", "providers": [
+        {"name": "Open Library", "url": "https://openlibrary.org/books/OL50444320M"}]}]
+    assert [c["name"] for c in data["credits"]] == ["Open Library"]
+
+    client = FakeClient([(lambda url, params: url == "https://openlibrary.org/search.json",
+                          {"docs": [{"key": "/works/OL9W", "title": "Dune", "ebook_access": "no_ebook"}]})])
+    assert asyncio.run(where_to_watch.fetch(client, "book", "Dune", 1965, {})) == {}
+
+
+def test_manga_lists_only_official_english_publishers():
+    meta = {"links": [{"label": "MyAnimeList", "url": "https://myanimelist.net/manga/116778"}]}
+    client = FakeClient([
+        (lambda url, params: url == "https://api.mangadex.org/manga", {"data": [
+            {"attributes": {"title": {"en": "Chainsaw Man (Official Colored)"}, "links": {"mal": "999", "engtl": "https://www.viz.com/x"}}},
+            {"attributes": {"title": {"en": "Chainsaw Man"}, "links": {"mal": "116778", "engtl": "https://www.viz.com/chainsaw-man"}}}]}),
+        (lambda url, params: url == "https://api.jikan.moe/v4/manga/116778/external", {"data": [
+            {"name": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Chainsaw_Man"},
+            {"name": "Some scans", "url": "https://scans.example/chainsaw"},
+            {"name": "MANGA Plus", "url": "https://mangaplus.shueisha.co.jp/titles/100037"},
+            {"name": "VIZ", "url": "https://www.viz.com/shonenjump/chapters/chainsaw-man"}]}),
+    ])
+    data = asyncio.run(where_to_watch.fetch(client, "manga", "Chainsaw Man", 2018, meta))
+    assert data["groups"] == [{"label": "Read officially on", "providers": [
+        {"name": "VIZ", "url": "https://www.viz.com/chainsaw-man"},
+        {"name": "MANGA Plus", "url": "https://mangaplus.shueisha.co.jp/titles/100037"}]}]
+    assert {"name": "MangaDex"} in data["credits"], "named without a link"
+
+
+def test_search_links_are_encoded_and_only_for_listen_and_read_kinds():
+    links = where_to_watch.searches("album", "Kid A & B", "Radiohead")
+    assert links[0] == {"name": "Spotify", "url": "https://open.spotify.com/search/Kid%20A%20%26%20B%20Radiohead"}
+    assert links[1]["url"] == "https://music.youtube.com/search?q=Kid+A+%26+B+Radiohead"
+    assert where_to_watch.searches("manga", "Berserk", "Kentaro Miura")[0]["url"] == "https://global.bookwalker.jp/search/?word=Berserk"
+    assert where_to_watch.searches("movie", "Interstellar") == [] and where_to_watch.searches("book", "  ") == []
+
+
+def test_headings_and_verbs():
+    assert where_to_watch.heading("album", "Kid A") == "Where to listen to Kid A"
+    assert where_to_watch.heading("manga", "Berserk") == "Where to read Berserk"
+    assert where_to_watch.heading("game") == "Where to play"
+    assert where_to_watch.heading("movie", "Heat") == "Where to watch Heat"
 
 
 def test_cache_refreshes_weekly_without_touching_the_facts_cache(db_session):
@@ -195,7 +304,7 @@ def test_library_lookup_returns_cached_services(authenticated_client, db_session
     assert body["groups"][0]["providers"][0]["name"] == "Netflix"
     assert body["more"] == WHERE["link"] and body["tmdb_notice"] is True
     assert response.headers["Cache-Control"] == "private, no-store"
-    assert authenticated_client.get("/api/where-to-watch", params={"kind": "book", "title": "Dune"}).status_code == 404
+    assert authenticated_client.get("/api/where-to-watch", params={"kind": "person", "title": "Dune"}).status_code == 404
 
 
 def test_library_dialog_renders_text_only_and_https_links():
@@ -227,3 +336,98 @@ console.log(JSON.stringify({
     assert out["more"].startswith("https://www.justwatch.com/")
     assert "Data from JustWatch." in out["note"] and "not endorsed or certified by TMDB" in out["note"]
     assert out["safe"] == ["https://a.b", "", ""]
+
+
+# ---------------------------------------------------------------- listen / read on pages, Amazon links
+
+def add_book(db, user, title="Pride and Prejudice", author="Jane Austen", year=1813):
+    book = models.Book(user_id=user.id, title=title, author=author, year=year, review=ESSAY, review_public=True, rating=9.0, read=True)
+    db.add(book)
+    db.flush()
+    return book
+
+
+BOOK_WHERE = {"v": 1, "kind": "book", "region": None, "fetched": "2026-11-02", "justwatch": False, "link": None,
+              "groups": [{"label": "Read free", "providers": [{"name": "Open Library", "url": "https://openlibrary.org/books/OL50444320M"}]}],
+              "credits": [{"name": "Open Library", "url": "https://openlibrary.org/"}]}
+
+
+def test_book_page_shows_where_to_read_and_searches(client, db_session, monkeypatch):
+    monkeypatch.delenv("AMAZON_ASSOCIATES_TAG", raising=False)
+    add_book(db_session, member(db_session, "reader"))
+    db_session.commit()
+    title_metadata.store(db_session, "book:pride and prejudice:1813", {"links": [], "sources": []}, "ok")
+    title_metadata.store(db_session, "where:book:pride and prejudice:1813", BOOK_WHERE, "ok")
+    html = client.get("/titles/book/pride-and-prejudice-1813").text
+    assert 'id="where-title">Where to read Pride and Prejudice</h2>' in html
+    assert 'href="#where-title">Where to read</a>' in html
+    assert "https://openlibrary.org/books/OL50444320M" in html and "Checked November 2, 2026." in html
+    assert "Search other services" in html and "https://bookshop.org/search?keywords=Pride+and+Prejudice+Jane+Austen" in html
+    assert "amazon.com" not in html and 'rel="sponsored' not in html
+
+
+def test_quick_answer_wording_for_listen_and_read():
+    from types import SimpleNamespace
+    from app.routers import titles
+    question, text, _ = titles._where_answer(SimpleNamespace(kind="book", title="Emma"), {"where": BOOK_WHERE})
+    assert question == "Where can I read Emma?" and text.startswith("You can read it free on Open Library.")
+    podcast = {"groups": [{"label": "Listen free on", "providers": [{"name": "Apple Podcasts"}, {"name": "Overcast"}]},
+                          {"label": "Any podcast app", "providers": [{"name": "RSS feed"}]}]}
+    question, text, _ = titles._where_answer(SimpleNamespace(kind="podcast", title="The Daily"), {"where": podcast})
+    assert question == "Where can I listen to The Daily?"
+    assert "listen free on Apple Podcasts and Overcast" in text and "RSS feed to any podcast app" in text
+
+
+def test_amazon_link_needs_the_tag_and_is_marked_sponsored(client, db_session, monkeypatch):
+    monkeypatch.setenv("AMAZON_ASSOCIATES_TAG", "omnitrackr-20")
+    add_book(db_session, member(db_session, "reader"))
+    db_session.commit()
+    title_metadata.store(db_session, "book:pride and prejudice:1813", {"links": [], "sources": []}, "ok")
+    title_metadata.store(db_session, "where:book:pride and prejudice:1813", None, "miss")
+    html = client.get("/titles/book/pride-and-prejudice-1813").text
+    assert "Buy a copy" in html and "tag=omnitrackr-20" in html and "i=stripbooks" in html
+    assert 'rel="sponsored noopener"' in html and "As an Amazon Associate" in html
+
+
+def test_audiobook_amazon_link_searches_audible(monkeypatch):
+    from app import affiliate
+    monkeypatch.setenv("AMAZON_ASSOCIATES_TAG", "omnitrackr-20")
+    link = affiliate.links_for("audiobook", "Project Hail Mary", "Andy Weir")[0]
+    assert "i=audible" in link["url"] and link["label"] == "Find the audiobook on Audible"
+    assert affiliate.links_for("podcast", "The Daily") == []
+
+
+def test_library_lookup_covers_books_with_searches(authenticated_client, db_session, monkeypatch):
+    monkeypatch.delenv("AMAZON_ASSOCIATES_TAG", raising=False)
+    title_metadata.store(db_session, "book:dune:1965", {"links": []}, "ok")
+    title_metadata.store(db_session, "where:book:dune:1965", None, "miss")
+    body = authenticated_client.get("/api/where-to-watch", params={"kind": "book", "title": "Dune", "year": 1965}).json()
+    assert body["groups"] == [] and body["buy"] == [] and body["heading"] == "Where to read"
+    assert [s["name"] for s in body["searches"]][1] == "Bookshop.org"
+
+
+def test_library_dialog_renders_amazon_and_searches():
+    script = r"""
+const { renderWhere } = require('./app/static/title-links.js');
+class Node {
+  constructor(tag) { this.tagName = tag; this.children = []; this.textContent = ''; this.className = ''; }
+  appendChild(child) { this.children.push(child); return child; }
+  append(...kids) { kids.forEach(k => this.appendChild(k)); }
+  replaceChildren(...kids) { this.children = kids; }
+}
+global.document = { createElement: tag => new Node(tag) };
+const body = new Node('div');
+renderWhere(body, { groups: [], buy: [{ name: 'Amazon', url: 'https://www.amazon.com/s?k=x&tag=t' }, { name: 'Bad', url: 'javascript:1' }],
+  disclosure: 'As an Amazon Associate we earn.', searches: [{ name: 'Libro.fm', url: 'https://libro.fm/search?q=x' }] }, 'audiobook');
+const buy = body.children[1];
+const search = body.children[2];
+console.log(JSON.stringify({
+  empty: body.children[0].textContent, buyLabel: buy.children[0].textContent, buyCount: buy.children[1].children.length,
+  rel: buy.children[1].children[0].children[0].rel, search: search.children[1].children[0].children[0].href,
+  note: body.children[3].textContent,
+}));
+"""
+    out = json.loads(subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, cwd=".").stdout)
+    assert out["empty"] == "We could not find listening services for this title yet."
+    assert out["buyLabel"] == "Buy a copy" and out["buyCount"] == 1 and out["rel"] == "sponsored noopener"
+    assert out["search"] == "https://libro.fm/search?q=x" and "Amazon Associate" in out["note"]

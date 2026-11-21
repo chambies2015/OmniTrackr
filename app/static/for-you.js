@@ -275,6 +275,8 @@
     } else {
       summary.textContent = "Nothing from your library is on the schedule right now. Here's what's popular instead.";
     }
+    // Popular-only lists wait behind "Show more" on home (home-layout.js); library matches don't.
+    if (section.dataset) section.dataset.source = matches.length ? 'library' : 'popular';
     const cards = matches.length ? matches.concat(popular.slice(0, Math.max(0, 6 - matches.length))) : popular;
     cards.forEach(card => {
       const fromLibrary = Boolean(card.reason);
@@ -455,6 +457,7 @@
   async function refreshForYou() {
     const request = ++state.request;
     if (!$('starterPicks') || !$('comingUp')) return;
+    if (window.OmniPicks) window.OmniPicks.refreshTeaser();
     try {
       // Both requests start together; on a phone, asking one after the other added
       // a full round trip before the card could appear.
@@ -488,6 +491,7 @@
 
   function resetForYou() {
     state.request += 1;
+    if (window.OmniPicks) window.OmniPicks.reset();
     ['starterPicks', 'comingUp'].forEach(id => { const node = $(id); if (node) node.hidden = true; });
   }
 
@@ -512,6 +516,12 @@
     };
     Object.entries(handlers).forEach(([id, handler]) => { const node = $(id); if (node) node.addEventListener('click', handler); });
     window.addEventListener('hashchange', () => { state.calendarLinkHandled = false; openCalendarFromLink(); });
+    // Turned on or off somewhere else on the page (the weekly email preview, Settings): hide or show the invites.
+    document.addEventListener('omni:weekly-email', event => {
+      if (!event.detail || typeof event.detail.enabled !== 'boolean') return;
+      state.email = { ...state.email, enabled: event.detail.enabled };
+      renderInvites();
+    });
   }
 
   window.refreshForYou = refreshForYou;

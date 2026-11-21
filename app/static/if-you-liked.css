@@ -74,3 +74,8 @@
   .yl-pick__art { flex-basis: 60px; width: 60px; }
 }
 .yl-why p + p { margin-top: 12px; }
+
+/* Questions about the anchor title and the picks */
+.yl-faq { margin: 44px 0; max-width: 820px; }
+.yl-faq h3 { color: #fff; font-size: 1.08rem; margin: 22px 0 6px; }
+.yl-faq p { color: #d7dbee; margin: 0; }
