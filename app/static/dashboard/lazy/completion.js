@@ -1,5 +1,6 @@
 let activeCompletionMomentId = null;
 let activeCompletionCategory = null;
+let activeCompletionItemId = null;
 let completionSaving = false;
 const COMPLETION_RELOADERS = {
   movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
@@ -73,6 +74,7 @@ async function openCompletionMoment(category, itemId) {
     const moment = await response.json();
     activeCompletionMomentId = moment.id;
     activeCompletionCategory = category;
+    activeCompletionItemId = itemId;
     document.getElementById('completionRitualTitle').textContent = moment.title;
     showCompletionShare(category, itemId, moment.title);
     showCompletionTalk(moment.talk);
@@ -147,6 +149,14 @@ function closeCompletionRitual() {
   if (modal) modal.style.display = 'none';
   activeCompletionMomentId = null;
   activeCompletionCategory = null;
+  activeCompletionItemId = null;
+}
+
+// Tell the rest of the dashboard that a takeaway or review was saved (the monthly challenge card counts the words).
+function announceCompletionSaved(category, itemId) {
+  try {
+    window.dispatchEvent(new CustomEvent('omnitrackr:completion-saved', { detail: { category, id: itemId } }));
+  } catch (error) { /* nothing listens */ }
 }
 
 async function saveCompletionReview(momentId, review, isPublic, spoilers) {
@@ -164,6 +174,7 @@ async function saveCompletionRitual() {
   if (!activeCompletionMomentId || completionSaving) return;
   const momentId = activeCompletionMomentId;
   const category = activeCompletionCategory;
+  const itemId = activeCompletionItemId;
   const takeaway = document.getElementById('completionRitualTakeaway').value;
   const favorite = document.getElementById('completionRitualFavorite').checked;
   const step = document.getElementById('completionReviewStep');
@@ -180,6 +191,7 @@ async function saveCompletionRitual() {
     if (typeof loadMonthlyReplay === 'function') loadMonthlyReplay();
     if (!review) {
       closeCompletionRitual();
+      announceCompletionSaved(category, itemId);
       return;
     }
     let result;
@@ -198,6 +210,7 @@ async function saveCompletionRitual() {
       const reload = typeof globalThis !== 'undefined' ? globalThis[COMPLETION_RELOADERS[category]] : null;
       if (typeof reload === 'function') reload();
     }
+    announceCompletionSaved(category, itemId);
     step.hidden = true;
     reviewBox.value = '';
     const save = document.getElementById('completionRitualSave');

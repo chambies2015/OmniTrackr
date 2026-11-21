@@ -65,6 +65,8 @@ FORMAT_NOUNS = {
 #               other work the member has also finished, then or any time before: going by the creator field,
 #               the maker credit in a title's cached public facts, or an edition pick's maker and "shadow" (their
 #               best-known work); another copy of the same story is not other work
+#   report      write ``words`` words or more about each of ``count`` titles finished this month: the takeaway on
+#               the finish screen, the note on a journal finish and the title's review, added together
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -322,6 +324,29 @@ CHALLENGES: dict[str, dict] = {
         ],
         "reflection": "Which of this month's finishes deserved more attention than it got, and what do you think kept it in the shadow?",
     },
+    "2027-09": {
+        "name": "Required reading",
+        "tagline": "Finish one of September's nine set texts, finish something from your summer reading list and hand in a fifty-word report.",
+        "published": "2027-09-01",
+        # The September edition (out September 1) has nine picks, one per format, each saying where it has been taught.
+        "edition": "september-2027",
+        "intro": [
+            "In much of the world September is when school starts again, and on September 8 UNESCO marks International Literacy Day. This challenge, and the September edition it pairs with, are about the works classrooms teach: nine of them, one in each format, from a jury-room drama that British secondary schools screen more than almost any other film to a game three student teachers wrote for an eighth-grade history class in 1971. This month they are on nobody's syllabus but yours. The challenge asks you to finish one of them, to finish something from your own summer reading list, meaning anything that was already in your library before September 1, and to hand in a short report on something you finished.",
+            "The report is the new part. Write fifty words or more about one of your September finishes: in the takeaway box when you mark it finished, in a note on the finish in your journal, or in a review on the title. Fifty words is four or five sentences. The step adds up everything you wrote about that one title, so a line now and a few more later count together, and it stays private unless you choose to publish a review. The challenge card on your home screen keeps count as you write. Anything you finish in September counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "september-2027",
+             "label": "Finish one of September's nine set texts",
+             "detail": "The September edition has nine works that schools and universities teach, one in each format OmniTrackr tracks, and each says where it has been taught. 12 Angry Men is 96 minutes and To Pimp a Butterfly about 79, so either fits an evening, and a run of The Oregon Trail takes an hour or two. The Wire is 60 episodes and Barefoot Gen ten volumes, so start those early. Finish any one of the nine in September and this step is done."},
+            {"kind": "waiting", "count": 1,
+             "label": "Finish your summer reading",
+             "detail": "Anything that was already in your library before September 1 counts, whether you saved it in June meaning to get to it over the summer or three years ago. Most libraries have a summer reading list that never got read. Pick one title from it and finish it. A title you add and finish in September counts toward the other two steps, just not this one, and if one of the edition's picks was already waiting in your library, it can do both."},
+            {"kind": "report", "count": 1, "words": 50,
+             "label": "Hand in a fifty-word report",
+             "detail": "Write fifty words or more about one title you finish in September. The takeaway you write when you mark it finished counts, and so do a note on the finish in your journal and the review on the title, all added together, so you can write a line tonight and finish the report at the weekend. Four or five sentences will do it: what it is, what worked, what didn't and who you would give it to. Nobody grades it. A takeaway stays private, and a review is public only if you choose to publish it. The challenge card keeps count and can open the finish screen for your latest finish."},
+        ],
+        "reflection": "Which of this month's finishes would you put on a syllabus, and what would you want a class to argue about?",
+    },
 }
 
 # Used for any month without a curated challenge, so the dashboard card never breaks.
@@ -416,16 +441,21 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
         models.CompletionMoment.completed_at < end,
     ).order_by(models.CompletionMoment.completed_at.asc()).all()
     finished: dict[tuple, dict] = {}
-    for row, item_id, reflected in (
-        *((entry, entry.item_id, entry.rating is not None or bool((entry.note or "").strip())) for entry in entries),
-        *((moment, moment.item_id, moment.rating is not None or bool((moment.takeaway or "").strip())) for moment in moments),
+    for row, item_id, reflected, note in (
+        *((entry, entry.item_id, entry.rating is not None or bool((entry.note or "").strip()), entry.note)
+          for entry in entries),
+        *((moment, moment.item_id, moment.rating is not None or bool((moment.takeaway or "").strip()), moment.takeaway)
+          for moment in moments),
     ):
         if row.category not in FORMAT_NOUNS:
             continue
         key = year_in_review._title_key(row.category, item_id, row.title)
         found = finished.setdefault(key, {"category": row.category, "item_id": item_id,
-                                          "title": row.title or "", "reflected": False, "at": None, "times": []})
+                                          "title": row.title or "", "reflected": False, "at": None, "times": [],
+                                          "notes": []})
         found["reflected"] = found["reflected"] or reflected
+        if (note or "").strip():
+            found["notes"].append(note)
         when = getattr(row, "occurred_at", None) or getattr(row, "completed_at", None)
         if when is not None:
             found["times"].append(when)
@@ -433,15 +463,17 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
                 found["at"] = when
         if found["item_id"] is None:
             found["item_id"] = item_id
-    removed = {key: row["times"] for key, row in finished.items() if isinstance(key[1], str)}
+    removed = {key: (row["times"], row["notes"]) for key, row in finished.items() if isinstance(key[1], str)}
     folded = year_in_review.fold_deleted_copies(finished)
-    # A removed copy folded into the live one keeps its finish times (day steps read every one).
-    for key, times in removed.items():
+    # A removed copy folded into the live one keeps its finish times (day steps read every one) and its notes
+    # (report steps add them up).
+    for key, (times, notes) in removed.items():
         if key in folded:
             continue
         for live_key, row in folded.items():
             if not isinstance(live_key[1], str) and (row["category"], year_in_review._plain_title(row["title"])) == key:
                 row["times"].extend(times)
+                row["notes"].extend(notes)
                 break
     return list(folded.values())
 
@@ -1075,6 +1107,70 @@ def maker_progress(db: Session, finishes: list[dict], rows: list[dict], target: 
     return {"count": len(counted), "waiting": waiting}
 
 
+# ---------------------------------------------------------------- report steps
+
+# Words in a report: letters and digits, with an apostrophe or hyphen inside a word ("don't", "well-made").
+REPORT_WORD = re.compile(r"[^\W_]+(?:['’-][^\W_]+)*")
+# Japanese and Chinese are written without spaces, so two of their characters count as one word.
+_WIDE_CHARS = re.compile("[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]")
+
+
+def report_words(text: Optional[str]) -> int:
+    """How many words a takeaway, note or review has, for a report step."""
+    text = str(text or "")
+    wide = len(_WIDE_CHARS.findall(text))
+    return len(REPORT_WORD.findall(_WIDE_CHARS.sub(" ", text))) + (wide + 1) // 2
+
+
+def _reviews(db: Session, finishes: list[dict]) -> dict[tuple[str, int], str]:
+    """The library review on each finished title still in the library: one query per format."""
+    wanted: dict[str, set[int]] = {}
+    for finish in finishes:
+        kind = title_pages.LIBRARY_TO_KIND.get(finish["category"])
+        if kind is not None and finish["item_id"] is not None:
+            wanted.setdefault(kind, set()).add(finish["item_id"])
+    reviews: dict[tuple[str, int], str] = {}
+    for kind, ids in wanted.items():
+        model = title_pages.KINDS[kind][0]
+        ordered = sorted(ids)
+        for first in range(0, len(ordered), 500):
+            for item_id, review in db.query(model.id, model.review).filter(
+                model.id.in_(ordered[first:first + 500]), model.review.isnot(None),
+            ):
+                if (review or "").strip():
+                    reviews[(kind, item_id)] = review
+    return reviews
+
+
+def report_progress(finishes: list[dict], reviews: dict[tuple[str, int], str], words: int = 50,
+                    target: int = 1) -> dict:
+    """This month's finishes with at least ``words`` words written about them, and the one to write more about.
+
+    A finish's words are its takeaway on the finish screen, the notes on its journal finishes and the title's
+    review, added together; the same text saved in two places counts once. While the step isn't done, "best"
+    is the finish with the most words so far (the latest finish if none has any), so the card can show the
+    count and open the finish screen for it. It names the member's own title, so only their card gets it.
+    """
+    counted, written = 0, []
+    for finish in finishes:
+        texts: dict[str, str] = {}
+        review = reviews.get((title_pages.LIBRARY_TO_KIND.get(finish["category"]), finish["item_id"]))
+        for text in (*finish.get("notes", ()), review):
+            plain = " ".join(str(text or "").split())
+            if plain:
+                texts.setdefault(plain.casefold(), plain)
+        total = sum(report_words(text) for text in texts.values())
+        if total >= words:
+            counted += 1
+        written.append((total, finish["at"] or datetime.min, finish))
+    best = None
+    if counted < target and written:
+        total, _, finish = max(written, key=lambda found: (found[0], found[1]))
+        best = {"title": finish["title"], "category": finish["category"], "id": finish["item_id"],
+                "words": total}
+    return {"count": counted, "best": best}
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -1149,6 +1245,12 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count = found["count"]
             # "waiting" names the member's own titles and the people behind them, so only their card has it.
             extra = {"waiting": found["waiting"]}
+        elif step["kind"] == "report":
+            target, words = step.get("count", 1), step.get("words", 50)
+            found = report_progress(finishes, _reviews(db, finishes), words, target)
+            count = found["count"]
+            # "best" names one of the member's own finishes, like "waiting", so only their card has it.
+            extra = {"words": words, "best": found["best"]}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],

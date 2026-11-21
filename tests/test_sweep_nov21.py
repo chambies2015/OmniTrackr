@@ -23,9 +23,9 @@ def test_light_mode_today_labels_are_readable():
 
 
 def test_changed_assets_carry_new_tags():
-    # challenges.js changed again for the May (#276), June, July and August challenges, and home-layout.js for the
+    # challenges.js changed again for the May (#276), June, July, August and September challenges, and home-layout.js for the
     # member phone pass ("Mark watched" on Do this next) and the Nov 21 morning sweep, so they carry later tags.
-    for tag in ("./styles.css?v=20261121-sweep-1", "/static/challenges.js?v=20261121-eclipsed-1",
+    for tag in ("./styles.css?v=20261121-sweep-1", "/static/challenges.js?v=20261121-required-reading-1",
                 "/static/home-layout.js?v=20261121-sweep-d-1"):
         assert tag in INDEX, tag
 
