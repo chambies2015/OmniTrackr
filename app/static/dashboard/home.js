@@ -787,6 +787,8 @@ function resetDailyDashboard() {
     document.getElementById(id)?.setAttribute('hidden', '');
   }
   window.OmniHomeHero?.reset();
+  window.OmniHomeFocus?.reset();
+  window.OmniHomeLayout?.reset();
   window.OmniHomeToday?.reset();
   window.OmniStayPosted?.reset();
   window.OmniWeekOne?.reset();
@@ -931,26 +933,42 @@ function renderLibraryPulse(pulse) {
   if (!pulseElement) return;
   if (returnDeckActive) {
     pulseElement.setAttribute('hidden', '');
+    if (typeof window !== 'undefined') window.OmniHomeFocus?.claim?.([]);
     return;
   }
   const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
   const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
-  if (!continueItems.length && !reflectionItems.length) {
+  // "Do this next" under the welcome strip shows the first title on its own; Continue lists the rest.
+  const focused = typeof window !== 'undefined' && window.OmniHomeFocus?.claim?.(continueItems) ? 1 : 0;
+  const restItems = continueItems.slice(focused, focused + 4);
+  if (!restItems.length && !reflectionItems.length) {
     pulseElement.setAttribute('hidden', '');
     return;
   }
+  const continueList = document.getElementById('libraryPulseContinue');
   renderLibraryPulseList(
-    document.getElementById('libraryPulseContinue'),
-    continueItems.slice(0, 4),
+    continueList,
+    restItems,
     'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
   );
+  // Only the focused title was on the go: the card is just the ratings and notes still to add.
+  const reflectOnly = Boolean(focused) && !restItems.length;
+  if (continueList) continueList.hidden = reflectOnly;
+  pulseElement.classList?.toggle?.('library-pulse--reflect-only', reflectOnly);
+  const pulseTitle = document.getElementById('libraryPulseTitle');
+  if (pulseTitle) pulseTitle.textContent = reflectOnly ? 'Make it memorable' : 'Continue';
+  const pulseEyebrow = pulseElement.querySelector?.('.library-pulse__eyebrow');
+  if (pulseEyebrow) pulseEyebrow.textContent = reflectOnly ? 'While you still remember' : focused ? 'Also on the go' : 'Right where you left off';
   renderLibraryPulseList(
     document.getElementById('libraryPulseReflect'),
     reflectionItems,
     'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
   );
   const reflections = document.getElementById('libraryPulseReflections');
-  if (reflections) reflections.hidden = !reflectionItems.length;
+  if (reflections) {
+    reflections.hidden = !reflectionItems.length;
+    if (reflectOnly) reflections.open = true;
+  }
   const count = document.getElementById('libraryPulseReflectionCount');
   if (count) count.textContent = `(${reflectionItems.length})`;
   pulseElement.removeAttribute('hidden');
@@ -987,9 +1005,11 @@ function renderTodaysPick(payload, { showEmpty = false } = {}) {
 
 // Continue already lists the first unfinished titles, so Today's pick steps past
 // them to offer something different. A couple of skips at most per pick.
+// "Do this next" holds the first of them.
+const SHOWN_PULSE_ITEMS = '#libraryPulseContinue [data-pulse-item-id], #homeFocus .home-focus__open[data-pulse-item-id]';
 function pickRepeatsContinue(pick) {
   if (!pick) return false;
-  return Array.from(document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]')).some(
+  return Array.from(document.querySelectorAll(SHOWN_PULSE_ITEMS)).some(
     (item) => item.dataset.pulseTab === pick.category && item.dataset.pulseItemId === String(pick.id)
   );
 }
@@ -1009,7 +1029,7 @@ function skipRepeatedPick() {
 // With every candidate already listed in Continue, the pick has nothing new to add.
 function pickAddsNothing() {
   if (!pickRepeatsContinue(todaysPickSelection) || document.getElementById('todaysPickFilter')?.value) return false;
-  return todaysPickCandidateCount <= document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]').length;
+  return todaysPickCandidateCount <= document.querySelectorAll(SHOWN_PULSE_ITEMS).length;
 }
 
 async function refreshTodaysPick() {
@@ -1203,6 +1223,7 @@ function renderNextUpQueue(items) {
   const focus = captureNextUpQueueFocus();
   dailyDashboardState.items = Array.isArray(items) ? items : [];
   items = dailyDashboardState.items;
+  if (typeof window !== 'undefined') window.OmniHomeFocus?.queue?.(items);
   const activeGroup = NEXT_UP_GROUPS.find(group => group.key === dailyDashboardState.filter);
   const inGroup = activeGroup ? items.filter(item => activeGroup.categories.includes(item.category)) : items;
   if (activeGroup && !inGroup.length) dailyDashboardState.filter = '';
