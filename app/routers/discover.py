@@ -238,7 +238,15 @@ def _notes_section(notes) -> str:
         return ""
     return (f'<section id="edition-notes" class="editorial edition-notes" aria-labelledby="edition-notes-heading">'
             f'<h2 id="edition-notes-heading">{escape(notes["heading"])}</h2>'
-            + "".join(f'<p>{escape(text)}</p>' for text in notes["paragraphs"]) + '</section>')
+            + "".join(f'<p>{escape(text)}</p>' for text in notes["paragraphs"]) + _notes_links(notes.get("links"))
+            + '</section>')
+
+
+def _notes_links(links) -> str:
+    """Pages an edition points to instead of repeating them (November 2027 onward): internal paths only."""
+    rows = "".join(f'<li><a href="{escape(href, quote=True)}">{escape(label)}</a></li>' for label, href in links or ()
+                   if isinstance(href, str) and href.startswith("/") and not href.startswith("//"))
+    return f'<ul class="edition-links">{rows}</ul>' if rows else ""
 
 
 def _long_date(value: str) -> str:
@@ -283,7 +291,14 @@ def _other_version(item) -> str:
     """The pick's version in another format, for editions that name one (July 2027 onward), the best-known
     work by the same maker, for editions that name that instead (August 2027), or where the pick has been
     taught, for editions about set texts (September 2027), or the bargain at the heart of the story, for
-    editions about wishes granted at a price (October 2027)."""
+    editions about wishes granted at a price (October 2027), who tells the story, for editions about
+    storytellers (November 2027), or the time machine, for editions about time travel (December 2027)."""
+    teller = item.get("teller")
+    if teller and teller.get("note"):
+        return f'<p class="pick-other"><strong>Who\'s telling it:</strong> {escape(teller["note"])}</p>'
+    machine = item.get("machine")
+    if machine and machine.get("note"):
+        return f'<p class="pick-other"><strong>The time machine:</strong> {escape(machine["note"])}</p>'
     bargain = item.get("bargain")
     if bargain and bargain.get("note"):
         return f'<p class="pick-other"><strong>The bargain:</strong> {escape(bargain["note"])}</p>'

@@ -206,6 +206,9 @@ def share_link(body: RecSource, request: Request, response: Response,
     _private(response)
     rec = _resolve(db, user, body)
     now = datetime.utcnow()
+    # A link made in an earlier month gets a fresh one, so the month's challenge (a step can ask you to tell
+    # someone about a title) sees this month's recommendation. The old link keeps working until it expires.
+    this_month = datetime(now.year, now.month, 1)
     link = db.query(models.FriendRecommendation).filter(
         models.FriendRecommendation.sender_id == user.id,
         models.FriendRecommendation.recipient_id.is_(None),
@@ -213,6 +216,7 @@ def share_link(body: RecSource, request: Request, response: Response,
         models.FriendRecommendation.category == rec["category"],
         _same_title(models.FriendRecommendation.title, rec["title"]),
         models.FriendRecommendation.expires_at > now + timedelta(days=7),
+        models.FriendRecommendation.created_at >= this_month,
     ).order_by(models.FriendRecommendation.id.desc()).first()
     if link is not None and (link.note or None) != body.note:
         link = None
