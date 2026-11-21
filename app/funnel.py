@@ -91,6 +91,12 @@ GUEST = (
     ("advent_shared", "Advent calendar: a door shared"),
     ("advent_door_link_opened", "Advent calendar: a shared door opened by a visitor without an account"),
     ("advent_signup_clicked", "Advent calendar: sign-up button pressed"),
+    ("essentials_ticked", "Essential 100: a visitor ticked a title they have finished"),
+    ("essentials_signup_clicked", "Essential 100: Keep my count pressed by a visitor"),
+    ("essentials_saved", "Essential 100: a member added a title from a list"),
+    ("essentials_shared", "Essential 100: a count shared"),
+    ("essentials_count_opened", "Essential 100: a shared count opened by a visitor without an account"),
+    ("essentials_imported", "Essential 100: titles ticked before sign-up moved into a new library"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
     ("guest_sheet_opened", "Keep your list sheet opened on a guide or title page"),
     ("guest_sheet_google", "Keep your list sheet: Continue with Google pressed"),
@@ -240,7 +246,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "advent_guest_opened", "advent_shared", "advent_signup_clicked",
                  "home_cta_clicked", "home_tour_opened", "home_import_clicked", "home_binge_demo_used", "home_tool_opened",
                  "title_signup_clicked", "title_trailer_played",
-                 "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked"}
+                 "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked",
+                 "essentials_ticked", "essentials_signup_clicked", "essentials_shared"}
 
 
 def record(event: str, request=None) -> bool:

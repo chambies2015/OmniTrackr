@@ -77,7 +77,7 @@ def _main_kind(section: str, data, found: dict):
             return _kind(data)
         if section == "new-releases" and data.get("focus"):
             return _KIND_ALIASES.get(data["focus"], data["focus"])
-    if section in ("in-order", "binge") and found["kinds"]:
+    if section in ("in-order", "binge", "essentials") and found["kinds"]:
         kind, count = max(found["kinds"].items(), key=lambda row: row[1])
         if count * 2 > sum(found["kinds"].values()):
             return kind
@@ -120,6 +120,10 @@ def _source(section: str, href: str):
     if section == "new-releases":
         from . import new_releases
         return new_releases.published().get(slug)
+    if section == "essentials":
+        from . import essentials
+        data = essentials.get(slug)
+        return data["sections"] if data else None
     if section == "binge":
         from .binge_guides import GUIDES
         return GUIDES.get(slug)

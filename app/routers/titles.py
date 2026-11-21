@@ -946,6 +946,22 @@ def _order_answer(group) -> tuple[str, str, str]:
     return f"Where does {group.title} fit in the {guide['name']} order?", text, html
 
 
+def _essential_answer(group) -> tuple[str, str, str]:
+    """For a title on one of the Essential 100 lists: where it sits there, and why it made it."""
+    from .. import essentials
+    try:
+        item = essentials.for_title(group.kind, group.title, getattr(group, "year", None))
+    except Exception:
+        return "", "", ""
+    if item is None:
+        return "", "", ""
+    data = essentials.get(item["format"])
+    reason = item["why"].split(". ")[0].rstrip(".") + "."
+    text = f"{group.title} is number {item['number']} of the essential 100 {data['noun']} on OmniTrackr. {reason}"
+    html = (_e(text) + f' <a href="{_e(essentials.anchor_url(item))}">See it on the list</a>.')
+    return f"Is {group.title} one of the essential {data['noun']}?", text, html
+
+
 def _when_answer(group, metadata: dict) -> tuple[str, str, str]:
     release = _pretty_date(metadata.get("release_date"))
     if not release:
@@ -967,7 +983,7 @@ FAQ_MIN = 3
 def _faq(group, summary: dict, metadata: dict) -> list[tuple[str, str, str]]:
     """Questions people search about a title, answered from its facts and member data. Empty unless there are a few."""
     answers = [_where_answer(group, summary), _length_answer(group, metadata), _worth_answer(group, summary),
-               _when_answer(group, metadata), _order_answer(group), _next_answer(group, summary)]
+               _when_answer(group, metadata), _order_answer(group), _essential_answer(group), _next_answer(group, summary)]
     answers = [answer for answer in answers if answer[0] and answer[1]]
     return answers if len(answers) >= FAQ_MIN else []
 
@@ -1766,6 +1782,14 @@ def import_guest_list(
                 browsed = (door["browse_kind"], door)
             else:
                 curated = door
+        if group is None and curated is None and browsed is None:
+            # A title saved with "Want to" on one of the Essential 100 lists.
+            from .. import essentials
+            essential = essentials.find(item.kind, item.slug)
+            if essential is not None and "browse_kind" in essential:
+                browsed = (essential["browse_kind"], essential)
+            else:
+                curated = essential
         if group is None and curated is None and browsed is None:
             # A pick saved from a Discover trail or monthly edition.
             from ..discover_catalog import find_guest_pick

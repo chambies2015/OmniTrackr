@@ -1229,6 +1229,16 @@ for route in best_of_router.router.routes:
     if getattr(route, "path", None) == "/api/best-of/add":
         bind_rate_limited_endpoint(route, rate_limited_best_of_add)
 app.include_router(best_of_router.router)
+
+from .routers import essentials as essentials_router
+# Ticking through a list of 100 is quick work, so saves get the start wall's limit.
+ESSENTIALS_LIMITS = {"/api/essentials/save": "90/minute", "/api/essentials/undo": "30/minute",
+                     "/api/essentials/import": "10/minute"}
+for route in essentials_router.router.routes:
+    limit = ESSENTIALS_LIMITS.get(getattr(route, "path", None))
+    if limit:
+        bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(essentials_router.router)
 from .routers import new_releases as new_releases_router
 app.include_router(new_releases_router.router)
 

@@ -16,6 +16,7 @@
       /^\/if-you-liked\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
       /^\/in-order\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
       /^\/best-of\/\d{4}\/[a-z-]{2,20}$/.test(window.location.pathname) ||
+      /^\/essentials\/(movies|tv|anime|games|books|music|manga|podcasts|audiobooks)$/.test(window.location.pathname) ||
       /^\/new-releases\/[a-z0-9-]{1,60}$/.test(window.location.pathname) ||
       /^\/halloween$/.test(window.location.pathname) ||
       /^\/holidays$/.test(window.location.pathname) ||

@@ -87,6 +87,9 @@ TRACKS = (
     {"key": "advent", "name": "Door Opener", "emoji": "🚪", "metric": "advent_doors", "targets": (6, 12, 24),
      "counts": "advent calendar doors opened in one December", "one": "advent calendar door opened",
      "next": "Open {n} more advent {noun}", "noun": ("door", "doors"), "shelf": None},
+    {"key": "essentials", "name": "Essentials", "emoji": "🏛️", "metric": "essentials", "targets": (10, 50, 200),
+     "counts": "titles from the Essential 100 lists finished", "one": "title from the Essential 100 lists finished",
+     "next": "Finish {n} more essential {noun}", "noun": ("title", "titles"), "shelf": None},
 )
 BY_KEY = {track["key"]: track for track in TRACKS}
 # Each key is one stored row per member, so two tracks sharing a key would share a tier.
@@ -95,7 +98,7 @@ TOTAL_LEVELS = len(TRACKS) * len(TIERS)
 # Where on the dashboard each badge's next step happens.
 LINKS = {
     "goals": "/#goals", "challenger": "/#challenge", "recruiter": "/#invite-friends", "company": "/#invite-friends",
-    "advent": "/holidays/advent-calendar", "steady": "/#your-week",
+    "advent": "/holidays/advent-calendar", "steady": "/#your-week", "essentials": "/essentials",
 }
 NEXT_COUNT = 3
 
@@ -134,6 +137,8 @@ def counts(db: Session, user: models.User) -> dict:
         models.YourWeekWeek.user_id == user.id, models.YourWeekWeek.kept_at.isnot(None)).count()
     from .advent_calendar import most_doors
     result["advent_doors"] = most_doors(db, user.id)
+    from .essentials import finished_count
+    result["essentials"] = finished_count(db, user.id)
     return result
 
 
