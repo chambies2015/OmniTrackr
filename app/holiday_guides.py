@@ -1,8 +1,10 @@
-"""Guides that sit beside the holiday hub (/holidays/thanksgiving, /holidays/reading-and-listening).
+"""Guides that sit beside the holiday hub (/holidays/christmas, /holidays/thanksgiving,
+/holidays/reading-and-listening).
 
 The hub at /holidays picks one title per screen format for each kind of holiday
-break. These go deeper on one part of the season: the four days of the Thanksgiving
-weekend, and the books, audiobooks, podcasts, manga and albums that suit December.
+break. These go deeper on one part of the season: Christmas itself (the year's new films and
+specials, with dates, and older picks for Christmas Eve and the week after), the four days
+of the Thanksgiving weekend, and the books, audiobooks, podcasts, manga and albums that suit December.
 None of their picks repeat the hub's; the plans link back to the hub's picks by name.
 
 Pick fields are the hub's without the festive level:
@@ -12,12 +14,583 @@ Pick fields are the hub's without the festive level:
     note     how to approach it
     caveat   what to know first (content, pace, availability)
 
+Optional, used by the Christmas guide (/holidays/christmas):
+    release  {"date": ISO date in the US, "where": "Netflix"} for a new title; shown on the
+             pick, and Pick for me only suggests it from that date (pick.is_available)
+    day      a shelf's label in the row of shelves under the intro (default: its `when`)
+    calendar a dated list of every new release ({key, label, after, eyebrow, heading, intro,
+             items: [{date, title, format, where, note}]}), shown after the shelf named in `after`
+    sources  ((label, url), ...) listed under "How we chose"
+
 Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py).
 Manga, podcast and audiobook picks are saved straight to the matching tracker
 (seasonal.extra_entry), since Pick for me only suggests the first six formats.
 """
 
 GUIDES = {
+    "christmas": {
+        "path": "/holidays/christmas",
+        "parent": "holidays",
+        "name": "Christmas 2026 guide",
+        "short": "Christmas",
+        "theme": "holiday",
+        "published": "2026-11-20",
+        "reviewed": "2026-11-20",
+        "search_title": "New Christmas movies 2026, TV specials and the best Christmas episodes, with dates and where to watch",
+        "headline": "Christmas 2026: what's new, and what's worth another go",
+        "deck": ("Every new Christmas film, special and album of 2026 with its date and where to find it, then twenty picks "
+                 "for the season: five of the new films, five Christmas episodes of shows you may already love, and ten "
+                 "older picks for Christmas Eve and the week after."),
+        "summary": ("Every new Christmas movie, TV special and album of 2026 with dates and platforms, plus twenty picks "
+                    "from Ebenezer to the Christmas episode of The Bear."),
+        "card": "New Christmas films and specials for 2026 with their dates, plus the best Christmas episodes and classics.",
+        "eyebrow": "CHRISTMAS 2026",
+        "related_heading": "More for the holidays",
+        "intro": [
+            "Christmas Day falls on a Friday this year. For a lot of people that means a long weekend straight after it, "
+            "then a quiet week before New Year's Day, which is also a Friday. The new releases are spread out further "
+            "than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters on "
+            "November 13, and the busiest single day is Wednesday, December 2, when Prime Video and Netflix each release "
+            "a Christmas film and NBC lights the tree at Rockefeller Center.",
+            "This guide does two jobs. The first part is the new stuff: the Christmas films, specials and albums of 2026, "
+            "each with its date and where to find it, checked on November 20. Five of the films get a full write-up. The "
+            "rest are listed by date in a calendar, so you can see the whole season on one screen.",
+            "The second part is for the rest of December, when you want something you already know will work. There are "
+            "five Christmas episodes from series that are worth an evening on their own, five picks for Christmas Eve and "
+            "five for Christmas Day and the days after it, in films, TV, books, an audiobook, albums and games.",
+            "The holiday hub already sorts twenty-four picks by how festive they are, from Fargo to Elf, and the advent "
+            "calendar opens a new pick every morning from December 1. Nothing here repeats either of them, or the "
+            "reading and listening guide, and the plans near the bottom of the page borrow from all three.",
+        ],
+        "shelves": [
+            {
+                "key": "new-this-year",
+                "name": "New this Christmas",
+                "when": "NEW IN 2026",
+                "day": "New in 2026",
+                "tagline": "Five of the year's new Christmas films, in theaters and on streaming.",
+                "intro": [
+                    "Most of each year's new Christmas films are romantic comedies made for streaming, and 2026 has "
+                    "plenty of those. It also has a gothic Christmas Carol from a horror director, Arnold Schwarzenegger "
+                    "as Santa Claus, and a sequel to the film in which Santa fought mercenaries with a sledgehammer. "
+                    "These five cover that range, from a cartoon for the youngest in the house to a film that should be "
+                    "kept well away from them.",
+                    "Four of the five weren't out when we wrote this, and we haven't seen those four. Read their "
+                    "write-ups as a description of what each film is and who it suits, not as a review. Dates are for "
+                    "the United States.",
+                ],
+                "picks": [
+                    {"kind": "movie", "title": "Ebenezer", "year": 2026, "creator": "Ti West",
+                     "release": {"date": "2026-11-13", "where": "In US theaters · Paramount Pictures"},
+                     "time": "About two hours (116 minutes)",
+                     "why": "Johnny Depp plays Scrooge in a new A Christmas Carol, written by Nathaniel Halpern and "
+                            "directed by Ti West, who made the X horror films with Mia Goth. Ian McKellen plays Jacob "
+                            "Marley, Andrea Riseborough and Tramell Tillman are the Ghosts of Christmas Past and Present, "
+                            "Rupert Grint is Bob Cratchit and Sam Claflin is Scrooge's nephew Fred. Paramount calls it a "
+                            "gothic retelling, set over one Christmas Eve in Victorian London.",
+                     "note": "Go with someone who knows the story well. Half the fun of a new Christmas Carol is "
+                             "spotting what it keeps and what it changes. If you have half an hour beforehand, read "
+                             "the first chapter of Dickens: Marley's visit is the most frightening scene in the book, "
+                             "and it is where a director like West has the most room.",
+                     "caveat": "Rated PG-13 for frightening material, so it is past the point most younger children "
+                               "will enjoy. The Muppet Christmas Carol on the holiday hub is the version for them. "
+                               "Paramount hadn't announced a streaming date when we checked."},
+                    {"kind": "movie", "title": "The Man with the Bag", "year": 2026, "creator": "Adam Shankman",
+                     "release": {"date": "2026-12-02", "where": "Prime Video"},
+                     "time": "A feature-length comedy; no runtime listed yet",
+                     "why": "Arnold Schwarzenegger plays Santa Claus, thirty years after he spent Jingle All the Way "
+                            "fighting other parents for a toy. A few days before Christmas his sack of presents is "
+                            "stolen, and he hires a small-time thief, played by Alan Ritchson from Reacher, to help get "
+                            "it back. Awkwafina, Ken Jeong, Jane Krakowski and Kyle Mooney are in the cast, and Adam "
+                            "Shankman, who directed Hairspray, shot it in Manhattan.",
+                     "note": "Amazon made Red One with Dwayne Johnson in 2024, and this is the same idea: a big Santa "
+                             "action comedy for a night when nobody in the room wants anything sentimental. It suits a "
+                             "group of adults and teenagers better than a family with small children.",
+                     "caveat": "It hadn't been rated or reviewed when we checked. A heist comedy starring Schwarzenegger "
+                               "and Ritchson will have fights and probably some swearing, so look at the rating on "
+                               "Prime Video before putting it on for younger viewers."},
+                    {"kind": "movie", "title": "In a Holidaze", "year": 2026, "creator": "Tiffany Paulsen",
+                     "release": {"date": "2026-12-02", "where": "Netflix"},
+                     "time": "A feature-length romantic comedy",
+                     "why": "Based on Christina Lauren's 2020 novel. Maddie Ziegler plays a woman in her twenties whose "
+                            "family and their oldest friends have spent every Christmas together at a cabin in Utah. "
+                            "This is the last year they will have the cabin. She makes a mess of things with the family "
+                            "friend she has loved for years, and then finds herself back at the start of the trip, "
+                            "living the same holiday again until she works out what she actually wants. Rob Lowe plays "
+                            "one of the parents.",
+                     "note": "It is Groundhog Day at a ski cabin, and the book has a big following among readers of "
+                             "holiday romance, so expect a lot of comparisons in the first week. If you have read it, "
+                             "watch for what survived. If you haven't, the film is the quicker way in.",
+                     "caveat": "A romance with adult characters, best for adults and older teenagers. Time-loop stories "
+                               "tend to sag in the middle, and the novel is told from inside its heroine's head, which "
+                               "is hard to put on screen."},
+                    {"kind": "movie", "title": "Violent Night 2", "year": 2026, "creator": "Tommy Wirkola",
+                     "release": {"date": "2026-12-04", "where": "In US theaters · Universal Pictures"},
+                     "time": "111 minutes",
+                     "why": "David Harbour is back as the hard-drinking Santa Claus of Violent Night (2022), the film "
+                            "that took Home Alone's traps and made them bloody. This time Santa has landed on the naughty "
+                            "list and lost his magic, and he has to stand up to a gangster, played by Jared Harris, who "
+                            "is terrorizing a small town. Kristen Bell joins as Mrs. Claus, and Tommy Wirkola, who "
+                            "directed the first film, directed this one.",
+                     "note": "Watch the first film beforehand if you haven't; the sequel keeps the same Santa and the "
+                             "same sense of humor. Then go with a group of adults who like their action films loud and "
+                             "silly. It is the one film on this page to keep away from a family evening.",
+                     "caveat": "The first film was rated R for strong bloody violence and language throughout, and "
+                               "nothing about the sequel suggests it will be any gentler. Not for children, whatever the "
+                               "poster looks like."},
+                    {"kind": "movie", "title": "Diary of a Wimpy Kid Christmas: The Getaway", "year": 2026,
+                     "creator": "Matt Danner",
+                     "release": {"date": "2026-12-04", "where": "Disney+"},
+                     "time": "An animated family film, about the length of an afternoon matinee",
+                     "why": "Disney's fifth animated Wimpy Kid film, based on The Getaway, the twelfth book in Jeff "
+                            "Kinney's series. The Heffleys skip Christmas at home and fly to a resort on a tropical "
+                            "island, and Greg finds out that paradise isn't as relaxing as the brochure promised. Matt "
+                            "Danner, who directed the animated The Last Straw, directed it.",
+                     "note": "This is the new release for the youngest in the house. Children who have read the books "
+                             "will want it the day it arrives, and it fits in the afternoon, before the grown-ups' film "
+                             "in the evening.",
+                     "caveat": "Slapstick and gross-out jokes in the style of the books. It is set on a beach, so it is "
+                               "the least Christmassy film here, and adults without a Wimpy Kid reader at home can "
+                               "skip it."},
+                ],
+            },
+            {
+                "key": "christmas-episodes",
+                "name": "The Christmas episodes",
+                "when": "ANY NIGHT IN DECEMBER",
+                "day": "Any night",
+                "tagline": "Four half-hours and one long hour, each fine to watch on its own.",
+                "intro": [
+                    "Long-running comedies tend to make a Christmas episode every year, and most of them are forgettable. "
+                    "A few are the best thing the show ever made. These five work even if you have never seen another "
+                    "episode, which makes them good for an evening when nobody can agree on a film and everyone has "
+                    "half an hour.",
+                    "Saving one of these adds the whole series to your library, so it is there if the episode makes "
+                    "you want more. The time line names the episode and where it sits in the show, and the times are "
+                    "for that one episode.",
+                ],
+                "picks": [
+                    {"kind": "tv", "title": "The Simpsons", "year": 1989, "creator": "Matt Groening",
+                     "time": "One 22-minute episode: season 1, episode 1",
+                     "why": "Simpsons Roasting on an Open Fire was the first full-length Simpsons episode, shown on Fox "
+                            "on December 17, 1989. Homer's Christmas bonus is cancelled, the family's Christmas money "
+                            "goes on removing Bart's new tattoo, and Homer secretly takes a job as a shopping-mall Santa "
+                            "to pay for presents. It ends at the dog track, which is how the family gets Santa's Little "
+                            "Helper.",
+                     "note": "Treat it as the start of the show, not an early curiosity. The drawing is rough, but the "
+                             "jokes land, and the ending is as warm as the series ever got. Every season is on Disney+ "
+                             "in the United States.",
+                     "caveat": "It looks very different from the Simpsons most people know; the characters were redrawn "
+                               "over the first few seasons. Nothing in it to worry about for children."},
+                    {"kind": "tv", "title": "Seinfeld", "year": 1989, "creator": "Larry David and Jerry Seinfeld",
+                     "time": "One 22-minute episode: season 9, episode 10",
+                     "why": "The Strike, first shown on December 18, 1997, is the episode that gave the world Festivus. "
+                            "George's father Frank invented it years ago as a protest against Christmas shopping: an "
+                            "aluminum pole instead of a tree, the Airing of Grievances over dinner, and the Feats of "
+                            "Strength to finish. The holiday came from real life. Dan O'Keefe, one of the episode's "
+                            "writers, grew up with a Festivus his father had made up.",
+                     "note": "This is the episode to show someone who has only heard of Festivus. Kramer goes back to "
+                             "work at a bagel shop after a twelve-year strike, Elaine is one stamp away from a free sub, "
+                             "and most of the cast ends up at Frank's table.",
+                     "caveat": "Seinfeld is a show about four selfish people, and Festivus is a sour joke about family "
+                               "holidays. The episode is less cosy than its reputation, which is most of its charm."},
+                    {"kind": "tv", "title": "The Office", "year": 2005, "creator": "Greg Daniels",
+                     "time": "One 22-minute episode: season 2, episode 10",
+                     "why": "In Christmas Party, first shown on December 6, 2005, Michael is given a handmade oven mitt "
+                            "in the office Secret Santa and turns the whole thing into a gift swap, because he has spent "
+                            "twenty times the limit on a video iPod for Ryan. Everyone wants the iPod. Jim only wants Pam "
+                            "to keep the teapot he filled with their private jokes. Michael Schur wrote it, years before "
+                            "he made Parks and Recreation and The Good Place.",
+                     "note": "Season two is where the American Office found its footing, and this episode is a fair "
+                             "test of whether you will like the rest. If Michael's face at the oven mitt makes you "
+                             "laugh, start the series from season two.",
+                     "caveat": "Cringe comedy. Michael tries to rescue his party with a lot of vodka, and you will spend "
+                               "a good part of it wincing on his behalf."},
+                    {"kind": "tv", "title": "Community", "year": 2009, "creator": "Dan Harmon",
+                     "time": "One 22-minute episode: season 2, episode 11",
+                     "why": "In Abed's Uncontrollable Christmas, first shown on December 9, 2010, Abed wakes up seeing "
+                            "the world in stop-motion, like an old Rankin/Bass special, and the rest of his study group "
+                            "go along with it to find out why. The whole episode is animated that way. It starts as a "
+                            "parody of the Rudolph specials and becomes a story about why Christmas is hard for him "
+                            "this year.",
+                     "note": "You don't need to know the characters; the first scene explains enough. It is funniest "
+                             "for anyone who grew up on Rudolph the Red-Nosed Reindeer and Santa Claus Is Comin' to Town, "
+                             "since half the jokes are about those specials.",
+                     "caveat": "Jokes about therapy and television that will pass younger children by, and a sad "
+                               "reason underneath it all: a parent who isn't coming home for Christmas."},
+                    {"kind": "tv", "title": "The Bear", "year": 2022, "creator": "Christopher Storer",
+                     "time": "One episode of about an hour: season 2, episode 6",
+                     "why": "Fishes goes back five years to a Christmas Eve at the Berzattos' house, where Carmy's mother "
+                            "Donna is cooking the Feast of the Seven Fishes for the whole family and coming apart while "
+                            "she does it. Jamie Lee Curtis won an Emmy for playing Donna. Bob Odenkirk, Sarah Paulson, "
+                            "John Mulaney, Gillian Jacobs and Jon Bernthal are around the table. It is the most "
+                            "frightening family Christmas on television.",
+                     "note": "It works without the rest of the show, but it hits harder if you have seen the first "
+                             "season, which explains what happens to Mikey later. Save it for people who have "
+                             "survived a difficult family Christmas of their own.",
+                     "caveat": "An hour of shouting, drinking and a mother's breakdown, ending with a car driven into "
+                               "the house. It is a great episode and a hard one to sit through, and not one to put on "
+                               "with relatives if your own Christmases look anything like it."},
+                ],
+            },
+            {
+                "key": "christmas-eve",
+                "name": "Christmas Eve",
+                "when": "DECEMBER 24",
+                "day": "December 24",
+                "tagline": "From the last-minute wrapping to the hour after midnight.",
+                "intro": [
+                    "Christmas Eve is a long day of waiting, especially for anyone under ten. There are presents still "
+                    "to wrap, food to start and a lot of hours to fill before bed. These five run from the afternoon, "
+                    "when everyone needs a film, to the time after the children are asleep.",
+                    "Each one is either set on Christmas Eve or made for it: a story to read aloud after dinner, a poet "
+                    "reading his own Christmas memories, a rock album about one Christmas Eve, a game that takes place "
+                    "over a single snowy night, and a film about a boy defending his house against two burglars who "
+                    "planned their robbery for December 24.",
+                ],
+                "picks": [
+                    {"kind": "movie", "title": "Home Alone", "year": 1990, "creator": "Chris Columbus",
+                     "time": "1 hour 43 minutes",
+                     "why": "Eight-year-old Kevin McCallister is left behind when his family flies to Paris for "
+                            "Christmas, and he has to defend the house in suburban Chicago from two burglars, Harry and "
+                            "Marv, who plan to clear out the street on Christmas Eve. John Hughes wrote it, Chris "
+                            "Columbus directed it and John Williams wrote the score. The last half hour, when Kevin's "
+                            "traps go off one after another, is the part children ask to watch again.",
+                     "note": "Put it on in the late afternoon, when the children are too excited for anything slower. "
+                             "Adults tend to notice other things on a rewatch: the old man next door, and how much the "
+                             "film is about a boy who thinks his family doesn't want him. ABC has it on its schedule "
+                             "for 8 p.m. Eastern on Christmas Eve this year.",
+                     "caveat": "Rated PG. The traps are cartoon violence, but a couple of them, the iron and the "
+                               "blowtorch, make younger viewers wince, and the film opens with Kevin sent to bed in "
+                               "disgrace."},
+                    {"kind": "book", "title": "The Gift of the Magi", "year": 1905, "creator": "O. Henry",
+                     "time": "About fifteen minutes read aloud",
+                     "why": "O. Henry's short story first ran in a New York newspaper in December 1905. Della has one "
+                            "dollar and eighty-seven cents to buy her husband Jim a Christmas present, so she sells her "
+                            "long hair to a wig maker and buys a chain for his gold watch. Jim, meanwhile, has made a "
+                            "sale of his own. Most people know the twist. The story is better than the twist: it is "
+                            "funny, and the narrator keeps butting in with opinions.",
+                     "note": "Read it aloud after dinner; it takes about as long as the washing up. It suits a table of "
+                             "mixed ages, since the children follow the story and the adults get the jokes about money.",
+                     "caveat": "The language is from 1905, with long sentences and old slang that younger listeners may "
+                               "need explained. It has been out of copyright for decades, so free copies are easy to "
+                               "find."},
+                    {"kind": "audiobook", "title": "A Child's Christmas in Wales", "year": 1952, "creator": "Dylan Thomas",
+                     "extra": {"narrator": "Dylan Thomas"},
+                     "time": "About twenty minutes",
+                     "why": "In 1952 Barbara Holdridge and Marianne Mantell, two recent graduates of Hunter College, "
+                            "recorded Dylan Thomas reading his own work at Steinway Hall in New York. The first side of "
+                            "the record was A Child's Christmas in Wales, his memory of boyhood Christmases in a Welsh "
+                            "seaside town: snow, aunts, uncles asleep after dinner, and a fire at Mrs. Prothero's. It was "
+                            "the first record of their company, Caedmon, which went on to sell spoken word on records "
+                            "for decades. The Library of Congress added it to the National Recording Registry in 2008.",
+                     "note": "Play it once the children are in bed, or let them stay up for it, since it is short. "
+                             "Thomas's voice is the reason to choose the recording over the book, and it is good "
+                             "company while you wrap the last presents.",
+                     "caveat": "Thomas reads in a rolling, musical voice that takes a minute to tune into, and the "
+                               "language is dense. It is a memory of a childhood in the 1920s, without much of a plot."},
+                    {"kind": "album", "title": "Christmas Eve and Other Stories", "year": 1996,
+                     "creator": "Trans-Siberian Orchestra",
+                     "time": "Just over an hour (62 minutes)",
+                     "why": "Trans-Siberian Orchestra's first album is a rock opera about one Christmas Eve: God sends an "
+                            "angel down to Earth to bring back an example of kindness done in the spirit of the holiday. "
+                            "It sets carols and a piece of Tchaikovsky's Nutcracker to electric guitars, piano and choir. "
+                            "It also has Christmas Eve/Sarajevo 12/24, the medley of God Rest Ye Merry, Gentlemen and "
+                            "Carol of the Bells that most people know the band by, in the same recording the metal band "
+                            "Savatage released in 1995.",
+                     "note": "Play it from the start and in order while the evening's cooking gets going, since it is "
+                             "built as one story. In a house that argues about Christmas music, it is one of the few "
+                             "records the rock fans and the carol fans might both put up with.",
+                     "caveat": "Loud, theatrical and completely sincere. If big power ballads make you wince, skip "
+                               "straight to Sarajevo."},
+                    {"kind": "game", "title": "Batman: Arkham Origins", "year": 2013, "creator": "WB Games Montréal",
+                     "time": "About twelve hours for the main story",
+                     "why": "It is Christmas Eve in Gotham, early in Batman's career. The crime boss Black Mask has put "
+                            "a fifty-million-dollar bounty on his head, and eight assassins have come to town to collect "
+                            "it before morning. The city is under snow and strung with lights, and the Joker turns up "
+                            "before the night is out. WB Games Montréal made it as a prequel to Rocksteady's Arkham "
+                            "Asylum and Arkham City.",
+                     "note": "This is the pick for the hours after everyone else has gone to bed. The fighting is the "
+                             "same easy-to-learn, hard-to-master combat as the other Arkham games, and the story follows "
+                             "one night from start to finish, which makes it a good fit for the Christmas break.",
+                     "caveat": "Rated T for blood, violence and language. It came out for PlayStation 3, Xbox 360, Wii U "
+                               "and PC and was never remastered, so the PC version is the simplest way to play it now. It "
+                               "usually ranks below Rocksteady's games, partly because much of its city is Arkham City's "
+                               "map again."},
+                ],
+            },
+            {
+                "key": "christmas-week",
+                "name": "Christmas Day and after",
+                "when": "DECEMBER 25 TO 31",
+                "day": "December 25 to 31",
+                "tagline": "For the afternoon of the day itself and the quiet week before New Year.",
+                "intro": [
+                    "By the afternoon of Christmas Day most houses have opened everything, eaten too much and need "
+                    "something everyone can watch without thinking. Then comes the odd week before New Year, when "
+                    "nobody is sure what day it is and there is finally time for something longer.",
+                    "These five go in that order: a film for the afternoon, a short animated film that British "
+                    "families have watched at Christmas since 1982, a record for the morning after, a book of letters "
+                    "for the long evenings and a farming game to play into January. The holiday hub's family shelf, "
+                    "Everyone on the sofa, has six more for the day itself.",
+                ],
+                "picks": [
+                    {"kind": "movie", "title": "Arthur Christmas", "year": 2011, "creator": "Sarah Smith",
+                     "time": "1 hour 37 minutes",
+                     "why": "Aardman, the studio behind Wallace & Gromit, imagines Santa's operation as a military one: "
+                            "a sleigh the size of a spaceship, an army of elves, and Santa's elder son Steve running it "
+                            "all from mission control. When one present for one girl in Cornwall is missed, only Arthur, "
+                            "the clumsy younger son who answers the letters, thinks it matters. He sets off with his "
+                            "grandfather, the old wooden sleigh and a team of reindeer to deliver it before she wakes up.",
+                     "note": "Good for the afternoon of Christmas Day, when everyone is full and a few of the adults will "
+                             "fall asleep. The jokes come fast enough for the ones who stay awake, and Bill Nighy as the "
+                             "grumpy old Grandsanta is the best thing in it.",
+                     "caveat": "Rated PG. A few noisy chases, and nothing much to worry about for children over four or "
+                               "five."},
+                    {"kind": "movie", "title": "The Snowman", "year": 1982, "creator": "Dianne Jackson",
+                     "time": "26 minutes",
+                     "why": "A wordless animated film of Raymond Briggs's picture book, about a boy whose snowman comes "
+                            "to life one night and flies him to the North Pole. Channel 4 first showed it on December "
+                            "26, 1982, and it was nominated for an Oscar for best animated short. The only singing is "
+                            "Walking in the Air, written by Howard Blake and sung in the film by Peter Auty, a St Paul's "
+                            "Cathedral choirboy.",
+                     "note": "Watch it on the 26th as a short break from everything else. The soft, pencil-crayon "
+                             "drawing looks like the book's pages moving, and the youngest children follow it easily "
+                             "without any dialogue. Some copies open with a short introduction by David Bowie.",
+                     "caveat": "The ending is sad: the snowman melts, and the film doesn't soften it. Small children may "
+                               "need a cuddle. The 2012 sequel, The Snowman and the Snowdog, ends more gently."},
+                    {"kind": "album", "title": "A Christmas Gift for You from Phil Spector", "year": 1963,
+                     "creator": "Phil Spector",
+                     "time": "34 minutes",
+                     "why": "Phil Spector made pop records by piling up session players, pianos and echo into what "
+                            "people called a wall of sound. In 1963 he made a Christmas album that way with the singers "
+                            "on his label: Darlene Love, the Ronettes, the Crystals, and Bob B. Soxx and the Blue Jeans. "
+                            "Darlene Love's Christmas (Baby Please Come Home) first appeared on it, and so did the "
+                            "Ronettes' Sleigh Ride. It came out on November 22, 1963, the day President Kennedy was "
+                            "shot, and hardly sold that year.",
+                     "note": "Put it on the morning after, when the house needs waking up. Every one of its thirteen "
+                             "tracks could be a single, and you will recognise half of them from other people's "
+                             "Christmas playlists. It ends with Spector speaking a thank-you over Silent Night, which "
+                             "you can skip.",
+                     "caveat": "Spector was convicted in 2009 of murdering the actress Lana Clarkson and died in prison "
+                               "in 2021, and some listeners would rather not play his records. The voices belong to the "
+                               "singers: Darlene Love sang Christmas (Baby Please Come Home) on David Letterman's show "
+                               "every December for almost thirty years."},
+                    {"kind": "book", "title": "Letters from Father Christmas", "year": 1976, "creator": "J.R.R. Tolkien",
+                     "time": "An evening, or a letter or two a night",
+                     "why": "Every Christmas from 1920 into the 1940s, Tolkien wrote his children a letter in the shaky "
+                            "handwriting of Father Christmas, with drawings, and left it for them to find. The letters "
+                            "tell the news from the North Pole: the year the North Polar Bear climbed the Pole and fell "
+                            "through the roof, the elves, and a war with goblins in the caves below. His family "
+                            "published them after his death, first in 1976 as The Father Christmas Letters.",
+                     "note": "Read one or two a night between Christmas and New Year, in order, so the stories of the "
+                             "Polar Bear and the goblins build up. Look for an edition with the color pictures; they are "
+                             "half the fun.",
+                     "caveat": "Written for Tolkien's own children, so some jokes are family jokes and the early letters "
+                               "are very short. Fans of The Hobbit will enjoy the goblins. Others may find it slight."},
+                    {"kind": "game", "title": "Stardew Valley", "year": 2016, "creator": "ConcernedApe",
+                     "time": "As long as you like; one season in the game takes about six hours",
+                     "why": "Eric Barone made Stardew Valley on his own over about four years. You inherit your "
+                            "grandfather's run-down farm outside a small town, then grow crops, fish, explore a mine and "
+                            "get to know the townspeople. The game has its own Christmas: the Feast of the Winter Star "
+                            "on the 25th day of winter, when the town holds a secret gift exchange and you are given a "
+                            "neighbor to buy for.",
+                     "note": "Start a new farm on the 26th with a friend or partner. Up to four people can share one "
+                             "farm on most systems, online or split-screen, and the first spring in the game is a gentle "
+                             "way into the new year.",
+                     "caveat": "Hard to put down, and it has no ending to reach, so decide how long you will play "
+                               "before you sit down. It runs on almost everything, phones included."},
+                ],
+            },
+        ],
+        "calendar": {
+            "key": "release-calendar",
+            "label": "Release calendar",
+            "after": "new-this-year",
+            "eyebrow": "EVERY NEW RELEASE, BY DATE",
+            "heading": "The 2026 Christmas calendar",
+            "intro": [
+                "Here is everything new for Christmas 2026 that we could confirm, in date order: films in theaters "
+                "and on streaming, network specials and two new albums. Titles with a full write-up above link to it. "
+                "TV times are Eastern and come from the networks' announced schedules, and the films' dates come from "
+                "the studios and streamers. We checked them all on November 20.",
+                "Schedules move, especially for TV specials, so check the service before you plan an evening around one. "
+                "Hallmark Channel and Lifetime premiere new TV films every week through December. We list two "
+                "of Hallmark's bigger ones and leave the rest to the channels' own schedules.",
+            ],
+            "items": [
+                {"date": "2026-11-04", "title": "A Dog's Perfect Christmas", "format": "Film", "where": "Netflix",
+                 "note": "Dennis Quaid, Milo Ventimiglia and Mary Steenburgen in a family drama from W. Bruce Cameron's "
+                         "novel, narrated by a basset hound voiced by Thomas Haden Church."},
+                {"date": "2026-11-06", "title": "The 12 Dates of Christmas", "format": "Film", "where": "Hulu",
+                 "note": "Lucy Hale and Ian Harding in a romantic comedy about twelve dates in the twelve weeks before "
+                         "Christmas."},
+                {"date": "2026-11-06", "title": "Worst Christmas Ever!", "format": "Album",
+                 "where": "Sufjan Stevens · Asthmatic Kitty",
+                 "note": "Sixteen tracks: fifteen picked from his two Christmas box sets of 2006 and 2012, and On This "
+                         "Christmas (It Only Gets Better), his first new Christmas song in fifteen years."},
+                {"date": "2026-11-06", "title": "Good Weather for Immaculate Conception", "format": "Album",
+                 "where": "Alanis Morissette · Epiphany / Virgin",
+                 "note": "Her first holiday album: fourteen tracks, two of them new songs, with Brandi Carlile and Steve "
+                         "Martin, Joy Oladokun and Martin Short among the guests."},
+                {"date": "2026-11-11", "title": "Tyler Perry's The Gospel of Christmas", "format": "Film",
+                 "where": "Netflix",
+                 "note": "A pastor inherits his family's struggling church in New York, with a cast full of gospel "
+                         "singers, among them Fantasia Barrino, Shirley Caesar and Yolanda Adams."},
+                {"date": "2026-11-12", "title": "The Christmas Switch", "format": "Film", "where": "Netflix",
+                 "note": "A Swedish romantic comedy about two very different twin sisters who swap lives in the weeks "
+                         "before Christmas."},
+                {"date": "2026-11-13", "title": "Ebenezer", "format": "Film", "where": "In US theaters",
+                 "note": "Johnny Depp as Scrooge in Ti West's gothic A Christmas Carol."},
+                {"date": "2026-11-18", "title": "Guarding Stars", "format": "Film", "where": "Netflix",
+                 "note": "Leighton Meester as a bodyguard and Jared Padalecki as the film star she pretends to date at "
+                         "his family's Montana ranch, from Katherine Center's novel The Bodyguard."},
+                {"date": "2026-11-23", "title": "Clashing Through the Snow", "format": "Film", "where": "Prime Video",
+                 "note": "Christopher Briney and Michelle Randolph on a road trip across the country in the holiday rush."},
+                {"date": "2026-11-28", "title": "Holiday Ever After: A Disney World Wish Come True", "format": "TV film",
+                 "where": "Hallmark Channel, 8 p.m.",
+                 "note": "Lacey Chabert and Travis Van Winkle, filmed at Walt Disney World."},
+                {"date": "2026-11-30", "title": "The Wonderful World of Disney: Holiday Spectacular", "format": "Special",
+                 "where": "ABC, 8 p.m., then Disney+ and Hulu",
+                 "note": "The yearly concert special filmed at the Disney parks."},
+                {"date": "2026-12-01", "title": "CMA Country Christmas", "format": "Special",
+                 "where": "ABC, 9 p.m., then Disney+ and Hulu",
+                 "note": "The seventeenth edition, hosted by Lady A, with Trisha Yearwood, Dan + Shay and BeBe Winans."},
+                {"date": "2026-12-02", "title": "The Man with the Bag", "format": "Film", "where": "Prime Video",
+                 "note": "Arnold Schwarzenegger as Santa and Alan Ritchson as the thief he hires."},
+                {"date": "2026-12-02", "title": "In a Holidaze", "format": "Film", "where": "Netflix",
+                 "note": "Maddie Ziegler relives the same Christmas at a Utah cabin."},
+                {"date": "2026-12-02", "title": "Christmas in Rockefeller Center", "format": "Special",
+                 "where": "NBC, 7 p.m.",
+                 "note": "The live lighting of the Rockefeller Center tree. Hosts and singers hadn't been named when we "
+                         "checked."},
+                {"date": "2026-12-02", "title": "Christmas With Snoop", "format": "Special", "where": "NBC, 10 p.m., and Peacock",
+                 "note": "Snoop Dogg's new holiday party special, with Martha Stewart, Gwen Stefani, Jamie Foxx and "
+                         "Kristin Chenoweth among the guests."},
+                {"date": "2026-12-04", "title": "Violent Night 2", "format": "Film", "where": "In US theaters",
+                 "note": "David Harbour's Santa returns, with Kristen Bell as Mrs. Claus."},
+                {"date": "2026-12-04", "title": "Diary of a Wimpy Kid Christmas: The Getaway", "format": "Animated film",
+                 "where": "Disney+",
+                 "note": "The Heffleys spend Christmas on a tropical island."},
+                {"date": "2026-12-05", "title": "A Grand Biltmore Christmas", "format": "TV film",
+                 "where": "Hallmark Channel, 8 p.m.",
+                 "note": "Holland Roden and Niall Matter, with Andie MacDowell and Jonathan Frakes, at the Biltmore "
+                         "estate."},
+                {"date": "2026-12-09", "title": "Gabby's Dollhouse: Makers and Bakers Holiday", "format": "Series",
+                 "where": "Netflix (US)",
+                 "note": "A baking and crafting competition for young pairs of makers, for fans of the preschool show."},
+                {"date": "2026-12-17", "title": "iHeartRadio Jingle Ball 2026", "format": "Special",
+                 "where": "ABC, 8 p.m., then Disney+ and Hulu",
+                 "note": "Highlights from the Jingle Ball concert tour, with Olivia Rodrigo, Hilary Duff and the Jonas "
+                         "Brothers among the acts."},
+                {"date": "2026-12-25", "title": "Disney Parks Magical Christmas Day Parade", "format": "Special",
+                 "where": "ABC, 10 a.m.",
+                 "note": "The parade and concert special that ABC shows every Christmas morning."},
+            ],
+        },
+        "plan_label": "Plan your Christmas",
+        "plan_heading": "Six ways to spend the season",
+        "nights": [
+            {"name": "Christmas Eve with young children",
+             "plan": "Diary of a Wimpy Kid Christmas: The Getaway after lunch, Home Alone once it gets dark, and The Gift "
+                     "of the Magi read aloud when everyone is in pajamas. If they still won't settle, The Polar Express "
+                     "from the holiday hub's family shelf is the book for the last ten minutes before the light goes off."},
+            {"name": "Christmas Eve for grown-ups",
+             "plan": "Christmas Eve and Other Stories while the food goes in, then Ebenezer if it is still showing near "
+                     "you. If you would rather stay in, A Child's Christmas in Wales with the lights low, and the Seinfeld "
+                     "Festivus episode for anyone who wants to air a grievance before bed."},
+            {"name": "A night out with friends in December",
+             "plan": "Violent Night 2 at the cinema on its opening weekend, then back to someone's flat for The Office's "
+                     "Christmas Party and Community's stop-motion episode, which make a forty-five-minute double bill. "
+                     "Save The Bear's Fishes for a quieter night, when nobody has to be cheerful afterwards."},
+            {"name": "Christmas Day afternoon",
+             "plan": "Arthur Christmas after lunch, when the older relatives start to nod off, then The Muppet Christmas "
+                     "Carol from the hub once the children wake everyone up again. Finish the day with the first "
+                     "Simpsons episode, which is twenty-two minutes long and about a family that can't afford Christmas."},
+            {"name": "Boxing Day and the days after",
+             "plan": "The Snowman in the morning, A Christmas Gift for You from Phil Spector while the kitchen gets "
+                     "cleared, and a new farm in Stardew Valley in the afternoon. Keep Letters from Father Christmas by "
+                     "the bed and read one letter a night until New Year."},
+            {"name": "Christmas on your own",
+             "plan": "Pick one new film for the evening, The Man with the Bag if you want noise or In a Holidaze if you "
+                     "want a romance, then Batman: Arkham Origins for as long as you like. Being alone at Christmas can "
+                     "be peaceful. The reading and listening guide has a whole shelf for the last hour of the night if "
+                     "it isn't."},
+        ],
+        "faq": [
+            ("What new Christmas movies are out in 2026?",
+             "In theaters, Ebenezer opened on November 13 and Violent Night 2 opens on December 4. On streaming, "
+             "Netflix has A Dog's Perfect Christmas (November 4), Tyler Perry's The Gospel of Christmas (November 11), "
+             "The Christmas Switch (November 12), Guarding Stars (November 18) and In a Holidaze (December 2). Prime "
+             "Video has Clashing Through the Snow (November 23) and The Man with the Bag (December 2), Hulu has The 12 "
+             "Dates of Christmas (November 6), and Disney+ has Diary of a Wimpy Kid Christmas: The Getaway (December 4). "
+             "The calendar on this page has every date and where to find each one."),
+            ("When can I stream Ebenezer?",
+             "Paramount hadn't announced a streaming date when we checked on November 20. It opened in US theaters on "
+             "November 13. Paramount's films usually move to Paramount+ some weeks after they leave theaters, so if you "
+             "want to see it before Christmas, the cinema is the safe bet."),
+            ("Is Violent Night 2 suitable for children?",
+             "No. The first Violent Night was rated R for strong bloody violence and language throughout, and the "
+             "sequel comes from the same director and writers. For a Santa film the whole family can watch, try "
+             "Arthur Christmas on this page or The Muppet Christmas Carol on the holiday hub."),
+            ("Is there a Doctor Who Christmas special in 2026?",
+             "No. The BBC had promised one, then said on June 10, 2026 that it would not make a one-off special and "
+             "would put the money into the show's long-term future instead. No date has been given for new episodes. "
+             "If you want a Christmas Carol with ghosts in it this year, Ebenezer is the one."),
+            ("What Christmas specials are on TV this year?",
+             "The biggest new ones are on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
+             "Christmas With Snoop at 10 p.m., both on NBC. ABC has its Disney Holiday Spectacular on November 30, CMA "
+             "Country Christmas on December 1, iHeartRadio Jingle Ball on December 17 and the Disney Parks parade on "
+             "Christmas morning. All times are Eastern and can change, so check your listings on the day."),
+            ("What day of the week is Christmas 2026?",
+             "Friday, December 25, so Christmas Eve is a Thursday and New Year's Eve the Thursday after. In the United "
+             "Kingdom Boxing Day falls on a Saturday, and the bank holiday for it moves to Monday, December 28."),
+            ("Why does saving a Christmas episode add the whole series?",
+             "OmniTrackr keeps a show in your library as one entry, with its seasons and episodes inside it. Saving "
+             "The Office from this page adds the series as not started. You can then mark the single episode as "
+             "watched in its episode guide, or carry on from there."),
+        ],
+        "method": [
+            "Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. The release "
+            "dates come from the studios', streamers' and networks' own announcements, as reported by the sources "
+            "below, and were checked on November 20, 2026. Dates are for the United States and TV times are Eastern. "
+            "Dates move, so check the service before you plan a night around one.",
+            "Several of the new films weren't out when we wrote this. We haven't seen them, so their write-ups say "
+            "what each film is and who it suits, not whether it is good. The fifteen older picks were chosen to fill "
+            "the gaps left by the holiday hub, the advent calendar and the reading and listening guide, which is why "
+            "some famous Christmas titles live on those pages instead. Every link on a pick goes to an OmniTrackr "
+            "title page, none go to shops, and nothing here is sponsored.",
+        ],
+        "sources": [
+            ("Netflix Christmas movie schedule 2026, What's on Netflix",
+             "https://www.whats-on-netflix.com/coming-soon/netflix-2026-christmas-movie-lineup/"),
+            ("Netflix's 2026 Christmas lineup, TVLine",
+             "https://www.tvline.com/2283714/2026-netflix-christmas-movies-schedule-full-cast-list/"),
+            ("Every new Christmas movie premiere, TVLine",
+             "https://www.tvline.com/2287838/2026-christmas-tv-movie-schedule-hallmark-lifetime-netflix/"),
+            ("Hallmark Channel 2026 Christmas movies, TVLine",
+             "https://www.tvline.com/2261153/2026-hallmark-channel-christmas-movies-schedule-full-cast-photos-list/"),
+            ("New Christmas movies to stream in 2026, TV Guide", "https://www.tvguide.com/galleries/new-christmas-movies-2026/"),
+            ("Ebenezer: everything you need to know, Paramount+",
+             "https://www.paramountplus.com/sneak-peak/ebenezer-everything-you-need-to-know/"),
+            ("Violent Night 2, Wikipedia", "https://en.wikipedia.org/wiki/Violent_Night_2"),
+            ("The Man with the Bag, Wikipedia", "https://en.wikipedia.org/wiki/The_Man_with_the_Bag_(film)"),
+            ("Diary of a Wimpy Kid Christmas: The Getaway release date, What's on Disney Plus",
+             "https://whatsondisneyplus.com/diary-of-a-wimpy-kid-christmas-the-getaway-disney-release-date-announced/"),
+            ("Every 2026 Christmas special coming to TV, Marie Claire",
+             "https://www.marieclaire.com/culture/tv-shows/best-christmas-specials-2026/"),
+            ("CBS and ABC 2026 holiday special schedules, Western Mass News",
+             "https://www.westernmassnews.com/2026/11/05/cbs-abc-announce-2026-holiday-special-schedules/"),
+            ("Sufjan Stevens announces Worst Christmas Ever!, JamBase",
+             "https://www.jambase.com/article/sufjan-stevens-worst-christmas-ever-compilation-holiday-album"),
+            ("Alanis Morissette announces a Christmas album, Stereogum",
+             "https://stereogum.com/2514139/alanis-morissette-announces-new-christmas-album-feat-brandi-carlile-steve-martin-martin-short/music"),
+            ("The 2026 Doctor Who Christmas special is cancelled, The A.V. Club",
+             "https://www.avclub.com/doctor-who-christmas-special-2026-cancelled"),
+            ("A Child's Christmas in Wales (1952), Library of Congress",
+             "https://blogs.loc.gov/now-see-hear/2022/12/from-the-national-recording-registry-a-childs-christmas-in-wales-1952/"),
+        ],
+    },
     "thanksgiving": {
         "path": "/holidays/thanksgiving",
         "parent": "holidays",

@@ -46,7 +46,7 @@ def test_edition_has_24_doors_across_every_format():
 def test_no_door_repeats_another_holiday_guide():
     from app.discover_catalog import MONTHLY_EDITIONS
     taken = {(item["kind"], title_pages.slugify(item["title"]))
-             for slug in ("holidays", "thanksgiving", "reading-and-listening") for item in seasonal.picks(seasonal.season(slug))}
+             for slug in ("holidays", "christmas", "thanksgiving", "reading-and-listening") for item in seasonal.picks(seasonal.season(slug))}
     december = MONTHLY_EDITIONS["december-2026"]["items"]
     taken |= {(title_pages.LIBRARY_TO_KIND[item["category"]], title_pages.slugify(item["title"])) for item in december}
     for door in EDITIONS[2026]["doors"]:
