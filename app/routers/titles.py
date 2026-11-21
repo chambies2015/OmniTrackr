@@ -38,7 +38,7 @@ KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "
                 "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
-FRIEND_RECS_VERSION = "20261121-tell-1"
+FRIEND_RECS_VERSION = "20261121-sweep-f-1"
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read",
                   "manga": "read", "podcast": "heard", "audiobook": "heard"}

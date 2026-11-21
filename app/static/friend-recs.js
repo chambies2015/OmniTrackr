@@ -243,7 +243,8 @@
     setStatus('Sending…');
     try {
       const data = await api('/api/friend-recs', { json: payload({ friend_ids: friendIds }) });
-      if (data.sent) told('friends');
+      // "Already in their inbox" is a telling too: sending it again in a new month counts for that month.
+      if (data.sent || data.already) told('friends');
       const names = data.friends || [];
       const who = names.length === 1 ? names[0] : `${names.length} friends`;
       setStatus(data.sent ? `Sent to ${who}. They'll find it on their dashboard.` : `Already in ${who}'s inbox. We updated your note.`, 'ok');

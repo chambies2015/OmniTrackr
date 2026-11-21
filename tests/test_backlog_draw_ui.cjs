@@ -130,3 +130,25 @@ test('show() brings back a card hidden here, refreshes it and says whether it is
   assert.equal(await module.show(), false);
   assert.equal(nodes.backlogDraw.hidden, true);
 });
+
+test('show() brings a card tucked behind Show more out before scrolling to it (Nov 21 sweep f)', async () => {
+  const { module, nodes } = setup();
+  const order = [];
+  const classes = new Set(['backlog-draw', 'is-home-tucked']);
+  nodes.backlogDraw.classList = { add() {}, remove() {}, contains: name => classes.has(name) };
+  nodes.backlogDraw.scrollIntoView = () => { order.push(classes.has('is-home-tucked') ? 'scrolled while tucked' : 'scrolled'); };
+  global.window.OmniHomeLayout = { reveal: node => { order.push('revealed'); assert.equal(node, nodes.backlogDraw); classes.delete('is-home-tucked'); } };
+  global.fetch = async () => ({ ok: true, json: async () => ({ card: { state: 'deal', today: '2026-11-18', total: 6 } }) });
+  assert.equal(await module.show(), true);
+  assert.deepEqual(order, ['revealed', 'scrolled']);
+  // Already out: nothing to reveal, it just scrolls.
+  order.length = 0;
+  assert.equal(await module.show(), true);
+  assert.deepEqual(order, ['scrolled']);
+  // A home screen without the layout script still scrolls, and a DOM without classList.contains doesn't throw.
+  delete global.window.OmniHomeLayout;
+  nodes.backlogDraw.classList = { add() {}, remove() {} };
+  order.length = 0;
+  assert.equal(await module.show(), true);
+  assert.deepEqual(order, ['scrolled']);
+});

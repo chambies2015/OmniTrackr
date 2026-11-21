@@ -1322,7 +1322,9 @@ def draw_progress(db: Session, user: models.User, finishes: list[dict], month: s
     if counted < target:
         draw = backlog_draw.active(db, user.id)
         row = backlog_draw._item(db, user.id, draw.category, draw.item_id) if draw is not None else None
-        if row is not None and (row.title or "").strip():
+        # A card ticked off before this month (in the library, say) still reads "picked" until the home
+        # screen next loads the draw and closes it; it can't take this month's deal, so it isn't offered.
+        if row is not None and (row.title or "").strip() and not backlog_draw._done(draw.category, row):
             card = {"title": row.title.strip(), "category": draw.category,
                     "night": draw.night.isoformat() if draw.night else None}
         else:

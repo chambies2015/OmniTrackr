@@ -483,10 +483,11 @@
   }
 
   window.OmniHomeFocus = { claim, queue, reset: resetFocus, render: renderFocus };
-  window.OmniHomeLayout = { arrange, schedule, reset: resetLayout, start, expand: setExpanded };
+  // reveal: another card's button that scrolls to a card (the challenge's "Deal me in") brings it out first.
+  window.OmniHomeLayout = { arrange, schedule, reset: resetLayout, start, expand: setExpanded, reveal: revealFor };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { claim, queue, resetFocus, arrange, quiet, engaged, arrangeColumn, focus, layout, start, setExpanded };
+    module.exports = { claim, queue, resetFocus, arrange, quiet, engaged, arrangeColumn, focus, layout, start, setExpanded, revealFor };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {
