@@ -148,3 +148,46 @@ test('a birthday step names titles in the library that turn a round number, or t
     delete global.document;
   }
 });
+
+test('a day step says when the next finish is due, in local time, or how the step counts', () => {
+  const now = new Date(2027, 5, 12, 22, 0);
+  const tomorrow = new Date(2027, 5, 13, 21, 40);
+  const time = tomorrow.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const open = { titles: ['  Gone Home '], count: 1, until: tomorrow.toISOString() };
+  const step = { kind: 'day', done: false, count: 1, target: 2, hours: 24, open };
+  assert.equal(challenge.dayHint(step, now), `Finish one more by ${time} tomorrow to go with Gone Home`);
+
+  const later = new Date(2027, 5, 12, 23, 30);
+  assert.equal(challenge.dayHint({ ...step, open: { ...open, until: later.toISOString() } }, now),
+    `Finish one more by ${later.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today to go with Gone Home`);
+
+  const three = { ...step, target: 3, open: { titles: ['A', 'B'], count: 2, until: tomorrow.toISOString() } };
+  assert.equal(challenge.dayHint(three, now), `Finish one more by ${time} tomorrow to go with A and B`);
+
+  // A window that has closed, a missing one or a broken date falls back to how the step counts.
+  const fallback = 'Any two finishes less than 24 hours apart count';
+  assert.equal(challenge.dayHint({ ...step, open: { ...open, until: new Date(2027, 5, 12, 21).toISOString() } }, now), fallback);
+  assert.equal(challenge.dayHint({ ...step, open: null }, now), fallback);
+  assert.equal(challenge.dayHint({ ...step, open: { titles: ['Gone Home'], until: 'soon' } }, now), fallback);
+  assert.equal(challenge.dayHint({ ...step, open: { titles: [], until: tomorrow.toISOString() } }, now), fallback);
+  assert.equal(challenge.dayHint({ ...step, done: true }, now), '');
+  assert.equal(challenge.dayHint({ ...step, kind: 'birthday' }, now), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {},
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const item = challenge.stepItem({ kind: 'day', label: 'Finish two things within a day', done: false,
+      count: 0, target: 2, hours: 24, open: null });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, fallback);
+    assert.ok(item.children.some(node => node.className === 'month-challenge__count' && node.textContent === '0 of 2'));
+  } finally {
+    delete global.document;
+  }
+});

@@ -259,7 +259,7 @@ def _byline(trail, published) -> str:
     return f'<p class="guide-byline">By <a href="/about">OmniTrackr</a> · {stamp}</p>'
 
 
-GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
 GUEST_HEAD = f'<script src="{GUEST_LIST_JS}" defer></script>'
 
 
