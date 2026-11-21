@@ -119,13 +119,22 @@ STEP_WORDS = {1: "one", 2: "two", 3: "three", 4: "four"}
 PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
 
 
+def _with_other(item: dict) -> str:
+    """", with the book" after a pick whose edition names its version in another format."""
+    other = (item.get("other") or {}).get("category")
+    if other not in CATEGORIES:
+        return ""
+    label = CATEGORIES[other][1]
+    return f", with the {_e(label if label == 'TV show' else label.lower())}"
+
+
 def _edition_section(step: dict, number: int = 1) -> str:
     slug = step.get("edition")
     edition = published_editions().get(slug)
     if not edition:
         return ""
     items = "".join(
-        f'<li><strong>{_e(item["title"])}</strong> <span class="muted">{_e(CATEGORIES[item["category"]][1])}</span></li>'
+        f'<li><strong>{_e(item["title"])}</strong> <span class="muted">{_e(CATEGORIES[item["category"]][1])}{_with_other(item)}</span></li>'
         for item in edition["items"]
     )
     picks = PICK_WORDS.get(len(edition["items"]), str(len(edition["items"])))
