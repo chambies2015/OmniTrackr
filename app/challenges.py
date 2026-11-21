@@ -25,7 +25,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import diary, models, title_origins, title_pages, year_in_review
+from . import backlog_draw, diary, models, title_origins, title_pages, year_in_review
 from .discover_catalog import MONTHLY_EDITIONS, published_editions
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -67,6 +67,8 @@ FORMAT_NOUNS = {
 #               best-known work); another copy of the same story is not other work
 #   report      write ``words`` words or more about each of ``count`` titles finished this month: the takeaway on
 #               the finish screen, the note on a journal finish and the title's review, added together
+#   draw        finish ``count`` titles this month that the member kept from the backlog draw on the home screen
+#               (the "Draw from your backlog" card), whenever they kept it and whatever happened to the card after
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -346,6 +348,29 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Write fifty words or more about one title you finish in September. The takeaway you write when you mark it finished counts, and so do a note on the finish in your journal and the review on the title, all added together, so you can write a line tonight and finish the report at the weekend. Four or five sentences will do it: what it is, what worked, what didn't and who you would give it to. Nobody grades it. A takeaway stays private, and a review is public only if you choose to publish it. The challenge card keeps count and can open the finish screen for your latest finish."},
         ],
         "reflection": "Which of this month's finishes would you put on a syllabus, and what would you want a class to argue about?",
+    },
+    "2027-10": {
+        "name": "At a price",
+        "tagline": "Finish one of October's nine bargains, take the deal the backlog draw offers you and make all three wishes.",
+        "published": "2027-10-01",
+        # The October edition (out October 1) has nine picks, one per format, each a story about a wish granted at a price.
+        "edition": "october-2027",
+        "intro": [
+            "October is the month for stories about the dark, and one of the oldest is the bargain: a wish granted by a devil, a witch or a stranger at a crossroads, and a price that turns out to be more than anyone meant to pay. This challenge, and the October edition it pairs with, are about those deals: nine of them, one in each format, from a potion that keeps two rivals young whether they like it or not to a lamb brought back from the dead on the condition that it starts a cult. The challenge asks you to finish one of them, to take a deal of your own from the backlog draw on your home screen, and to make all three wishes, meaning three finishes in October.",
+            "The deal is the new part. The Draw from your backlog card on your home screen deals you three face-down cards from titles you saved and never started. Keep one, finish it in October, and the step is done. You don't choose what's on the cards, which is the point: the bargain is that you watch, play, read or listen to whatever you're dealt. Anything you finish in October counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "october-2027",
+             "label": "Finish one of October's nine bargains",
+             "detail": "The October edition has nine stories about a wish granted at a price, one in each format OmniTrackr tracks, and each says who the deal is with. Death Becomes Her is 104 minutes and Robert Johnson's King of the Delta Blues Singers about 43, so either fits an evening, and Something Wicked This Way Comes is a weekend's reading. Chainsaw Man is twelve episodes and xxxHolic nineteen volumes, so start those early. Finish any one of the nine in October and this step is done."},
+            {"kind": "draw", "count": 1,
+             "label": "Take the deal",
+             "detail": "On your home screen, the Draw from your backlog card deals you three face-down cards from titles you saved and never started. Turn them over, keep one, pick a night for it if you like, and finish it in October. A card you kept before October counts too, and so does one you put back and then finished anyway. The draw needs at least three titles waiting in your library (podcasts aren't dealt, since they rarely end), so if the card isn't there, save a few first. If you don't like the first three, you can deal again, but the spirit of the thing is to take what you're given."},
+            {"kind": "total", "count": 3,
+             "label": "Make all three wishes",
+             "detail": "Wishes come in threes in the old stories, from The Monkey's Paw to the genie in the bottle, and the third is usually the one that puts things right. Finish three titles in October, in any format. The edition pick and the card you were dealt both count toward the three, so a single extra finish can do it. Nobody is keeping score but you."},
+        ],
+        "reflection": "Which of this month's finishes cost you more than you expected, in time, nerve or sleep, and was it worth the price?",
     },
 }
 
@@ -1207,6 +1232,43 @@ def report_progress(finishes: list[dict], reviews: dict[tuple[str, int], list[st
     return {"count": counted, "best": best}
 
 
+# ---------------------------------------------------------------- draw steps
+
+def _kept_cards(db: Session, user_id: int, before: datetime) -> set[tuple[str, int]]:
+    """Every title the member has kept from the backlog draw before ``before``, whatever happened to the card.
+
+    ``created_at`` rather than ``picked_at``, which "Not tonight" moves forward to ask again later.
+    """
+    return {(category, item_id) for category, item_id in db.query(
+        models.BacklogDraw.category, models.BacklogDraw.item_id,
+    ).filter(models.BacklogDraw.user_id == user_id, models.BacklogDraw.created_at < before).distinct()}
+
+
+def draw_progress(db: Session, user: models.User, finishes: list[dict], month: str, target: int = 1) -> dict:
+    """This month's finishes that the member kept from the backlog draw, and where their draw stands.
+
+    A kept card counts once its title is finished this month, whenever it was kept (before the month ended) and
+    whatever happened to the card afterwards: a member who put it back and finished it anyway still took the deal.
+    While the step isn't done, "card" is the title on the member's card now ({title, category, night}) and
+    "ready" says whether the draw has enough unstarted titles to deal. Both describe the member's own library,
+    so only their card gets them.
+    """
+    _, end = month_bounds(month)
+    kept = _kept_cards(db, user.id, end)
+    counted = sum(1 for finish in finishes
+                  if finish["item_id"] is not None and (finish["category"], finish["item_id"]) in kept)
+    card, ready = None, False
+    if counted < target:
+        draw = backlog_draw.active(db, user.id)
+        row = backlog_draw._item(db, user.id, draw.category, draw.item_id) if draw is not None else None
+        if row is not None and (row.title or "").strip():
+            card = {"title": row.title.strip(), "category": draw.category,
+                    "night": draw.night.isoformat() if draw.night else None}
+        else:
+            ready = backlog_draw.backlog_count(db, user) >= backlog_draw.MIN_BACKLOG
+    return {"count": counted, "card": card, "ready": ready}
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -1287,6 +1349,14 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count = found["count"]
             # "best" names one of the member's own finishes, like "waiting", so only their card has it.
             extra = {"words": words, "best": found["best"]}
+        elif step["kind"] == "draw":
+            target = step.get("count", 1)
+            user = db.get(models.User, user_id)
+            found = (draw_progress(db, user, finishes, month, target) if user is not None
+                     else {"count": 0, "card": None, "ready": False})
+            count = found["count"]
+            # "card" names the member's own kept title, like "best", so only their card has it.
+            extra = {"card": found["card"], "ready": found["ready"]}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],

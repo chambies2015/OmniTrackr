@@ -111,3 +111,22 @@ test('a browser that hid the deal card tells the server, so the backlog isn\'t c
   await shown.module.refresh(true);
   assert.doesNotMatch(plain[0], /hidden=/);
 });
+
+test('show() brings back a card hidden here, refreshes it and says whether it is showing', async () => {
+  const storage = { omnitrackr_backlog_draw_hidden: JSON.stringify({ me: Date.now() + 60000, other: 5 }) };
+  const { module, nodes } = setup(storage);
+  const asked = [];
+  let scrolled = 0;
+  nodes.backlogDraw.scrollIntoView = () => { scrolled += 1; };
+  global.fetch = async url => { asked.push(url); return { ok: true, json: async () => ({ card: { state: 'deal', today: '2026-11-18', total: 6 } }) }; };
+  assert.equal(await module.show(), true);
+  // Only this account's "Hide for now" is cleared, and the server is asked to count the backlog again.
+  assert.deepEqual(JSON.parse(storage.omnitrackr_backlog_draw_hidden), { other: 5 });
+  assert.doesNotMatch(asked[0], /hidden=/);
+  assert.equal(nodes.backlogDraw.hidden, false);
+  assert.equal(scrolled, 1);
+  // Too few titles waiting: nothing to show.
+  global.fetch = async () => ({ ok: true, json: async () => ({ card: null }) });
+  assert.equal(await module.show(), false);
+  assert.equal(nodes.backlogDraw.hidden, true);
+});

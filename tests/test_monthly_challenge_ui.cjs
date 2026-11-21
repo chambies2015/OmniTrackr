@@ -313,3 +313,71 @@ test('a report step counts the words so far, names the finish to write about, or
     delete global.document;
   }
 });
+
+test('a draw step names the kept card, offers to deal, or says what the draw needs', () => {
+  const step = { kind: 'draw', done: false, count: 0, target: 1, card: { title: ' Dune ', category: 'movies', night: '2027-10-15' }, ready: false };
+  assert.equal(challenge.drawHint(step), 'Your card: Dune, kept for Friday');
+  assert.equal(challenge.drawHint({ ...step, card: { ...step.card, night: null } }), 'Your card: Dune. Finish it to take the deal');
+  assert.equal(challenge.drawHint({ ...step, card: { ...step.card, night: '15 October' } }), 'Your card: Dune. Finish it to take the deal');
+  assert.equal(challenge.drawHint({ ...step, card: null, ready: true }), 'Deal three cards from your backlog and keep one');
+  const needs = "The draw deals from titles you've saved and not started, and needs three";
+  assert.equal(challenge.drawHint({ ...step, card: null }), needs);
+  assert.equal(challenge.drawHint({ ...step, card: { title: '   ' } }), needs);
+  assert.equal(challenge.drawHint({ ...step, card: 'Dune', ready: 'yes' }), needs);
+  assert.equal(challenge.drawHint({ ...step, done: true }), '');
+  assert.equal(challenge.drawHint({ ...step, kind: 'report' }), '');
+  // The other hints ignore a draw step, so it gets only its own line.
+  assert.equal(challenge.reportHint(step), '');
+  assert.equal(challenge.makerHint(step), '');
+  // Dates are read as calendar days, so no time zone moves them.
+  assert.equal(challenge.nightName('2027-10-31'), 'Sunday');
+  assert.equal(challenge.nightName('2027-02-30'), '');
+  assert.equal(challenge.nightName('tomorrow'), '');
+  assert.equal(challenge.nightName(null), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {}, type: '',
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const button = challenge.drawButton(step);
+    assert.equal(button.textContent, 'See my card');
+    assert.equal(button.dataset.challengeAction, 'draw');
+    assert.equal(challenge.drawButton({ ...step, card: null, ready: true }).textContent, 'Deal me in');
+    // Nothing to deal yet, or nothing left to do: no button.
+    assert.equal(challenge.drawButton({ ...step, card: null }), null);
+    assert.equal(challenge.drawButton({ ...step, done: true }), null);
+    assert.equal(challenge.drawButton({ ...step, kind: 'total' }), null);
+
+    const item = challenge.stepItem({ ...step, label: 'Take the deal' });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, 'Your card: Dune, kept for Friday');
+    assert.equal(label.children[1].dataset.challengeAction, 'draw');
+  } finally {
+    delete global.document;
+  }
+});
+
+test('Deal me in opens the backlog draw, or says where to find it', async () => {
+  const said = [];
+  global.document = { getElementById: id => (id === 'monthlyChallengeStatus' ? { set textContent(value) { said.push(value); } } : null) };
+  global.window = { OmniBacklogDraw: { show: async () => true } };
+  try {
+    assert.equal(await challenge.showDraw(), true);
+    assert.deepEqual(said, []);
+    window.OmniBacklogDraw.show = async () => false;
+    assert.equal(await challenge.showDraw(), false);
+    assert.equal(said.at(-1), 'Find the Draw from your backlog card on your home screen.');
+    window.OmniBacklogDraw.show = async () => { throw new Error('offline'); };
+    assert.equal(await challenge.showDraw(), false);
+    delete window.OmniBacklogDraw;
+    assert.equal(await challenge.showDraw(), false);
+  } finally {
+    delete global.window;
+    delete global.document;
+  }
+});

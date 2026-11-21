@@ -282,7 +282,11 @@ GUEST_PANEL_NOTE = ('<p class="save-panel__guest" data-guest-only>No account yet
 def _other_version(item) -> str:
     """The pick's version in another format, for editions that name one (July 2027 onward), the best-known
     work by the same maker, for editions that name that instead (August 2027), or where the pick has been
-    taught, for editions about set texts (September 2027)."""
+    taught, for editions about set texts (September 2027), or the bargain at the heart of the story, for
+    editions about wishes granted at a price (October 2027)."""
+    bargain = item.get("bargain")
+    if bargain and bargain.get("note"):
+        return f'<p class="pick-other"><strong>The bargain:</strong> {escape(bargain["note"])}</p>'
     classroom = item.get("classroom")
     if classroom and classroom.get("note"):
         return f'<p class="pick-other"><strong>In the classroom:</strong> {escape(classroom["note"])}</p>'

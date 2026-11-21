@@ -106,6 +106,22 @@
     }
   }
 
+  function unhideHere() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(HIDE_KEY) || '{}') || {};
+      if (!saved[accountKey()]) return;
+      delete saved[accountKey()];
+      localStorage.setItem(HIDE_KEY, JSON.stringify(saved));
+    } catch (error) { /* nothing stored */ }
+  }
+
+  // Other cards (the monthly challenge's "Take the deal" step) hear when a card is kept, finished or given up.
+  function announce(what) {
+    try {
+      window.dispatchEvent(new CustomEvent('omnitrackr:backlog-draw-changed', { detail: { what } }));
+    } catch (error) { /* nothing listening */ }
+  }
+
   function hideHere() {
     try {
       const saved = JSON.parse(localStorage.getItem(HIDE_KEY) || '{}') || {};
@@ -240,6 +256,7 @@
       });
       state.hand = null;
       render(data.card);
+      announce('kept');
     } catch (error) {
       node.disabled = false;
       setStatus(error.message);
@@ -381,6 +398,7 @@
     setStatus('');
     try {
       const data = await send('POST', '/api/backlog-draw/answer', { today: localToday(), ...body });
+      announce(body && body.action);
       return data;
     } catch (error) {
       if (node) node.disabled = false;
@@ -597,6 +615,20 @@
     return Boolean(section && !section.hidden);
   }
 
+  // Bring the card back, even if "Hide for now" was pressed in this browser, and scroll to it. Resolves to
+  // whether the card is showing (it isn't when fewer than three titles are waiting). Mid-deal or mid-score it
+  // only scrolls, so the member's cards aren't thrown away.
+  function show() {
+    unhideHere();
+    const busy = state.hand || state.scoring || state.finished;
+    return Promise.resolve(busy ? null : refresh(true)).then(() => {
+      const section = $('backlogDraw');
+      const shown = Boolean(section && !section.hidden);
+      if (shown && section.scrollIntoView) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return shown;
+    });
+  }
+
   function wire() {
     $('backlogDrawHide')?.addEventListener('click', event => {
       const node = event.currentTarget;
@@ -617,8 +649,8 @@
     if (document.visibilityState === 'visible' && state.card && state.card.today !== localToday()) refresh(true);
   });
 
-  window.OmniBacklogDraw = { refresh, reset, render, active };
+  window.OmniBacklogDraw = { refresh, reset, render, active, show };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { refresh, reset, render, active, localToday, addDays, weekday, nightWords, nightChoices, hourWords, state };
+    module.exports = { refresh, reset, render, active, show, localToday, addDays, weekday, nightWords, nightChoices, hourWords, state };
   }
 })();

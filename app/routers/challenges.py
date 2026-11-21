@@ -121,8 +121,11 @@ PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
 
 def _with_other(item: dict) -> str:
     """", with the book" after a pick whose edition names its version in another format, ", in the shadow
-    of Rumours" after one that names its maker's best-known work, or ", taught at Harvard" after one that
-    says where it has been taught."""
+    of Rumours" after one that names its maker's best-known work, ", taught at Harvard" after one that
+    says where it has been taught, or ", a deal with a chained god" after one that names who a bargain is with."""
+    deal = (item.get("bargain") or {}).get("with")
+    if deal:
+        return f", a deal with {_e(deal)}"
     where = (item.get("classroom") or {}).get("where")
     if where:
         return f", taught {_e(where)}"
