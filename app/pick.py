@@ -91,7 +91,9 @@ def _build() -> list[dict]:
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
     from .seasonal import pool_sources as seasonal_sources
     for item, label, url in seasonal_sources():
-        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
+        # A new title in the Christmas guide carries its release date, so it isn't suggested before it is out.
+        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url,
+                    out=(item.get("release") or {}).get("date")))
     from .best_of import pool_sources as best_of_sources
     for item, label, url in best_of_sources():
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
