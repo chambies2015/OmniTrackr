@@ -684,7 +684,16 @@
     google.rel = 'nofollow';
     google.appendChild(googleLogo());
     google.appendChild(element('span', '', 'Continue with Google'));
-    google.addEventListener('click', function () { rememberPage(); report('signup_sheet_google'); report('signup_form_opened'); });
+    google.addEventListener('click', function () {
+      rememberPage();
+      report('signup_sheet_google');
+      report('signup_form_opened');
+      if (savedCount()) report('guest_list_signup');
+      // A friend's invite picked up on the homepage (auth.js) travels to Google, as from the homepage button.
+      let invite = '';
+      try { invite = window.sessionStorage.getItem('omnitrackr_friend_invite') || ''; } catch (_) { invite = ''; }
+      google.href = /^[A-Za-z0-9_-]{16,32}$/.test(invite) ? '/auth/google/start?invite=' + encodeURIComponent(invite) : '/auth/google/start';
+    });
     const email = element('a', 'guest-sheet__btn guest-sheet__btn--ghost', 'Sign up with email');
     email.href = '/#signup';
     email.addEventListener('click', function () { rememberPage(); report('signup_sheet_email'); });

@@ -32,7 +32,7 @@ function allText(node) {
   return [node.textContent || '', ...(node.children || []).map(allText)].join(' ');
 }
 
-function load({ mark = 'google', phone = true, member = false, saved = 0, guestSheet = '', guestList = null } = {}) {
+function load({ mark = 'google', phone = true, member = false, saved = 0, guestSheet = '', guestList = null, invite = '' } = {}) {
   const store = new Map();
   if (member) store.set('omnitrackr_user', '{"id":1}');
   if (saved) store.set('omnitrackr_guest_list', JSON.stringify(Array.from({ length: saved }, (_, i) => ({ kind: 'movie', slug: `t-${i}`, title: `T ${i}` }))));
@@ -41,7 +41,8 @@ function load({ mark = 'google', phone = true, member = false, saved = 0, guestS
     setItem: (key, value) => store.set(key, String(value)),
     removeItem: key => store.delete(key),
   };
-  global.sessionStorage = { getItem: () => null, setItem() {} };
+  const session = new Map(invite ? [['omnitrackr_friend_invite', invite]] : []);
+  global.sessionStorage = { getItem: key => (session.has(key) ? session.get(key) : null), setItem() {} };
   const clicks = [];
   const menus = [{ open: true }];
   const body = fakeElement('body');
@@ -109,6 +110,20 @@ test('Continue with Google counts as starting to sign up and remembers the page'
   const back = JSON.parse(store.get('omnitrackr_guest_return'));
   assert.equal(back.path, '/in-order/star-wars');
   assert.equal(back.title, 'Star Wars in order | OmniTrackr');
+});
+
+test('a friend invite rides along to Google, and saved titles count as a guest list sign-up', () => {
+  const { press, sheet, events } = load({ invite: 'abcdefghijklmnop1234', saved: 2 });
+  press();
+  const google = sheet().children.find(node => node.className === 'guest-sheet__actions').children[0];
+  google.listeners.click.forEach(fn => fn({}));
+  assert.equal(google.href, '/auth/google/start?invite=abcdefghijklmnop1234');
+  assert.ok(events.includes('guest_list_signup'));
+  const bad = load({ invite: '../../x' });
+  bad.press();
+  const other = bad.sheet().children.find(node => node.className === 'guest-sheet__actions').children[0];
+  other.listeners.click.forEach(fn => fn({}));
+  assert.equal(other.href, '/auth/google/start');
 });
 
 test('the sheet mentions titles saved in this browser', () => {
