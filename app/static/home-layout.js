@@ -71,6 +71,56 @@
     return open;
   }
 
+  // A film, an album or a game nobody logged time on has nothing to step through, so this card only
+  // offered "Open". "Mark watched" finishes it in one tap with the same PUT the library's done circle
+  // sends, then opens the usual finish moment and refreshes Continue.
+  const DONE = {
+    movies: ['watched', 'watched'], 'tv-shows': ['watched', 'finished'], anime: ['watched', 'finished'],
+    'video-games': ['played', 'played'], music: ['listened', 'listened'], books: ['read', 'read'],
+    manga: ['read', 'read'], podcasts: ['listened', 'listened'], audiobooks: ['listened', 'finished'],
+  };
+
+  function say(message, tone) {
+    if (typeof showNotice === 'function') showNotice(message, tone);
+  }
+
+  function doneButton(item, itemId) {
+    const [field, word] = DONE[item.category] || [];
+    if (!field || !validId(itemId)) return null;
+    const title = item.title || 'this title';
+    const button = el('button', 'home-focus__btn home-focus__done', `Mark ${word}`);
+    button.type = 'button';
+    button.setAttribute('aria-label', `Mark ${title} as ${word}`);
+    button.addEventListener('click', async () => {
+      if (button.disabled || typeof authenticatedFetch !== 'function') return;
+      button.disabled = true;
+      let saved = false;
+      try {
+        const base = typeof API_BASE === 'string' ? API_BASE : '';
+        const response = await authenticatedFetch(`${base}/${item.category}/${itemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: true }),
+        });
+        saved = Boolean(response && response.ok);
+      } catch (error) {
+        saved = false;
+      }
+      button.disabled = false;
+      if (!saved) {
+        say('That didn\u2019t save. Try again in a moment.', 'error');
+        return;
+      }
+      say(`${title}: marked ${word}.`, 'success');
+      if (typeof openCompletionMoment === 'function') openCompletionMoment(item.category, itemId);
+      window.OmniHomeHero?.refresh?.();
+      if (typeof refreshLibraryPulse === 'function') refreshLibraryPulse();
+      const config = typeof libraryPageConfig === 'function' ? libraryPageConfig(item.category) : null;
+      if (config && typeof config[2] === 'function') config[2]();
+    });
+    return button;
+  }
+
   function started(item) {
     return Boolean(item.progress || item.started_at || (item.episode_progress && item.episode_progress.current));
   }
@@ -130,9 +180,14 @@
       }
       window.OmniEpisodes?.appendActions(actions, forward);
       window.OmniProgress?.appendAction(actions, forward);
+      if (fromContinue && !actions.querySelector('button.episode-next, button.progress-update')) {
+        const done = doneButton(item, itemId);
+        if (done) actions.appendChild(done);
+      }
       actions.appendChild(openButton(item, itemId));
-      // The first button is the one that moves the title forward: "+ S2 E6", "Update progress", "Start reading" or "Open".
-      const first = actions.querySelector('button.episode-next, button.home-focus__start, button.progress-update, button.home-focus__open');
+      // The first button is the one that moves the title forward: "+ S2 E6", "Update progress", "Start reading",
+      // "Mark watched" or "Open".
+      const first = actions.querySelector('button.episode-next, button.home-focus__start, button.progress-update, button.home-focus__done, button.home-focus__open');
       if (first) first.classList.add('home-focus__primary');
     }
     section.hidden = false;
