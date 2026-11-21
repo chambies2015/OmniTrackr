@@ -208,7 +208,7 @@ def homepage_section(limit: int = 6) -> str:
         'and themed picks across every format. Each one is dated and says who each pick suits, with a fair caveat.</p>'
         '</div></div>'
         f'<ul class="lp-reads__grid">{cards}</ul>'
-        '<p class="lp-reads__more"><a href="/in-order">Franchises in order</a>'
+        '<p class="lp-reads__more"><a href="/guides">Every guide</a><a href="/in-order">Franchises in order</a>'
         '<a href="/if-you-liked">If you liked…</a><a href="/discover">Discover trails</a></p>'
         '</div></section>'
     )
