@@ -149,6 +149,35 @@
 .sn-pick__link { font-size: .92rem; }
 .sn-pick__status { font-size: .9rem; margin: 8px 0 0; min-height: 1em; }
 
+/* New releases (Christmas guide): a date line on a pick, the dated calendar and the sources list. */
+.sn-pick__release { color: var(--sn-accent-soft); font-size: .88rem; font-weight: 700; margin: 4px 0 0; }
+.sn-calendar { margin-top: 56px; scroll-margin-top: 80px; }
+.sn-calendar__intro { max-width: 800px; }
+.sn-calendar__intro p { color: #d7dbee; }
+.sn-calendar__month { color: var(--sn-accent-soft); font-size: 1.1rem; letter-spacing: .02em; margin: 28px 0 10px; }
+.sn-calendar__list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.sn-calendar__row { align-items: flex-start; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; display: flex; gap: 16px; padding: 14px 16px; }
+.sn-calendar__date { background: rgba(255, 255, 255, .06); border-radius: 10px; flex: 0 0 64px; padding: 6px 0; text-align: center; }
+.sn-calendar__date span { color: var(--site-muted); display: block; font-size: .74rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sn-calendar__date strong { color: #fff; display: block; font-size: 1rem; }
+.sn-calendar__body { min-width: 0; }
+.sn-calendar__body p { margin: 0; }
+.sn-calendar__title { color: #fff; }
+.sn-calendar__title a { color: #fff; text-decoration-color: var(--sn-accent); text-underline-offset: 3px; }
+.sn-calendar__format, .sn-calendar__out { border-radius: 999px; display: inline-block; font-size: .74rem; font-weight: 700; margin-left: 4px; padding: 2px 8px; vertical-align: 2px; }
+.sn-calendar__format { border: 1px solid var(--site-border-strong); color: #d7dbee; }
+.sn-calendar__out { background: var(--sn-accent); color: var(--sn-accent-ink); }
+.sn-calendar__where { color: var(--sn-accent-soft); font-size: .9rem; font-weight: 700; margin-top: 2px !important; }
+.sn-calendar__note { color: #d7dbee; font-size: .95rem; margin-top: 4px !important; }
+/* The reading layout sets long text in serif; a calendar row's title and service stay in the UI font. */
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p { font-size: 1rem; line-height: 1.55; }
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__title,
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__where { font-family: var(--site-font); }
+.guide-body .sn-calendar .sn-calendar__row .sn-calendar__body p.sn-calendar__where { font-size: .9rem; }
+.sn-calendar__format, .sn-calendar__out { font-family: var(--site-font); }
+.sn-sources { margin: 10px 0 18px; padding-left: 20px; }
+.sn-sources li { margin: 6px 0; overflow-wrap: anywhere; }
+
 /* Plan your night and questions. */
 .sn-plan, .sn-faq { margin-top: 56px; }
 .sn-nights { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
@@ -190,6 +219,8 @@
 }
 @media (max-width: 520px) {
   .sn-scale__list { grid-template-columns: 1fr; }
+  .sn-calendar__row { gap: 12px; padding: 12px; }
+  .sn-calendar__date { flex-basis: 54px; }
   .sn-pick__art { flex-basis: 56px; width: 56px; }
 }
 @media (prefers-reduced-motion: reduce) {
