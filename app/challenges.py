@@ -61,6 +61,10 @@ FORMAT_NOUNS = {
 #   pair        finish ``count`` titles whose other version, in another format, the member has also finished, then
 #               or any time before: matched by name, or by an edition pick's "other" version (a book and an
 #               audiobook of the same name are the same words, so they never pair)
+#   maker       finish ``count`` titles by someone (a director, author, band, host, TV creator or game studio) whose
+#               other work the member has also finished, then or any time before: going by the creator field,
+#               the maker credit in a title's cached public facts, or an edition pick's maker and "shadow" (their
+#               best-known work); another copy of the same story is not other work
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -294,6 +298,29 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. If you have finished both versions of something, write down which you would give a friend first and why: the quicker one, the one that keeps a surprise, or the one that does something the other can't. Takeaways stay private unless you publish a review."},
         ],
         "reflection": "Which version of a story you love did you meet first, and do you think that decided which one you prefer?",
+    },
+    "2027-08": {
+        "name": "Eclipsed",
+        "tagline": "Finish one of August's nine works eclipsed by their maker's most famous one, finish something else by a creator you already know and say whether the shadow was deserved.",
+        "published": "2027-08-01",
+        # The August edition (out August 1) has nine picks, one per format, each naming its maker's best-known work.
+        "edition": "august-2027",
+        "intro": [
+            "On Monday, August 2, the Moon passes in front of the Sun for up to six minutes and 23 seconds. The shadow crosses southern Spain, Gibraltar and North Africa, then Luxor, Jeddah and Mecca, and most of Europe, Africa and the Middle East will see at least part of it. A longer total eclipse won't cross easily reached land until 2114. This challenge, and the August edition it pairs with, are about another kind of eclipse: the work that disappears behind its maker's most famous one. Francis Ford Coppola made The Conversation between the two Godfather films, and it lost the Oscar for Best Picture to the second of them. Fleetwood Mac followed Rumours with Tusk, a double album that cost more than any rock record before it and sold about four million copies, against more than forty million for Rumours. Toni Morrison wrote Sula fourteen years before Beloved. The edition has nine of these, one in each format, and each names the famous work standing in front of it. The challenge asks you to finish one of the nine, to finish something else by someone whose work you have already finished, and to write down whether the shadow was deserved.",
+            "The middle step counts an August finish by a director, author, band, host, TV creator or game studio whose other work you have finished, this month or any time before. It goes by the creator saved on each title in your library and by the director, creator or developer that a title's page lists, when it lists one. For the edition's nine, the famous work each one names counts too, so The Conversation counts for anyone who has seen The Godfather. Another copy of the same work doesn't count: the audiobook of a book you have read, or another season or volume of a series you have finished, is more of the same thing. The challenge card on your home screen lists a few titles already in your library that would count. Anything you finish in August counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "august-2027",
+             "label": "Finish one pick from the August edition",
+             "detail": "The August edition has nine picks, one in each format OmniTrackr tracks, and each lives in the shadow of the best-known work by the same people. The Conversation is 113 minutes and Tusk about 74, so either fits an evening, and Sula is under six hours on audio. The Leftovers is 28 episodes and Silver Spoon fifteen volumes, so start those early. Finish any one of the nine in August and this step is done."},
+            {"kind": "maker", "count": 1,
+             "label": "Finish something else by a creator you already know",
+             "detail": "Any title you finish in August counts if you have also finished other work by the same director, author, band, podcast host, TV creator or game studio, this month or any time before: a second film by a director you like, another album by a band, a novel by the author of a book you loved. The step goes by the creator saved on each title in your library, so check those are filled in, and by the director, creator or developer a title's page lists, which is how TV, anime and games can count. For the edition's picks, the famous work it names counts too, so finishing Tusk counts if you have heard Rumours. The audiobook of a book you have read, or another season or volume of the same series, is the same work, so it doesn't count. The challenge card lists a few titles in your library that qualify."},
+            {"kind": "reflect", "count": 1,
+             "label": "Say whether the shadow was deserved",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. If you went from someone's famous work to a lesser-known one, write down which you would hand a friend first, and whether the famous one earned its place in front. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which of this month's finishes deserved more attention than it got, and what do you think kept it in the shadow?",
     },
 }
 
@@ -845,6 +872,209 @@ def pair_progress(finishes: list[dict], library: list[dict], limit: int = PAIR_W
     return {"count": len(stories), "waiting": waiting}
 
 
+# ---------------------------------------------------------------- maker steps
+
+# The credit in a title's public facts that names who made it (people_pages.FACT_ROLES roles). Cast,
+# writers, studios of anime, publishers and networks are left out: they lump unrelated work together.
+MAKER_CREDITS = {"movie": ("Director",), "tv": ("Creator",), "anime": ("Director",), "game": ("Developer",),
+                 "album": ("Artist",), "book": ("Author",), "manga": ("Mangaka",), "podcast": ("Host",),
+                 "audiobook": ("Author",)}
+# How the creator field members type is split: a band's name keeps its commas.
+MAKER_FIELD_ROLES = {"movie": "Director", "album": "Artist", "book": "Author", "manga": "Mangaka",
+                     "podcast": "Host", "audiobook": "Author"}
+# How many unfinished titles the card names under a maker step.
+MAKER_WAITING_LIMIT = 3
+# Rows read per format, like PAIR_LIBRARY_CAP: a bound on the card's cost for a huge import.
+MAKER_LIBRARY_CAP = 5000
+# Cached-facts keys read for maker credits (four queries). Titles past it still count by creator field.
+MAKER_CREDIT_KEYS = 2000
+_MORE_NAMES = re.compile(r"\s+(?:&|and)\s+|\s*;\s*|\s+/\s+")
+
+
+def maker_key(name: str) -> str:
+    """A maker's name reduced for matching: "The Velvet Underground" and "Velvet Underground" are one band,
+    "Shinichirō Watanabe" and "Shinichiro Watanabe" one person. "" for a placeholder such as "Various"."""
+    from . import people_pages
+
+    name = " ".join((name or "").split())
+    if not people_pages.is_real_name(name):
+        return ""
+    slug = people_pages.name_slug(name)
+    slug = slug[4:] if slug.startswith("the-") and len(slug) > 4 else slug
+    return slug if len(slug) >= 2 else ""
+
+
+def maker_names(kind: str, value: str) -> list[str]:
+    """The people in a creator field: "Joseph Fink, Jeffrey Cranor" and "Phil Lord & Christopher Miller" are two
+    each, while a band such as "Earth, Wind & Fire" stays one name."""
+    from . import people_pages
+
+    role = MAKER_FIELD_ROLES.get(kind)
+    if not role or not (value or "").strip():
+        return []
+    names = []
+    for part in people_pages.split_names(value, role):
+        names.extend([part] if role in people_pages.UNSPLIT_ROLES else _MORE_NAMES.split(part))
+    return [name.strip() for name in names if name and name.strip()]
+
+
+def _edition_makers() -> tuple[dict, dict]:
+    """Edition picks that name a "shadow" (their maker's best-known work): (category, story key) of the pick, and
+    of the shadow in each format it counts in, -> (maker key, maker's name)."""
+    picks: dict[tuple[str, str], tuple[str, str]] = {}
+    shadows: dict[tuple[str, str], tuple[str, str]] = {}
+    for edition in MONTHLY_EDITIONS.values():
+        for item in edition.get("items", []):
+            shadow, maker = item.get("shadow"), item.get("maker")
+            key = maker_key(maker or "")
+            if not shadow or not key:
+                continue
+            for name in (item["title"], *item.get("aliases", ())):
+                picks[(item["category"], story_key(name))] = (key, maker)
+            for category in (shadow["category"], *shadow.get("also", ())):
+                for name in (shadow["title"], *shadow.get("aliases", ())):
+                    shadows[(category, story_key(name))] = (key, maker)
+    return picks, shadows
+
+
+def _maker_rows(db: Session, user_id: int) -> list[dict]:
+    """The member's library across the nine formats with each title's creator field and year, newest saves first."""
+    rows = []
+    for kind, (model, _, category, _, creator) in title_pages.KINDS.items():
+        done = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        columns = [model.id, model.title, done, model.added_at, title_pages._year_column(kind, model)]
+        if creator:
+            columns.append(getattr(model, creator))
+        for found in db.query(*columns).filter(model.user_id == user_id).order_by(model.id.desc()).limit(MAKER_LIBRARY_CAP):
+            item_id, title, finished, added_at, year = found[:5]
+            if (title or "").strip():
+                rows.append({"category": category, "kind": kind, "id": item_id, "title": title.strip(),
+                             "finished": bool(finished), "added": added_at or datetime.min,
+                             "year": title_pages._row_year(kind, year), "creator": found[5] if creator else None})
+    rows.sort(key=lambda row: (row["added"], row["id"]), reverse=True)
+    return rows
+
+
+def _credit_keys(kind: str, title: str, year: Optional[int]) -> tuple[str, ...]:
+    from . import title_metadata
+
+    normalized = title_pages.normalize(title)
+    keys = [title_metadata.cache_key(kind, normalized, year)]
+    if year:
+        keys.append(title_metadata.cache_key(kind, normalized, None))
+    return tuple(keys)
+
+
+def _credited_makers(db: Session, wanted: dict[str, str]) -> dict[str, list[tuple[str, str]]]:
+    """The makers in cached public facts for each metadata key: key -> [(maker key, name)], 500 keys a query.
+
+    ``wanted`` maps each key to its title kind, since only that kind's maker credit counts (a film's director,
+    not its cast)."""
+    found: dict[str, list[tuple[str, str]]] = {}
+    keys = sorted(wanted)
+    roles = sorted({role for kind in set(wanted.values()) for role in MAKER_CREDITS.get(kind, ())})
+    if not keys or not roles:
+        return found
+    for first in range(0, len(keys), 500):
+        for metadata_key, role, name in db.query(
+            models.TitleCredit.metadata_key, models.TitleCredit.role, models.TitleCredit.name,
+        ).filter(models.TitleCredit.metadata_key.in_(keys[first:first + 500]), models.TitleCredit.role.in_(roles)):
+            if role in MAKER_CREDITS.get(wanted.get(metadata_key), ()):
+                key = maker_key(name)
+                if key:
+                    found.setdefault(metadata_key, []).append((key, name))
+    return found
+
+
+def maker_progress(db: Session, finishes: list[dict], rows: list[dict], target: int = 1,
+                   limit: int = MAKER_WAITING_LIMIT) -> dict:
+    """This month's finishes by someone whose other work the member has finished, and, while the step isn't
+    done, up to ``limit`` unfinished library titles that would count.
+
+    A title's makers are the names in its creator field, its maker credit in cached public facts (director,
+    TV creator, developer...) and, for an edition pick or the famous work it names, the edition's maker. The
+    other work can have been finished at any time: a library title marked finished counts, and so does any of
+    this month's finishes, including a title since removed. Another copy of the same story (the audiobook of a
+    book, another season) is not other work. "waiting" names the member's own titles, so only their card gets it.
+    """
+    picks, shadows = _edition_makers()
+    by_id = {(row["category"], row["id"]): row for row in rows}
+
+    def row_for(finish: dict) -> Optional[dict]:
+        return by_id.get((finish["category"], finish["item_id"])) if finish["item_id"] is not None else None
+
+    # Credits are looked up for this month's finishes first, then the newest saves, up to MAKER_CREDIT_KEYS keys.
+    wanted: dict[str, str] = {}
+    for category, title, row in (*((finish["category"], finish["title"], row_for(finish)) for finish in finishes),
+                                 *((row["category"], row["title"], row) for row in rows)):
+        kind = title_pages.LIBRARY_TO_KIND.get(category)
+        if kind and len(wanted) < MAKER_CREDIT_KEYS:
+            for key in _credit_keys(kind, title, row["year"] if row else None):
+                wanted[key] = kind
+    try:
+        credited = _credited_makers(db, wanted)
+    except Exception:
+        db.rollback()  # The step still counts creator fields and edition picks.
+        credited = {}
+
+    memo: dict[tuple, dict[str, str]] = {}
+
+    def makers(category: str, title: str, row: Optional[dict]) -> dict[str, str]:
+        """Maker key -> the maker's name as first found."""
+        cache_key = (category, title, row["id"] if row else None)
+        if cache_key in memo:
+            return memo[cache_key]
+        kind = title_pages.LIBRARY_TO_KIND.get(category)
+        found: dict[str, str] = {}
+        for name in maker_names(kind, row["creator"] if row else ""):
+            key = maker_key(name)
+            if key:
+                found.setdefault(key, name)
+        if kind:
+            for metadata_key in _credit_keys(kind, title, row["year"] if row else None):
+                for key, name in credited.get(metadata_key, ()):
+                    found.setdefault(key, name)
+        story = story_key(title)
+        for mapping in (picks, shadows):
+            if (category, story) in mapping:
+                key, name = mapping[(category, story)]
+                found.setdefault(key, name)
+        memo[cache_key] = found
+        return found
+
+    # Every finished work, by maker: maker key -> story keys.
+    finished: dict[str, set[str]] = {}
+    done_entries = [(row["category"], row["title"], row) for row in rows if row["finished"]]
+    done_entries += [(finish["category"], finish["title"], row_for(finish)) for finish in finishes]
+    for category, title, row in done_entries:
+        for key in makers(category, title, row):
+            finished.setdefault(key, set()).add(story_key(title))
+
+    def known_maker(title: str, found: dict[str, str]) -> Optional[str]:
+        """The name of a maker of ``title`` with other finished work, or None."""
+        story = story_key(title)
+        for key in sorted(found):
+            if finished.get(key, set()) - {story}:
+                return found[key]
+        return None
+
+    counted = {story_key(finish["title"]) for finish in finishes
+               if known_maker(finish["title"], makers(finish["category"], finish["title"], row_for(finish)))}
+    waiting, seen = [], set()
+    if len(counted) < target:
+        for row in rows:
+            if len(waiting) >= limit:
+                break
+            name = (row["category"], title_pages.normalize(row["title"]))
+            if row["finished"] or name in seen:
+                continue
+            maker = known_maker(row["title"], makers(row["category"], row["title"], row))
+            if maker:
+                seen.add(name)
+                waiting.append({"title": row["title"], "maker": maker})
+    return {"count": len(counted), "waiting": waiting}
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -913,6 +1143,12 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count = found["count"]
             # "waiting" names the member's own titles, like "turning", so only their card has it.
             extra = {"waiting": [] if count >= target else found["waiting"]}
+        elif step["kind"] == "maker":
+            target = step.get("count", 1)
+            found = maker_progress(db, finishes, _maker_rows(db, user_id), target)
+            count = found["count"]
+            # "waiting" names the member's own titles and the people behind them, so only their card has it.
+            extra = {"waiting": found["waiting"]}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],
