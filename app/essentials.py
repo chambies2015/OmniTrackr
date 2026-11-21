@@ -13,6 +13,7 @@ and length for audiobooks). A title the member already has is left exactly as it
 from __future__ import annotations
 
 import importlib
+import re
 from datetime import datetime
 from typing import Iterable, Optional
 
@@ -114,6 +115,27 @@ def anchor_url(item: dict) -> str:
     return f'{path(item["format"])}#{item["anchor"]}'
 
 
+# Words that end in a full stop without ending a sentence ("Dr. Strangelove", "Mr. Darcy", "St. Petersburg").
+_NOT_AN_END = {"mr", "mrs", "ms", "dr", "st", "jr", "sr", "vs", "no", "vol", "bros", "co", "mt", "ft", "prof", "rev",
+               "gen", "lt", "col", "capt", "sgt", "inc", "ltd", "ave", "approx", "etc"}
+_SENTENCE_END = re.compile(r'[.!?]["\u201d\u2019)]?(?=\s+["\u201c\u2018(]?[A-Z0-9])')
+
+
+def first_sentence(text: str) -> str:
+    """The first sentence of a blurb, for a one-line answer. Initials ("Monkey D. Luffy", "T. E. Lawrence")
+    and abbreviations ("Dr.", "Mr.", "Super Mario Bros.") don't end it."""
+    text = " ".join((text or "").split())
+    for match in _SENTENCE_END.finditer(text):
+        end = match.end()
+        word = text[:match.start()].rsplit(" ", 1)[-1].lstrip("\"\u201c\u2018(")
+        if len(word) <= 1 or "." in word or word.lower() in _NOT_AN_END:
+            continue
+        if len(text[:end].split()) < 4:  # "Comedy Bang! Bang!" is a name, not a sentence.
+            continue
+        return text[:end]
+    return text
+
+
 def for_title(kind: str, title: str, year=None) -> Optional[dict]:
     """The essential title a title page is about, if one of the lists has it (for a link back)."""
     wanted = title_pages.normalize(title)
@@ -165,14 +187,32 @@ def add(db: Session, user, item: dict, seen: bool, image: Optional[str] = None) 
 
     saved = entry(item)
     kind = item["kind"]
+    # A "seen" title is created already finished: a friend's feed then shows it as added, not as
+    # something finished just now (ticking 200 titles would otherwise post 200 finishes), and it
+    # costs one write instead of two.
     if kind in BROWSE_KINDS:
-        state, record = browse.add_to_library(db, user, saved["browse_kind"], saved, image)
-    else:
-        state, record = pick.add_to_library(db, user, saved, image)
-    if state == "created" and seen:
-        setattr(record, title_pages.COMPLETE_FIELD[kind], True)
-        db.flush()
-    return state, record
+        return browse.add_to_library(db, user, saved["browse_kind"], saved, image, finished=seen)
+    return pick.add_to_library(db, user, saved, image, finished=seen)
+
+
+def library_titles(db: Session, user_id: int, items: list[dict]) -> set[tuple[str, str]]:
+    """(kind, normalized title) for the titles in ``items`` the member already has, one query per format.
+
+    Matches the way the add helpers look for an existing title, so an import can skip
+    those without asking about each one.
+    """
+    by_kind: dict[str, set[str]] = {}
+    for item in items:
+        by_kind.setdefault(item["kind"], set()).add(title_pages.normalize(item["title"]))
+    found = set()
+    for kind, titles in by_kind.items():
+        model = title_pages.KINDS[kind][0]
+        wanted = sorted(titles)
+        for start in range(0, len(wanted), 500):
+            for (title,) in db.query(func.lower(func.trim(model.title))).filter(
+                    model.user_id == user_id, func.lower(func.trim(model.title)).in_(wanted[start:start + 500])):
+                found.add((kind, title))
+    return found
 
 
 # ---------------------------------------------------------------- what a member already has

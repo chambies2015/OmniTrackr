@@ -291,7 +291,7 @@ def test_both_sign_in_cards_have_the_code_box():
         assert 'id="verifyCodeForm"' in panel and 'autocomplete="one-time-code"' in panel and 'inputmode="numeric"' in panel
         assert panel.index('id="verifyCodeForm"') < panel.index('id="verifySentInbox"')
         assert "6-digit code to confirm" in html
-        assert "auth.js?v=20261118-email-code-1" in html
+        assert "auth.js?v=20261121-essentials-return-1" in html
 
 
 def test_the_code_endpoint_is_rate_limited():

@@ -207,11 +207,13 @@ def _build_title_details(index: list[dict]) -> dict[str, dict]:
 
 # ---------------------------------------------------------------- saving
 
-def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None) -> tuple[str, object]:
+def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None, finished: bool = False) -> tuple[str, object]:
     """Add a curated pick to the member's library as not yet started. Does not commit.
 
     Returns ("existing" | "created", record). A title the member already has (same
-    name, any case) is left exactly as it is.
+    name, any case) is left exactly as it is. With ``finished`` a new record is saved
+    already finished (the Essential 100's "Seen it"), so it reads as an add, not as a
+    finish that happened just now.
     """
     kind = pick["kind"]
     model, _, category, _, _ = title_pages.KINDS[kind]
@@ -229,6 +231,8 @@ def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None) -
     safe = title_pages._safe_image(image)
     if safe:
         fields[title_pages.IMAGE_FIELD[kind]] = safe
+    if finished:
+        fields[title_pages.COMPLETE_FIELD[kind]] = True
     record = model(**fields)
     db.add(record)
     db.flush()
