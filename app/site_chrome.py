@@ -15,8 +15,8 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261121-sweep-d-1"
-SITE_JS_VERSION = "20261028-nav-1"
+SITE_CSS_VERSION = "20261121-refresh-1"
+SITE_JS_VERSION = "20261121-refresh-1"
 SITE_NAV_JS_VERSION = "20261121-phone-2"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
@@ -140,6 +140,13 @@ FOOTER_GROUPS = (
 )
 # The legal links also sit on their own line under the columns, where people look for them.
 FOOTER_LEGAL = (("Privacy", "/privacy"), ("Terms", "/terms"), ("Ads & affiliates", "/advertising"), ("Contact", "/contact"))
+# The nine tracker guides, one chip per format in the footer's top band. (kind, label, href);
+# the kind picks the chip's dot colour from the --fmt-* tokens in site.css.
+FOOTER_FORMATS = (
+    ("movie", "Movies", "/movie-tracker"), ("tv", "TV shows", "/tv-show-tracker"), ("anime", "Anime", "/anime-tracker"),
+    ("game", "Games", "/game-tracker"), ("book", "Books", "/book-tracker"), ("album", "Music", "/music-tracker"),
+    ("manga", "Manga", "/manga-tracker"), ("podcast", "Podcasts", "/podcast-tracker"), ("audiobook", "Audiobooks", "/audiobook-tracker"),
+)
 
 # A short sign-up prompt above the footer for signed-out readers of the section
 # hubs most visitors arrive on from search. Pages that already ask in their own
@@ -318,20 +325,28 @@ def apply_app_chrome(html: str) -> str:
 
 
 def site_footer() -> str:
+    # On phones site.js turns each column heading into a button that opens its links.
     columns = "".join(
         f'<nav class="site-footer__col" aria-label="{escape(title)}"><h2>{escape(title)}</h2>'
+        f'<div class="site-footer__links" id="site-footer-{index}">'
         + "".join(f'<a href="{href}">{escape(label)}</a>' for label, href in links)
-        + "</nav>"
-        for title, links in FOOTER_GROUPS
+        + "</div></nav>"
+        for index, (title, links) in enumerate(FOOTER_GROUPS)
     )
+    formats = "".join(f'<li><a href="{href}" data-kind="{kind}">{escape(label)}</a></li>' for kind, label, href in FOOTER_FORMATS)
     legal = "".join(f'<a href="{href}">{escape(label)}</a>' for label, href in FOOTER_LEGAL)
     return (
-        '<footer class="site-footer"><div class="site-wrap site-footer__grid">'
+        '<footer class="site-footer"><div class="site-wrap site-footer__top">'
         f'<div class="site-footer__brand">{_brand()}'
         '<p>A free, independent media tracker for everything you watch, play, read, and hear.</p>'
-        '<a class="site-footer__cta" href="/#signup">Start your library <span aria-hidden="true">→</span></a>'
-        '<a class="site-footer__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>'
-        f'</div>{columns}</div>'
+        '<div class="site-footer__actions">'
+        '<a class="site-footer__cta site-btn site-btn--primary site-btn--sm" href="/#signup" data-guest-only>Start your library</a>'
+        '<a class="site-footer__kofi site-btn site-btn--ghost site-btn--sm" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">'
+        '<span aria-hidden="true">♥</span>Support on Ko-fi</a>'
+        '</div></div>'
+        f'<nav class="site-footer__formats" aria-label="Trackers by format"><h2>One library for all nine</h2><ul>{formats}</ul></nav>'
+        '</div>'
+        f'<div class="site-wrap site-footer__grid">{columns}</div>'
         '<div class="site-wrap site-footer__base">'
         f'<p>© {date.today().year} OmniTrackr. An independent project run by one person.</p>'
         f'<nav aria-label="Legal">{legal}</nav>'

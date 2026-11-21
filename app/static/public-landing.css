@@ -675,3 +675,25 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-tool__link { min-height: 44px; }
   .lp-reads__more { gap: 18px 22px; }
 }
+
+/* ---------- Look refresh (Nov 21 2026) ----------
+   Roomier big type, the nine-format spectrum as the brand accent, tighter button
+   shadows and a hairline of light on cards. The tokens come from site.css (:root),
+   which this page loads too; the fallbacks keep the page right without it. */
+.lp-title { letter-spacing: var(--site-display-track, -.032em); line-height: 1.02; }
+/* "One library." runs through four of the format colours: films, albums, TV, podcasts. */
+.lp-title__accent { background: linear-gradient(100deg, #f9a8d4 0%, #c4b5fd 38%, #93c5fd 66%, #5eead4 100%); -webkit-background-clip: text; background-clip: text; }
+.lp-eyebrow::before { background: var(--site-spectrum, linear-gradient(90deg, #f472b6, #2dd4bf)); border-radius: 2px; content: ""; display: inline-block; height: 2px; margin-right: 10px; vertical-align: .32em; width: 18px; }
+.lp .lp-hero {
+  background:
+    radial-gradient(900px 520px at 78% 40%, rgba(124, 58, 237, .28), transparent 62%),
+    radial-gradient(520px 340px at 98% -4%, rgba(244, 114, 182, .14), transparent 65%),
+    radial-gradient(600px 400px at 8% 90%, rgba(45, 212, 191, .10), transparent 60%),
+    var(--lp-bg);
+}
+/* A faint dot grid behind the poster wall, fading out before it reaches the headline. */
+.lp .lp-hero::before { background-image: radial-gradient(rgba(255, 255, 255, .09) 1px, transparent 1.4px); background-size: 28px 28px; content: ""; inset: 0; -webkit-mask-image: radial-gradient(ellipse 55% 70% at 74% 46%, #000 15%, transparent 72%); mask-image: radial-gradient(ellipse 55% 70% at 74% 46%, #000 15%, transparent 72%); pointer-events: none; position: absolute; }
+.lp-hero__grid { position: relative; z-index: 1; }
+.lp-btn--primary { box-shadow: var(--site-cta-shadow, inset 0 1px 0 rgba(255, 255, 255, .22), 0 10px 24px -10px rgba(127, 78, 240, .9)); }
+.lp-btn--primary:hover { box-shadow: var(--site-cta-shadow-hover, inset 0 1px 0 rgba(255, 255, 255, .22), 0 16px 32px -12px rgba(127, 78, 240, 1)); }
+.lp-btn--ghost, .lp-feature, .lp-tool, .lp-voice, .lp-try, .lp-pulse__cell, .lp-reads__card a { box-shadow: var(--site-edge, inset 0 1px 0 rgba(255, 255, 255, .06)); }
