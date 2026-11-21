@@ -441,6 +441,10 @@ body.site .site-finder__field input:focus-visible { outline: none; }
     content: ""; height: 44px; left: -4px; min-height: 100%; position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
   }
 
+  /* "Log in" under the sign-up sheets' buttons was a 16px line of text (Nov 21 sweep). The
+     padding makes it a 44px target and the equal negative margin keeps the sheet the same height. */
+  .guest-sheet__note a { display: inline-block; margin-block: -12px; padding: 12px 4px; }
+
   /* Cards in "Other guides" lists: the whole card opens the guide, not only its title line. */
   body.site .guide-related-grid article { position: relative; }
   body.site .guide-related-grid article h3 a::after { content: ""; inset: 0; position: absolute; }

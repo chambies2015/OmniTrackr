@@ -112,6 +112,15 @@
         return;
       }
       say(`${title}: marked ${word}.`, 'success');
+      // The card redraws with the next title and this button goes with it, so the finish moment
+      // would hand focus back to nothing when it closes. Park focus on the card's heading first.
+      if (document.activeElement === button) {
+        const heading = $('homeFocusTitle');
+        if (heading) {
+          heading.setAttribute('tabindex', '-1');
+          heading.focus({ preventScroll: true });
+        }
+      }
       if (typeof openCompletionMoment === 'function') openCompletionMoment(item.category, itemId);
       window.OmniHomeHero?.refresh?.();
       if (typeof refreshLibraryPulse === 'function') refreshLibraryPulse();

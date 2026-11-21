@@ -15,7 +15,7 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261121-phone-2"
+SITE_CSS_VERSION = "20261121-sweep-d-1"
 SITE_JS_VERSION = "20261028-nav-1"
 SITE_NAV_JS_VERSION = "20261121-phone-2"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
