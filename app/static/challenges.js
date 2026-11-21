@@ -67,7 +67,7 @@
       log.dataset.challengeAction = 'log-revisit';
       item.appendChild(log);
     }
-    const hint = stretchHint(step) || birthdayHint(step);
+    const hint = stretchHint(step) || birthdayHint(step) || dayHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
@@ -144,6 +144,42 @@
     const years = (Array.isArray(step.years) ? step.years : []).filter(year => Number.isInteger(year) && year > 0).slice(0, 4);
     if (!years.length) return '';
     return `Counts if it came out in ${years.join(', ')} or an earlier year ending in ${years[0] % 10}`;
+  }
+
+  const COUNT_WORDS = { 2: 'two', 3: 'three', 4: 'four', 5: 'five' };
+
+  function listText(names) {
+    return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  }
+
+  // "9:40 PM today", "9:40 PM tomorrow" or "9:40 PM on Thursday", in the reader's own time zone.
+  function deadlineText(until, now) {
+    const time = until.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const then = new Date(until.getFullYear(), until.getMonth(), until.getDate());
+    const apart = Math.round((then - today) / 86400000);
+    if (apart === 0) return `${time} today`;
+    if (apart === 1) return `${time} tomorrow`;
+    return `${time} on ${until.toLocaleDateString([], { weekday: 'long' })}`;
+  }
+
+  // Under a step about finishing two things within a day: when the next finish has to be done by to
+  // pair with the last one ("Finish one more by 9:40 PM tomorrow to go with Gone Home"), or how it counts.
+  function dayHint(step, now = new Date()) {
+    if (!step || step.kind !== 'day' || step.done) return '';
+    const hours = Number.isInteger(step.hours) && step.hours > 0 ? step.hours : 24;
+    const target = Number.isInteger(step.target) && step.target > 1 ? step.target : 2;
+    const open = step.open && typeof step.open === 'object' ? step.open : null;
+    const titles = (open && Array.isArray(open.titles) ? open.titles : [])
+      .filter(title => typeof title === 'string' && title.trim()).map(title => title.trim()).slice(0, 3);
+    const have = open && Number.isInteger(open.count) && open.count > 0 ? open.count : titles.length;
+    const until = open && typeof open.until === 'string' ? new Date(open.until) : null;
+    if (titles.length && have < target && until && !Number.isNaN(until.getTime()) && until > now) {
+      const need = target - have;
+      const more = need === 1 ? 'one more' : `${COUNT_WORDS[need] || need} more`;
+      return `Finish ${more} by ${deadlineText(until, now)} to go with ${listText(titles)}`;
+    }
+    return `Any ${COUNT_WORDS[target] || target} finishes less than ${hours} hours apart count`;
   }
 
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
@@ -347,7 +383,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

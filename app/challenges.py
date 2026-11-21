@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import secrets
 from calendar import monthrange
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import and_, func, or_
@@ -53,6 +53,8 @@ FORMAT_NOUNS = {
 #               OmniTrackr or someone they know), whenever they said it
 #   birthday    finish ``count`` titles that turn a round number in the month's year: released a whole number of
 #               ``every`` years before it (2017, 2007, 1997... in 2027), going by the year saved on the title
+#   day         finish ``count`` titles less than ``hours`` hours apart: a day's worth of finishes, measured in
+#               hours so it works the same in every time zone and across midnight
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -241,6 +243,29 @@ CHALLENGES: dict[str, dict] = {
         ],
         "reflection": "Which of this month's finishes would you still want to go back to in another ten years?",
     },
+    "2027-06": {
+        "name": "All in a day",
+        "tagline": "Finish one of June's nine stories that happen inside a single day, finish two things within a day of each other and write down where the day went.",
+        "published": "2027-06-01",
+        # The June edition (out June 1) has nine picks, one per format, each set within one day or night.
+        "edition": "june-2027",
+        "intro": [
+            "The longest day of the year north of the equator falls on Monday, June 21, and a surprising number of stories are set on single days in June. Clarissa Dalloway goes out to buy flowers on a morning in the middle of June 1923. Cléo walks around Paris for an hour and a half on the afternoon of June 21, waiting for a test result. Katie Greenbriar comes home on June 7, 1995, to find the house empty. This challenge, and the June edition it pairs with, are about stories that fit inside one day. The edition has nine of them, one in each format, from the thirteen minutes it took Apollo 11 to land on the Moon to the twenty-four hours of the first season of 24. The challenge asks you to finish one of the nine, to finish two things within a day of each other, and to write down when and where you finished something.",
+            "The middle step counts any two finishes less than 24 hours apart, so it works the same in every time zone: a film in the afternoon and an album that evening, or a book you finish late at night and a game the next day. Once you have finished one thing, the challenge card on your home screen says how long you have to finish the next. Anything you finish in June counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "june-2027",
+             "label": "Finish one pick from the June edition",
+             "detail": "The June edition has nine picks, one in each format OmniTrackr tracks, and each one takes place within a single day or night. Days of Future Passed is about 41 minutes and Cléo from 5 to 7 is 90, so either fits an evening, and Gone Home takes most players two or three hours. The first season of 24 is twenty-four episodes, about seventeen hours, so start that one early. Finish any one of the nine in June and this step is done."},
+            {"kind": "day", "count": 2, "hours": 24,
+             "label": "Finish two things within a day",
+             "detail": "Any two titles you finish less than 24 hours apart count, in any formats. The step goes by hours, so it works the same in every time zone and doesn't care about midnight. A short film and an album fit into one evening, and a book you finish over breakfast pairs with a game you finish after dinner. Once you have finished one thing, the challenge card shows when the next one needs to be done by, in your own time. If one of the pair is from the June edition, it does the first step as well."},
+            {"kind": "reflect", "count": 1,
+             "label": "Write down where the day went",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. This month, try writing down when and where you were: on the train at eight in the morning, on the sofa at one at night, outside on the longest evening of the year. A year from now that line will bring the day back better than a score will. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Which of this month's stories felt longer than the time it covered, and which felt shorter?",
+    },
 }
 
 # Used for any month without a curated challenge, so the dashboard card never breaks.
@@ -343,14 +368,26 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
             continue
         key = year_in_review._title_key(row.category, item_id, row.title)
         found = finished.setdefault(key, {"category": row.category, "item_id": item_id,
-                                          "title": row.title or "", "reflected": False, "at": None})
+                                          "title": row.title or "", "reflected": False, "at": None, "times": []})
         found["reflected"] = found["reflected"] or reflected
         when = getattr(row, "occurred_at", None) or getattr(row, "completed_at", None)
-        if when is not None and (found["at"] is None or when > found["at"]):
-            found["at"] = when
+        if when is not None:
+            found["times"].append(when)
+            if found["at"] is None or when > found["at"]:
+                found["at"] = when
         if found["item_id"] is None:
             found["item_id"] = item_id
-    return list(year_in_review.fold_deleted_copies(finished).values())
+    removed = {key: row["times"] for key, row in finished.items() if isinstance(key[1], str)}
+    folded = year_in_review.fold_deleted_copies(finished)
+    # A removed copy folded into the live one keeps its finish times (day steps read every one).
+    for key, times in removed.items():
+        if key in folded:
+            continue
+        for live_key, row in folded.items():
+            if not isinstance(live_key[1], str) and (row["category"], year_in_review._plain_title(row["title"])) == key:
+                row["times"].extend(times)
+                break
+    return list(folded.values())
 
 
 def _release_years(db: Session, finishes: list[dict]) -> dict[tuple[str, int], Optional[int]]:
@@ -597,6 +634,54 @@ def turning_titles(db: Session, user_id: int, month: str, every: int = 10, limit
     return [{key: value for key, value in entry.items() if key != "_added"} for entry in found[:limit]]
 
 
+# How many of the open window's finishes the card names under a day step.
+DAY_TITLES_LIMIT = 3
+
+
+def _iso(moment: datetime) -> str:
+    return moment.replace(microsecond=0).isoformat() + "Z"
+
+
+def day_progress(finishes: list[dict], month: str, hours: int = 24, target: int = 2,
+                 now: Optional[datetime] = None) -> dict:
+    """The most titles finished less than ``hours`` apart this month, and the window still open now.
+
+    Every logged finish time counts (a title finished twice has two chances to pair), but each title
+    counts once inside a window. "open" is the stretch that started with the earliest finish in the
+    last ``hours`` and hasn't closed yet: the titles in it and when it closes (never after the month
+    ends, since a July finish can't count for June). It names the member's own titles, so only their
+    card gets it.
+    """
+    span = timedelta(hours=hours)
+    start, end = month_bounds(month)
+    events = sorted((when, index) for index, finish in enumerate(finishes) for when in finish.get("times") or ()
+                    if start <= when < end)
+    best, inside, left = 0, {}, 0
+    for when, index in events:
+        inside[index] = inside.get(index, 0) + 1
+        while when - events[left][0] >= span:
+            gone = events[left][1]
+            inside[gone] -= 1
+            if not inside[gone]:
+                del inside[gone]
+            left += 1
+        best = max(best, len(inside))
+    now = now or datetime.utcnow()
+    result = {"best": best, "open": None}
+    if best >= target or not start <= now < end:
+        return result
+    recent = [(when, index) for when, index in events if now - span < when <= now]
+    if recent:
+        names, seen = [], set()
+        for _, index in recent:
+            if index not in seen:
+                seen.add(index)
+                names.append((finishes[index].get("title") or "").strip() or "Untitled")
+        closes = min(recent[0][0] + span, end)
+        result["open"] = {"titles": names[:DAY_TITLES_LIMIT], "count": len(seen), "until": _iso(closes)}
+    return result
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -653,6 +738,12 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             # "years" is the same for everyone; "turning" names the member's own titles, so only their card has it.
             extra = {"years": birthday_years(month, every)[:4],
                      "turning": [] if count >= target else turning_titles(db, user_id, month, every)}
+        elif step["kind"] == "day":
+            hours, target = step.get("hours", 24), step.get("count", 2)
+            found = day_progress(finishes, month, hours, target)
+            count = found["best"]
+            # "open" names the member's own titles, like "turning", so only their card has it.
+            extra = {"hours": hours, "open": found["open"]}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],
