@@ -182,6 +182,9 @@
   const CAPS = { main: [3, 4], rail: [2, 3] };
   const layout = {
     sticky: new Set(), stickyFrom: 0, settledAt: 0, frame: 0, expanded: false, observer: null, media: null, started: false,
+    // The card a link asked for this visit (/#goals from an email, a notification or the goals page). Card
+    // scripts clear the hash once they've scrolled to it, so it's remembered here and the card stays out.
+    asked: '', askedAt: 0, moved: false,
   };
 
   function readExpanded() {
@@ -212,14 +215,18 @@
     return !unit.hidden;
   }
 
-  function hashCard() {
+  function hashCard(url) {
+    if (url) {
+      const at = String(url).indexOf('#');
+      return at >= 0 ? HASH_CARDS[String(url).slice(at)] || '' : '';
+    }
     return HASH_CARDS[window.location.hash] || '';
   }
 
   // The member is part-way through something in this card, or it is celebrating something they did.
   function engaged(unit) {
     const id = unitId(unit);
-    if (ALWAYS.has(id) || id === hashCard()) return true;
+    if (ALWAYS.has(id) || id === hashCard() || (id && id === layout.asked)) return true;
     if (document.activeElement && document.activeElement !== document.body && unit.contains(document.activeElement)) return true;
     if (unit.querySelector('[id$="Celebration"]:not([hidden])')) return true;
     if (id === 'backlogDraw') return Boolean(unit.querySelector('.backlog-draw__plan, .backlog-draw__table--up'));
@@ -295,6 +302,7 @@
       main.shown.concat(rail.shown).forEach(unit => layout.sticky.add(unitId(unit)));
     }
     board.classList.toggle('home-board--more', layout.expanded);
+    keepAskedInView();
     const more = $('homeMore');
     const toggle = $('homeMoreToggle');
     const names = $('homeMoreNames');
@@ -309,6 +317,17 @@
     setText(names, layout.expanded ? '' : tucked.map(cardName).filter(Boolean).join(' · '));
     if (names) names.hidden = layout.expanded || !names.textContent;
     if (more.hidden) more.hidden = false;
+  }
+
+  // Cards above a linked card often load after its own script has scrolled to it and push it off
+  // screen. For the first few seconds, until the member scrolls themselves, bring it back.
+  function keepAskedInView() {
+    if (!layout.asked || layout.moved || !layout.askedAt || Date.now() - layout.askedAt > 6000) return;
+    const card = $(layout.asked);
+    if (!card || card.hidden || card.classList.contains('is-home-tucked') || typeof card.getBoundingClientRect !== 'function') return;
+    const top = card.getBoundingClientRect().top;
+    const height = window.innerHeight || 0;
+    if (height && (top < -4 || top > height * 0.6) && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'start' });
   }
 
   function schedule() {
@@ -326,11 +345,12 @@
     if (status && announce) status.textContent = layout.expanded ? 'More cards are showing on your home.' : 'Fewer cards are showing.';
   }
 
-  // A link to a card that is waiting behind "Show more" opens the rest first, so it lands.
+  // A link to a card that is waiting behind "Show more" brings that card out, so it lands. Only that
+  // card: the member didn't choose Show more, so the rest stay put and nothing is remembered.
   function revealFor(target) {
-    if (!target || layout.expanded) return;
-    const unit = target.closest('.is-home-tucked');
-    if (unit) setExpanded(true, { announce: false });
+    if (!target) return;
+    layout.asked = unitId(target);
+    if (target.classList?.contains('is-home-tucked')) arrange();
   }
 
   function watchSettle() {
@@ -356,6 +376,12 @@
     if (!board) return;
     layout.started = true;
     layout.expanded = readExpanded();
+    layout.asked = hashCard();
+    if (layout.asked) {
+      layout.askedAt = Date.now();
+      const moved = () => { layout.moved = true; };
+      ['wheel', 'touchmove', 'keydown', 'mousedown'].forEach(type => window.addEventListener(type, moved, { passive: true, once: true }));
+    }
     layout.media = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 640px)') : null;
     layout.media?.addEventListener?.('change', schedule);
     if (typeof MutationObserver === 'function') {
@@ -370,8 +396,9 @@
       const id = link && HASH_CARDS[link.getAttribute('href')];
       if (id) revealFor($(id));
     }, true);
-    window.addEventListener('hashchange', () => {
-      const id = hashCard();
+    window.addEventListener('hashchange', event => {
+      // The card's own script may have cleared the hash already, so read the one the event carried.
+      const id = hashCard(event && event.newURL) || hashCard();
       if (id) revealFor($(id));
       schedule();
     });
@@ -382,6 +409,7 @@
 
   function resetLayout() {
     layout.sticky.clear();
+    layout.asked = '';
     layout.settledAt = 0;
     layout.stickyFrom = 0;
     document.querySelectorAll('.is-home-tucked').forEach(node => node.classList.remove('is-home-tucked'));
