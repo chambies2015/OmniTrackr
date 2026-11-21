@@ -22,7 +22,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import diary, models, title_pages, year_in_review
+from . import diary, models, title_origins, title_pages, year_in_review
 from .discover_catalog import MONTHLY_EDITIONS, published_editions
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -49,6 +49,8 @@ FORMAT_NOUNS = {
 #   revisit     revisit ``count`` titles: a journal "Revisited" entry, or another finish of a title finished before
 #   stretch     finish ``count`` titles in a format the member had finished fewer than ``under`` titles in before
 #               the month began; if every format already has that many, their least-finished format counts
+#   recommended finish ``count`` titles that the member says a person recommended (Why I added it: a friend on
+#               OmniTrackr or someone they know), whenever they said it
 # A challenge with ``"revisits_count": True`` also counts a logged revisit as a finish for its other steps.
 CHALLENGES: dict[str, dict] = {
     "2026-10": {
@@ -189,6 +191,29 @@ CHALLENGES: dict[str, dict] = {
         ],
         "reflection": "Which format would you go back to after this month, and what would you hand to a friend trying it for the first time?",
     },
+    "2027-04": {
+        "name": "Pass it on",
+        "tagline": "Finish one of April's nine word-of-mouth hits, finish something a person recommended to you and write the line you'd say when you pass it on.",
+        "published": "2027-04-01",
+        # The April edition (out April 1) has nine picks, one per format, each spread mostly by people telling each other.
+        "edition": "april-2027",
+        "intro": [
+            "April starts with a day for not believing what anyone tells you. This challenge, and the April edition it pairs with, are about the recommendations worth believing. Most of what people love best reaches them the same way: a friend, a sibling or someone at work says you have to try this, and keeps asking until you do. The edition's nine picks all found their audiences like that. A Detroit singer-songwriter's album sold an estimated half a million copies in South Africa without his knowing, a Canadian sitcom was found on Netflix three seasons in, and a game made almost entirely by one person went from a small Kickstarter to at least five million copies. The challenge asks you to finish one of the nine, to finish something a person recommended to you, and to write down the line you would say when you pass something on.",
+            "The middle step counts any April finish whose Why I added it names a friend or someone you know. Most titles don't say yet, so the challenge card on your home screen lists your April finishes that don't, and a tap on one opens the box to say who it was. Titles you add from a friend's recommendation or from the friends feed already say so. Anything you finish in April counts, whenever you joined.",
+        ],
+        "steps": [
+            {"kind": "edition", "edition": "april-2027",
+             "label": "Finish one pick from the April edition",
+             "detail": "The April edition has nine picks, one in each format OmniTrackr tracks, and each reached most of its audience because people told each other about it. The Velvet Underground & Nico is about 48 minutes and Searching for Sugar Man 85, so either fits an evening. Schitt's Creek is eighty episodes and Dungeon Crawler Carl a 13-hour audiobook, so start those early. Finish any one of the nine in April and this step is done."},
+            {"kind": "recommended", "count": 1,
+             "label": "Finish something someone recommended to you",
+             "detail": "Any title you finish in April counts if a person recommended it to you: a friend on OmniTrackr or someone you know, named under Why I added it on the title. You can say who after you finish, and the challenge card lists your April finishes that don't say yet. An article, a video or something you came across yourself doesn't count for this step. If a friend has been telling you to watch, read or play something for years, this is the month to finish it, and if someone recommended one of the edition's picks to you, finishing it does this step and the first one at once."},
+            {"kind": "reflect", "count": 1,
+             "label": "Write the line you'd pass on",
+             "detail": "Rate one of this month's finishes or add a line about it when you mark it finished. Write it the way you would say it to a friend: who it is for, and what they should know before they start. \"Keep going until season two\" has probably got more people through Schitt's Creek than any review. Takeaways stay private unless you publish a review."},
+        ],
+        "reflection": "Who recommended the best thing you finished this month, and have you told them you finished it?",
+    },
 }
 
 # Used for any month without a curated challenge, so the dashboard card never breaks.
@@ -291,8 +316,11 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
             continue
         key = year_in_review._title_key(row.category, item_id, row.title)
         found = finished.setdefault(key, {"category": row.category, "item_id": item_id,
-                                          "title": row.title or "", "reflected": False})
+                                          "title": row.title or "", "reflected": False, "at": None})
         found["reflected"] = found["reflected"] or reflected
+        when = getattr(row, "occurred_at", None) or getattr(row, "completed_at", None)
+        if when is not None and (found["at"] is None or when > found["at"]):
+            found["at"] = when
         if found["item_id"] is None:
             found["item_id"] = item_id
     return list(year_in_review.fold_deleted_copies(finished).values())
@@ -435,6 +463,58 @@ def stretch_formats(db: Session, user_id: int, month: str, finishes: list[dict],
     return [category for category in FORMAT_NOUNS if counts.get(category) == fewest]
 
 
+def _origins(db: Session, user_id: int, finishes: list[dict]) -> dict[tuple[str, int], str]:
+    """Where each finished library title came from (its Why I added it source), in one query per 500 titles."""
+    wanted = {(finish["category"], finish["item_id"]) for finish in finishes
+              if finish["item_id"] is not None and finish["item_id"] > 0}
+    if not wanted:
+        return {}
+    ids = sorted({item_id for _, item_id in wanted})
+    sources: dict[tuple[str, int], str] = {}
+    for first in range(0, len(ids), 500):
+        for category, item_id, source in db.query(
+            models.TitleOrigin.category, models.TitleOrigin.item_id, models.TitleOrigin.source,
+        ).filter(models.TitleOrigin.user_id == user_id, models.TitleOrigin.item_id.in_(ids[first:first + 500])):
+            if (category, item_id) in wanted:
+                sources[(category, item_id)] = source
+    return sources
+
+
+def _recommended_count(finishes: list[dict], sources: dict[tuple[str, int], str]) -> int:
+    return sum(1 for finish in finishes if sources.get((finish["category"], finish["item_id"])) in title_origins.PEOPLE)
+
+
+# How many of the month's finishes the card offers to credit, newest first.
+UNSAID_LIMIT = 3
+
+
+def unsaid_finishes(db: Session, user_id: int, finishes: list[dict], sources: dict[tuple[str, int], str],
+                    limit: int = UNSAID_LIMIT) -> list[dict]:
+    """This month's finishes that are still in the library and don't say where they came from yet.
+
+    The card offers these so a member can say who recommended one without finding it on its shelf.
+    Newest finish first; titles removed from the library are left out, since there is nothing to edit.
+    """
+    candidates = [finish for finish in finishes
+                  if finish["item_id"] is not None and finish["item_id"] > 0
+                  and (finish["category"], finish["item_id"]) not in sources
+                  and finish["category"] in title_origins.LIBRARY]
+    candidates.sort(key=lambda finish: finish.get("at") or datetime.min, reverse=True)
+    candidates = candidates[:limit * 4]
+    live: dict[str, set[int]] = {}
+    for category in {finish["category"] for finish in candidates}:
+        model = title_origins.LIBRARY[category][0]
+        ids = sorted(finish["item_id"] for finish in candidates if finish["category"] == category)
+        live[category] = {row_id for (row_id,) in db.query(model.id).filter(model.user_id == user_id, model.id.in_(ids))}
+    unsaid = []
+    for finish in candidates:
+        if finish["item_id"] in live.get(finish["category"], ()):
+            unsaid.append({"category": finish["category"], "id": finish["item_id"], "title": finish["title"]})
+        if len(unsaid) >= limit:
+            break
+    return unsaid
+
+
 def _edition_titles(slug: str) -> set[tuple[str, str]]:
     """The edition's picks as (category, title), with any other names a library might give them."""
     edition = MONTHLY_EDITIONS.get(slug) or {}
@@ -480,6 +560,11 @@ def progress(db: Session, user_id: int, month: str) -> list[dict]:
             count, target = sum(1 for finish in finishes if finish["category"] in formats), step.get("count", 1)
             # Private to the member: shown on their own card, never on a shared page.
             extra = {"formats": [STRETCH_LABELS[category] for category in formats]}
+        elif step["kind"] == "recommended":
+            sources = _origins(db, user_id, finishes)
+            count, target = _recommended_count(finishes, sources), step.get("count", 1)
+            # Private to the member, like "formats": finishes the card can offer to credit to someone.
+            extra = {"unsaid": [] if count >= target else unsaid_finishes(db, user_id, finishes, sources)}
         else:
             count, target = _step_count(db, user_id, step, finishes, month)
         steps.append({"key": f"step-{index + 1}", "kind": step["kind"], "label": step["label"],
