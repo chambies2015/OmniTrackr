@@ -92,7 +92,14 @@
     });
     document.querySelectorAll('[data-guest-bar]').forEach(bar => { bar.hidden = list.length === 0; });
     document.querySelectorAll('[data-guest-count]').forEach(counter => {
-      counter.textContent = list.length ? `${countText(list.length)}. Sign up free to keep ${list.length === 1 ? 'it' : 'them'}.` : '';
+      counter.textContent = list.length ? `${countText(list.length)}.` : '';
+      if (!list.length || typeof document.createElement !== 'function') return;
+      // The second sentence is its own span so narrow save bars can drop it (the button says it).
+      const ask = document.createElement('span');
+      ask.className = 'guest-count__ask';
+      ask.textContent = ` Sign up free to keep ${list.length === 1 ? 'it' : 'them'}.`;
+      if (typeof counter.appendChild === 'function') counter.appendChild(ask);
+      else counter.textContent += ask.textContent;
     });
   }
 

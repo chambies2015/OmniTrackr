@@ -102,6 +102,10 @@ GUEST = (
     ("guest_sheet_google", "Keep your list sheet: Continue with Google pressed"),
     ("guest_sheet_email", "Keep your list sheet: Sign up with email pressed"),
     ("guest_sheet_login", "Keep your list sheet: Log in pressed"),
+    ("signup_sheet_opened", "Phones: Start tracking sheet opened on a guide or other public page"),
+    ("signup_sheet_google", "Phones: Start tracking sheet, Continue with Google pressed"),
+    ("signup_sheet_email", "Phones: Start tracking sheet, Sign up with email pressed"),
+    ("signup_sheet_login", "Phones: Start tracking sheet, Log in pressed"),
     ("guest_return_clicked", "New library: Back to the page the list was saved from pressed"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
@@ -247,6 +251,7 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "home_cta_clicked", "home_tour_opened", "home_import_clicked", "home_binge_demo_used", "home_tool_opened",
                  "title_signup_clicked", "title_trailer_played",
                  "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked",
+                 "signup_sheet_opened", "signup_sheet_google", "signup_sheet_email", "signup_sheet_login",
                  "essentials_ticked", "essentials_signup_clicked", "essentials_shared"}
 
 

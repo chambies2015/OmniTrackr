@@ -22,7 +22,7 @@ from .discover import page
 router = APIRouter(tags=["tonight"])
 CSS_VERSION = "20261112-tonight-2"
 JS_VERSION = "20261112-tonight-2"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
 DESCRIPTION = ("Can't agree on what to watch tonight? Make a quick poll from your watchlist, send the link to the "
                "group chat and let everyone vote. Free, and friends don't need an account to vote.")
 SITE_URL = tonight_polls.SITE_URL

@@ -26,7 +26,7 @@ from .titles import KIND_PLURALS
 router = APIRouter(tags=["trending"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261120-explore-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
 SINGULAR = {kind: noun for kind, (noun, _) in trending.NOUNS.items()}
 PLURAL = {kind: plural for kind, (_, plural) in trending.NOUNS.items()}
 

@@ -23,7 +23,7 @@ from .discover import page
 router = APIRouter(tags=["tier-list"])
 CSS_VERSION = "20261117-tier-share-1"
 JS_VERSION = "20261117-tier-share-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261118-sheet-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
 DESCRIPTION = ("Free tier list maker for movies, TV, anime, games, books and albums. Start from a ready-made set or "
                "search any title, rank it S to D, save it as an image.")
 MAX_REDIRECTS = 3

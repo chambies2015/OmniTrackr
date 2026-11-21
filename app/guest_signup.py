@@ -26,3 +26,23 @@ def mark_guest_pages(html: str) -> str:
         return html
     mode = "google" if google_signin.configured() else "email"
     return _BODY.sub(f'<body data-guest-sheet="{mode}"', html, count=1)
+
+
+# Every public page has "Start tracking" in its header. On a phone the homepage
+# sign-up form fills the whole screen, so following that link used to load the
+# homepage only to cover it, and closing the form left the visitor on the
+# homepage instead of the page they were reading. When Google sign-in is set up,
+# this marks the page and site-nav.js opens a small sheet in place on phones:
+# Continue with Google, Sign up with email, Log in.
+_SIGNUP_LINK = 'href="/#signup"'
+
+
+def mark_signup_pages(html: str) -> str:
+    if _SIGNUP_LINK not in html or "data-signup-sheet" in html:
+        return html
+    # Only pages with the visitor header (pages for signed-in members render it with is-member).
+    if any(marker in html for marker in _HAS_FORM) or '<header class="site-header">' not in html:
+        return html
+    if not google_signin.configured():
+        return html
+    return _BODY.sub('<body data-signup-sheet="google"', html, count=1)
