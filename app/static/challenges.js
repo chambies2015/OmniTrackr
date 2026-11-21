@@ -67,7 +67,7 @@
       log.dataset.challengeAction = 'log-revisit';
       item.appendChild(log);
     }
-    const hint = stretchHint(step) || birthdayHint(step) || dayHint(step);
+    const hint = stretchHint(step) || birthdayHint(step) || dayHint(step) || pairHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
@@ -180,6 +180,24 @@
       return `Finish ${more} by ${deadlineText(until, now)} to go with ${listText(titles)}`;
     }
     return `Any ${COUNT_WORDS[target] || target} finishes less than ${hours} hours apart count`;
+  }
+
+  // Under a step about finishing the other version of something: up to three unfinished titles from the
+  // member's library that would pair with something they've finished ("In your library: Dune (film) to go
+  // with the book"), or how the step counts.
+  function pairHint(step) {
+    if (!step || step.kind !== 'pair' || step.done) return '';
+    const text = value => (typeof value === 'string' ? value.trim() : '');
+    const waiting = (Array.isArray(step.waiting) ? step.waiting : [])
+      .filter(title => title && text(title.title) && text(title.format)).slice(0, 3);
+    if (waiting.length) {
+      const names = waiting.map(title => {
+        const partner = text(title.with);
+        return `${text(title.title)} (${text(title.format)})${partner ? ` to go with the ${partner}` : ''}`;
+      });
+      return `In your library: ${names.join(', ')}`;
+    }
+    return "Counts when it shares a name with something you've finished in another format";
   }
 
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
@@ -383,7 +401,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

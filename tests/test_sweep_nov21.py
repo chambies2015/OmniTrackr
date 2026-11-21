@@ -23,8 +23,8 @@ def test_light_mode_today_labels_are_readable():
 
 
 def test_changed_assets_carry_new_tags():
-    # challenges.js changed again for the May (#276) and June challenges, so it carries a later tag.
-    for tag in ("./styles.css?v=20261121-sweep-1", "/static/challenges.js?v=20261121-all-in-a-day-1",
+    # challenges.js changed again for the May (#276), June and July challenges, so it carries a later tag.
+    for tag in ("./styles.css?v=20261121-sweep-1", "/static/challenges.js?v=20261121-told-twice-1",
                 "/static/home-layout.js?v=20261121-sweep-1"):
         assert tag in INDEX, tag
 
