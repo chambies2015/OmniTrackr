@@ -68,9 +68,9 @@
       item.appendChild(log);
     }
     const hint = stretchHint(step) || birthdayHint(step) || dayHint(step) || pairHint(step) || makerHint(step)
-      || reportHint(step);
+      || reportHint(step) || drawHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
-    const write = writeButton(step);
+    const write = writeButton(step) || drawButton(step);
     if (write) copy.appendChild(write);
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
@@ -282,6 +282,65 @@
     status(step.done ? 'Saved. That counts as your report.' : `Saved. ${reportHint(step)}.`);
   }
 
+  const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  function drawCard(step) {
+    const card = step.card && typeof step.card === 'object' ? step.card : null;
+    if (!card || typeof card.title !== 'string' || !card.title.trim()) return null;
+    return { ...card, title: card.title.trim() };
+  }
+
+  // "2027-10-15" as "Friday", read as a calendar date so no time zone can move it.
+  function nightName(night) {
+    const match = typeof night === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(night) : null;
+    if (!match) return '';
+    const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    // "2027-02-30" would roll into March: not a real night.
+    return day.getUTCDate() === Number(match[3]) ? WEEKDAYS[day.getUTCDay()] : '';
+  }
+
+  // Under a step about taking the deal the backlog draw offers: the title on the member's card ("Your card:
+  // Dune, kept for Friday"), an offer to deal, or what the draw needs before it can.
+  function drawHint(step) {
+    if (!step || step.kind !== 'draw' || step.done) return '';
+    const card = drawCard(step);
+    if (card) {
+      const night = nightName(card.night);
+      return night ? `Your card: ${card.title}, kept for ${night}` : `Your card: ${card.title}. Finish it to take the deal`;
+    }
+    if (step.ready === true) return 'Deal three cards from your backlog and keep one';
+    return "The draw deals from titles you've saved and not started, and needs three";
+  }
+
+  // A button under the draw step that brings the Draw from your backlog card into view, even if it was hidden here.
+  function drawButton(step) {
+    if (!step || step.kind !== 'draw' || step.done) return null;
+    const card = drawCard(step);
+    if (!card && step.ready !== true) return null;
+    const button = el('button', 'month-challenge__link', card ? 'See my card' : 'Deal me in');
+    button.type = 'button';
+    button.dataset.challengeAction = 'draw';
+    return button;
+  }
+
+  function showDraw() {
+    const draw = typeof window !== 'undefined' ? window.OmniBacklogDraw : null;
+    const fallback = 'Find the Draw from your backlog card on your home screen.';
+    if (!draw || typeof draw.show !== 'function') {
+      status(fallback);
+      return Promise.resolve(false);
+    }
+    try {
+      return Promise.resolve(draw.show()).then(shown => {
+        if (!shown) status(fallback);
+        return Boolean(shown);
+      }).catch(() => { status(fallback); return false; });
+    } catch (error) {
+      status(fallback);
+      return Promise.resolve(false);
+    }
+  }
+
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
   async function openRevisitForm() {
     const opened = typeof navigateLibraryTab === 'function' ? await navigateLibraryTab('activity') : false;
@@ -454,6 +513,8 @@
       creditTitle(target);
     } else if (action === 'write') {
       writeReport(target);
+    } else if (action === 'draw') {
+      showDraw();
     }
   }
 
@@ -489,6 +550,11 @@
       if (fromCard) state.writing = null;
       refreshMonthlyChallenge({ wrote: fromCard });
     });
+    // Keeping, finishing or giving up a card on the backlog draw moves the "Take the deal" step.
+    window.addEventListener('omnitrackr:backlog-draw-changed', () => {
+      if (!state.data || !(state.data.steps || []).some(step => step.kind === 'draw')) return;
+      refreshMonthlyChallenge();
+    });
   }
 
   if (typeof window !== 'undefined') {
@@ -496,7 +562,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint, reportHint, writeButton, afterWrite };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint, reportHint, writeButton, afterWrite, drawHint, drawButton, nightName, showDraw };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
