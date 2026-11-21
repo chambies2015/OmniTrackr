@@ -264,3 +264,52 @@ test('a maker step names titles by people you know waiting in the library, or ho
     delete global.document;
   }
 });
+
+test('a report step counts the words so far, names the finish to write about, or says how it counts', () => {
+  const step = { kind: 'report', done: false, count: 0, target: 1, words: 50,
+    best: { title: ' Lord of the Flies ', category: 'books', id: 12, words: 32 } };
+  assert.equal(challenge.reportHint(step), 'Lord of the Flies: 32 words so far, 18 to go');
+  assert.equal(challenge.reportHint({ ...step, best: { ...step.best, words: 1 } }), 'Lord of the Flies: 1 word so far, 49 to go');
+  assert.equal(challenge.reportHint({ ...step, best: { ...step.best, words: 0 } }),
+    'Write 50 words about Lord of the Flies, or about anything else you finish this month');
+  // A missing word target falls back to fifty, and a missing or broken finish to how the step counts.
+  const fallback = 'Counts when what you write about one finish adds up to 50 words';
+  assert.equal(challenge.reportHint({ ...step, words: undefined, best: null }), fallback);
+  assert.equal(challenge.reportHint({ ...step, best: { title: '  ', words: 3 } }), fallback);
+  assert.equal(challenge.reportHint({ ...step, best: 'Lord of the Flies' }), fallback);
+  assert.equal(challenge.reportHint({ ...step, done: true }), '');
+  assert.equal(challenge.reportHint({ ...step, kind: 'maker' }), '');
+  // The other hints ignore a report step, so it gets only its own line.
+  assert.equal(challenge.makerHint(step), '');
+  assert.equal(challenge.pairHint(step), '');
+
+  const make = tag => ({
+    tag, className: '', textContent: '', dataset: {}, children: [], attributes: {}, type: '',
+    appendChild(child) { this.children.push(child); return child; },
+    append(...nodes) { this.children.push(...nodes); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+  });
+  global.document = { createElement: make };
+  try {
+    const button = challenge.writeButton(step);
+    assert.equal(button.textContent, 'Keep writing');
+    assert.equal(button.dataset.challengeAction, 'write');
+    assert.equal(button.dataset.category, 'books');
+    assert.equal(button.dataset.itemId, '12');
+    assert.equal(button.attributes['aria-label'], 'Write about Lord of the Flies');
+    assert.equal(challenge.writeButton({ ...step, best: { ...step.best, words: 0 } }).textContent, 'Write it');
+    // A finish that was removed from the library has no id, so there is nothing to open.
+    assert.equal(challenge.writeButton({ ...step, best: { ...step.best, id: null } }), null);
+    assert.equal(challenge.writeButton({ ...step, best: { ...step.best, category: '' } }), null);
+    assert.equal(challenge.writeButton({ ...step, done: true }), null);
+    assert.equal(challenge.writeButton({ ...step, kind: 'reflect' }), null);
+
+    const item = challenge.stepItem({ ...step, label: 'Hand in a fifty-word report' });
+    const label = item.children.find(node => node.className === 'month-challenge__label');
+    assert.equal(label.children[0].className, 'month-challenge__hint');
+    assert.equal(label.children[0].textContent, 'Lord of the Flies: 32 words so far, 18 to go');
+    assert.equal(label.children[1].dataset.challengeAction, 'write');
+  } finally {
+    delete global.document;
+  }
+});

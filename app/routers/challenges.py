@@ -120,8 +120,12 @@ PICK_WORDS = {6: "six", 7: "seven", 8: "eight", 9: "nine"}
 
 
 def _with_other(item: dict) -> str:
-    """", with the book" after a pick whose edition names its version in another format, or ", in the shadow
-    of Rumours" after one that names its maker's best-known work."""
+    """", with the book" after a pick whose edition names its version in another format, ", in the shadow
+    of Rumours" after one that names its maker's best-known work, or ", taught at Harvard" after one that
+    says where it has been taught."""
+    where = (item.get("classroom") or {}).get("where")
+    if where:
+        return f", taught {_e(where)}"
     shadow = (item.get("shadow") or {}).get("title")
     if shadow:
         return f", in the shadow of {_e(shadow)}"

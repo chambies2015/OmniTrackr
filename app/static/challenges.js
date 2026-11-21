@@ -3,7 +3,7 @@
 (function () {
   'use strict';
 
-  const state = { request: 0, data: null, forced: false, busy: false, crediting: null };
+  const state = { request: 0, data: null, forced: false, busy: false, crediting: null, writing: null };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -67,8 +67,11 @@
       log.dataset.challengeAction = 'log-revisit';
       item.appendChild(log);
     }
-    const hint = stretchHint(step) || birthdayHint(step) || dayHint(step) || pairHint(step) || makerHint(step);
+    const hint = stretchHint(step) || birthdayHint(step) || dayHint(step) || pairHint(step) || makerHint(step)
+      || reportHint(step);
     if (hint) copy.appendChild(el('span', 'month-challenge__hint', hint));
+    const write = writeButton(step);
+    if (write) copy.appendChild(write);
     if (step.kind === 'recommended' && !step.done) {
       copy.appendChild(creditRow(step) || el('span', 'month-challenge__hint', 'Name them under "Why I added it" on the title'));
     }
@@ -215,6 +218,70 @@
     return "Counts when the director, author, band or host matches something you've finished";
   }
 
+  function reportTarget(step) {
+    return Number.isInteger(step.words) && step.words > 0 ? step.words : 50;
+  }
+
+  function reportBest(step) {
+    const best = step.best && typeof step.best === 'object' ? step.best : null;
+    if (!best || typeof best.title !== 'string' || !best.title.trim()) return null;
+    return { ...best, title: best.title.trim(), words: Number.isInteger(best.words) && best.words > 0 ? best.words : 0 };
+  }
+
+  // Under a step about writing a report: how far the longest one has got ("Dune: 32 words so far, 18 to
+  // go"), which finish to write about, or how the step counts.
+  function reportHint(step) {
+    if (!step || step.kind !== 'report' || step.done) return '';
+    const target = reportTarget(step);
+    const best = reportBest(step);
+    if (best && best.words > 0 && best.words < target) {
+      return `${best.title}: ${best.words} word${best.words === 1 ? '' : 's'} so far, ${target - best.words} to go`;
+    }
+    if (best) return `Write ${target} words about ${best.title}, or about anything else you finish this month`;
+    return `Counts when what you write about one finish adds up to ${target} words`;
+  }
+
+  // A button under the report step that opens the finish screen for that title, where the takeaway goes.
+  function writeButton(step) {
+    if (!step || step.kind !== 'report' || step.done) return null;
+    const best = reportBest(step);
+    if (!best || !Number.isInteger(best.id) || best.id < 1 || typeof best.category !== 'string' || !best.category) return null;
+    const button = el('button', 'month-challenge__link', best.words ? 'Keep writing' : 'Write it');
+    button.type = 'button';
+    button.dataset.challengeAction = 'write';
+    button.dataset.category = best.category;
+    button.dataset.itemId = String(best.id);
+    button.setAttribute('aria-label', `Write about ${best.title}`);
+    return button;
+  }
+
+  function writeReport(button) {
+    const open = typeof window !== 'undefined' ? window.openCompletionMoment : null;
+    const category = button.dataset.category;
+    const id = Number(button.dataset.itemId);
+    if (typeof open !== 'function' || !category || !Number.isInteger(id) || id < 1) {
+      status('Open the title in your library and add a takeaway or a review.');
+      return;
+    }
+    state.writing = { category, id };
+    try {
+      Promise.resolve(open(category, id)).catch(() => {
+        state.writing = null;
+        status('Open the title in your library and add a takeaway or a review.');
+      });
+    } catch (error) {
+      state.writing = null;
+      status('Open the title in your library and add a takeaway or a review.');
+    }
+  }
+
+  // After a takeaway or review saved from the card: say whether it finished the step.
+  function afterWrite() {
+    const step = ((state.data && state.data.steps) || []).find(item => item.kind === 'report');
+    if (!step) return;
+    status(step.done ? 'Saved. That counts as your report.' : `Saved. ${reportHint(step)}.`);
+  }
+
   // Open the Journal's "Add a moment" form with "Revisited" already chosen.
   async function openRevisitForm() {
     const opened = typeof navigateLibraryTab === 'function' ? await navigateLibraryTab('activity') : false;
@@ -289,6 +356,7 @@
   async function refreshMonthlyChallenge(options) {
     if (!$('monthlyChallenge')) return;
     const credited = Boolean(options && options.credited === true);
+    const wrote = Boolean(options && options.wrote === true);
     const request = ++state.request;
     try {
       const response = await fetch(`${apiBase()}/api/challenge`, fetchOptions({ headers: { Accept: 'application/json' } }));
@@ -298,6 +366,7 @@
       render(data);
       openFromHash();
       if (credited) afterCredit();
+      if (wrote) afterWrite();
     } catch (error) {
       // The challenge is optional; the dashboard works without it.
     }
@@ -383,6 +452,8 @@
       openRevisitForm();
     } else if (action === 'credit') {
       creditTitle(target);
+    } else if (action === 'write') {
+      writeReport(target);
     }
   }
 
@@ -409,6 +480,15 @@
       if (fromCard) state.crediting = null;
       refreshMonthlyChallenge({ credited: fromCard });
     });
+    // A takeaway or review saved on the finish screen can hand in the report, wherever it was opened from.
+    window.addEventListener('omnitrackr:completion-saved', event => {
+      if (!state.data || !(state.data.steps || []).some(step => step.kind === 'report')) return;
+      const saved = event && event.detail;
+      const fromCard = Boolean(state.writing && saved && saved.category === state.writing.category
+        && Number(saved.id) === state.writing.id);
+      if (fromCard) state.writing = null;
+      refreshMonthlyChallenge({ wrote: fromCard });
+    });
   }
 
   if (typeof window !== 'undefined') {
@@ -416,7 +496,7 @@
     window.resetMonthlyChallenge = resetMonthlyChallenge;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint };
+    module.exports = { daysLeftText, summaryText, dismissKey, stepItem, stretchHint, creditRow, afterCredit, state, birthdayHint, dayHint, pairHint, makerHint, reportHint, writeButton, afterWrite };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
