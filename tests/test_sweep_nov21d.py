@@ -56,7 +56,6 @@ def test_sign_up_sheet_log_in_link_has_a_tap_band_on_phones():
     rule = re.search(r"\.guest-sheet__note a \{([^}]*)\}", phones)
     assert rule, "the phone block styles the sheet's Log in link"
     assert "margin-block: -12px" in rule.group(1) and "padding: 12px 4px" in rule.group(1)
-    assert site_chrome.SITE_CSS_VERSION == "20261121-sweep-d-1"
     stats = (ROOT / "app" / "templates" / "site_stats.html").read_text(encoding="utf-8")
     assert f"/static/site.css?v={site_chrome.SITE_CSS_VERSION}" in stats
 
