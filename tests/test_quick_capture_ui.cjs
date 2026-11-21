@@ -571,3 +571,28 @@ test('a corrected search keeps one-tap Add but drops the shared year', async () 
   await again;
   assert.ok(s.get('quickCaptureResults').querySelector('[data-action="add-quick-capture-result"]'));
 });
+
+test('on a phone every match gets one-tap Add and Edit first; wider screens keep Use', async () => {
+  const phone = setup();
+  phone.context.window.matchMedia = query => ({ matches: query === '(max-width: 680px)' });
+  const form = shareForm(phone, 'addMovieForm', true);
+  phone.context.selectQuickCaptureCategory('movies');
+  const search = phone.search('Dune');
+  phone.respond('movies', 'Dune');
+  await search;
+  const add = phone.get('quickCaptureResults').querySelector('[data-action="add-quick-capture-result"]');
+  assert.ok(add, 'Add sits on the match itself');
+  assert.match(phone.get('quickCaptureStatus').textContent, /Tap Add to save one/);
+  assert.equal(await phone.context.addQuickCaptureResult(Number(add.dataset.quickResultIndex)), true);
+  assert.equal(form.submitted, 1);
+
+  const wide = setup();
+  wide.context.window.matchMedia = () => ({ matches: false });
+  wide.context.selectQuickCaptureCategory('movies');
+  const again = wide.search('Dune');
+  wide.respond('movies', 'Dune');
+  await again;
+  assert.equal(wide.get('quickCaptureResults').querySelector('[data-action="add-quick-capture-result"]'), null);
+  assert.equal(wide.results().length, 1);
+  assert.match(wide.get('quickCaptureStatus').textContent, /Choose one to review before saving/);
+});

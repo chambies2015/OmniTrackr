@@ -1,3 +1,14 @@
+// On a phone, Add anything fills the whole screen and "Use" opened the shelf's form with the
+// keyboard up, so saving a match took three taps. Phones get the same Add / Edit first pair a
+// shared title gets; wider screens keep "Use" and review the form first.
+function quickCaptureOneTap() {
+  try {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 680px)').matches;
+  } catch (_) {
+    return false;
+  }
+}
+
 function isCurrentQuickCaptureSearch(search) {
   return quickCaptureSearch === search && !search.controller.signal.aborted
     && isElementShown(document.getElementById('quickCaptureModal'))
@@ -192,7 +203,7 @@ function updateQuickCaptureStatus(search) {
   const count = quickCaptureResults.length;
   if (count) {
     status.textContent = `${count} match${count === 1 ? '' : 'es'} for “${search.query}”. `
-      + (search.shared ? 'Tap Add to save one, or Edit first to change the details.' : 'Choose one to review before saving.');
+      + (search.oneTap ? 'Tap Add to save one, or Edit first to change the details.' : 'Choose one to review before saving.');
   } else if (pending) {
     status.textContent = `Searching for “${search.query}”… You can enter a title manually at any time.`;
   } else {
@@ -246,7 +257,7 @@ function renderQuickCaptureResults(search, group, result) {
     // Append stable indices; another source must not replace a focused result.
     result.results.forEach(item => {
       const index = quickCaptureResults.push(item) - 1;
-      if (search.shared) {
+      if (search.oneTap) {
         group.grid.appendChild(sharedQuickCaptureResult(item, index));
         return;
       }
@@ -310,7 +321,8 @@ async function searchQuickCapture(event) {
   // IMDb, Netflix and similar links could be a film or a series: search both shelves.
   const categories = quickCaptureCategory !== 'all' ? [quickCaptureCategory]
     : share?.kind === 'screen' ? ['movies', 'tv-shows'] : QUICK_CAPTURE_CATEGORY_ORDER;
-  const search = { query, category: quickCaptureCategory, controller, groups: new Map(), shared: !!quickCaptureShare };
+  // Shared titles and phones get one-tap Add on every match (see quickCaptureOneTap).
+  const search = { query, category: quickCaptureCategory, controller, groups: new Map(), shared: !!quickCaptureShare, oneTap: !!quickCaptureShare || quickCaptureOneTap() };
   quickCaptureSearch = search;
   createQuickCaptureGroups(search, categories, results);
   // Each source renders independently; completion never gates the first result.
