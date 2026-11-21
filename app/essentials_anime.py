@@ -28,8 +28,8 @@ LIST = {
         "The list runs in order of first release, across seven eras, so you can read it as a short history. Tick off "
         "what you have watched and the page keeps count. If you are new, start with the ten titles marked as "
         "starters; if you have seen the recent hits, the first three sections are where the gaps usually are. For "
-        "long series we give episode counts as of mid-2025 and say where to start or what to skip, because a "
-        "1,100-episode show needs a plan.",
+        "long series we give episode counts as of 2026 and say where to start or what to skip, because a "
+        "1,150-episode show needs a plan.",
     ],
     "sections": [
         {
@@ -460,7 +460,7 @@ LIST = {
                           "does, but its final arc closes things off well.",
                  "aka": ["GTO"]},
                 {"title": "One Piece", "year": 1999, "creator": "Konosuke Uda", "origin": "Toei Animation",
-                 "length": "More than 1,100 episodes by mid-2025", "hours": 450,
+                 "length": "More than 1,150 episodes by 2026, and still running", "hours": 470,
                  "why": "Monkey D. Luffy, whose body stretches like rubber after he eats a cursed fruit, sails with a "
                         "growing crew to find the treasure left by the executed pirate king Gol D. Roger. Eiichiro "
                         "Oda's manga has sold more than 500 million copies, a Guinness record for a comic by a single "
@@ -1186,7 +1186,7 @@ LIST = {
               "Festival, then cut and added by hand. We wanted every decade from the late 1950s on, every major genre, "
               "TV series as well as films, and a spread of studios, so we capped each director at three entries and "
               "Studio Ghibli at four films. Years are first broadcast or first public screening. Episode counts and "
-              "runtimes were checked against Anime News Network and Wikipedia; long series are counted as of mid-2025 "
+              "runtimes were checked against Anime News Network and Wikipedia; long series are counted as of 2026 "
               "and rounded where they were still running. Nothing that began after mid-2025 is included.",
     "sources": [
         ("MyAnimeList: top anime", "https://myanimelist.net/topanime.php"),
@@ -1213,7 +1213,7 @@ LIST = {
          "in their own right, Cowboy Bebop's above all. With older shows, check that you have an uncut version: the "
          "1995 Sailor Moon dub and the 2000 Cardcaptors both cut and rewrote episodes."),
         ("Do I have to watch One Piece from episode 1?",
-         "Yes, the story is continuous, but plan for it: there were more than 1,100 episodes by mid-2025. The early "
+         "Yes, the story is continuous, but plan for it: there were more than 1,150 episodes by 2026. The early "
          "arcs are short, and if you are not hooked by the end of the Arlong Park arc, around episode 45, the show "
          "probably is not for you."),
         ("What is the difference between Fullmetal Alchemist and Brotherhood?",

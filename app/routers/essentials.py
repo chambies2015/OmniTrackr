@@ -19,7 +19,7 @@ from datetime import date
 from functools import lru_cache
 from html import escape
 from typing import Literal, Optional
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -34,8 +34,9 @@ from .if_you_liked import GUEST_LIST_JS
 
 router = APIRouter(tags=["essentials"])
 CSS_VERSION = "20261121-phone-1"
-JS_VERSION = "20261121-phone-1"
-IMPORT_JS = "/static/essentials-import.js?v=20261121-essentials-1"
+# Both the phone pass (Titles only) and the Nov 21 sweep changed essentials.js.
+JS_VERSION = "20261121-phone-2"
+IMPORT_JS = "/static/essentials-import.js?v=20261121-essentials-sweep-1"
 SITE = "https://omnitrackr.xyz"
 PUBLISHED = "2026-11-21"
 HUB_TITLE = "The Essential 100: the films, shows, games, books and albums worth knowing"
@@ -183,6 +184,11 @@ def _item_html(data: dict, item: dict, signed_in: bool, states: Optional[dict], 
     )
 
 
+def _signup_back(fmt: str) -> str:
+    """Sign-up that comes back to this list's count (auth.js allows the path), where the ticks move in."""
+    return "/?next=" + quote(f"{essentials.path(fmt)}#your-count", safe="") + "#signup"
+
+
 def _tracker(data: dict, signed_in: bool, states: Optional[dict]) -> str:
     fmt = data["format"]
     count = essentials.progress(states, fmt) if states is not None else {"done": 0, "tracked": 0, "total": len(data["items"])}
@@ -215,7 +221,7 @@ def _tracker(data: dict, signed_in: bool, states: Optional[dict]) -> str:
         # Hides the notes so the list reads as a checklist; essentials.js shows it and remembers the choice.
         '<button type="button" class="es-view" aria-pressed="false" data-es-view hidden>Titles only</button>'
         f'<a class="es-share" href="{_e(share)}" data-es-share{"" if signed_in else " hidden"}>Share my count</a>'
-        + ('' if signed_in else '<a class="es-save-count" href="/#signup" data-es-signup hidden>Keep my count, free</a>')
+        + ('' if signed_in else f'<a class="es-save-count" href="{_e(_signup_back(fmt))}" data-es-signup hidden>Keep my count, free</a>')
         + '</div></aside>'
     )
 
@@ -524,7 +530,17 @@ def essentials_list(fmt: str, user=Depends(get_optional_current_user), db: Sessi
 
 # ---------------------------------------------------------------- shared counts
 
-_ALL_PATTERN = re.compile(r"^\d{1,3}(?:-\d{1,3}){8}$")
+# Plain ASCII digits without leading zeros, so each count has one address ("\d" would take "٥" or "007").
+_COUNT = r"(?:0|[1-9][0-9]{0,2})"
+_ALL_PATTERN = re.compile(rf"^{_COUNT}(?:-{_COUNT}){{8}}$")
+_ONE_PATTERN = re.compile(rf"^{_COUNT}$")
+
+
+def _parse_one(fmt: str, done: str) -> Optional[tuple[dict, int]]:
+    data = essentials.get(fmt)
+    if data is None or not _ONE_PATTERN.match(done or "") or int(done) > len(data["items"]):
+        return None
+    return data, int(done)
 
 
 def _parse_all(counts: str) -> Optional[list[int]]:
@@ -578,10 +594,11 @@ def essentials_all_score(counts: str, request: Request, user=Depends(get_optiona
 
 
 @router.get(essentials.BASE_PATH + "/{fmt}/score/{done}", include_in_schema=False)
-def essentials_score(fmt: str, done: int, request: Request, user=Depends(get_optional_current_user)):
-    data = essentials.get(fmt)
-    if data is None or not 0 <= done <= len(data["items"]):
+def essentials_score(fmt: str, done: str, request: Request, user=Depends(get_optional_current_user)):
+    parsed = _parse_one(fmt, done)
+    if parsed is None:
         raise HTTPException(404, "Not found")
+    data, done = parsed
     if user is None:
         funnel.record("essentials_count_opened", request)
     total = len(data["items"])
@@ -662,7 +679,7 @@ def _png(content: bytes) -> Response:
 
 
 @router.get(essentials.BASE_PATH + "/score/{counts}/card.png", include_in_schema=False)
-def essentials_all_card(counts: str):
+def essentials_all_card(counts: str, request: Request):
     values = _parse_all(counts)
     if values is None:
         raise HTTPException(404, "Not found")
@@ -670,11 +687,11 @@ def essentials_all_card(counts: str):
 
 
 @router.get(essentials.BASE_PATH + "/{fmt}/score/{done}/card.png", include_in_schema=False)
-def essentials_card(fmt: str, done: int):
-    data = essentials.get(fmt)
-    if data is None or not 0 <= done <= len(data["items"]):
+def essentials_card(fmt: str, done: str, request: Request):
+    parsed = _parse_one(fmt, done)
+    if parsed is None:
         raise HTTPException(404, "Not found")
-    return _png(render_card(fmt, (done,)))
+    return _png(render_card(fmt, (parsed[1],)))
 
 
 # ---------------------------------------------------------------- saving
@@ -747,12 +764,22 @@ def essentials_import(payload: EssentialImport, request: Request, response: Resp
     response.headers["Cache-Control"] = "private, no-store"
     lock_progress_owner(db, user.id)
     added, existing, missing = 0, 0, 0
+    items = []
     for item_id in dict.fromkeys(payload.ids):
         item = essentials.item_by_id(item_id) if isinstance(item_id, str) and len(item_id) <= 160 else None
         if item is None:
             missing += 1
+        else:
+            items.append(item)
+    # One query per format for what is already there, instead of one per ticked title.
+    have = essentials.library_titles(db, user.id, items)
+    for item in items:
+        key = (item["kind"], title_pages.normalize(item["title"]))
+        if key in have:
+            existing += 1
             continue
         state, _ = essentials.add(db, user, item, True)
+        have.add(key)
         if state == "created":
             added += 1
         else:

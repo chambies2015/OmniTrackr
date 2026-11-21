@@ -621,9 +621,11 @@ def turning_titles(db: Session, user_id: int, month: str, every: int = 10, limit
             matches = or_(*(and_(column >= datetime(year, 1, 1), column < datetime(year + 1, 1, 1)) for year in years))
         else:
             matches = column.in_(years)
+        # Postgres puts NULLs first in a descending sort, so rows from before added_at existed would
+        # crowd out this year's saves; they go last, as they do in the merge below.
         rows = db.query(model.id, model.title, column, model.added_at).filter(
             model.user_id == user_id, getattr(model, title_pages.COMPLETE_FIELD[kind]).isnot(True), matches,
-        ).order_by(model.added_at.desc(), model.id.desc()).limit(limit).all()
+        ).order_by(model.added_at.desc().nullslast(), model.id.desc()).limit(limit).all()
         for item_id, title, value, added_at in rows:
             year = value.year if kind == "game" else value
             if not (title or "").strip() or not _turns_round(year, month, every):

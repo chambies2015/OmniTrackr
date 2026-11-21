@@ -57,6 +57,9 @@ function validateDiscoverAuthReturn(value) {
     // An awards show's page, back at the ballot.
     const ballot = value.match(/^\/awards\/[a-z0-9-]{1,60}#ballot$/);
     if (ballot && ballot[0] === value) return value;
+    // The Essential 100 hub or one list, back at the count, where ticks from before signing up move in.
+    const essential = value.match(/^\/essentials(?:\/(?:movies|tv|anime|games|books|music|manga|podcasts|audiobooks)(?:#your-count)?)?$/);
+    if (essential && essential[0] === value) return value;
     // A list someone shared: its public page or its share link, so signing in from a
     // "+ Add to my library" button comes back to the list.
     const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);

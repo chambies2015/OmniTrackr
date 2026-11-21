@@ -19,11 +19,24 @@
     }
   }
 
+  // The list the visitor last ticked on, for a link back once the ticks are in the library.
+  const LIST_PATH = /^\/essentials\/(?:movies|tv|anime|games|books|music|manga|podcasts|audiobooks)$/;
+
+  function readFrom() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY) || 'null');
+      return data && typeof data.from === 'string' && LIST_PATH.test(data.from) ? data.from : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function forget(sent) {
     // Keep anything ticked in another tab while the request was running.
     try {
       const left = read().filter(id => !sent.includes(id));
-      if (left.length) localStorage.setItem(KEY, JSON.stringify({ v: 1, seen: left }));
+      const from = readFrom();
+      if (left.length) localStorage.setItem(KEY, JSON.stringify(from ? { v: 1, seen: left, from } : { v: 1, seen: left }));
       else localStorage.removeItem(KEY);
     } catch (error) { /* nothing to clear */ }
   }
@@ -48,18 +61,26 @@
     return result;
   }
 
-  function toast(message) {
+  function toast(message, back) {
     const node = document.createElement('div');
     node.className = 'guest-import-toast';
     node.setAttribute('role', 'status');
     node.textContent = message;
+    if (back) {
+      const link = document.createElement('a');
+      link.className = 'guest-import-toast__back';
+      link.href = `${back}#your-count`;
+      link.textContent = 'See your count on the list →';
+      node.append(document.createElement('br'), link);
+    }
     document.body.appendChild(node);
-    setTimeout(() => node.remove(), 8000);
+    setTimeout(() => node.remove(), back ? 15000 : 8000);
   }
 
   async function importTicks() {
     const ids = read();
     if (!ids.length || !signedIn()) return null;
+    const back = readFrom();
     let response;
     try {
       response = await fetch('/api/essentials/import', { method: 'POST', credentials: 'same-origin', headers: headers(), body: JSON.stringify({ ids }) });
@@ -78,14 +99,14 @@
         window.location.reload();
         return result;
       }
-      toast(`Added ${result.added} title${result.added === 1 ? '' : 's'} you ticked on the Essential 100 before signing up.`);
+      toast(`Added ${result.added} title${result.added === 1 ? '' : 's'} you ticked on the Essential 100 before signing up.`, back);
       LOADERS.forEach(name => { if (typeof window[name] === 'function') { try { window[name](); } catch (error) { /* ignore */ } } });
       if (typeof window.refreshForYou === 'function') window.refreshForYou();
     }
     return result;
   }
 
-  const api = { read, importTicks, KEY };
+  const api = { read, readFrom, importTicks, KEY };
   window.OmniEssentialsImport = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {
