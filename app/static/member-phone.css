@@ -147,3 +147,11 @@
   body.has-app-dock .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   body.app-shell .library-section:not(#lv) .library-table.mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] .action-btn { flex: 1 1 0; margin: 0; min-height: 46px; }
 }
+
+/* ---------- Settings: Copy link and Copy code ---------- */
+/* The two pill buttons beside the profile link and the supporter code were 30px tall
+   (Nov 21 sweep). Their row is a wrapping flex line, so a taller button only makes that
+   row taller; nothing overlaps. */
+@media (max-width: 760px) {
+  body.app-shell .profile-settings__copy { align-items: center; display: inline-flex; font-size: .86rem; min-height: 44px; padding: 0 16px; }
+}
