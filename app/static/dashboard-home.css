@@ -1429,3 +1429,307 @@ body.app-shell .your-week[data-status="kept"] .your-week__day.is-today {
   border-color: color-mix(in srgb, var(--yw-kept) 50%, transparent);
 }
 body.app-shell .your-week[data-status="kept"] .your-week__day.is-today .your-week__day-name { color: color-mix(in srgb, var(--yw-kept) 80%, var(--fg)); }
+
+/* ==========================================================================
+   Streamlined home (Nov 20 2026): one "Do this next" title under the welcome
+   strip, a short board, and one card look. home-layout.js picks the title and
+   marks cards past the first few in each column .is-home-tucked; they wait
+   behind the "Show more" row. Every card keeps its own ids, hide buttons and
+   rules; nothing here changes what a card says.
+   ========================================================================== */
+
+/* ---------- Do this next ---------- */
+body.app-shell .home-focus {
+  align-items: center;
+  background:
+    radial-gradient(70% 240px at 0% 0%, hsl(var(--fmt-hue, 262) 70% 55% / .12), transparent 70%),
+    radial-gradient(420px 200px at 100% 100%, color-mix(in srgb, var(--teal, #14b8a6) 9%, transparent), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid color-mix(in srgb, hsl(var(--fmt-hue, 262) 70% 55%) 32%, var(--border));
+  border-radius: var(--home-radius);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 6px 20px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin: -6px 0 22px;
+  padding: 16px 22px 16px 16px;
+}
+body.app-shell .home-focus[hidden] { display: none; }
+/* The welcome-back deck is the one thing to do while it's open; Continue and this title wait. */
+body.app-shell:has(#returnDeck:not([hidden])) .home-focus { display: none; }
+body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"],
+  [data-active-tab="recommendations"], [data-active-tab="friends-feed"]) .home-focus { display: none; }
+body.app-shell .home-focus__cover {
+  aspect-ratio: 2 / 3;
+  background: hsl(var(--fmt-hue, 262) 60% 50% / .16);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--poster-edge, rgba(255, 255, 255, .08)), var(--lib-cover-shadow, 0 6px 16px rgba(0, 0, 0, .22));
+  display: block;
+  overflow: hidden;
+  width: 72px;
+}
+body.app-shell .home-focus[data-format="music"] .home-focus__cover,
+body.app-shell .home-focus[data-format="podcasts"] .home-focus__cover { aspect-ratio: 1; width: 84px; }
+body.app-shell .home-focus__cover img { display: block; height: 100%; object-fit: cover; width: 100%; }
+body.app-shell .home-focus__cover--letter {
+  align-items: center;
+  color: hsl(var(--fmt-hue, 262) 70% var(--fmt-ink-l, 70%));
+  display: flex;
+  font: 700 1.6rem/1 var(--font-display, Poppins, sans-serif);
+  justify-content: center;
+}
+body.app-shell .home-focus__copy { display: grid; gap: 3px; min-width: 0; }
+body.app-shell .home-focus__eyebrow {
+  color: var(--teal, #14b8a6);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0;
+  text-transform: uppercase;
+}
+body.app-shell.dark-mode .home-focus__eyebrow { color: #5eead4; }
+body.app-shell .home-focus__title {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.32rem;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.25;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+body.app-shell .home-focus__meta { color: var(--fg-secondary); font-size: .88rem; margin: 0; }
+body.app-shell .home-focus__progress { align-items: center; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+body.app-shell .home-focus__progress[hidden],
+body.app-shell .home-focus__progress:empty { display: none; }
+body.app-shell .home-focus__progress .progress-checkpoint { color: var(--teal, #14b8a6); font-size: .84rem; font-weight: 600; }
+body.app-shell.dark-mode .home-focus__progress .progress-checkpoint { color: #5eead4; }
+body.app-shell .home-focus__progress .episode-progress { flex: 1 1 220px; max-width: 360px; }
+body.app-shell .home-focus__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+body.app-shell .home-focus__actions .episode-actions { display: contents; }
+body.app-shell .home-focus__actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  min-height: 42px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+body.app-shell .home-focus__actions button:hover:not(:disabled) { background: var(--surface-hover); }
+body.app-shell .home-focus__actions button:focus-visible { box-shadow: var(--ring); outline: 2px solid var(--primary); outline-offset: 2px; }
+body.app-shell .home-focus__actions button.home-focus__primary {
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  border-color: transparent;
+  color: #fff;
+  order: -1;
+  padding: 0 20px;
+}
+body.app-shell .home-focus__actions button.home-focus__primary:hover:not(:disabled) { background: linear-gradient(135deg, #6d28d9, #7e22ce); }
+
+/* ---------- Continue when its only title is the one above ---------- */
+body.app-shell .home-board .library-pulse--reflect-only .library-pulse__header { margin-bottom: 6px; }
+body.app-shell .home-board .library-pulse--reflect-only .library-pulse__reflections > summary { display: none; }
+body.app-shell .home-board .library-pulse--reflect-only .library-pulse__reflections { border-top: 0; margin-top: 0; padding-top: 0; }
+body.app-shell .home-board #libraryPulseContinue[hidden] { display: none; }
+
+/* ---------- Above the board: one welcome-back deck at a time ---------- */
+/* While the deck is open, the first-steps launchpad waits; its own "Not now" still works when it's back. */
+body.app-shell #returnDeck:not([hidden]) ~ #libraryLaunchpad { display: none; }
+
+/* ---------- Cards waiting behind "Show more" ---------- */
+body.app-shell .home-board:not(.home-board--more) .is-home-tucked { display: none !important; }
+body.app-shell .home-board__more {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  grid-column: 1 / -1;
+  justify-content: center;
+  margin-top: 2px;
+  text-align: center;
+}
+body.app-shell .home-board__more[hidden] { display: none; }
+body.app-shell .home-board__more-toggle {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px dashed color-mix(in srgb, var(--primary) 40%, var(--border));
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 600;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+}
+body.app-shell .home-board__more-toggle::after { content: "▾"; font-size: .8rem; opacity: .7; }
+body.app-shell .home-board__more-toggle[aria-expanded="true"]::after { content: "▴"; }
+body.app-shell .home-board__more-toggle:hover { background: var(--surface-hover); border-style: solid; }
+body.app-shell .home-board__more-toggle:focus-visible { box-shadow: var(--ring); outline: 2px solid var(--primary); outline-offset: 2px; }
+body.app-shell .home-board__more-names {
+  color: var(--fg-secondary);
+  flex-basis: 100%;
+  font-size: .8rem;
+  line-height: 1.5;
+  margin: 0;
+}
+body.app-shell .home-board__more-names[hidden] { display: none; }
+/* The rail's swipe hint and one-card width count only the cards on show. */
+@media (max-width: 640px) {
+  body.app-shell .home-board:not(.home-board--more) .home-board__rail-title:not(:has(+ .home-board__rail-cards > section:not([hidden]):not(.is-home-tucked) ~ section:not([hidden]):not(.is-home-tucked)))::after { display: none; }
+  body.app-shell .home-board:not(.home-board--more) .home-board__rail-cards:not(:has(> section:not([hidden]):not(.is-home-tucked) ~ section:not([hidden]):not(.is-home-tucked))) { grid-auto-columns: 100%; }
+}
+
+/* ---------- One card look ---------- */
+/* Every card on the board shares the library panel's surface: the same border, radius, shadow and
+   padding, with a soft corner tint in the card's own colour instead of a coloured frame. */
+body.app-shell .home-board .home-board__main > section[id],
+body.app-shell .home-board .home-board__rail-cards > section[id] {
+  --card-accent: var(--accent-solid, #7c3aed);
+  background:
+    radial-gradient(520px 200px at 100% 0%, color-mix(in srgb, var(--card-accent) 11%, transparent), transparent 70%),
+    var(--home-card-tint), var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--home-radius);
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+}
+body.app-shell .home-board .home-board__main > section[id] { padding: 20px 22px; }
+body.app-shell .home-board .home-board__rail-cards > section[id] { padding: 18px; }
+body.app-shell .home-board .home-board__main > section[id][hidden],
+body.app-shell .home-board .home-board__rail-cards > section[id][hidden] { display: none; }
+body.app-shell .home-board :is(#homeNews, #nextUpQueue, #stayPosted) { --card-accent: var(--teal, #14b8a6); }
+body.app-shell .home-board :is(#backlogDraw, #onThisDay, #badgeCase, #awardsBallot, #newYearPledge, #supportAsk) { --card-accent: #f59e0b; }
+body.app-shell .home-board #yourWeek[data-status="kept"] { --card-accent: var(--teal, #14b8a6); }
+body.app-shell .home-board #adventCard { --card-accent: #ef4444; }
+body.app-shell .home-board #seasonCard { --card-accent: var(--season-accent, #0f766e); }
+body.app-shell .home-board .home-board__rail-cards > #seasonCard { border-color: color-mix(in srgb, var(--season-accent, #0f766e) 45%, var(--border)); }
+
+/* Main column titles: one size, with the colour bar the library headings use. */
+body.app-shell .home-board__main :is(#weekOneTitle, #homeNewsTitle, #yourWeekTitle, #backlogDrawTitle, #stayPostedTitle,
+  #picksTeaserTitle, #reviewInboxTitle, #onThisDayTitle) {
+  align-items: center;
+  display: flex;
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  gap: 10px;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+}
+body.app-shell .home-board__main :is(#weekOneTitle, #homeNewsTitle, #yourWeekTitle, #backlogDrawTitle, #stayPostedTitle,
+  #picksTeaserTitle, #reviewInboxTitle, #onThisDayTitle)::before {
+  align-self: flex-start;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 60%, #fff), var(--card-accent));
+  border-radius: 999px;
+  content: "";
+  flex: none;
+  height: 18px;
+  margin-top: 3px;
+  width: 4px;
+}
+body.app-shell .home-board__main #comingUpTitle::before { background: var(--home-bar); }
+body.app-shell .home-board__rail-cards > section[id] h2 { font-size: 1.02rem; }
+
+/* Eyebrows: one size and spacing (each keeps its colour). */
+body.app-shell .home-board :is(.week-one__eyebrow, .home-news__eyebrow, .your-week__eyebrow, .backlog-draw__eyebrow,
+  .stay-posted__eyebrow, .on-this-day__eyebrow, .year-so-far__eyebrow, .season-card__eyebrow, .support-ask__eyebrow) {
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+/* Quiet buttons ("Hide this card", "Not now", "Don't ask again") look the same everywhere. */
+body.app-shell .home-board :is(.your-week__quiet, .week-one__quiet, .backlog-draw__quiet, .stay-posted__quiet,
+  .on-this-day__dismiss, .for-you-card__dismiss, .year-so-far__dismiss, .support-ask__quiet) {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  font-size: .8rem;
+  font-weight: 600;
+  min-height: 36px;
+  opacity: 1;
+  padding: 0 10px;
+  text-decoration: none;
+}
+body.app-shell .home-board :is(.your-week__quiet, .week-one__quiet, .backlog-draw__quiet, .stay-posted__quiet,
+  .on-this-day__dismiss, .for-you-card__dismiss, .year-so-far__dismiss, .support-ask__quiet):hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 640px) {
+  body.app-shell .home-focus {
+    gap: 4px 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin: -4px 0 16px;
+    padding: 14px;
+  }
+  body.app-shell .home-focus__cover { width: 60px; }
+  body.app-shell .home-focus[data-format="music"] .home-focus__cover,
+  body.app-shell .home-focus[data-format="podcasts"] .home-focus__cover { width: 64px; }
+  body.app-shell .home-focus__title { font-size: 1.12rem; }
+  body.app-shell .home-focus__meta { font-size: .8rem; }
+  body.app-shell .home-focus__actions { gap: 6px; grid-column: 1 / -1; justify-content: flex-start; margin-top: 8px; }
+  body.app-shell .home-focus__actions button { min-height: 44px; }
+  body.app-shell:has(#homeFocus:not([hidden])) .home-hero { margin-bottom: 14px; }
+  body.app-shell .home-board .home-board__main > section[id] { padding: 16px; }
+  body.app-shell .home-board .home-board__rail-cards > section[id] { padding: 16px; }
+  body.app-shell .home-board__main :is(#weekOneTitle, #homeNewsTitle, #yourWeekTitle, #backlogDrawTitle, #stayPostedTitle,
+    #picksTeaserTitle, #reviewInboxTitle, #onThisDayTitle) { font-size: 1.04rem; }
+  /* Quick start's suggestions scroll sideways instead of stacking two screens tall. */
+  body.app-shell #starterPicks .for-you-grid {
+    display: grid;
+    gap: 10px;
+    grid-auto-columns: min(78%, 280px);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 16px 8px;
+    position: relative;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  body.app-shell #starterPicks .for-you-grid::-webkit-scrollbar { display: none; }
+  body.app-shell #starterPicks .for-you-grid > * { scroll-snap-align: start; }
+  body.app-shell #starterPicks .for-you-grid[hidden] { display: none; }
+}
+
+/* A new member's first week already lists what's out this week, so Quick start keeps to its popular picks, one row of them. */
+body.app-shell:has(#weekOne:not([hidden])) #starterPicks :is(#starterPicksUpcomingTitle, #starterPicksUpcoming) { display: none; }
+@media (min-width: 641px) {
+  body.app-shell #starterPicks #starterPicksPopular > :nth-child(n + 7) { display: none; }
+}
+
+/* Phones: with a title to pick up (or the welcome-back deck) right under it, the welcome strip keeps to
+   the greeting and the one-line summary, so both fit on the first screen. The same numbers are on Statistics. */
+@media (max-width: 640px) {
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero :is(.home-hero__covers, .home-hero__stats, .home-hero__mix) { display: none; }
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero { gap: 4px; padding: 16px 18px; }
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__title { font-size: 1.5rem; }
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__news { margin-top: 6px; }
+  body.app-shell .home-focus__actions button { font-size: .78rem; padding: 0 11px; }
+  body.app-shell .home-focus__actions button.home-focus__primary { flex: 0 1 auto; padding: 0 14px; }
+}
+/* "Last watched · Season 2, episode 5" already says it: the bar under it drops its own words. */
+body.app-shell .home-focus__progress:has(.progress-checkpoint:not([hidden])) .episode-progress__label { display: none; }
+@media (max-width: 640px) {
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__date { display: none; }
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero { padding: 14px 16px; }
+  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__title { font-size: 1.36rem; }
+  body.app-shell .home-focus__copy { align-self: center; }
+  body.app-shell .home-focus__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* One row of buttons: the next episode, the guide and Open. "Update progress" is a tap away under Open. */
+  body.app-shell .home-focus__actions:has(.episode-next.home-focus__primary) .progress-update { display: none; }
+}
