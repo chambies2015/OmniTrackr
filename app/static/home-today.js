@@ -208,7 +208,12 @@
   }
 
   function friendLine(item) {
-    if (item.type === 'burst') return `added ${plural(item.count, 'title', 'titles')}`;
+    if (item.type === 'burst') {
+      const finished = Number(item.finished) || 0;
+      const added = `added ${plural(item.count, 'title', 'titles')}`;
+      if (!finished) return added;
+      return finished >= item.count ? `${added} they've finished` : `${added}, ${finished} finished`;
+    }
     if (item.kind === 'finished') return `${DONE_WORD[item.category] || 'finished'} ${item.title}`;
     if (item.kind === 'reviewed') return `reviewed ${item.title}`;
     if (item.kind === 'rated') return `rated ${item.title}`;

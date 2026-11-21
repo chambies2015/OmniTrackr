@@ -73,3 +73,14 @@ test('||double bars|| in a review are kept back as spoilers', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(spoilerParts('No secrets here'))), [{ text: 'No secrets here' }]);
   assert.deepEqual(JSON.parse(JSON.stringify(spoilerParts('a || b'))), [{ text: 'a || b' }]);
 });
+
+test('a run of adds says how many came in finished, and shows under Finished too', () => {
+  const { burstLine, matches } = load();
+  assert.equal(burstLine({ type: 'burst', count: 6 }), 'added 6 titles');
+  assert.equal(burstLine({ type: 'burst', count: 6, finished: 0 }), 'added 6 titles');
+  assert.equal(burstLine({ type: 'burst', count: 40, finished: 31 }), 'added 40 titles, 31 finished');
+  assert.equal(burstLine({ type: 'burst', count: 12, finished: 12 }), "added 12 titles they've finished");
+  assert.ok(matches({ type: 'burst', count: 12, finished: 3 }, 'finished'));
+  assert.ok(!matches({ type: 'burst', count: 12, finished: 0 }, 'finished'));
+  assert.ok(!matches({ type: 'burst', count: 12, finished: 12 }, 'opinions'));
+});

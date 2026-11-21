@@ -85,6 +85,8 @@ test('friend lines use the right verb for each format', () => {
   assert.equal(module.friendLine({ type: 'title', kind: 'finished', category: 'books', title: 'Dune' }), 'read Dune');
   assert.equal(module.friendLine({ type: 'title', kind: 'rated', category: 'anime', title: 'Dandadan' }), 'rated Dandadan');
   assert.equal(module.friendLine({ type: 'burst', count: 5 }), 'added 5 titles');
+  assert.equal(module.friendLine({ type: 'burst', count: 30, finished: 22 }), 'added 30 titles, 22 finished');
+  assert.equal(module.friendLine({ type: 'burst', count: 8, finished: 8 }), "added 8 titles they've finished");
 });
 
 test('renders shows and friends, and the welcome strip line', () => {

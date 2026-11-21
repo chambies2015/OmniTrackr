@@ -100,7 +100,10 @@ def test_burst_of_plain_adds_collapses_into_one_card(authenticated_client, db_se
     dana = _friend(db_session, me)
     for number in range(6):
         add_movie(db_session, dana, title=f"Import {number}", year=2000 + number)
-    add_movie(db_session, dana, title="Rated One", year=1999, rating=7.0)
+    # Rated on its own, well before the run of adds, so it keeps its card (a rated add inside
+    # a run of adds goes into the run's card since Nov 21 2026).
+    add_movie(db_session, dana, title="Rated One", year=1999, rating=7.0,
+              added_at=datetime.utcnow() - timedelta(hours=2))
     db_session.commit()
     data = _feed(authenticated_client)
     kinds = [item["type"] for item in data["items"]]
