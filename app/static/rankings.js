@@ -821,6 +821,17 @@
 
   // ------------------------------------------------------------------ wiring
 
+  // /#rankings (the Ranker badge, "Rank N more titles"): on a fresh load and, from the home screen, on
+  // a click that only changes the hash. The hash is cleared so the same link works a second time.
+  function openFromHash() {
+    if (window.location.hash !== '#rankings' || !signedIn()) return false;
+    try {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+    } catch (error) { /* keep the hash */ }
+    openTab();
+    return true;
+  }
+
   function wire() {
     $('rankDuelHide')?.addEventListener('click', () => {
       hideHere();
@@ -839,9 +850,8 @@
       state.dialogReturn = null;
       if (back && typeof back.focus === 'function' && document.contains(back)) back.focus();
     });
-    if (window.location.hash === '#rankings' && signedIn()) {
-      setTimeout(() => openTab(), 0);
-    }
+    if (window.location.hash === '#rankings') setTimeout(openFromHash, 0);
+    window.addEventListener('hashchange', openFromHash);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire, { once: true });
@@ -849,6 +859,6 @@
 
   window.OmniRankings = { refresh, reset, load, place, openTab, render: renderCard };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { refresh, reset, load, place, openTab, renderCard, duel, placedView, placedWords, cardSummary, pickFormat, state };
+    module.exports = { refresh, reset, load, place, openTab, openFromHash, renderCard, duel, placedView, placedWords, cardSummary, pickFormat, state };
   }
 })();

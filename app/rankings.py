@@ -272,6 +272,26 @@ def _cancel(row: models.Ranking) -> None:
     row.low = row.high = row.steps = 0
 
 
+def _window(row: models.Ranking, ranked: list[int]) -> tuple[int, int]:
+    """Where the title being placed can still land: the stretch [low, high) of ``ranked``.
+
+    ``low`` and ``high`` were saved against the stored list. A title deleted from the library since
+    then is gone from ``ranked`` (see _tidy), and every place after it moves up one, so the saved
+    numbers are counted again over the titles still there. Otherwise a deletion above the stretch
+    lands the new title one place too low. When nothing of the stretch is left, the question starts
+    again from the whole list: a few more picks, never a wrong place.
+    """
+    stored = _ids(row.ranked)
+    low, high = max(0, min(row.low or 0, len(stored))), max(0, min(row.high or 0, len(stored)))
+    if stored != ranked:
+        keep = set(ranked)
+        low = sum(1 for item_id in stored[:low] if item_id in keep)
+        high = sum(1 for item_id in stored[:high] if item_id in keep)
+    if low >= high:
+        return 0, len(ranked)
+    return low, high
+
+
 def _remaining(low: int, high: int) -> int:
     """About how many more answers place the title (a stretch of n places needs about log2(n+1))."""
     span = max(0, high - low)
@@ -330,8 +350,9 @@ def question(db: Session, user: models.User, category: str, now: Optional[dateti
     finished = _finished(db, user.id, category)
     finished_count = len(finished)
     if row is not None and row.placing_id and ranked:
-        low, high = max(0, min(row.low, len(ranked))), max(0, min(row.high, len(ranked)))
-        if low < high and row.placing_id not in ranked and _is_finished(db, user.id, category, row.placing_id):
+        # answer() takes the same stretch, so the question shown is always the one it accepts.
+        if row.placing_id not in ranked and _is_finished(db, user.id, category, row.placing_id):
+            low, high = _window(row, ranked)
             mid = (low + high) // 2
             return _question(db, user.id, category, row.placing_id, ranked[mid], ranked=ranked, low=low, high=high,
                              steps=row.steps or 0, finished=finished_count)
@@ -416,12 +437,12 @@ def answer(db: Session, user: models.User, category: str, placing_id: int, again
             row.ranked = _dump(ranked)
             row.placed_total = (row.placed_total or 0) + 1
         row.placing_id = placing_id
+        row.ranked = _dump(ranked)
         row.low, row.high, row.steps = 0, len(ranked), 0
     elif row.placing_id != placing_id:
         raise Stale()
-    low, high = max(0, min(row.low, len(ranked))), max(0, min(row.high, len(ranked)))
-    if low >= high:
-        low, high = 0, len(ranked)
+    low, high = _window(row, ranked)
+    row.ranked = _dump(ranked)  # the stretch saved below counts places in this list, deleted titles gone
     mid = (low + high) // 2
     if ranked[mid] != against_id:
         raise Stale()
@@ -494,8 +515,11 @@ def skip(db: Session, user: models.User, category: str, item_id: int, leave_out:
     if leave_out:
         left_out = [value for value in _ids(row.left_out) if value != item_id] + [item_id]
         row.left_out = _dump(left_out[-MAX_LEFT_OUT:])
-        ranked = [value for value in _ids(row.ranked) if value != item_id]
+        stored = _ids(row.ranked)
+        ranked = [value for value in stored if value != item_id]
         row.ranked = _dump(ranked)
+        if row.placing_id and len(ranked) != len(stored):
+            row.low, row.high, row.steps = 0, len(ranked), 0  # the stretch moved; ask again from the middle
         count("left_out")
     else:
         later = [value for value in _ids(row.later) if value != item_id] + [item_id]

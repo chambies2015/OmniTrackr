@@ -76,3 +76,25 @@ test('home layout keeps the card out mid-game and tucks it when it is only an of
   assert.equal(layout.quiet(unit('more')), true);
   assert.equal(layout.quiet(unit('start')), false);
 });
+
+test('a /#rankings link opens the tab, also when only the hash changes on the home screen', () => {
+  const ui = load();
+  const opened = [];
+  const replaced = [];
+  global.hasStoredAuth = () => true;
+  global.navigateLibraryTab = name => { opened.push(name); return Promise.resolve(true); };
+  global.window.location = { hash: '#rankings', pathname: '/', search: '' };
+  global.window.history = { state: null, replaceState: (state, title, url) => { replaced.push(url); global.window.location.hash = ''; } };
+  assert.equal(ui.openFromHash(), true);
+  assert.deepEqual(opened, ['rankings']);
+  assert.deepEqual(replaced, ['/']);  // cleared, so the Ranker badge link works a second time
+  assert.equal(ui.openFromHash(), false);  // nothing to open once the hash is gone
+  global.window.location.hash = '#rankings';
+  global.hasStoredAuth = () => false;
+  assert.equal(ui.openFromHash(), false);  // signed out: the homepage, not the tab
+  assert.deepEqual(opened, ['rankings']);
+  const source = fs.readFileSync(path.join(__dirname, '..', 'app', 'static', 'rankings.js'), 'utf8');
+  assert.ok(source.includes("window.addEventListener('hashchange', openFromHash);"));
+  delete global.hasStoredAuth;
+  delete global.navigateLibraryTab;
+});
