@@ -142,6 +142,10 @@ async def lifespan(application: FastAPI):
     your_week_task = None
     if your_week.emails_enabled():
         your_week_task = asyncio.create_task(your_week.your_week_loop(application))
+    from . import together
+    together_task = None
+    if together.emails_enabled():
+        together_task = asyncio.create_task(together.together_loop(application))
     from . import streaming_services
     streaming_task = None
     if streaming_services.enabled_for_process():
@@ -163,7 +167,8 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task):
+                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task,
+                     together_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -1005,6 +1010,37 @@ for route in your_week_router.router.routes:
     elif path and path.startswith("/api/your-week/"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(your_week_router.router)
+from .routers import together as together_router
+# Watch together: the home card and plan page read often; joining, notes and invites are a tap at a time.
+# The invite page and its picture are opened by people without an account, so they are limited per address.
+TOGETHER_LIMITS = {
+    ("/api/together", "GET"): "30/minute",
+    ("/api/together/titles", "GET"): "20/minute",
+    ("/api/together", "POST"): "10/minute",
+    ("/api/together/{plan_id}", "GET"): "60/minute",
+    ("/api/together/{plan_id}/position", "PUT"): "40/minute",
+    ("/api/together/{plan_id}/notes", "POST"): "15/minute",
+    ("/api/together/{plan_id}/notes/{note_id}", "DELETE"): "20/minute",
+    ("/api/together/{plan_id}/me", "PATCH"): "20/minute",
+    ("/api/together/{plan_id}", "PATCH"): "20/minute",
+    ("/api/together/{plan_id}/end", "POST"): "10/minute",
+    ("/api/together/{plan_id}/link", "POST"): "5/minute",
+    ("/api/together/{plan_id}/friends", "GET"): "20/minute",
+    ("/api/together/{plan_id}/invite", "POST"): "10/minute",
+    ("/api/together/{plan_id}/leave", "POST"): "10/minute",
+    ("/api/together/{plan_id}/members/{member_id}", "DELETE"): "10/minute",
+    ("/api/together/{plan_id}/finish", "POST"): "10/minute",
+    ("/api/together/join/{token}", "GET"): "30/minute",
+    ("/api/together/join/{token}", "POST"): "10/minute",
+    ("/together/join/{token}", "GET"): "60/minute",
+    ("/together/join/{token}/card.png", "GET"): "30/minute",
+}
+for route in together_router.router.routes:
+    path = getattr(route, "path", None)
+    for method in getattr(route, "methods", None) or ():
+        if (path, method) in TOGETHER_LIMITS:
+            bind_rate_limited_endpoint(route, limiter.limit(TOGETHER_LIMITS[(path, method)])(route.endpoint))
+app.include_router(together_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:

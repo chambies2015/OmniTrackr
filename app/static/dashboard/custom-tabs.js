@@ -982,6 +982,7 @@ const progressOptions = {
   onSaved: (payload, shouldContinue) => {
     if (!shouldContinue()) return;
     window.OmniYourWeek?.refresh(true);  // today's tile lights up as soon as progress is saved
+    window.OmniTogether?.refresh(true);  // a plan with friends follows the library forward
     return Promise.allSettled([
       refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue),
       refreshLibraryProgressView(payload, shouldContinue),

@@ -202,6 +202,17 @@ GUEST = (
     ("quiz_imported", "Taste quiz answers saved before sign-up moved into a new library"),
     ("quiz_saved", "Taste quiz: a suggested pick saved to a list or library"),
     ("collection_link_created", "Lists: a member turned on a share link"),
+    ("together_created", "Watch together: a plan started"),
+    ("together_shared", "Watch together: an invite link copied or shared"),
+    ("together_link_opened", "Watch together: an invite link opened by a visitor without an account"),
+    ("together_signup_clicked", "Watch together: sign-up pressed on an invite or the guide"),
+    ("together_joined", "Watch together: someone joined a plan"),
+    ("together_moved", "Watch together: someone moved forward"),
+    ("together_note", "Watch together: a note left"),
+    ("together_week_done", "Watch together: someone got through a week's stretch"),
+    ("together_finished", "Watch together: someone reached the end"),
+    ("together_email_sent", "Watch together: weekly reminder email sent"),
+    ("together_back_from_email", "Watch together: a plan opened from the reminder email"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -272,7 +283,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "signup_sheet_opened", "signup_sheet_google", "signup_sheet_email", "signup_sheet_login",
                  "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
                  "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
-                 "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked"}
+                 "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
+                 "together_shared", "together_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

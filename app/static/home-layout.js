@@ -239,7 +239,7 @@
   const HASH_CARDS = {
     '#your-week': 'yourWeek', '#backlog-draw': 'backlogDraw', '#badges': 'badgeCase', '#challenge': 'monthlyChallenge',
     '#goals': 'yearGoals', '#on-this-day': 'onThisDay', '#release-calendar': 'comingUp', '#week-one': 'weekOne',
-    '#homeNews': 'homeNews', '#advent': 'adventCard', '#on-your-services': 'onYourServices',
+    '#homeNews': 'homeNews', '#advent': 'adventCard', '#on-your-services': 'onYourServices', '#together': 'togetherHome',
   };
   // Shown now and then under their own rules (first week only, a few times a year): never tucked.
   const ALWAYS = new Set(['weekOne', 'stayPosted', 'supportAsk']);
@@ -299,6 +299,8 @@
       const recap = $('yourWeekRecap');
       return Boolean(unit.dataset.status && unit.dataset.status !== 'setup') || Boolean(recap && !recap.hidden);
     }
+    // Watch together only shows while a plan with friends is running, so it never waits behind "Show more".
+    if (id === 'togetherHome') return true;
     // Something on the member's list just arrived on one of their streaming services.
     if (id === 'onYourServices') return unit.dataset.status === 'new';
     // Rankings: a title finished this week, one part-way placed, or one that just landed.
