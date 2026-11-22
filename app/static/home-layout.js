@@ -301,6 +301,8 @@
     }
     // Something on the member's list just arrived on one of their streaming services.
     if (id === 'onYourServices') return unit.dataset.status === 'new';
+    // Rankings: a title finished this week, one part-way placed, or one that just landed.
+    if (id === 'rankDuel') return unit.dataset.engaged === 'true' || ['fresh', 'placing', 'placed'].includes(unit.dataset.status);
     if (id === 'monthlyChallenge') return $('monthlyChallengeLeave') ? !$('monthlyChallengeLeave').hidden : false;
     return false;
   }
@@ -317,6 +319,7 @@
       case 'nextUpQueue': return !($('nextUpQueueItems')?.children.length);
       case 'comingUp': return unit.dataset.source === 'popular';
       case 'badgeCase': return true;
+      case 'rankDuel': return unit.dataset.status === 'more';
       case 'yearGoals': return !$('yearGoalsList') || $('yearGoalsList').hidden;
       default: return false;
     }

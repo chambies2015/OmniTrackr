@@ -62,6 +62,8 @@ function switchTab(tabName) {
     loadRecommendationPostcards();
   } else if (tabName === 'collections') {
     return loadCollections();
+  } else if (tabName === 'rankings') {
+    window.OmniRankings?.load();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }

@@ -963,6 +963,19 @@ for route in backlog_draw_router.router.routes:
     elif path and path.startswith("/api/backlog-draw/"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(backlog_draw_router.router)
+from .routers import rankings as rankings_router
+# Rankings: answering "which did you like more?" is a tap every second or two, so it gets more room.
+for route in rankings_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/rankings/answer":
+        bind_rate_limited_endpoint(route, limiter.limit("120/minute")(route.endpoint))
+    elif path in ("/api/rankings", "/api/rankings/card"):
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+    elif path == "/api/rankings/collection":
+        bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+    elif path and path.startswith("/api/rankings/"):
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+app.include_router(rankings_router.router)
 from .routers import your_week as your_week_router
 # Your week: one read per home refresh, and buttons pressed a click at a time.
 for route in your_week_router.router.routes:

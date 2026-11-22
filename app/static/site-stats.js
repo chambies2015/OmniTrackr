@@ -523,6 +523,9 @@
     const streaming = growth.streaming || {};
     const streamingCounts = streaming.counts || {};
     const streamingLabels = streaming.labels || {};
+    const ranks = growth.rankings || {};
+    const rankCounts = ranks.counts || {};
+    const rankLabels = ranks.labels || {};
     const widgets = growth.widgets || {};
     const widgetCounts = widgets.counts || {};
     const widgetLabels = widgets.labels || {};
@@ -639,6 +642,14 @@
         { label: 'Titles that arrived on a service', count: streaming.arrivals || 0 },
         { label: 'Titles being watched for arrivals (now)', count: streaming.titles_checked || 0 },
       ],
+      growthRankings: [
+        { label: 'Members with a ranking (now)', count: ranks.members_now || 0 },
+        { label: 'Members with ten or more ranked (now)', count: ranks.members_ten_now || 0 },
+        { label: 'Titles ranked (now)', count: ranks.titles_now || 0 },
+        { label: 'Top tens on public profiles (now)', count: ranks.public_now || 0 },
+        ...(ranks.by_format || []).map(item => ({ label: `Ranking ${item.label} (now)`, count: item.count })),
+        ...Object.keys(rankLabels).map(key => ({ label: rankLabels[key], count: rankCounts[key] || 0 })),
+      ],
       growthWidgets: [
         { label: 'Times members\' widgets loaded on other sites', count: widgets.loads || 0 },
         { label: 'Members whose widgets loaded', count: widgets.members || 0 },
@@ -689,6 +700,7 @@
     growthBacklogDraw: 'Draw from your backlog',
     growthYourWeek: 'Your week (weekly pace, kept weeks, Sunday nudge)',
     growthStreaming: 'On your services (streaming services, arrival notes)',
+    growthRankings: 'Rankings (which did you like more?)',
     growthWidgets: 'Profile widgets on other sites',
     growthReviews: 'Share your reviews card',
     growthSupportAsks: 'Support notes and the supporters page',

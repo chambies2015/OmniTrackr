@@ -795,6 +795,7 @@ function resetDailyDashboard() {
   window.OmniBacklogDraw?.reset();
   window.OmniYourWeek?.reset();
   window.OmniStreaming?.reset();
+  window.OmniRankings?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1832,6 +1833,8 @@ function runDashboardLayoutBatch() {
   window.OmniYourWeek?.refresh();
   // On your services: what on the member's list streams on services they picked (at most once a minute).
   window.OmniStreaming?.refresh();
+  // Rankings: a title finished this week asks where it belongs (at most once a minute unless one just got placed).
+  window.OmniRankings?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

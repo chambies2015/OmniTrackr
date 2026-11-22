@@ -2456,3 +2456,35 @@ class ServiceAlert(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "title_key", "service", name="uq_service_alerts_member_title_service"),
     )
+
+
+class Ranking(Base):
+    """One member's ranking of the titles they finished in one format (Nov 2026), for "Rankings".
+
+    A new table only, one row per member and format. ``ranked`` is a JSON list of that format's
+    library ids, best first. A title is placed by answering "which did you like more?" a few times:
+    ``placing_id`` is the title being placed and ``low``/``high`` the stretch of the list it can still
+    land in (a binary search, so a list of 100 takes about seven answers). ``left_out`` holds titles the
+    member asked never to be offered, ``later`` the ones skipped for now. Library rows are never
+    changed here. ``public`` puts the top ten on the member's public profile (off until they say so).
+    """
+    __tablename__ = "rankings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    ranked = Column(Text, nullable=False, default="[]")
+    left_out = Column(Text, nullable=True)
+    later = Column(Text, nullable=True)
+    placing_id = Column(Integer, nullable=True)
+    low = Column(Integer, nullable=False, default=0)
+    high = Column(Integer, nullable=False, default=0)
+    steps = Column(Integer, nullable=False, default=0)
+    public = Column(Boolean, nullable=False, default=False)
+    placed_total = Column(Integer, nullable=False, default=0)  # placements ever made, re-placements included
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", name="uq_rankings_member_category"),
+    )
