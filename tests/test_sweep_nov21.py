@@ -29,7 +29,7 @@ def test_changed_assets_carry_new_tags():
     # styles.css for the review length limit; home-layout.js again for the Nov 21 afternoon sweep's reveal and
     # the Nov 22 "On your services" card).
     for tag in ("./styles.css?v=20261121-text-limits-1", "/static/challenges.js?v=20261121-between-the-years-1",
-                "/static/home-layout.js?v=20261122-streaming-1"):
+                "/static/home-layout.js?v=20261122-rankings-1"):
         assert tag in INDEX, tag
 
 

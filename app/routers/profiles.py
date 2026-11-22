@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261114-profile-3"
+CSS_VERSION = "20261122-ranked-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 FRAMES_CSS_VERSION = "20261104-frames-1"
 
@@ -262,6 +262,32 @@ def _now_html(view) -> str:
             f'<p class="profile-section__intro">{intro}</p><div class="profile-now__layout">{shelf}{queue}</div></section>')
 
 
+def _ranked_html(view) -> str:
+    """Top tens the member put in order on the Rankings tab and chose to show here. The order only, never scores."""
+    if not view.ranked:
+        return ""
+    name = _e(view.user.username)
+    boards = ""
+    for board in view.ranked:
+        rows = ""
+        for item in board["items"]:
+            art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy" width="48" height="72">' if item.get("image")
+                   else f'<span>{_e(item["title"][:1].upper())}</span>')
+            year = f'<small>{_e(item["year"])}</small>' if item.get("year") else ""
+            title = (f'<a href="{_e(item["url"])}">{_e(item["title"])}</a>' if item.get("url")
+                     else f'<span>{_e(item["title"])}</span>')
+            rows += (f'<li class="profile-ranked__row"><span class="profile-ranked__place">{item["position"]}</span>'
+                     f'<span class="profile-ranked__art" aria-hidden="true">{art}</span>'
+                     f'<span class="profile-ranked__copy">{title}{year}</span></li>')
+        more = (f'<p class="profile-ranked__more">{board["total"] - len(board["items"])} more ranked below these.</p>'
+                if board["total"] > len(board["items"]) else "")
+        boards += (f'<div class="profile-ranked__board" data-format="{_e(board["category"])}">'
+                   f'<h3>Top {len(board["items"])} {_e(board["nouns"])}</h3><ol class="profile-ranked__list">{rows}</ol>{more}</div>')
+    return (f'<section class="title-section profile-ranked" aria-labelledby="profile-ranked"><h2 id="profile-ranked">Ranked</h2>'
+            f'<p class="profile-section__intro">{name}\'s favourites in order, decided two at a time.</p>'
+            f'<div class="profile-ranked__boards">{boards}</div></section>')
+
+
 def _owner_note_html(view, is_owner: bool) -> str:
     if not is_owner:
         return ""
@@ -387,7 +413,7 @@ def _collections_html(view) -> str:
 
 # Library categories in the taste-mix bar, in profile-page.css colors.
 MIX_COLORS = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks")
-SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-now", "Right now"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
+SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-now", "Right now"), ("profile-ranked", "Ranked"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
                 ("profile-favorites", "Favorites"), ("profile-diary", "Diary"), ("profile-reviews", "Reviews"),
                 ("profile-collections", "Collections"))
 
@@ -588,7 +614,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         + (f". {lead}" if lead else "."), 158)
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
-    body = "".join([_showcase_html(view), _now_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
+    body = "".join([_showcase_html(view), _now_html(view), _ranked_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
     tabs = _tabs_html(body)
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'

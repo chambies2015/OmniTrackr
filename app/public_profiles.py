@@ -504,6 +504,7 @@ class ProfileView:
     hours: int = 0  # estimated, from the shelves the member hasn't made private
     now: dict = field(default_factory=dict)  # {"current": [...], "queued": [...]} when the member shows it
     spread: list = field(default_factory=list)  # titles rated 1..10, with the library stats
+    ranked: list = field(default_factory=list)  # top tens from Rankings the member chose to show
 
     @property
     def path(self) -> str:
@@ -545,7 +546,18 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         hours=time_spent.public_hours(db, user) if profile.show_stats and not user.statistics_private else 0,
         now=_now(db, user) if getattr(profile, "show_now", False) else {},
         spread=_rating_spread(db, user) if profile.show_stats and not user.statistics_private else [],
+        ranked=_ranked(db, user),
     )
+
+
+def _ranked(db: Session, user: models.User) -> list:
+    """Top tens from Rankings, only for formats the member switched on there and doesn't keep private."""
+    try:
+        from . import rankings
+        return rankings.public_lists(db, user, _visible_categories(user))
+    except Exception:
+        db.rollback()
+        return []
 
 
 def _may_be_indexable(db: Session, user_ids: set) -> set:

@@ -261,6 +261,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "backlog_draw": _backlog_draw(db, days, now),
         "your_week": _your_week(db, days, now),
         "streaming": _streaming(db, days, now),
+        "rankings": _rankings(db, days, now),
         "widgets": _profile_widgets(db, days, now),
     }
 
@@ -290,6 +291,16 @@ def _streaming(db: Session, days: int, now: datetime) -> dict:
     try:
         from .. import streaming_services
         return streaming_services.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _rankings(db: Session, days: int, now: datetime) -> dict:
+    """Rankings: members putting their finished titles in order, answers given and top tens shared."""
+    try:
+        from .. import rankings
+        return rankings.stats(db, days, now)
     except Exception:
         db.rollback()
         return {}

@@ -78,6 +78,7 @@ async function openCompletionMoment(category, itemId) {
     document.getElementById('completionRitualTitle').textContent = moment.title;
     showCompletionShare(category, itemId, moment.title);
     showCompletionTalk(moment.talk);
+    showCompletionRank(category, itemId);
     document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
     document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
     const step = document.getElementById('completionReviewStep');
@@ -141,6 +142,38 @@ function showCompletionTalk(talk) {
         navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'finish_talk_clicked' })], { type: 'application/json' }));
       }
     } catch (error) { /* counting only */ }
+  };
+}
+
+// A title just finished is the easiest one to place: the member still knows how it compares.
+// The reflection is saved first when anything was typed, then the Rankings dialog asks.
+function showCompletionRank(category, itemId) {
+  const box = document.getElementById('completionRank');
+  const button = document.getElementById('completionRankBtn');
+  if (!box || !button) return;
+  const ranker = typeof window !== 'undefined' ? window.OmniRankings : null;
+  box.hidden = !(ranker && typeof ranker.place === 'function');
+  if (box.hidden) return;
+  button.disabled = false;
+  button.onclick = async () => {
+    const takeaway = document.getElementById('completionRitualTakeaway');
+    const favorite = document.getElementById('completionRitualFavorite');
+    const step = document.getElementById('completionReviewStep');
+    const review = document.getElementById('completionReviewText');
+    const typed = Boolean((takeaway && takeaway.value.trim()) || (favorite && favorite.checked)
+      || (step && !step.hidden && review && review.value.trim()));
+    button.disabled = true;
+    if (typed) {
+      await saveCompletionRitual();
+      const save = document.getElementById('completionRitualSave');
+      // Still open with the save button waiting: it didn't save, and the member's text is still there.
+      if (activeCompletionMomentId && save && save.dataset.action !== 'close-completion-ritual') {
+        button.disabled = false;
+        return;
+      }
+    }
+    closeCompletionRitual();
+    ranker.place(category, itemId, 'finish');
   };
 }
 

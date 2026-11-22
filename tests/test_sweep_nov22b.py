@@ -154,8 +154,9 @@ def test_site_stats_script_tag_moved_with_the_streaming_block():
     # site-stats.js gained the "On your services" block in #302, but kept the tag it had since
     # Nov 20. Static files are cached for a year, so the block stayed empty for anyone who had
     # opened Site stats before.
+    # Later blocks (Rankings, #307) move it again, so only check it is a Nov 22 tag or newer.
     assert tag != "20261120-widgets-1"
-    assert tag == "20261122-sweep-b-1"
+    assert tag[:8] >= "20261122"
     assert "growthStreaming" in (ROOT / "app/static/site-stats.js").read_text()
 
 

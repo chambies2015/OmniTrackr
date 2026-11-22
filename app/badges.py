@@ -90,6 +90,9 @@ TRACKS = (
     {"key": "essentials", "name": "Essentials", "emoji": "🏛️", "metric": "essentials", "targets": (10, 50, 200),
      "counts": "titles from the Essential 100 lists finished", "one": "title from the Essential 100 lists finished",
      "next": "Finish {n} more essential {noun}", "noun": ("title", "titles"), "shelf": None},
+    {"key": "ranker", "name": "Ranker", "emoji": "🥇", "metric": "ranked", "targets": (10, 50, 150),
+     "counts": "titles ranked", "one": "title ranked", "next": "Rank {n} more {noun}", "noun": ("title", "titles"),
+     "shelf": None},
 )
 BY_KEY = {track["key"]: track for track in TRACKS}
 # Each key is one stored row per member, so two tracks sharing a key would share a tier.
@@ -99,6 +102,7 @@ TOTAL_LEVELS = len(TRACKS) * len(TIERS)
 LINKS = {
     "goals": "/#goals", "challenger": "/#challenge", "recruiter": "/#invite-friends", "company": "/#invite-friends",
     "advent": "/holidays/advent-calendar", "steady": "/#your-week", "essentials": "/essentials",
+    "ranker": "/#rankings",
 }
 NEXT_COUNT = 3
 
@@ -139,6 +143,8 @@ def counts(db: Session, user: models.User) -> dict:
     result["advent_doors"] = most_doors(db, user.id)
     from .essentials import finished_count
     result["essentials"] = finished_count(db, user.id)
+    from .rankings import ranked_total
+    result["ranked"] = ranked_total(db, user.id)
     return result
 
 

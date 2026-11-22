@@ -103,6 +103,7 @@
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
   <link rel="stylesheet" href="/static/streaming.css?v=20261122-streaming-1">
+  <link rel="stylesheet" href="/static/rankings.css?v=20261122-rankings-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -491,6 +492,7 @@
         <button class="tab" data-switch-tab="activity">Journal</button>
         <button class="tab" data-switch-tab="recommendations">Postcards</button>
         <button class="tab" data-switch-tab="collections">Collections</button>
+        <button class="tab" data-switch-tab="rankings">Rankings</button>
         <button class="tab" data-switch-tab="statistics">Statistics</button>
         <div id="customTabsContainer"></div>
         <button class="tab library-nav__manage" id="manageCustomTabsBtn" data-action="show-custom-tab-manager">Manage custom tabs</button>
@@ -852,6 +854,19 @@
           </div>
           <div id="backlogDrawBody" class="backlog-draw__body" aria-live="polite"></div>
           <p id="backlogDrawStatus" class="backlog-draw__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Rankings: "which did you like more?" about two finished titles, so they fall into order (rankings.js) -->
+        <section id="rankDuel" class="rank-card" aria-labelledby="rankDuelTitle" hidden>
+          <div class="rank-card__head">
+            <div>
+              <p id="rankDuelEyebrow" class="rank-card__eyebrow">Rankings</p>
+              <h2 id="rankDuelTitle" class="rank-card__title">Which did you like more?</h2>
+              <p id="rankDuelSummary" class="rank-card__summary"></p>
+            </div>
+            <button type="button" id="rankDuelHide" class="rank-quiet">Hide for now</button>
+          </div>
+          <div id="rankDuelBody" class="rank-card__body"></div>
+          <p id="rankDuelStatus" class="rank-status" role="status" aria-live="polite"></p>
         </section>
         <!-- Offered once in a while to members with no weekly email, notifications or calendar yet (stay-posted.js) -->
         <section id="stayPosted" class="stay-posted" aria-labelledby="stayPostedTitle" hidden>
@@ -2265,6 +2280,45 @@
       </section>
     </div>
 
+    <!-- Rankings Tab Content: finished titles in order, two at a time (rankings.js) -->
+    <div id="rankings-tab" class="tab-content">
+      <section class="rank-hero" aria-labelledby="rankHeroTitle">
+        <div class="rank-hero__copy">
+          <p class="rank-hero__eyebrow">Private until you share it</p>
+          <h2 id="rankHeroTitle">Rankings</h2>
+          <p id="rankHeroSummary" class="rank-hero__summary">Pick the one you liked more, two at a time, and everything you've finished falls into order. Placing a title among a hundred others takes about seven picks.</p>
+        </div>
+        <ol class="rank-hero__art" aria-hidden="true"><li>1</li><li>2</li><li>3</li></ol>
+      </section>
+      <div id="rankFormats" class="rank-formats" role="group" aria-label="Rank which format"></div>
+      <div id="rankBoard" class="rank-board" aria-busy="false">
+        <section id="rankAsk" class="rank-panel rank-ask" aria-labelledby="rankAskTitle">
+          <h3 id="rankAskTitle" class="rank-panel__title">Which did you like more?</h3>
+          <div id="rankAskBody" class="rank-ask__body"></div>
+          <p id="rankAskStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <section id="rankList" class="rank-panel rank-list" aria-labelledby="rankListTitle">
+          <div class="rank-list__head">
+            <h3 id="rankListTitle" class="rank-panel__title">Your ranking</h3>
+            <div id="rankListTools" class="rank-list__tools"></div>
+          </div>
+          <div id="rankListBody" class="rank-list__body"></div>
+          <p id="rankListStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <section id="rankWaiting" class="rank-panel rank-waiting" aria-labelledby="rankWaitingTitle" hidden>
+          <h3 id="rankWaitingTitle" class="rank-panel__title">Waiting to be ranked</h3>
+          <p class="rank-panel__hint">Finished, not placed yet. Recent finishes come first.</p>
+          <ul id="rankWaitingList" class="rank-chips"></ul>
+          <button type="button" id="rankWaitingMore" class="rank-quiet" hidden>Show all</button>
+        </section>
+        <details id="rankLeftOut" class="rank-panel rank-left-out" hidden>
+          <summary id="rankLeftOutTitle">Left out</summary>
+          <p class="rank-panel__hint">You asked not to rank these. Put one back and it waits with the others.</p>
+          <ul id="rankLeftOutList" class="rank-chips"></ul>
+        </details>
+      </div>
+    </div>
+
     <!-- Collections Tab Content -->
     <div id="collections-tab" class="tab-content">
       <section class="collections-hero">
@@ -2702,7 +2756,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261121-feed-runs-1"></script>
-  <script src="/static/home-layout.js?v=20261122-streaming-1"></script>
+  <script src="/static/home-layout.js?v=20261122-rankings-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261122-streaming-1"></script>
@@ -2733,6 +2787,7 @@
   <script src="/static/backlog-draw.js?v=20261121-sweep-f-1" defer></script>
   <script src="/static/your-week.js?v=20261120-your-week-2" defer></script>
   <script src="/static/streaming.js?v=20261122-sweep-b-1" defer></script>
+  <script src="/static/rankings.js?v=20261122-rankings-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261122-shelf-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
@@ -4023,6 +4078,17 @@
     </div>
   </div>
 
+  <!-- Rankings: place one title from the finish dialog without leaving the page (rankings.js) -->
+  <dialog id="rankDialog" class="rank-dialog" aria-labelledby="rankDialogTitle">
+    <div class="rank-dialog__head">
+      <p id="rankDialogEyebrow" class="rank-card__eyebrow">Rankings</p>
+      <h2 id="rankDialogTitle" class="rank-dialog__title">Where does it rank?</h2>
+      <button type="button" id="rankDialogClose" class="rank-dialog__close" aria-label="Close">×</button>
+    </div>
+    <div id="rankDialogBody" class="rank-dialog__body"></div>
+    <p id="rankDialogStatus" class="rank-status" role="status" aria-live="polite"></p>
+  </dialog>
+
   <!-- Finish Ritual Modal -->
   <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
     <div class="modal-content completion-ritual-modal" data-stop-propagation>
@@ -4055,6 +4121,10 @@
         <div id="completionTalk" class="completion-ritual-modal__share completion-ritual-modal__talk" hidden>
           <p><strong>Want to talk about it?</strong> <span id="completionTalkNote"></span></p>
           <a class="completion-ritual-modal__share-btn" id="completionTalkLink" href="/discussions">Join the discussion</a>
+        </div>
+        <div id="completionRank" class="completion-ritual-modal__share completion-ritual-modal__rank" hidden>
+          <p><strong>Where does it rank?</strong> <span id="completionRankNote">A few quick picks put it in order with everything else you've finished.</span></p>
+          <button type="button" class="completion-ritual-modal__share-btn" id="completionRankBtn">Rank it</button>
         </div>
         <div class="completion-ritual-modal__actions">
           <button type="button" class="action-btn" id="completionRitualSave" data-action="save-completion-ritual">Save reflection</button>
