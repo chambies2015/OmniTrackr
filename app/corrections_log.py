@@ -180,10 +180,27 @@ def _edition_notes() -> Change:
 
 
 @lru_cache(maxsize=1)
+def _spring_tv_dates() -> Change:
+    pages = (
+        ("/new-releases/spring-2027",
+         "Added Wild Things (April 16, Apple TV) to Also on the calendar, and links to the new spring games guide. "
+         "The opening now says why there is no spring TV guide yet."),
+        ("/new-releases/winter-2027-tv",
+         "Added Invincible season 5 (February 17, Prime Video) to Also on the calendar. Prime Video set the date on "
+         "November 19."),
+    )
+    return Change(
+        "2026-11-22", "update", "Two release guides", "/new-releases",
+        "Added two TV dates found while writing the spring 2027 games guide: Wild Things on April 16 to the spring "
+        "guide, and Invincible season 5 on February 17 to the winter TV guide. No picks changed.",
+        pages,
+    )
+
+
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
     changes = [_in_order_dates(), _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(),
-               *_grammys(), _if_you_liked_questions(), _edition_notes()]
+               *_grammys(), _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))
 
 

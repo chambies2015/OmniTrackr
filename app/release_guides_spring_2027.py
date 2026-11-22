@@ -3,8 +3,9 @@
 Same fields as the guides in release_guides.py (that module adds these to GUIDES). The
 all-format guide, spring-2027, covers March to May like the winter one covers December to
 February, and becomes the "current" guide on Release Radar on March 1. The one-format
-spring guides (focus "movies", "anime" and "books") cover April to June, the quarter after
-the winter one-format guides. A title written up as a pick in one guide is only mentioned in
+spring guides (focus "movies", "games", "anime" and "books") cover April to June, the quarter
+after the winter one-format guides. There is no spring TV guide yet: in November 2026 almost
+no April to June premieres had a date, so the few that did are in spring-2027's ``also``. A title written up as a pick in one guide is only mentioned in
 ``also`` in the others, so every pick has one home in the Pick for me pool.
 """
 
@@ -17,7 +18,7 @@ GUIDES = {
         "summary": ("The March to May 2027 releases we would plan around, from The Legend of Zelda and Star Wars: "
                     "Starfighter to Final Fantasy VII Revelation, with what to catch up on first."),
         "published": "2026-11-21",
-        "reviewed": "2026-11-21",
+        "reviewed": "2026-11-22",
         "starts": "2027-03-01",
         "ends": "2027-05-31",
         "lead": [
@@ -35,8 +36,10 @@ GUIDES = {
             "what to watch, play or read first if you want to arrive ready.",
             "Three of the season's films open in March and are already written up in our winter guides: Sonic the "
             "Hedgehog 4 on March 19, Godzilla x Kong: Supernova on March 26, and Mike Flanagan's The Exorcist: "
-            "Martyrs on March 12. They are listed at the bottom with links. Our spring movies, anime and books "
-            "guides go further into April, May and June, one format at a time.",
+            "Martyrs on March 12. They are listed at the bottom with links. Our spring movies, games, anime and "
+            "books guides go further into April, May and June, one format at a time. There is no spring TV guide "
+            "yet, because almost no shows had an April to June date when we wrote this. The streaming services "
+            "usually set their spring dates in January and February, and we will write one then.",
         ],
         "sections": [
             {
@@ -415,6 +418,10 @@ GUIDES = {
              "behind it. No day yet."),
             ("Persona 4 Revival on Switch 2 (May 20).",
              "The remake from our winter guide reaches Nintendo's console three months after the other versions."),
+            ("Wild Things (April 16, Apple TV).",
+             "A limited series about Siegfried & Roy, with Jude Law and Andrew Garfield as the Las Vegas magicians "
+             "and their white tigers, from John Hoffman, who co-created Only Murders in the Building. It is based on "
+             "Apple's podcast of the same name."),
             ("The Day of the Jackal, season 2 (2027, Peacock).",
              "Eddie Redmayne's assassin returns, though Peacock has said only 2027, so it may not be a spring "
              "show."),
@@ -471,6 +478,7 @@ GUIDES = {
             ("Bleeding Cool: Heated Rivalry season 2 expected in April 2027", "https://bleedingcool.com/tv/heated-rivalry-season-2-expected-april-2027-filming-eyed-for-august/"),
             ("Variety: Off Campus sets its season 2 date", "https://variety.com/2026/tv/news/off-campus-season-2-release-amazon-alli-and-dean-1236940329/"),
             ("TV Insider: The Day of the Jackal season 2", "https://www.tvinsider.com/1166859/"),
+            ("9to5Mac: Apple TV sets Wild Things for April 16", "https://9to5mac.com/2026/11/19/apple-tv-reveals-new-series-with-andrew-garfield-jude-law-as-magicians/"),
             ("Gematsu: Grave Seasons launches March 9, 2027", "https://www.gematsu.com/2026/09/grave-seasons-launches-march-9-2027"),
             ("RPG Site: Exodus launches April 7, 2027", "https://www.rpgsite.net/news/21185-exodus-release-date-ps5-xbox-pc-steam"),
             ("GamesRadar+: Exodus finally gets a release date", "https://www.gamesradar.com/games/mass-effect/mass-effect-like-rpg-exodus-finally-gets-a-release-date-and-its-not-that-far-away/"),
@@ -1600,6 +1608,321 @@ GUIDES = {
             ("The Bookish Bulletin: most anticipated May 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-may-2027-books"),
             ("The Bookish Bulletin: most anticipated June 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-june-2027-books"),
             ("BookBrowse: our most anticipated books for 2027", "https://www.bookbrowse.com/blogs/editor/index.cfm/2026/11/10/Our-Most-Anticipated-Books-for-2027"),
+        ],
+    },
+    "spring-2027-games": {
+        "name": "Spring 2027 games: the new releases worth playing from April to June",
+        "period": "April to June 2027",
+        "eyebrow": "GAMES RELEASE GUIDE",
+        "hub_label": "Spring 2027 games",
+        "focus": "games",
+        "search_title": "Spring 2027 games: Pony Island 2, Mariachi Legends, Stronghold 4, Melty Blood and more",
+        "summary": ("Eight spring 2027 games worth playing, from Pony Island 2 and Mariachi Legends to Stronghold 4 "
+                    "and Melty Blood: Twi-Lumina, with what to play first."),
+        "published": "2026-11-22",
+        "reviewed": "2026-11-22",
+        "starts": "2027-04-01",
+        "ends": "2027-06-30",
+        "lead": [
+            "The biggest games of the spring all come out in its first seven weeks. Exodus, the science fiction "
+            "role-playing game from former BioWare developers, arrives on April 7, Final Fantasy VII Revelation the "
+            "next day, and God of War Laufey on May 20. Those three are written up in our all-format spring guide. "
+            "This one is about the games that come out around them, which are easy to miss when a Final Fantasy is "
+            "taking up everyone's evenings.",
+            "We went through the publishers' announcements as they stood on November 22, 2026, and kept the games "
+            "with at least a month: eight of them, four from small independent studios, two from Japan and two "
+            "strategy games. For each one we say when it comes out and on what, what it is, what to play first if "
+            "anything, and the thing most likely to put you off. None of them are out yet, so read these as bets, "
+            "not reviews. We say where we are guessing.",
+            "A lot of spring games still have only a season. Kirby and the World Beyond, Spyro: A Realm Beyond, Mega "
+            "Man: Dual Override, Turok: Origins and The Expanse: Osiris Reborn are all due in spring 2027 with no "
+            "month, so they are listed at the bottom with what we know. We will move them up into the guide when "
+            "their publishers set a date. Dates are for the US, and the platforms are the ones announced so far.",
+        ],
+        "sections": [
+            {
+                "format": "games",
+                "id": "indies",
+                "label": "Indies",
+                "heading": "Four indie games, one of them from the maker of Inscryption",
+                "intro": [
+                    "These come from small studios and will get a fraction of the attention Final Fantasy gets in "
+                    "April. Two of them come out on the same Tuesday, April 27, three weeks after the big releases. "
+                    "Haunted Paws has a month but no day, and Rustown closes the season on June 30.",
+                ],
+                "picks": [
+                    {"kind": "game", "title": "Pony Island 2: Panda Circus", "year": 2027, "creator": None,
+                     "date": "2027-04-27",
+                     "released": "PC (Steam)",
+                     "why": "A sequel to Daniel Mullins's 2016 puzzle game Pony Island. You play a young nomad who "
+                            "died too early and has to escape the Earth Prison with your soul and your sanity, "
+                            "bargaining with the deities of the underworld and beating, or breaking, their games.",
+                     "note": "Mullins makes games that turn on you. Pony Island looked like a cheap arcade game about "
+                             "a pony jumping fences and turned out to be a machine built by the devil, which you "
+                             "escaped by hacking it from the inside. Inscryption (2021), his next game, began as a "
+                             "card game in a dark cabin and kept turning into something else, and it won the Seumas "
+                             "McNally Grand Prize at the Independent Games Festival. Panda Circus looks like a run of "
+                             "arcade cabinets, each with its own rules and its own look, and it adds live-action "
+                             "scenes with Sungwon Cho, Arian Moayed (Stewy in Succession), Caitlin Reilly and Kevin "
+                             "Saxby. The store page says \"This is not a game about ponies,\" which fans of the first "
+                             "one will read as a promise. If you liked Inscryption, this is the spring game we would "
+                             "put first.",
+                     "first": "Nothing is required, but Pony Island (2016) is short and cheap, and it is the quickest "
+                              "way to find out whether this kind of game is for you. Inscryption is the fuller "
+                              "version of the same idea.",
+                     "caveat": "PC only so far. Half the fun of a Mullins game is not knowing what comes next, so "
+                               "stay away from trailers and walkthroughs if you can. Expect some unsettling images."},
+                    {"kind": "game", "title": "Mariachi Legends", "year": 2027, "creator": None,
+                     "date": "2027-04-27",
+                     "released": "PS5, Xbox Series X|S, Switch, PC · on Game Pass",
+                     "why": "A side-scrolling Metroidvania from Halberd Studios, set in the Mexican town of Santa "
+                            "Mascota. You play Pablo Cruz, a detective who has made a deal with Death herself and can "
+                            "turn into La Sombra, on the trail of a man who has become immortal.",
+                     "note": "The creative director, Miguel Hasson, has a one-line pitch for it: Alucard's suit in "
+                             "Castlevania is \"like 90%\" of a mariachi suit already. Mariachi Legends takes the "
+                             "castle-exploring structure of Symphony of the Night and moves it to a real place, "
+                             "Mascota in Jalisco, where Hasson's mother comes from. The map exists by day and by "
+                             "night, with a full moon as well, and some gates and enemies only appear at certain "
+                             "times. You parry, collect tarot cards for new powers, and cook dishes from recipes "
+                             "you find around town, which Hasson says can make you \"ridiculously "
+                             "overpowered\" for a boss. It was due in 2026 and moved to April.",
+                     "first": "Nothing. Castlevania: Symphony of the Night (1997) is the game it is built on, if you "
+                              "have never played it.",
+                     "caveat": "Metroidvanias mean a lot of walking back through places you have been, and a map "
+                               "that changes between day and night doubles it. Halberd hasn't said how long it is or "
+                               "what it costs."},
+                    {"kind": "game", "title": "Haunted Paws", "year": 2027, "creator": None,
+                     "date": "2027-05-01", "month_only": True,
+                     "released": "PS5, Xbox Series X|S, Switch 2, Switch, PS4, PC · the day hasn't been set",
+                     "why": "A cozy co-op horror game from LazyFlock in which two puppies sneak through a haunted "
+                            "mansion to rescue their human, who has been kidnapped by the creatures living there.",
+                     "note": "It is a haunted house seen from knee height, by two dogs who can dig, sniff and bark. You "
+                             "make your own puppy, choosing the breed, the color of its fur and what it wears, and "
+                             "each creature you beat gives up a piece of its past, so the house tells its story as you "
+                             "go. It is built for two, and you can invite a friend to play for free, so one copy "
+                             "covers a pair. Cozy horror is a small genre for people who like the creaking floors "
+                             "more than the jump scares. A demo is out now on Switch 2 and Switch, which makes it the one game in this "
+                             "guide you can try before you decide.",
+                     "first": "Nothing. Play the demo on Switch first.",
+                     "caveat": "Only the month is set. LazyFlock hasn't said how long it is, and a game designed for "
+                               "two can feel thin if you play it on your own."},
+                    {"kind": "game", "title": "Rustown", "year": 2027, "creator": None,
+                     "date": "2027-06-30",
+                     "released": "Xbox Series X|S, PC (Steam and Microsoft Store)",
+                     "why": "A story-driven stealth adventure from Plotrick. Five years after a pandemic called the "
+                            "idiot virus, you get a letter from your father, whom you thought was dead, and follow it "
+                            "into Rustown, a slum where gangs of the infected and the uninfected fight over what is "
+                            "left.",
+                     "note": "Most games set after a pandemic turn the infected into monsters to be shot. In Rustown "
+                             "they are people, living in their own part of town with their own gangs, and the game is "
+                             "about slipping past both sides, following clues and piecing together the stories of the "
+                             "people who live there. Plotrick showed it at the ID@Xbox showcase in October with a "
+                             "trailer in English, Japanese and Korean, and its description calls it \"a story of life "
+                             "and kindness that endure in a broken city.\" That and the trailer are most of what we "
+                             "have to go on, so it is the riskiest pick in this guide. We included it because stealth "
+                             "games that ask you to understand a place, not clear it out, are rare, and this one "
+                             "comes at the end of June, when the spring rush is over.",
+                     "caveat": "Xbox and PC only so far. There is no price, no length and no hands-on preview yet. "
+                               "Wait for the reviews."},
+                ],
+            },
+            {
+                "format": "games",
+                "id": "japan",
+                "label": "From Japan",
+                "heading": "Two from Japan: a fighting game and a picture book",
+                "intro": [
+                    "Both come from Japanese studios with a long record and a loyal following. One is an updated "
+                    "version of a 2021 fighting game. The other came out in Japan in April 2026 and reaches the rest "
+                    "of the world, translated, a year later.",
+                ],
+                "picks": [
+                    {"kind": "game", "title": "Melty Blood: Twi-Lumina", "year": 2027, "creator": None,
+                     "date": "2027-04-22",
+                     "released": "PS5, PS4, Switch 2, Switch, Xbox One, PC · one or two players, online play",
+                     "why": "An updated version of Melty Blood: Type Lumina (2021), the 2D fighting game set in the "
+                            "world of Type-Moon's Tsukihime, with a reworked battle system, new characters and a new "
+                            "story written by Kinoko Nasu.",
+                     "note": "Type Lumina brought Melty Blood back in 2021 after more than a decade away, built on the "
+                             "remake of Tsukihime that came out the same year, and it was a fast air-dashing fighter. "
+                             "Twi-Lumina builds on it. Len, the cat familiar from the older "
+                             "Melty Blood games, returns, and Aniplex has confirmed White Len as well. Nasu, who "
+                             "created Tsukihime and the Fate series, has written a new story centered on Shiki Tohno "
+                             "in Souya City. The developer, French-Bread, also makes Under Night In-Birth, so the "
+                             "fighting is in experienced hands. If you play fighting games online, the date matters: "
+                             "April 22 is a Thursday, and the first few weeks are when the most people are playing.",
+                     "first": "Nothing for the fighting. For the story, the Tsukihime remake (A piece of blue glass "
+                              "moon) introduces the characters, and it has been out in English since 2024.",
+                     "caveat": "If you own Type Lumina, Aniplex hasn't said whether there is an upgrade or what it "
+                               "costs. The Xbox version is for Xbox One, not Xbox Series, and the voices are Japanese "
+                               "only."},
+                    {"kind": "game", "title": "The Grimm Reapress and the Drearytale Monster", "year": 2026,
+                     "creator": None,
+                     "date": "2027-05-13",
+                     "released": "Switch 2, Switch, PS5, PC · Japanese voices with English subtitles",
+                     "why": "A storybook adventure from Nippon Ichi Software, drawn to look like a picture book. A "
+                            "disease called Paper Mortis is turning people into picture books and picture books into "
+                            "monsters, and Mono, whose sister has caught it, sets out through the Libratarium with "
+                            "Mär, a monster bent on revenge.",
+                     "note": "This is the third of Nippon Ichi's dark fairy tales, after The Liar Princess and the "
+                             "Blind Prince (2018) and The Cruel King and the Great Hero (2022). Both looked like "
+                             "children's books and told stories with real sadness in them: a wolf who blinded a "
+                             "prince and has to lead him through a forest, and a dragon raising a human girl. The "
+                             "Grimm Reapress keeps the hand-drawn style and gives you more to do. You solve puzzles, "
+                             "fight bosses and dive into the storybooks themselves to learn the girls' stories. It came "
+                             "out in Japan on April 30, 2026, on PS5, Switch 2 and Switch, and NIS America's English "
+                             "release on May 13 adds a PC version.",
+                     "caveat": "Japanese voices only. NIS America hasn't said how long it is or what it costs, and "
+                               "the earlier games were slow, gentle ones, so look elsewhere for action."},
+                ],
+            },
+            {
+                "format": "games",
+                "id": "strategy",
+                "label": "Strategy",
+                "heading": "Two strategy games, one going into early access and one coming out",
+                "intro": [
+                    "Both of these are being finished in public. Stronghold 4 opens its early access on Steam in "
+                    "April, so you can buy it and play it while Firefly finishes it. Guild Saga has been in early "
+                    "access since 2024 and reaches its full release, and PlayStation 5, in May.",
+                ],
+                "picks": [
+                    {"kind": "game", "title": "Stronghold 4", "year": 2027, "creator": None,
+                     "date": "2027-04-20",
+                     "released": "PC (Steam) · early access, with the full release later",
+                     "why": "Firefly Studios' castle-building strategy game, the first numbered Stronghold since "
+                            "2011. It is set in medieval England years before the first game and follows Penryn of "
+                            "Wethel, a shepherd who becomes a leader.",
+                     "note": "Stronghold (2001) made castles fun to build and then to defend, with an economy behind "
+                             "the walls: bread, ale, taxes and the mood of your peasants counted as much as the "
+                             "archers on the battlements. Firefly has spent the last few years remaking its old games, "
+                             "with Definitive Editions of Stronghold and Stronghold Crusader, and this is the new one, "
+                             "built on Unreal Engine 5. Weather now changes things: snow slows the crops, and heavy "
+                             "rain shortens your archers' range. Firefly's feature list has a 22-mission campaign, "
+                             "sieges with moats and tunnelers, skirmishes against up to eight computer opponents and "
+                             "a free build mode, and Ben Starr, Clive in Final Fantasy XVI, is in the cast. Early "
+                             "access was due on December 7 and moved to April 20. Firefly called it \"a hard decision "
+                             "for the team to make, but one which we think will lead to a better game.\"",
+                     "first": "Nothing. If you have never played the series, Stronghold: Definitive Edition (2023) is "
+                              "the original with modern controls, and the Steam demo of Stronghold 4 is free.",
+                     "caveat": "This is early access, so it is unfinished: online multiplayer, the economic campaign "
+                               "and co-op come later. PC only. If you want the finished game, wait for 1.0."},
+                    {"kind": "game", "title": "Guild Saga: Vanished Worlds", "year": 2024, "creator": None,
+                     "date": "2027-05-01", "month_only": True,
+                     "released": "PS5 and PC (Steam) · the full release, after early access on PC since October 2024",
+                     "why": "A turn-based tactics role-playing game from Ocelot Technologies, a small studio in "
+                            "Ontario, in which you build a hero and a party and explore the islands of the Respite "
+                            "Archipelago.",
+                     "note": "The appeal is the way the skills combine. There are about 200 of them across ten "
+                             "disciplines, and the ground and the weather matter: a Geomancer can summon a mandrake, "
+                             "a Hydromancer can make it rain, and an Aeromancer can then send lightning through the "
+                             "puddles. Chains like that were what people loved in Divinity: Original Sin 2, and they "
+                             "are rare in a smaller game. Around the fights there is more of a role-playing game than "
+                             "most tactics games bother with. You choose your hero's appearance, background and "
+                             "talents, your companions have quests of their own, you can befriend or romance them, and "
+                             "the side quests include a murder mystery and monster bounties. It has been on Steam in "
+                             "early access since October 10, 2024, and its full release in May comes with the "
+                             "PlayStation 5 version, which Ocelot's chief executive says \"feels like a "
+                             "homecoming.\"",
+                     "first": "Nothing.",
+                     "caveat": "Only the month is set, and Ocelot says it will give the day closer to launch. Tactics "
+                               "games with this many skills take patience to learn."},
+                ],
+            },
+        ],
+        "also": [
+            ("Exodus (April 7).",
+             "Archetype Entertainment's science fiction role-playing game, in which every long journey costs time back "
+             "home. We wrote it up in our all-format spring guide."),
+            ("Final Fantasy VII Revelation (April 8).",
+             "The last part of the remake, on every current console and PC on the same day. Also in the spring "
+             "guide."),
+            ("God of War Laufey (May 20, PS5).",
+             "Santa Monica Studio's game about Faye, Kratos's late wife, moved from February. Also in the spring "
+             "guide."),
+            ("Persona 4 Revival on Switch 2 (May 20).",
+             "The Persona 4 remake from our winter guide reaches Nintendo's console three months after the other "
+             "versions."),
+            ("Kirby and the World Beyond (spring, Switch 2).",
+             "Nintendo's second full 3D Kirby game, after Kirby and the Forgotten Land, and part of the series' 35th "
+             "anniversary. Kirby cuts a hole in the sky and finds another world behind it."),
+            ("Spyro: A Realm Beyond (spring).",
+             "A new Spyro adventure from Toys for Bob, which remade the first three games in 2018, with true flight in "
+             "place of gliding and Tom Kenny back as Spyro. On PS5, Xbox Series, Switch 2 and PC."),
+            ("Mega Man: Dual Override (spring).",
+             "Capcom's first new mainline Mega Man since Mega Man 11 in 2018, with Proto Man as a second playable "
+             "character. On every current console, the last generation and PC."),
+            ("Turok: Origins (spring).",
+             "Saber Interactive's third-person dinosaur shooter, moved from autumn 2026, on PS5, Xbox Series, Switch 2 "
+             "and PC."),
+            ("The Expanse: Osiris Reborn (spring).",
+             "Owlcat Games' role-playing game set in the world of The Expanse, aimed squarely at people who miss Mass "
+             "Effect. On Game Pass from launch, as well as PS5 and PC."),
+            ("Squadron 42 (April to June, PC).",
+             "Cloud Imperium's single-player campaign set in the Star Citizen universe, now listed on Steam for the "
+             "second quarter of 2027 after years of delays."),
+            ("The Backworld (April to June, PC).",
+             "A turn-based role-playing game with horror in it, from Numor Games, with three modes running from a "
+             "relaxed story mode to permanent death."),
+        ],
+        "plan_heading": "A plan for the spring",
+        "plan": [
+            "Most people will spend the first half of April on Exodus or Final Fantasy VII Revelation, and the games "
+            "in this guide come in behind them. Stronghold 4's early access opens on Tuesday the 20th and Melty Blood "
+            "follows on Thursday the 22nd. Pony Island 2 and Mariachi Legends both arrive on the 27th, and if you can "
+            "only fit in one, choose by mood: Pony Island 2 for something strange you will want to talk about, "
+            "Mariachi Legends for something to explore for weeks.",
+            "May is lighter. The Grimm Reapress comes out on the 13th and God of War Laufey on the 20th, and Haunted "
+            "Paws and Guild Saga are due some time in the month. Haunted Paws has a demo on Switch now, which is the "
+            "easiest way to decide whether to save an evening for it with a friend.",
+            "June has only Rustown so far, on the 30th. The big publishers hold their summer showcases in early June "
+            "every year, and that is when the spring games still without a month will either get a date or quietly "
+            "move to the autumn. We will update this page as they do, and the date at the top says when we last "
+            "checked.",
+        ],
+        "method": [
+            "Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. None of these "
+            "games had come out when we wrote about them, so this is a guide to what we think is worth trying, not a "
+            "set of reviews. We worked from the publishers' own announcements and the coverage listed below, checked "
+            "each date against a second source where we could, and kept games with at least a month. Games with only "
+            "a season or a quarter are listed under Also on the calendar.",
+            "Game dates move more than film or TV dates, and two of the games here have moved already: Mariachi "
+            "Legends from 2026, and Stronghold 4's early access from December 7. Haunted Paws and Guild Saga have a "
+            "month but no day, and we list them by the month. Platforms are the ones confirmed so far. None of the "
+            "announcements we read gave a price, so we have left prices out.",
+        ],
+        "related": [
+            ("Spring 2027 releases", "/new-releases/spring-2027"),
+            ("Winter 2027 games", "/new-releases/winter-2027-games"),
+            ("The best games of 2026", "/best-of/2026/games"),
+            ("The Essential 100 games", "/essentials/games"),
+            ("How to track games on OmniTrackr", "/game-tracker"),
+        ],
+        "sources": [
+            ("Gematsu: Pony Island 2: Panda Circus launches April 27, 2027", "https://www.gematsu.com/2026/08/pony-island-2-panda-circus-launches-april-27-2027"),
+            ("Game Informer: Pony Island 2: Panda Circus arrives in April 2027", "https://gameinformer.com/gamescom-2026/2026/08/25/pony-island-2-panda-circus-arrives-in-april-2027"),
+            ("Gematsu: Mariachi Legends delayed to April 27, 2027", "https://www.gematsu.com/2026/08/mariachi-legends-delayed-to-april-27-2027"),
+            ("GamesRadar+: Mariachi Legends and Alucard's suit", "https://www.gamesradar.com/games/action/the-metroidvania-ive-wanted-for-3-years-is-finally-out-next-year-and-it-looks-like-mexican-castlevania-alucards-suit-is-like-90-percent-of-a-mariachi-suit-already/"),
+            ("Gematsu: Haunted Paws launches in May 2027", "https://www.gematsu.com/2026/10/haunted-paws-launches-in-may-2027"),
+            ("Gematsu: Rustown launches June 30, 2027", "https://www.gematsu.com/2026/10/rustown-launches-june-30-2027-for-xbox-series-pc"),
+            ("Gematsu: Melty Blood: Twi-Lumina launches April 22, 2027", "https://gematsu.com/2026/09/melty-blood-twi-lumina-launches-april-22-2027"),
+            ("Games Press: Aniplex announces Melty Blood: Twi-Lumina", "https://www.gamespress.com/New-Entry-in-MELTY-BLOOD-Series-2D-Fighter-MELTY-BLOOD-TWI-LUMINA-To-B"),
+            ("Gematsu: The Grimm Reapress and the Drearytale Monster is coming west", "https://www.gematsu.com/2026/09/the-grimm-reapress-and-the-drearytale-monster-coming-west-in-2027-for-ps5-switch-2-switch-and-pc"),
+            ("The Outerhaven: The Grimm Reapress gets its release date", "https://www.theouterhaven.net/the-grimm-reapress-and-the-drearytale-monster-gets-its-release-date/"),
+            ("Worthplaying: Stronghold 4 early access moves to April 2027", "https://worthplaying.com/article/2026/11/3/news/151343-stronghold-4-needs-more-time-steam-early-access-delayed-until-april-2027/"),
+            ("Gematsu: Stronghold 4 announced for PC", "https://www.gematsu.com/2026/06/stronghold-4-announced-for-pc"),
+            ("Gematsu: Guild Saga: Vanished Worlds comes to PS5 in May 2027", "https://www.gematsu.com/2026/11/strategy-rpg-guild-saga-vanished-worlds-coming-to-ps5-in-may-2027"),
+            ("Gematsu: Persona 4 Revival comes to Switch 2 on May 20, 2027", "https://www.gematsu.com/2026/09/persona-4-revival-coming-to-switch-2-on-may-20-2027"),
+            ("VGC: Kirby and the World Beyond is coming in spring 2027", "https://www.videogameschronicle.com/news/kirby-and-the-world-beyond-is-an-all-new-kirby-3d-adventure-coming-in-spring-2027/"),
+            ("Gematsu: Spyro: A Realm Beyond announced", "https://www.gematsu.com/2026/06/spyro-a-realm-beyond-announced-for-ps5-xbox-series-switch-2-and-pc"),
+            ("Gematsu: Mega Man: Dual Override launches in spring 2027", "https://www.gematsu.com/2026/09/mega-man-dual-override-launches-in-spring-2027"),
+            ("Gematsu: Turok: Origins delayed to spring 2027", "https://www.gematsu.com/2026/08/turok-origins-delayed-to-spring-2027"),
+            ("GamesRadar+: The Expanse: Osiris Reborn gets a spring 2027 window", "https://www.gamesradar.com/games/rpg/mass-effect-inspired-sci-fi-rpg-the-expanse-osiris-reborn-gets-a-spring-2027-release-window-and-it-has-a-closed-beta-coming-next-month/"),
+            ("DLCompare: Squadron 42 gets a Q2 2027 window", "https://www.dlcompare.com/gaming-news/squadron-42-returns-with-a-new-trailer-and-a-q2-2027-release-window"),
+            ("Gematsu: The Backworld launches in Q2 2027", "https://www.gematsu.com/2026/11/the-backworld-launches-in-q2-2027"),
+            ("Shacknews: 2027 video game release dates", "https://www.shacknews.com/article/150148/2027-video-games"),
+            ("Game Informer: 2027 video game release schedule", "https://gameinformer.com/2027"),
+            ("Wikipedia: list of video games released in 2027", "https://en.wikipedia.org/wiki/List_of_video_games_released_in_2027"),
         ],
     },
 }

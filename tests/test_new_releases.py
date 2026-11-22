@@ -82,6 +82,8 @@ def test_guides_publish_on_their_date():
     for slug in ("spring-2027", "spring-2027-movies", "spring-2027-anime", "spring-2027-books"):
         assert slug not in new_releases.published(date(2026, 11, 20))
         assert slug in new_releases.published(date(2026, 11, 21))
+    assert "spring-2027-games" not in new_releases.published(date(2026, 11, 21))
+    assert "spring-2027-games" in new_releases.published(date(2026, 11, 22))
     # The spring guide takes over from the winter one on March 1, and the one-format spring guides never do.
     assert new_releases.current(date(2026, 11, 21)) == "november-2026"
     assert new_releases.current(date(2027, 2, 28)) == "winter-2026-27"
@@ -310,8 +312,11 @@ def test_spring_guide_covers_march_to_may(client):
     for path in ("/in-order/zelda", "/in-order/star-wars", "/in-order/final-fantasy-vii", "/in-order/star-trek"):
         assert f'href="{path}"' in html
     # It links to the one-format spring guides, which go further into April, May and June.
-    for slug in ("spring-2027-movies", "spring-2027-anime", "spring-2027-books"):
+    for slug in ("spring-2027-movies", "spring-2027-games", "spring-2027-anime", "spring-2027-books"):
         assert f'href="/new-releases/{slug}"' in html
+    # There is no spring TV guide yet; the one dated April show is in the list at the bottom.
+    assert "spring-2027-tv" not in GUIDES
+    assert any(title.startswith("Wild Things (April 16") for title, _ in entry["also"])
     # The March films were written up in the winter movies guide, so they are only mentioned here.
     winter = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["winter-2027-movies"])}
     assert not winter & {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
@@ -324,6 +329,7 @@ def test_spring_guide_covers_march_to_may(client):
     ("spring-2027-movies", "MOVIES RELEASE GUIDE", "film", "John Rambo"),
     ("spring-2027-anime", "ANIME SEASON GUIDE", "anime", "Kagurabachi"),
     ("spring-2027-books", "BOOKS RELEASE GUIDE", "book", "Feels Like Falling"),
+    ("spring-2027-games", "GAMES RELEASE GUIDE", "game", "Pony Island 2: Panda Circus"),
 ])
 def test_spring_season_guides_group_their_picks(client, slug, eyebrow, noun, first):
     entry = GUIDES[slug]
@@ -349,7 +355,7 @@ def test_spring_season_guides_group_their_picks(client, slug, eyebrow, noun, fir
 def test_spring_guides_give_every_title_one_home():
     # A title written up in one spring guide is only mentioned in the others' "also" lists, so Pick for me and
     # the save buttons have one place to point to.
-    slugs = ["spring-2027", "spring-2027-movies", "spring-2027-anime", "spring-2027-books",
+    slugs = ["spring-2027", "spring-2027-movies", "spring-2027-anime", "spring-2027-books", "spring-2027-games",
              "winter-2026-27", "winter-2027-movies", "winter-2027-anime", "winter-2027-books", "winter-2027-games",
              "winter-2027-tv"]
     seen = {}
@@ -370,14 +376,47 @@ def test_trackers_link_to_the_spring_guides(client):
     assert 'href="/new-releases/spring-2027-movies"' in client.get("/movie-tracker").text
     assert 'href="/new-releases/spring-2027-books"' in client.get("/book-tracker").text
     assert 'href="/new-releases/spring-2027"' in client.get("/game-tracker").text
+    assert 'href="/new-releases/spring-2027-games"' in client.get("/game-tracker").text
 
 
 def test_season_guide_picks_save_as_themselves():
     # Pick for me keeps the first copy of a title it sees, so a new film or book must not be shadowed by an
     # older title of the same name and kind (The Nightingale is also a 2018 film): it would save the wrong year.
     for slug in ("winter-2027-movies", "winter-2027-books", "spring-2027", "spring-2027-movies", "spring-2027-anime",
-                 "spring-2027-books"):
+                 "spring-2027-books", "spring-2027-games"):
         for item in new_releases.picks(GUIDES[slug]):
             pooled = new_releases.pool_entry(item)
             assert pooled["year"] == item["year"], (slug, item["title"])
             assert pooled["out"] == item["date"], (slug, item["title"])
+
+
+def test_spring_games_guide_leaves_the_big_three_and_undated_games_to_the_list(client):
+    entry = GUIDES["spring-2027-games"]
+    html = client.get("/new-releases/spring-2027-games").text
+    titles = {title_pages.slugify(item["title"]) for item in new_releases.picks(entry)}
+    # Exodus, Final Fantasy VII Revelation and God of War Laufey are picks in the all-format spring guide.
+    spring = {title_pages.slugify(item["title"]) for item in new_releases.picks(GUIDES["spring-2027"])
+              if item["kind"] == "game"}
+    assert not spring & titles
+    assert any(title.startswith("Exodus") for title, _ in entry["also"])
+    # Games with only a season or a quarter are listed, not picked.
+    for name in ("Kirby and the World Beyond", "Spyro: A Realm Beyond", "Mega Man: Dual Override", "Squadron 42"):
+        assert any(title.startswith(name) for title, _ in entry["also"]), name
+        assert title_pages.slugify(name) not in titles
+    # Two picks have a month but no day.
+    assert html.count("Out May 2027") == 2 and "Out May 1<" not in html
+    # Guild Saga left early access in May 2027 but has been playable since 2024, so it saves under 2024.
+    guild = next(item for item in new_releases.picks(entry) if item["title"].startswith("Guild Saga"))
+    assert guild["year"] == 2024 and new_releases.pool_entry(guild)["year"] == 2024
+    hub = client.get("/new-releases").text
+    winter_card = 'nr-card__label">Winter 2027 games<'
+    assert hub.index("This month") < hub.index(winter_card) < hub.index('nr-card__label">Spring 2027 games<')
+
+
+def test_spring_tv_dates_are_logged():
+    from app import corrections_log
+    pages = {path for change in corrections_log.guide_changes() for path, _ in change.pages}
+    assert {"/new-releases/spring-2027", "/new-releases/winter-2027-tv"} <= pages
+    winter_tv = GUIDES["winter-2027-tv"]
+    assert any(title.startswith("Invincible, season 5 (February 17") for title, _ in winter_tv["also"])
+    assert winter_tv["reviewed"] == GUIDES["spring-2027"]["reviewed"] == "2026-11-22"
