@@ -19,7 +19,7 @@ from .discover import page
 
 router = APIRouter(tags=["pick-swap"])
 CSS_VERSION = "20261123-swap-1"
-JS_VERSION = "20261123-swap-1"
+JS_VERSION = "20261123-swap-sweep-1"
 DESCRIPTION = ("Secret Santa for recommendations: start a swap, send the link, draw names, and everyone picks one "
                "film, show, book, game or album for the person they drew, with a note on why. Everything opens on "
                "unwrap day. Free.")
@@ -179,10 +179,11 @@ GUIDE = (
     'morning, the last day before a break, the office party, the next book club. Everything opens at 8 a.m. in the '
     'host\'s time zone, and anyone who hasn\'t picked gets a reminder two days before.</p>'
     '<h3>How many people</h3>'
-    '<p>Two to thirty. Two people simply trade picks. With three or more, nobody knows who drew them until unwrap '
-    'day, which is the point. The draw goes in one loop through everyone, so no two people end up just swapping with '
-    'each other. If someone drops out after the draw, the person who drew them picks for whoever they had drawn, '
-    'and the swap tells them.</p>'
+    '<p>Two to thirty, and it\'s more of a surprise with four or more. Two people simply trade picks. With three, '
+    'whoever you didn\'t draw must have drawn you, so only the pick itself is a secret. From four up, nobody can work '
+    'out who drew them until unwrap day, which is the point. The draw goes in one loop through everyone, so no two '
+    'people end up just swapping with each other. If someone drops out after the draw, the person who drew them picks '
+    'for whoever they had drawn, and the swap tells them.</p>'
     '<h3>Questions people ask</h3>'
     '<dl class="ps-faq">'
     '<dt>Do my friends need an account?</dt><dd>Yes, a free one, so the swap can tell them who they drew and keep '

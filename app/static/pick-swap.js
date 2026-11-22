@@ -58,6 +58,29 @@
     return typeof url === 'string' && /^https:\/\//.test(url) && url.length <= 500 ? url : '';
   }
 
+  // Before unwrap day the boxes carry no names apart from yours. Seeing which person's box filled up
+  // just as "a pick is wrapped for you" arrived would tell people who drew them.
+  function boxStates(swap) {
+    const me = (swap.people || []).find(person => person.you && person.in_draw);
+    const total = Math.max(0, Number(swap.givers) || 0);
+    const filled = Math.max(0, Math.min(total, Number(swap.wrapped) || 0));
+    const boxes = [];
+    if (me) boxes.push({ label: 'You', wrapped: Boolean(me.wrapped) });
+    let others = Math.max(0, filled - (me && me.wrapped ? 1 : 0));
+    while (boxes.length < total) {
+      boxes.push({ label: others > 0 ? 'Wrapped' : 'Not yet', wrapped: others > 0 });
+      others -= 1;
+    }
+    return boxes;
+  }
+
+  // A week from today if that's before unwrap day, otherwise tomorrow. Never today: the 8 a.m. draw has
+  // usually passed by the time someone fills in the form.
+  function firstDrawDay(today, revealOn) {
+    const week = addDays(today, 7);
+    return week && revealOn && week < revealOn ? week : addDays(today, 1);
+  }
+
   // Search results this swap can take: allowed kinds only, at most eight.
   function allowedResults(results, kinds) {
     const allowed = Array.isArray(kinds) && kinds.length ? new Set(kinds) : null;
@@ -67,7 +90,7 @@
   }
 
   if (typeof module === 'object' && module.exports) {
-    module.exports = { parseDay, isoDay, addDays, kindsLabel, daysWords, safePath, safeImage, allowedResults };
+    module.exports = { parseDay, isoDay, addDays, kindsLabel, daysWords, safePath, safeImage, allowedResults, firstDrawDay, boxStates };
     return;
   }
 
@@ -415,8 +438,9 @@
     const datedLabel = el('label', 'ps-check');
     datedLabel.appendChild(dated);
     datedLabel.appendChild(document.createTextNode('Draw on a set day'));
-    const drawDay = input('date', { value: addDays(options.today, 7) < options.reveal_on ? addDays(options.today, 7) : options.today,
-      min: options.today, id: 'psDrawDay' });
+    // Names are drawn at 8 a.m. on the draw day, which has usually passed by the time someone starts a swap
+    // today, so the earliest draw day offered is tomorrow.
+    const drawDay = input('date', { value: firstDrawDay(options.today, options.reveal_on), min: addDays(options.today, 1), id: 'psDrawDay' });
     drawDay.setAttribute('aria-label', 'Draw day');
     drawDay.hidden = true;
     [manual, dated].forEach(radio => radio.addEventListener('change', () => { drawDay.hidden = !dated.checked; }));
@@ -857,15 +881,20 @@
   function boxesRow(swap) {
     const list = el('ul', 'ps-boxes');
     list.setAttribute('aria-label', `${swap.wrapped} of ${swap.givers} picks wrapped`);
-    swap.people.filter(person => person.in_draw).forEach(person => {
-      const item = el('li', `ps-box${person.wrapped ? ' ps-box--wrapped' : ' ps-box--empty'}`);
+    boxStates(swap).forEach(box => {
+      const item = el('li', `ps-box${box.wrapped ? ' ps-box--wrapped' : ' ps-box--empty'}`);
       item.appendChild(el('span', 'ps-box__lid'));
       item.appendChild(el('span', 'ps-box__body'));
-      item.appendChild(el('small', null, person.you ? 'You' : person.username));
-      item.title = person.wrapped ? `${person.username} has wrapped a pick` : `${person.username} hasn't picked yet`;
+      item.appendChild(el('small', null, box.label));
       list.appendChild(item);
     });
     return list;
+  }
+
+  function secretLine(givers) {
+    if (givers === 2) return 'You two drew each other. What you each picked stays wrapped until unwrap day.';
+    if (givers === 3) return 'With three of you, whoever you didn\'t draw drew you. What they picked stays wrapped until unwrap day.';
+    return 'Only you know who you drew, and the boxes don\'t say whose is whose. Everything opens on unwrap day.';
   }
 
   function boardSection(swap) {
@@ -1087,7 +1116,7 @@
       title.id = 'psWrappedTitle';
       boxes.appendChild(title);
       boxes.appendChild(boxesRow(swap));
-      boxes.appendChild(el('p', 'ps-hint', 'Nobody can see what anyone picked, or who drew whom, until unwrap day.'));
+      boxes.appendChild(el('p', 'ps-hint', secretLine(swap.givers)));
       body.appendChild(boxes);
     } else if (swap.invite_url) {
       body.appendChild(inviteBox(swap, view.fresh));
