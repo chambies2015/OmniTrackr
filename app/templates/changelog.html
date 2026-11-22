@@ -28,7 +28,7 @@
   <meta name="twitter:image:alt" content="OmniTrackr changelog">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/public-reader.css?v=20261120-a11y-1">
 
   <script type="application/ld+json">
@@ -61,6 +61,17 @@
       <section class="privacy-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Publish a Changelog?</h2>
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="speed-nov22-2026-heading">
+        <h2 id="speed-nov22-2026-heading">November 22, 2026: Faster guide pages, especially on phones</h2>
+        <p>We measured 20 public pages with Lighthouse on a slow phone profile and fixed what was holding them back. Nothing in your library changed.</p>
+        <ul>
+          <li>The Back button brings back the guide you came from straight away. A script that Google's ads load kept Chrome from holding on to pages with ads, so going back reloaded the whole page.</li>
+          <li>Resting the pointer on a guide link, or tapping it on a phone, starts fetching that page, so it usually opens without waiting for the server. This works in Chrome and Edge. Other browsers load pages as before.</li>
+          <li>One accented name, like Yasujirō Ozu on the Essential 100 films, used to download an 85 KB font file. Those letters now come from a 15 KB file, and that page shows its first text about half a second sooner in our tests.</li>
+          <li>Wikipedia posters on Discover, the Essential 100 and Browse now load at the size they are shown, not as the full upload. The first screen of Discover went from about 670 KB of images to under 100 KB in our test. If Wikipedia can't send the smaller copy, the page shows the full one.</li>
+        </ul>
       </section>
 
       <section class="privacy-section" aria-labelledby="security-nov22-services-2026-heading">

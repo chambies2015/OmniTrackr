@@ -219,7 +219,7 @@ def render(db: Session, q: str, kind: Optional[str], signed_in: bool) -> str:
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/search-page.css?v={SEARCH_CSS_VERSION}">
   {extra}
 </head>

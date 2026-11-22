@@ -15,6 +15,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
+from ..page_hints import SPECULATION_RULES, SPECULATION_RULES_PATH
 from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
@@ -494,6 +495,14 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
     sitemap = "\n".join(sitemap_parts)
     
     return Response(content=sitemap, media_type="application/xml")
+
+
+@router.get(SPECULATION_RULES_PATH, include_in_schema=False)
+async def speculation_rules():
+    """The prefetch rules public pages point to in their Speculation-Rules header (page_hints.py)."""
+    return Response(content=json.dumps(SPECULATION_RULES, separators=(",", ":")),
+                     media_type="application/speculationrules+json",
+                     headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/robots.txt")
