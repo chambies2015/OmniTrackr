@@ -2560,6 +2560,7 @@ class TogetherPlan(Base):
 
     members = relationship("TogetherMember", cascade="all, delete-orphan", back_populates="plan")
     notes = relationship("TogetherNote", cascade="all, delete-orphan")
+    removals = relationship("TogetherRemoval", cascade="all, delete-orphan")
 
 
 class TogetherMember(Base):
@@ -2610,3 +2611,19 @@ class TogetherNote(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (Index("ix_together_notes_plan_part", "plan_id", "part"),)
+
+
+class TogetherRemoval(Base):
+    """Someone the person running a together plan took out of it (Nov 22 2026 sweep).
+
+    The invite link would otherwise let them straight back in. The row goes when the person
+    running the plan asks them in again from their friends list. New table only.
+    """
+    __tablename__ = "together_removals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("plan_id", "user_id", name="uq_together_removal"),)

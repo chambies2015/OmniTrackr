@@ -122,6 +122,18 @@
   // ------------------------------------------------------------------ page helpers
 
   const root = document.getElementById('togetherApp');
+
+  // The poster on the invite and plan pages comes with the page. One that no longer loads shows the
+  // title's first letter, like the posters drawn here.
+  document.querySelectorAll('.tg-art img[data-letter]').forEach(img => {
+    const swap = () => {
+      const letter = el('span', 'tg-art__empty', img.dataset.letter || '?');
+      letter.setAttribute('aria-hidden', 'true');
+      img.replaceWith(letter);
+    };
+    if (img.complete && img.naturalWidth === 0) swap();
+    else img.addEventListener('error', swap, { once: true });
+  });
   const reported = new Set();
   function report(event) {
     if (reported.has(event)) return;
