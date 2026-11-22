@@ -83,7 +83,11 @@ class SecurityHeadersMiddleware:
         headers["X-Frame-Options"] = "DENY"
         headers["X-XSS-Protection"] = "1; mode=block"
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # unload=(): Google's ad viewability script (lidar.js) adds an unload listener, and any
+        # unload listener keeps Chrome from putting the page in its back/forward cache, so the
+        # Back button reloaded every guide that shows ads. Nothing on the site listens for
+        # unload; scripts that need a last word use pagehide or visibilitychange.
+        headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), unload=()"
         headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
         if "Content-Security-Policy" not in headers:

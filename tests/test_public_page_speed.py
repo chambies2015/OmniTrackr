@@ -25,7 +25,7 @@ class TestSelfHostedFonts:
     def test_every_font_file_in_the_stylesheet_exists(self):
         css = (STATIC / "fonts.css").read_text(encoding="utf-8")
         files = re.findall(r"url\(/static/fonts/([\w.-]+\.woff2)\)", css)
-        assert len(files) == 13
+        assert len(files) == 14
         for name in files:
             assert (STATIC / "fonts" / name).stat().st_size > 1000, name
         assert (STATIC / "fonts" / "OFL.txt").exists()

@@ -16,7 +16,7 @@ from datetime import date
 from html import escape
 
 SITE_CSS_VERSION = "20261121-refresh-1"
-SITE_JS_VERSION = "20261121-refresh-1"
+SITE_JS_VERSION = "20261122-cwv-1"
 SITE_NAV_JS_VERSION = "20261121-phone-2"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
@@ -404,7 +404,7 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">\n'
         '  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
         '  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
-        '  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">\n'
+        '  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">\n'
         '</head>\n<body class="site site-message-page">\n  <!--SITE_NAV:-->\n'
         '  <main class="site-message site-wrap">\n'
         '    <div class="site-message__orb" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="160" height="160"></div>\n'

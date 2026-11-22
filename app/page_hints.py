@@ -102,3 +102,34 @@ def add_theme_color(html: str) -> str:
     viewport = _VIEWPORT.search(html, 0, head_end)
     at = viewport.end() if viewport else head_end
     return html[:at] + tag + html[at:]
+
+
+# Speculation rules: Chrome fetches a guide's HTML while the pointer rests on its
+# link (about 200 ms on a computer, at the tap on a phone), so the next page opens
+# without a round trip to the server. Only plain reading pages are listed. Pages
+# that count a visit on the server (the homepage's sign-up funnel, shared lists,
+# public collections' reader counts, poll links) are left out, and Site stats
+# already skips requests marked Sec-Purpose: prefetch. Other browsers ignore the
+# header.
+SPECULATION_RULES_PATH = "/speculation-rules.json"
+SPECULATION_RULES_HEADER = f'"{SPECULATION_RULES_PATH}"'
+PREFETCH_PATHS = (
+    "/discover", "/discover/*", "/essentials", "/essentials/*", "/best-of", "/best-of/*",
+    "/awards", "/awards/*", "/release-radar", "/release-radar/*", "/new-this-week",
+    "/new-releases", "/new-releases/*", "/titles", "/titles/*", "/trending", "/charts",
+    "/browse", "/browse/*", "/in-order", "/in-order/*", "/if-you-liked", "/if-you-liked/*",
+    "/guides", "/guides/*", "/switch", "/switch/*", "/binge-calculator", "/binge-calculator/*",
+    "/holidays", "/holidays/*", "/halloween", "/valentines-day", "/people", "/people/*",
+    "/*-tracker", "/faq", "/about", "/media-tracking", "/use-cases", "/export-import-guide",
+    "/review-guidelines", "/sample-library", "/reviews", "/collections/explore",
+)
+SPECULATION_RULES = {
+    "prefetch": [{
+        "source": "document",
+        "where": {"and": [
+            {"href_matches": list(PREFETCH_PATHS)},
+            {"not": {"selector_matches": "[rel~=nofollow], [download], [target=_blank], [data-no-prefetch]"}},
+        ]},
+        "eagerness": "moderate",
+    }],
+}

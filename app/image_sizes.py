@@ -14,6 +14,13 @@ a podcast cover drops from about 450 KB to under 20 KB. IMDb posters on Amazon
 take the width from the "_V1_" part of the name, and Open Library has a medium
 cover next to the large one; both are only shrunk for small thumbnails.
 
+Wikipedia posters come from upload.wikimedia.org at full size: a 250 by 370
+poster can be a 180 KB JPEG, and the Discover and Essential 100 pages show them
+at about 80 to 120 CSS pixels. Wikimedia makes thumbnails at any width under
+/thumb/, so a tile asks for the 250-pixel one (about 30 KB). Those pages load
+site.js, which puts the original back if a thumbnail ever fails to load, so a
+page without site.js keeps the full-size file.
+
 Only <img> src and srcset values in HTML responses are rewritten (see
 html_finish.py). Links, share tags and structured data keep the original URL.
 """
@@ -29,6 +36,14 @@ _MAL_LARGE = re.compile(r"^(https://cdn\.myanimelist\.net/images/(?:anime|manga)
 _APPLE = re.compile(r"^(https://is\d-ssl\.mzstatic\.com/image/thumb/[^?#]+/)(\d{2,4})x(\d{2,4})(bb|cc)\.(?:png|jpe?g|webp)$", re.I)
 _AMAZON = re.compile(r"^(https://m\.media-amazon\.com/images/M/[^/?#]+?\._V1_)[A-Za-z0-9_,]*\.(jpe?g)$", re.I)
 _OPEN_LIBRARY_LARGE = re.compile(r"^(https://covers\.openlibrary\.org/b/(?:id|isbn|olid)/[A-Za-z0-9-]+?)-L\.jpg$", re.I)
+# Original uploads only: /thumb/ URLs are already resized, and the query string is
+# Wikipedia's own utm tagging. MediaWiki shortens long thumbnail names to
+# "thumbnail.jpg", so names past WIKIMEDIA_MAX_NAME keep their original.
+_WIKIMEDIA = re.compile(r"^https://upload\.wikimedia\.org/wikipedia/(?P<wiki>[a-z]{2,12})/(?P<dirs>[0-9a-f]/[0-9a-f]{2})/"
+                        r"(?P<name>[A-Za-z0-9%_.,()'!~-]+\.(?:jpe?g|png))(?:\?[^\s\"#]*)?$", re.I)
+WIKIMEDIA_MAX_NAME = 120
+# Wikimedia's standard thumbnail steps; other widths may be refused.
+WIKIMEDIA_WIDTHS = (120, 250, 500, 960)
 
 POSTER_WIDTH = 420
 HERO_WIDTH = 640
@@ -41,7 +56,10 @@ APPLE_WIDTHS = (200, 400, 600)
 SMALL_THUMB_WIDTH = 240
 
 _HOSTS = ("media.rawg.io/media/", "myanimelist.net/images/", ".mzstatic.com/image/thumb/",
-          "m.media-amazon.com/images/M/", "covers.openlibrary.org/b/")
+          "m.media-amazon.com/images/M/", "covers.openlibrary.org/b/", "upload.wikimedia.org/wikipedia/")
+_WIKIMEDIA_HOST = "upload.wikimedia.org/wikipedia/"
+# site.js swaps a failed Wikimedia thumbnail back to the original upload.
+_FALLBACK_SCRIPT = "/static/site.js"
 _IMG_TAG = re.compile(r"<img\b[^>]*>", re.I)
 _SRC = re.compile(r'(\ssrc=")([^"]+)(")', re.I)
 _SRCSET = re.compile(r'(\ssrcset=")([^"]+)(")', re.I)
@@ -76,6 +94,31 @@ def sized(url: Optional[str], width: int = POSTER_WIDTH, *, display_width: Optio
     return url
 
 
+def wikimedia_thumb(url: Optional[str], width: int = POSTER_WIDTH, *, display_width: Optional[int] = None) -> Optional[str]:
+    """Return a Wikimedia thumbnail URL for an original upload, or the URL unchanged.
+
+    Small tiles get the 120 or 250 pixel step. The large posters at the top of a
+    title page keep their original: English Wikipedia's poster uploads are already
+    about 250 pixels wide, so a bigger thumbnail would only be an upscaled copy.
+    Commons files can be photos thousands of pixels wide, so those get 500 or 960.
+    """
+    if not isinstance(url, str):
+        return url
+    match = _WIKIMEDIA.match(url.replace("&amp;", "&"))
+    if not match or len(match.group("name")) > WIKIMEDIA_MAX_NAME:
+        return url
+    if display_width is not None and display_width <= 56:
+        target = WIKIMEDIA_WIDTHS[0]
+    elif width <= POSTER_WIDTH:
+        target = WIKIMEDIA_WIDTHS[1]
+    elif match.group("wiki") != "commons":
+        return url
+    else:
+        target = WIKIMEDIA_WIDTHS[3] if width >= BACKDROP_WIDTH else WIKIMEDIA_WIDTHS[2]
+    wiki, dirs, name = match.group("wiki"), match.group("dirs"), match.group("name")
+    return f"https://upload.wikimedia.org/wikipedia/{wiki}/thumb/{dirs}/{name}/{target}px-{name}"
+
+
 def _tag_width(tag: str) -> int:
     classes = (_CLASS.search(tag).group(1) if _CLASS.search(tag) else "").lower()
     if "backdrop" in classes:
@@ -85,7 +128,15 @@ def _tag_width(tag: str) -> int:
     return POSTER_WIDTH
 
 
-def _rewrite_tag(match: re.Match) -> str:
+def _rewrite_wikimedia(tag: str, width: int, display: Optional[int]) -> str:
+    # Only a plain src: site.js can put the original back for one URL, not a srcset.
+    if _SRCSET.search(tag):
+        return tag
+    return _SRC.sub(lambda m: m.group(1) + (wikimedia_thumb(m.group(2), width, display_width=display) or m.group(2)) + m.group(3),
+                    tag, count=1)
+
+
+def _rewrite_tag(match: re.Match, wikimedia: bool = False) -> str:
     tag = match.group(0)
     if not any(host in tag for host in _HOSTS):
         return tag
@@ -96,6 +147,8 @@ def _rewrite_tag(match: re.Match) -> str:
     display = int(declared.group(1)) if declared and int(declared.group(1)) <= MAL_SMALL_MAX else None
     if display is not None:
         width = RAWG_WIDTHS[0]  # a 200-pixel copy still covers a 112-pixel tile on a 2x screen
+    if _WIKIMEDIA_HOST in tag:
+        return _rewrite_wikimedia(tag, width, display) if wikimedia else tag
     tag = _SRC.sub(lambda m: m.group(1) + (sized(m.group(2), width, display_width=display) or m.group(2)) + m.group(3), tag, count=1)
 
     def srcset(m: re.Match) -> str:
@@ -114,4 +167,5 @@ def shrink_html(html: str) -> str:
     """Rewrite oversized CDN images in every <img> tag of a page."""
     if not any(host in html for host in _HOSTS):
         return html
-    return _IMG_TAG.sub(_rewrite_tag, html)
+    wikimedia = _WIKIMEDIA_HOST in html and _FALLBACK_SCRIPT in html
+    return _IMG_TAG.sub(lambda m: _rewrite_tag(m, wikimedia), html)
