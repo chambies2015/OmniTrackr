@@ -218,6 +218,8 @@ def _related(today: date) -> str:
     links = [
         ("/holidays", "Holiday picks", "Twenty-four movies, shows, anime, games, books and albums for the break, "
                                        "sorted by how festive they are."),
+        ("/swap", "Pick swap", "Secret Santa with recommendations: everyone draws a name, picks one title for them "
+                               "and you all open them on the same day."),
     ]
     try:
         from .. import release_guides

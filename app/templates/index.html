@@ -105,6 +105,7 @@
   <link rel="stylesheet" href="/static/streaming.css?v=20261122-tonight-share-1">
   <link rel="stylesheet" href="/static/rankings.css?v=20261122-ranked-share-1">
   <link rel="stylesheet" href="/static/together-home.css?v=20261122-together-1">
+  <link rel="stylesheet" href="/static/pick-swap-home.css?v=20261123-swap-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -719,6 +720,18 @@
           </div>
           <ul id="togetherHomeList" class="together-home__list" aria-live="polite"></ul>
           <p id="togetherHomeStatus" class="together-home__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Pick swap: swaps the member is in, where each one stands and the next thing to do: invite people,
+             pick for the person they drew, unwrap (pick-swap-home.js). Only shown while they're in one. -->
+        <section id="swapHome" class="swap-home" aria-labelledby="swapHomeTitle" hidden>
+          <div class="swap-home__head">
+            <div class="swap-home__intro">
+              <p class="swap-home__eyebrow">Pick swap</p>
+              <h2 id="swapHomeTitle" class="swap-home__title">Your swaps</h2>
+            </div>
+            <a class="swap-home__more" href="/swap">All swaps</a>
+          </div>
+          <ul id="swapHomeList" class="swap-home__list" aria-live="polite"></ul>
         </section>
         <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
              newest arrivals first. Asks which services once, then lists them (streaming.js). -->
@@ -2762,7 +2775,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261122-together-sweep-1"></script>
+  <script src="./auth.js?v=20261123-swap-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261116-stay-1"></script>
@@ -2774,7 +2787,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261121-feed-runs-1"></script>
-  <script src="/static/home-layout.js?v=20261122-together-1"></script>
+  <script src="/static/home-layout.js?v=20261123-swap-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261122-streaming-1"></script>
@@ -2807,6 +2820,7 @@
   <script src="/static/streaming.js?v=20261122-svc-sweep-1" defer></script>
   <script src="/static/rankings.js?v=20261122-ranked-sweep-1" defer></script>
   <script src="/static/together-home.js?v=20261122-together-1" defer></script>
+  <script src="/static/pick-swap-home.js?v=20261123-swap-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261122-shelf-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
