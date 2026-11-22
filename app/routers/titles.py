@@ -1454,7 +1454,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/discussions.css?v=20261120-a11y-1">
   <script src="/static/share.js?v=20261120-share-menu-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261121-phone-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261122-shelf-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image, faq)}
@@ -1816,6 +1816,18 @@ def import_guest_list(
         from .. import funnel
         funnel.record("guest_list_imported", request)
     return {"added": added, "existing": existing, "missing": missing}
+
+
+@router.get("/api/guest-list/suggest")
+def suggest_for_guest_list(request: Request, response: Response, kind: str = Query(..., max_length=10),
+                           slug: str = Query(..., max_length=130), db: Session = Depends(get_db)):
+    """What members who track this title also track, for the homepage's "Your library" panel.
+
+    Public and the same for everyone: the answer is the title page's "Members also track" list.
+    """
+    response.headers["Cache-Control"] = "public, max-age=600"
+    from .. import guest_picks
+    return {"results": guest_picks.suggestions(db, kind, slug)}
 
 
 @router.get("/api/where-to-watch")

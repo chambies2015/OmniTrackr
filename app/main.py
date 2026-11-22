@@ -378,6 +378,17 @@ def savebar_signup_html(google: bool) -> str:
             '<span><span class="lp-savebar__wide">Continue with </span>Google</span></a>' + email)
 
 
+def shelf_signup_html(google: bool) -> str:
+    """Sign-up buttons in the homepage's "Your library" panel (guest_picks.shelf_html)."""
+    email = ('<button type="button" class="lp-btn lp-btn--small '
+             f'{"lp-btn--ghost" if google else "lp-btn--primary"}" data-action="show-register-form" data-shelf-signup>'
+             f'{"Use email" if google else "Create a free account"}</button>')
+    if not google:
+        return email
+    return ('<a class="lp-btn lp-btn--google lp-btn--small" href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup data-shelf-signup>'
+            f'{GOOGLE_G_SVG}<span>Continue with Google</span></a>' + email)
+
+
 HOME_CTA_COPY = {
     "tour": ("That could be your library by tonight.", "Free, private until you share it, and you can export everything whenever you like."),
     "tools": ("Keep what you find.", "Your picks, polls and plans save to one library, across all nine formats."),
@@ -504,6 +515,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
         page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)
         page = page.replace("<!--SAVEBAR_SIGNUP-->", savebar_signup_html(google), 1)
+        page = page.replace("<!--SHELF_SIGNUP-->", shelf_signup_html(google), 1)
         if "<!--HERO_STAGE-->" in page and "<!--/HERO_STAGE-->" in page:
             try:
                 from . import guest_picks
@@ -854,6 +866,7 @@ rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
 rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
 rate_limited_take_ask = limiter.limit("20/minute")(titles.ask_for_takes)
 rate_limited_title_search = limiter.limit("60/minute")(titles.search_titles)
+rate_limited_guest_suggest = limiter.limit("60/minute")(titles.suggest_for_guest_list)
 rate_limited_where_to_watch = limiter.limit("30/minute")(titles.where_to_watch_lookup)
 for route in titles.router.routes:
     if getattr(route, "path", None) == "/api/guest-list/import":
@@ -864,6 +877,8 @@ for route in titles.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_take_ask)
     elif getattr(route, "path", None) == "/api/titles/search":
         bind_rate_limited_endpoint(route, rate_limited_title_search)
+    elif getattr(route, "path", None) == "/api/guest-list/suggest":
+        bind_rate_limited_endpoint(route, rate_limited_guest_suggest)
     elif getattr(route, "path", None) == "/api/where-to-watch":
         bind_rate_limited_endpoint(route, rate_limited_where_to_watch)
 from .routers import title_discussions

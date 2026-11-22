@@ -114,7 +114,7 @@ def test_every_page_loads_the_new_guest_list_script(client):
     stale = [path for path in (ROOT / "app").rglob("*") if path.suffix in (".py", ".html")
              and "guest-list.js?v=20261118-sheet-1" in path.read_text(encoding="utf-8")]
     assert stale == []
-    assert "/static/guest-list.js?v=20261121-phone-1" in client.get("/in-order/star-wars").text
+    assert "/static/guest-list.js?v=20261122-shelf-1" in client.get("/in-order/star-wars").text
 
 
 def test_essentials_lists_offer_a_titles_only_view(client):
@@ -170,7 +170,7 @@ def test_hero_search_results_sit_under_the_box_on_phones(client):
     script = (ROOT / "app/static/title-search.js").read_text(encoding="utf-8")
     assert "form.classList.toggle('lp-search--open', open)" in script and "input.blur()" in script
     page = client.get("/").text
-    assert "/static/public-landing.css?v=20261121-refresh-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
+    assert "/static/public-landing.css?v=20261122-shelf-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
 
 
 def test_public_pages_tint_the_phone_address_bar(client):

@@ -118,7 +118,7 @@ def test_homepage_tours_member_features_and_free_tools(client):
     html = client.get("/").text
     tour = html[html.index('id="how-it-works"'):html.index('<!--LATEST_GUIDES-->') if '<!--LATEST_GUIDES-->' in html else len(html)]
     for heading in ("A diary of finishes and rewatches", "Your year as a story", "Badges in bronze", "Lists you build with friends",
-                    "Compare your taste", "Rank anything from S to D", "Goals and monthly challenges", "Bring your history from 13"):
+                    "Compare your taste", "What’s on the services you have", "Goals and monthly challenges", "Bring your history from 13"):
         assert heading in tour, heading
     assert 'style="' not in tour  # the strict CSP blocks inline styles
     tryout = html[html.index('id="free-tools"'):]

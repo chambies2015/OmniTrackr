@@ -39,10 +39,27 @@ def round_down(count: int) -> str:
     return f"{(count // step) * step:,}+"
 
 
+# The homepage is in English, so its three quotes are too: a review in Polish or Spanish there
+# reads to a new visitor like spam, even though /reviews rightly shows every language.
+ENGLISH_WORDS = frozenset("the and a an to of is it in i this that was for but with you on not as are be its my "
+                          "so if at by from have has had they he she we what all just more than very really".split())
+ENGLISH_SHARE = 0.12
+
+
+def reads_as_english(text: str) -> bool:
+    """True when common English words make up a fair share of the text (a rough check, no library)."""
+    words = [word.strip(".,;:!?\"'()[]…-—’“”").casefold() for word in (text or "").split()]
+    words = [word for word in words if word]
+    if len(words) < 8:
+        return False
+    return sum(word in ENGLISH_WORDS for word in words) / len(words) >= ENGLISH_SHARE
+
+
 def pick_reviews(reviews: list[dict]) -> list[dict]:
-    """Newest standalone reviews, one per member, preferring a mix of media types."""
+    """Newest standalone reviews in English, one per member, preferring a mix of media types."""
     chosen, members, categories = [], set(), set()
-    standalone = [r for r in reviews if r.get("search_ready") and not r.get("spoilers") and (r.get("title") or "").strip()]
+    standalone = [r for r in reviews if r.get("search_ready") and not r.get("spoilers") and (r.get("title") or "").strip()
+                  and reads_as_english(r.get("review") or "")]
     for prefer_new_category in (True, False):
         for review in standalone:
             if len(chosen) >= MAX_REVIEWS:

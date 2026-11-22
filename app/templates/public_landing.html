@@ -35,7 +35,7 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20261121-refresh-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261122-shelf-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261120-a11y-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
@@ -258,13 +258,14 @@
             <p>Taste Match scores how closely your ratings agree on the titles you've both finished, then lists what they loved that you haven't tried yet.</p>
           </article>
           <article class="lp-feature">
-            <div class="lp-vignette lp-vg-tiers" aria-hidden="true">
-              <p><b class="t-s">S</b><i></i><i></i></p>
-              <p><b class="t-a">A</b><i></i><i></i><i></i></p>
-              <p><b class="t-b">B</b><i></i></p>
+            <div class="lp-vignette lp-vg-list lp-vg-services" aria-hidden="true">
+              <p class="lp-vg-list__title">On your services <span class="lp-vg-svc"><b>N</b><b>A</b><b>C</b></span></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-tv"></span><strong>Stranger Things</strong><em class="lp-vg-pill">Netflix</em></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-tv"></span><strong>Severance</strong><em class="lp-vg-pill">Apple TV+</em></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-anime"></span><strong>Frieren</strong><em class="lp-vg-pill is-done">Crunchyroll</em></p>
             </div>
-            <h3>Rank anything from S to D</h3>
-            <p>Drag titles into tiers, from your library or a starter template, and save the board as an image. The <a href="/tier-list">tier list maker</a> works without an account too.</p>
+            <h3>What’s on the services you have</h3>
+            <p>Tick the streaming services you have and see which films, shows and anime on your list you can watch there. When one arrives, you get a note. Covers 24 US services, free ones included.</p>
           </article>
           <article class="lp-feature">
             <div class="lp-vignette lp-vg-goal" aria-hidden="true">
@@ -441,7 +442,7 @@
     <!--SITE_FOOTER-->
     <div class="lp-savebar" data-guest-bar hidden>
       <div class="lp-wrap lp-savebar__inner">
-        <p class="lp-savebar__count" data-guest-count role="status" aria-live="polite"></p>
+        <div class="lp-savebar__mine"><a class="lp-savebar__covers" href="#your-library" data-savebar-covers aria-label="See your library" hidden></a><p class="lp-savebar__count" data-guest-count role="status" aria-live="polite"></p></div>
         <div class="lp-savebar__actions"><!--SAVEBAR_SIGNUP--></div>
       </div>
     </div>
@@ -451,7 +452,8 @@
   <script src="/auth.js?v=20261122-sweep-1"></script>
   <script src="/static/public-landing.js?v=20261115-home-2" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
-  <script src="/static/guest-list.js?v=20261121-phone-1" defer></script>
+  <script src="/static/guest-list.js?v=20261122-shelf-1" defer></script>
+  <script src="/static/home-shelf.js?v=20261122-shelf-1" defer></script>
   <script src="/static/title-search.js?v=20261121-phone-1" defer></script>
 </body>
 </html>
