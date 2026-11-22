@@ -80,10 +80,26 @@ test('what keeping the list gets you follows what was saved', () => {
   assert.equal(films[0], 'Rate Arrival and log the day you finish it');
   assert.ok(films.some(line => /US streaming services/.test(line)));
   const show = shelf.perks([{ kind: 'game', title: 'Balatro' }, { kind: 'tv', title: 'Severance' }]);
-  assert.ok(show.some(line => line === 'Get a note when Severance has a new episode out'));
+  assert.ok(show.some(line => line === 'Tick off Severance episode by episode, and get a note if new ones come out'));
   const books = shelf.perks([{ kind: 'book', title: 'Dune' }]);
   assert.deepEqual(books, ['Rate Dune and log the day you finish it', 'Save the page or chapter you’re on']);
   const games = shelf.perks([{ kind: 'game', title: 'Hades' }]);
   assert.equal(games.length, 2);
   assert.match(games[1], /Year in Review/);
+});
+
+// Nov 22 sweep: adding a "Members also track" title redraws the row, sometimes after a fetch.
+// Focus stays at the same place in the row, or goes to the panel's heading when the row empties.
+test('focus stays in the suggestion row after it is drawn again', () => {
+  const shelf = loadShelf();
+  const focused = [];
+  const button = name => ({ name, focus() { focused.push(name); } });
+  const heading = { name: 'heading', tabIndex: 0, focus() { focused.push('heading'); } };
+  const panel = { querySelector: selector => (selector === '#lp-shelf-title' ? heading : null) };
+  const row = buttons => ({ querySelectorAll: () => buttons });
+  shelf.focusInRow(panel, row([button('a'), button('b'), button('c')]), 1);
+  shelf.focusInRow(panel, row([button('a'), button('b')]), 3);
+  shelf.focusInRow(panel, row([]), 0);
+  assert.deepEqual(focused, ['b', 'b', 'heading']);
+  assert.equal(heading.tabIndex, -1);
 });

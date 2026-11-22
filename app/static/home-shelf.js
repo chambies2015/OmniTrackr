@@ -88,7 +88,8 @@
       lines.push('See which of these are on your US streaming services, and get a note when one arrives');
     }
     const show = list.find(item => EPISODES.has(item.kind));
-    if (show) lines.push(`Get a note when ${show.title} has a new episode out`);
+    // Many of the most tracked shows have ended, so promise the episode guide, not new episodes.
+    if (show) lines.push(`Tick off ${show.title} episode by episode, and get a note if new ones come out`);
     else if (list.some(item => READING.has(item.kind))) lines.push('Save the page or chapter you’re on');
     else lines.push('See everything you finish in your Year in Review');
     return lines.slice(0, 3);
@@ -170,12 +171,25 @@
     }
     picks = picks.slice(0, ALSO_SHOWN);
     because.textContent = heading;
+    // A keyboard user who just added one of these would otherwise be dropped on <body> when the
+    // row is drawn again, sometimes a fetch later: keep focus at the same place in the row.
+    const focusAt = row.contains(document.activeElement)
+      ? Array.prototype.indexOf.call(row.querySelectorAll('button'), document.activeElement) : -1;
     row.replaceChildren(...picks.map(entry => {
       const item = element('li');
       item.appendChild(alsoButton(entry));
       return item;
     }));
     box.hidden = picks.length === 0;
+    if (focusAt >= 0) focusInRow(shelf, row, focusAt);
+  }
+
+  function focusInRow(shelf, row, index) {
+    const buttons = row.querySelectorAll('button');
+    const next = buttons.length ? buttons[Math.min(index, buttons.length - 1)] : shelf.querySelector('#lp-shelf-title');
+    if (!next || typeof next.focus !== 'function') return;
+    if (!buttons.length) next.tabIndex = -1;
+    next.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------ the panel
@@ -282,16 +296,9 @@
         }
         return;
       }
-      const also = event.target.closest('[data-shelf-pick]');
-      if (also) {
+      if (event.target.closest('[data-shelf-pick]')) {
+        // guest-list.js saves it; drawAlso keeps the keyboard in the row when it redraws.
         report('home_shelf_suggestion_added');
-        const index = Array.prototype.indexOf.call(shelf.querySelectorAll('[data-shelf-also-list] button'), also);
-        // guest-list.js saves it and the row is drawn again without it: keep the keyboard nearby.
-        setTimeout(() => {
-          const buttons = shelf.querySelectorAll('[data-shelf-also-list] button');
-          const next = buttons[Math.min(index, buttons.length - 1)] || shelf.querySelector('[data-shelf-count]');
-          if (next && document.activeElement === document.body && typeof next.focus === 'function') next.focus({ preventScroll: true });
-        }, 0);
         return;
       }
       if (event.target.closest('[data-shelf-signup]')) report('home_shelf_signup');
@@ -306,6 +313,8 @@
     chips.forEach(chip => chip.addEventListener('click', () => {
       const which = chip.dataset.picksFilter;
       chips.forEach(other => other.setAttribute('aria-pressed', String(other === chip)));
+      // Phones hide the tenth most-tracked tile for even rows; a format's own list keeps all of its titles.
+      grid.classList.toggle('is-filtered', which !== 'top');
       grid.querySelectorAll('li[data-picks-kind]').forEach(tile => {
         tile.hidden = which === 'top' ? !tile.hasAttribute('data-picks-top') : tile.dataset.picksKind !== which;
       });
@@ -332,7 +341,7 @@
     setupShelf();
   }
 
-  const api = { countLine, perks, init };
+  const api = { countLine, perks, focusInRow, init };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener && typeof window !== 'undefined') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
