@@ -58,3 +58,13 @@ test('home layout keeps the card out when something just arrived, and links find
   const source = require('node:fs').readFileSync(file, 'utf8');
   assert.ok(source.includes("'#on-your-services': 'onYourServices'"));
 });
+
+test('a long check says it takes a while instead of promising the hour (Nov 22 sweep)', () => {
+  const ui = load();
+  const base = { chosen: chosen(['Netflix']), total: 1, new: 0 };
+  assert.ok(ui.summaryFor({ ...base, pending: 24 }).endsWith('Still checking 24 titles, so more may turn up within the hour.'));
+  // Lookups run a few dozen an hour, shared between members, so 240 titles take hours.
+  const long = ui.summaryFor({ ...base, pending: 240 });
+  assert.ok(!long.includes('within the hour'));
+  assert.ok(long.endsWith('Still checking 240 titles. We look them up a few dozen an hour, so more will turn up through the day.'));
+});
