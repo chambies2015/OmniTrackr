@@ -172,6 +172,14 @@ START_HERE = (
 )
 
 
+def _newest_first(value: str) -> int:
+    """Sort key for newest first. An undated guide sorts last instead of breaking the sort."""
+    try:
+        return -date.fromisoformat(value).toordinal()
+    except (TypeError, ValueError):
+        return 0
+
+
 def _date_label(value: str, short: bool = False) -> str:
     try:
         parsed = date.fromisoformat(value)
@@ -426,7 +434,7 @@ def formats_html() -> str:
     for slug, kind, label, word, _ in FORMATS:
         covering = [row for row in all_rows if kind in row["formats"]]
         own = [row for row in covering if row["main"] == kind and row["shelf"] in _DESK_ORDER]
-        own.sort(key=lambda row: (_DESK_ORDER.index(row["shelf"]), row["updated"] and -date.fromisoformat(row["updated"]).toordinal()))
+        own.sort(key=lambda row: (_DESK_ORDER.index(row["shelf"]), _newest_first(row["updated"])))
         picked, per_shelf = [], {}
         for row in own:
             if per_shelf.get(row["shelf"], 0) >= 1:
@@ -511,9 +519,11 @@ def rail_html(path: str) -> str:
     shelf = next((entry for entry in SHELVES if entry[0] == row["shelf"]), None)
     links = []
     if shelf:
-        size = sum(1 for item in every if item["shelf"] == row["shelf"])
-        hub_href = shelf[2][0][0]
-        links.append(f'<li><a href="{escape(hub_href, quote=True)}">{escape(shelf[1])}</a> <span>{size}</span></li>')
+        key, heading, _intro, hubs = shelf
+        size = sum(1 for item in every if item["shelf"] == key)
+        # The shelf's hub page, or the shelf in the library when this page is that hub.
+        hub_href = hubs[0][0] if hubs[0][0] != path else f"/guides#shelf-{key}"
+        links.append(f'<li><a href="{escape(hub_href, quote=True)}">{escape(heading)}</a> <span>{size}</span></li>')
     if row["main"] in LABEL_BY_KIND:
         slug = next(item[0] for item in FORMATS if item[1] == row["main"])
         singular = next(item[3] for item in FORMATS if item[1] == row["main"])
