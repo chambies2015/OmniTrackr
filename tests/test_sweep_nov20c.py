@@ -58,8 +58,11 @@ def test_challenge_step_button_drops_under_its_label_on_narrow_cards():
 
 def test_changed_files_have_new_version_tags():
     for tag in ('/static/library-view.css?v=20261120-sweep-1', '/static/dashboard-home.css?v=20261121-sweep-1',
-                '/static/library-quick.js?v=20261120-sweep-1', '/static/home-hero.js?v=20261120-sweep-1'):
+                '/static/library-quick.js?v=20261120-sweep-1'):
         assert tag in INDEX, tag
+    # home-hero.js moved on with the member look refresh (Nov 22 2026); a later tag keeps the fix.
+    hero = re.search(r'/static/home-hero\.js\?v=(\d{8}[^"]*)"', INDEX).group(1)
+    assert hero >= "20261120-sweep-1", hero
 
 
 def test_changelog_mentions_the_sweep():
