@@ -167,6 +167,9 @@ COUNTERS = {
     "from_alert": "Opened the card from an arrival note",
     "alert_sent": "Members told about an arrival",
     "alert_titles": "Titles in those notes",
+    "link_on": "Made a share link for their list",
+    "link_off": "Turned their share link off",
+    "link_opened": "Share links opened by someone else",
 }
 EVENTS = {"where", "queued", "opened", "filter", "from_alert", "seen_choose", "seen_list"}
 
@@ -842,6 +845,7 @@ def stats(db: Session, days: int, now: datetime) -> dict:
         "by_service": [{"name": NAMES[service], "count": by_service[service]}
                        for service in sorted(by_service, key=lambda s: (-by_service[s], ORDER[s]))],
         "titles_checked": int(db.query(func.count(models.ServiceTitleCheck.id)).scalar() or 0),
+        "links_now": int(db.query(func.count(models.ServiceShare.id)).scalar() or 0),
         "arrivals": int(db.query(func.count(sightings.id)).filter(
             sightings.baseline == False, sightings.first_seen_at >= since).scalar() or 0),  # noqa: E712
     }

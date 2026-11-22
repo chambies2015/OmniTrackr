@@ -641,6 +641,7 @@
         ...Object.keys(streamingLabels).map(key => ({ label: streamingLabels[key], count: streamingCounts[key] || 0 })),
         { label: 'Titles that arrived on a service', count: streaming.arrivals || 0 },
         { label: 'Titles being watched for arrivals (now)', count: streaming.titles_checked || 0 },
+        { label: 'Share links on (now)', count: streaming.links_now || 0 },
       ],
       growthRankings: [
         { label: 'Members with a ranking (now)', count: ranks.members_now || 0 },

@@ -423,8 +423,8 @@ def test_card_script_styles_and_hooks_are_wired():
     bundle = dashboard_assets.full_source()
     tag = index[index.index('<section id="onYourServices"'):]
     assert tag[:tag.index(">")].endswith("hidden")
-    assert '/static/streaming.js?v=20261122-sweep-b-1" defer' in index
-    assert '/static/streaming.css?v=20261122-streaming-1' in index
+    assert '/static/streaming.js?v=20261122-tonight-share-1" defer' in index
+    assert '/static/streaming.css?v=20261122-tonight-share-1' in index
     for hook in ("window.OmniStreaming?.refresh();", "window.OmniStreaming?.reset();",
                  "window.OmniStreaming?.renderFilters(category, host);",
                  "if (filters.onServices) parsed.searchParams.set('on_services', 'true');",

@@ -385,6 +385,142 @@
     return parts.join(' ');
   }
 
+  // ------------------------------------------------ the share link
+
+  const SHARE_PATH = /^\/on-my-services\/[A-Za-z0-9_-]{16,32}$/;
+
+  function funnel(name) {
+    try {
+      if (navigator.sendBeacon && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: name })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
+  }
+
+  async function shareLink(path) {
+    if (!SHARE_PATH.test(path || '')) return;
+    const url = `${window.location.origin}${path}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'What I can stream tonight', url });
+        funnel('svc_link_shared');
+      } catch (error) { /* closed the share sheet */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus('Link copied. Anyone with it sees the titles on this card and the services they’re on.');
+      funnel('svc_link_shared');
+    } catch (error) {
+      setStatus(`Copy this link: ${url}`);
+    }
+  }
+
+  async function saveStory(path, control) {
+    if (!SHARE_PATH.test(path || '')) return;
+    control.disabled = true;
+    setStatus('Getting your image ready…');
+    try {
+      const response = await fetch(`${path}/story.png`, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(String(response.status));
+      const blob = await response.blob();
+      const file = typeof File === 'function' ? new File([blob], 'omnitrackr-on-my-services.png', { type: 'image/png' }) : null;
+      funnel('svc_link_shared');
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); setStatus(''); } catch (error) {
+          setStatus(error && error.name === 'AbortError' ? '' : 'Sharing didn’t open, so try again or long-press the image.');
+        }
+      } else {
+        const link = el('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'omnitrackr-on-my-services.png';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+        setStatus('Image saved. Add it to a story and put the link on it.');
+      }
+    } catch (error) {
+      setStatus('The image didn’t load. Try again in a minute.');
+    } finally {
+      control.disabled = false;
+    }
+  }
+
+  async function shareCall(path, control) {
+    if (state.busy) return null;
+    state.busy = true;
+    if (control) control.disabled = true;
+    const epoch = state.epoch;
+    try {
+      const data = await send('POST', path);
+      if (epoch !== state.epoch || !state.card) return null;
+      state.card.share = data.share || null;
+      renderShare(state.card);
+      return data.share || null;
+    } catch (error) {
+      setStatus(error.message);
+      return null;
+    } finally {
+      state.busy = false;
+      if (control && control.isConnected) control.disabled = false;
+    }
+  }
+
+  function renderShare(card) {
+    const box = $('onYourServicesShare');
+    const privacy = $('onYourServicesPrivacy');
+    const share = card && card.state === 'list' ? card.share : null;
+    const linked = Boolean(share && SHARE_PATH.test(share.path || ''));
+    if (privacy) {
+      privacy.textContent = linked
+        ? 'Only you can see which services you pick. Your share link shows the ones your titles are on.'
+        : 'Only you can see which services you pick.';
+    }
+    if (!box) return;
+    // Nothing to offer until there are a few titles to show, unless a link is already out there.
+    if (!share || (!linked && !share.allowed)) {
+      box.hidden = true;
+      box.replaceChildren();
+      return;
+    }
+    const copy = el('div', 'on-services__share-copy');
+    const row = el('div', 'on-services__share-actions');
+    if (linked && !share.allowed) {
+      copy.append(el('p', 'on-services__share-title', 'Your share link is paused'),
+        el('p', 'on-services__share-text', share.reason === 'services'
+          ? 'You have no services picked, so anyone who opens the link sees that it isn’t shared anymore. Pick them again and the same link works.'
+          : 'Fewer than three titles from your list are on your services right now, so anyone who opens the link sees that it isn’t shared anymore. It comes back by itself when there are three again.'));
+    } else if (linked) {
+      const opened = Number(share.opened) || 0;
+      copy.append(el('p', 'on-services__share-title', 'This list is shared by link'),
+        el('p', 'on-services__share-text', `Friends see the titles here and which services they’re on, never your scores or the rest of your library. They can tick their own services to see what they can watch too.${opened ? ` Opened ${plural(opened, 'time', 'times')} so far.` : ''}`));
+      row.append(
+        button('on-services__btn on-services__btn--primary', navigator.share ? 'Share link' : 'Copy link', () => shareLink(share.path)),
+        button('on-services__btn', 'Save image for stories', control => saveStory(share.path, control)));
+      const open = el('a', 'on-services__quiet', 'Open the page');
+      open.href = share.path;
+      row.appendChild(open);
+    } else {
+      copy.append(el('p', 'on-services__share-title', 'Show friends what you can stream tonight'),
+        el('p', 'on-services__share-text', 'Get a link to this list. Friends see the titles and which services they’re on, never your scores or the rest of your library, and can check which ones they can watch too.'));
+      row.appendChild(button('on-services__btn on-services__btn--primary', 'Get a share link', async control => {
+        const made = await shareCall('/api/streaming/share', control);
+        if (!made) return;
+        setStatus('Your link is ready.');
+        $('onYourServicesShare')?.querySelector('.on-services__share-actions button')?.focus({ preventScroll: true });
+      }));
+    }
+    if (linked) {
+      row.appendChild(button('on-services__quiet', 'Turn off', async control => {
+        const ended = await shareCall('/api/streaming/share/off', control);
+        if (ended) setStatus('The link is off. Anyone who opens it now sees that it isn’t shared anymore.');
+      }));
+    }
+    box.replaceChildren(copy, row);
+    box.hidden = false;
+  }
+
   // ------------------------------------------------ the card
 
   function render(card) {
@@ -395,6 +531,7 @@
     if (!card) {
       section.hidden = true;
       section.dataset.status = '';
+      renderShare(null);
       return;
     }
     const choosing = card.state === 'choose';
@@ -418,6 +555,7 @@
     show('onYourServicesLater', choosing);
     show('onYourServicesStop', choosing);
     show('onYourServicesHide', !choosing);
+    renderShare(card);
     if (choosing) {
       show('onYourServicesFilters', false);
       show('onYourServicesList', false);
@@ -502,7 +640,8 @@
     if (state.observer) state.observer.disconnect();
     const section = $('onYourServices');
     if (section) { section.hidden = true; section.dataset.status = ''; }
-    ['onYourServicesList', 'onYourServicesFilters'].forEach(id => $(id)?.replaceChildren());
+    ['onYourServicesList', 'onYourServicesFilters', 'onYourServicesShare'].forEach(id => $(id)?.replaceChildren());
+    show('onYourServicesShare', false);
     setStatus('');
     syncLibraryFilters();
   }
@@ -600,7 +739,7 @@
   window.OmniStreaming = { refresh, reset, renderFilters: renderLibraryFilter, get chosen() { return state.chosen.slice(); } };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { render, summaryFor, serviceNames, kindWords, filtered, state, renderLibraryFilter };
+    module.exports = { render, summaryFor, serviceNames, kindWords, filtered, state, renderLibraryFilter, renderShare };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {

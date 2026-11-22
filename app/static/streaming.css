@@ -298,6 +298,29 @@ body.app-shell.dark-mode .on-services__act { color: #93c5fd; }
 .on-services__status { color: var(--fg-secondary); font-size: .82rem; margin: 6px 0 0; }
 .on-services__status:empty { display: none; }
 
+/* ---------- the share link (Nov 22 2026) ---------- */
+.on-services__share {
+  align-items: center;
+  background: color-mix(in srgb, var(--card-accent) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 26%, var(--border));
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 14px;
+}
+.on-services__share[hidden] { display: none; }
+.on-services__share-copy { flex: 1 1 320px; min-width: 0; }
+.on-services__share-title { color: var(--fg); font-size: .9rem; font-weight: 700; margin: 0; }
+.on-services__share-text { color: var(--fg-secondary); font-size: .8rem; line-height: 1.45; margin: 2px 0 0; max-width: 64ch; }
+.on-services__share-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.on-services__share .on-services__btn { font-size: .84rem; min-height: 40px; padding: 0 16px; }
+.on-services__share .on-services__btn:not(.on-services__btn--primary) { background: var(--card-bg); color: var(--fg); }
+.on-services__share .on-services__btn:not(.on-services__btn--primary):hover:not(:disabled) { background: var(--surface-hover); }
+.on-services__share a.on-services__quiet { align-items: center; display: inline-flex; text-decoration: none; }
+
 /* ---------- the library filter ---------- */
 .library-filter-streaming[hidden] { display: none; }
 
@@ -339,6 +362,8 @@ body.app-shell.dark-mode .on-services__act { color: #93c5fd; }
   .on-services__act { min-height: 40px; }
   .on-services__chip { min-height: 44px; }
   .on-services__actions .on-services__btn--primary { flex: 1 1 100%; }
+  .on-services__share { padding: 12px; }
+  .on-services__share .on-services__btn, .on-services__share .on-services__quiet { min-height: 44px; }
 }
 
 @media (forced-colors: active) {

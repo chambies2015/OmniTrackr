@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import models, streaming_services
+from .. import funnel, models, service_shares, streaming_services
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(tags=["streaming services"])
@@ -34,10 +34,21 @@ class Event(BaseModel):
 
 def _card(db: Session, user: models.User) -> Optional[dict]:
     try:
-        return streaming_services.card(db, user)
+        card = streaming_services.card(db, user)
     except Exception:
         db.rollback()
         return None  # optional card; the home screen never waits on it
+    if card is not None and card.get("state") == "list":
+        card["share"] = _share_state(db, user)
+    return card
+
+
+def _share_state(db: Session, user: models.User) -> Optional[dict]:
+    try:
+        return service_shares.state(db, user)
+    except Exception:
+        db.rollback()
+        return None
 
 
 @router.get("/api/streaming")
@@ -82,3 +93,26 @@ def streaming_answer(payload: Answer, request: Request, response: Response, user
 def streaming_event(payload: Event, request: Request, response: Response, user: models.User = Depends(get_current_user)):
     _no_store(response)
     return {"counted": streaming_services.count(payload.event)}
+
+
+@router.post("/api/streaming/share")
+def streaming_share_on(request: Request, response: Response, user: models.User = Depends(get_current_user),
+                       db: Session = Depends(get_db)):
+    """Make (or return) the member's link to what on their list is streaming on their services."""
+    _no_store(response)
+    try:
+        service_shares.turn_on(db, user)
+    except LookupError as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error))
+    funnel.record("svc_link_created", request)
+    return {"share": service_shares.state(db, user)}
+
+
+@router.post("/api/streaming/share/off")
+def streaming_share_off(request: Request, response: Response, user: models.User = Depends(get_current_user),
+                        db: Session = Depends(get_db)):
+    """End the link. Anyone who opens it afterwards sees that it isn't shared anymore."""
+    _no_store(response)
+    service_shares.turn_off(db, user)
+    return {"share": service_shares.state(db, user)}
