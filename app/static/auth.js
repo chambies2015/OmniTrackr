@@ -71,6 +71,9 @@ function validateDiscoverAuthReturn(value) {
     // Watch together: the guide, an invite link (where joining happens) and one plan.
     const together = value.match(/^\/together(?:\/join\/[A-Za-z0-9_-]{16,40}|\/([1-9]\d{0,9}))?$/);
     if (together && together[0] === value && (together[1] === undefined || Number(together[1]) <= 2147483647)) return value;
+    // Pick swap: the guide, an invite link (where joining happens) and one swap.
+    const swap = value.match(/^\/swap(?:\/join\/[A-Za-z0-9_-]{16,40}|\/([1-9]\d{0,9}))?$/);
+    if (swap && swap[0] === value && (swap[1] === undefined || Number(swap[1]) <= 2147483647)) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }

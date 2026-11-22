@@ -213,6 +213,18 @@ GUEST = (
     ("together_finished", "Watch together: someone reached the end"),
     ("together_email_sent", "Watch together: weekly reminder email sent"),
     ("together_back_from_email", "Watch together: a plan opened from the reminder email"),
+    ("swap_created", "Pick swap: a swap started"),
+    ("swap_shared", "Pick swap: an invite link copied or shared"),
+    ("swap_link_opened", "Pick swap: an invite link opened by a visitor without an account"),
+    ("swap_signup_clicked", "Pick swap: sign-up pressed on an invite or the guide"),
+    ("swap_joined", "Pick swap: someone joined a swap"),
+    ("swap_drawn", "Pick swap: names drawn"),
+    ("swap_picked", "Pick swap: a pick wrapped"),
+    ("swap_revealed", "Pick swap: unwrap day reached"),
+    ("swap_unwrapped", "Pick swap: someone opened the pick they got"),
+    ("swap_gift_added", "Pick swap: a pick someone got saved to their library"),
+    ("swap_email_sent", "Pick swap: email sent (draw, reminder or unwrap day)"),
+    ("swap_back_from_email", "Pick swap: a swap opened from one of its emails"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -284,7 +296,7 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
                  "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
                  "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
-                 "together_shared", "together_signup_clicked"}
+                 "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

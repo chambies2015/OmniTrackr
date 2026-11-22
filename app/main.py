@@ -146,6 +146,10 @@ async def lifespan(application: FastAPI):
     together_task = None
     if together.emails_enabled():
         together_task = asyncio.create_task(together.together_loop(application))
+    from . import pick_swap
+    swap_task = None
+    if pick_swap.loop_enabled():
+        swap_task = asyncio.create_task(pick_swap.swap_loop(application))
     from . import streaming_services
     streaming_task = None
     if streaming_services.enabled_for_process():
@@ -168,7 +172,7 @@ async def lifespan(application: FastAPI):
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
                      episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task,
-                     together_task):
+                     together_task, swap_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -1041,6 +1045,40 @@ for route in together_router.router.routes:
         if (path, method) in TOGETHER_LIMITS:
             bind_rate_limited_endpoint(route, limiter.limit(TOGETHER_LIMITS[(path, method)])(route.endpoint))
 app.include_router(together_router.router)
+from .routers import pick_swap as pick_swap_router
+# Pick swap: the home card and swap page read often; joining, wrapping and reactions are a tap at a time.
+# The invite page and its picture are opened by people without an account, so they are limited per address.
+PICK_SWAP_LIMITS = {
+    ("/api/swaps", "GET"): "30/minute",
+    ("/api/swaps/start", "GET"): "20/minute",
+    ("/api/swaps", "POST"): "6/minute",
+    ("/api/swaps/join/{token}", "GET"): "30/minute",
+    ("/api/swaps/join/{token}", "POST"): "10/minute",
+    ("/api/swaps/{swap_id}", "GET"): "60/minute",
+    ("/api/swaps/{swap_id}", "PATCH"): "20/minute",
+    ("/api/swaps/{swap_id}/me", "PATCH"): "20/minute",
+    ("/api/swaps/{swap_id}/draw", "POST"): "6/minute",
+    ("/api/swaps/{swap_id}/gift", "PUT"): "20/minute",
+    ("/api/swaps/{swap_id}/gift", "DELETE"): "20/minute",
+    ("/api/swaps/{swap_id}/unwrap", "POST"): "6/minute",
+    ("/api/swaps/{swap_id}/received/open", "POST"): "20/minute",
+    ("/api/swaps/{swap_id}/received/add", "POST"): "10/minute",
+    ("/api/swaps/{swap_id}/received/thanks", "POST"): "10/minute",
+    ("/api/swaps/{swap_id}/friends", "GET"): "20/minute",
+    ("/api/swaps/{swap_id}/invite", "POST"): "10/minute",
+    ("/api/swaps/{swap_id}/link", "POST"): "5/minute",
+    ("/api/swaps/{swap_id}/leave", "POST"): "10/minute",
+    ("/api/swaps/{swap_id}/members/{member_id}", "DELETE"): "10/minute",
+    ("/api/swaps/{swap_id}/cancel", "POST"): "5/minute",
+    ("/swap/join/{token}", "GET"): "60/minute",
+    ("/swap/join/{token}/card.png", "GET"): "30/minute",
+}
+for route in pick_swap_router.router.routes:
+    path = getattr(route, "path", None)
+    for method in getattr(route, "methods", None) or ():
+        if (path, method) in PICK_SWAP_LIMITS:
+            bind_rate_limited_endpoint(route, limiter.limit(PICK_SWAP_LIMITS[(path, method)])(route.endpoint))
+app.include_router(pick_swap_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:

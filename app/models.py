@@ -2627,3 +2627,83 @@ class TogetherRemoval(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("plan_id", "user_id", name="uq_together_removal"),)
+
+
+class PickSwap(Base):
+    """A pick swap (Nov 2026): Secret Santa where everyone gives one recommendation. /swap/<id>.
+
+    New tables only. People join with the invite link (/swap/join/<token>) until names are
+    drawn, by the host or on ``draw_on``. Each person then picks one title for the person
+    they drew, and everything opens on ``reveal_on``. ``draw_at`` and ``reveal_at`` are those
+    days at 8 a.m. in the host's time zone (``tz``, minutes east of UTC), stored in UTC.
+    ``kinds`` is a comma-separated list of title kinds a pick may be (empty means any).
+    """
+    __tablename__ = "pick_swaps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    name = Column(String(60), nullable=False)
+    note = Column(String(300), nullable=True)
+    kinds = Column(String(120), nullable=False, default="")
+    tz = Column(Integer, nullable=False, default=0)
+    draw_on = Column(Date, nullable=True)
+    draw_at = Column(DateTime, nullable=True)
+    reveal_on = Column(Date, nullable=False)
+    reveal_at = Column(DateTime, nullable=False)
+    drawn_at = Column(DateTime, nullable=True)
+    revealed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    reminded_at = Column(DateTime, nullable=True)
+    short_at = Column(DateTime, nullable=True)  # the host was told there weren't enough people to draw
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    members = relationship("PickSwapMember", cascade="all, delete-orphan", back_populates="swap")
+    removals = relationship("PickSwapRemoval", cascade="all, delete-orphan")
+
+
+class PickSwapMember(Base):
+    """One person in a pick swap, who they drew, and the pick they wrapped for them.
+
+    ``gives_to`` is the user id of the person they drew (set at the draw, never shown to anyone
+    else before unwrap day). The ``gift_*`` columns are the pick itself, copied in as public
+    title facts. ``gift_opened_at``, ``gift_added_at`` and ``gift_thanks`` record what the
+    person who received it did with it.
+    """
+    __tablename__ = "pick_swap_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    swap_id = Column(Integer, ForeignKey("pick_swaps.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    wish = Column(String(160), nullable=True)
+    gives_to = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    gift_kind = Column(String(10), nullable=True)
+    gift_title = Column(String(200), nullable=True)
+    gift_year = Column(Integer, nullable=True)
+    gift_image = Column(String(500), nullable=True)
+    gift_slug = Column(String(140), nullable=True)
+    gift_creator = Column(String(200), nullable=True)
+    gift_note = Column(String(500), nullable=True)
+    picked_at = Column(DateTime, nullable=True)
+    gift_opened_at = Column(DateTime, nullable=True)
+    gift_added_at = Column(DateTime, nullable=True)
+    gift_thanks = Column(String(12), nullable=True)
+    thanked_at = Column(DateTime, nullable=True)
+
+    swap = relationship("PickSwap", back_populates="members")
+
+    __table_args__ = (UniqueConstraint("swap_id", "user_id", name="uq_pick_swap_member"),)
+
+
+class PickSwapRemoval(Base):
+    """Someone the host took out of a pick swap, so the invite link can't add them back."""
+    __tablename__ = "pick_swap_removals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    swap_id = Column(Integer, ForeignKey("pick_swaps.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("swap_id", "user_id", name="uq_pick_swap_removal"),)

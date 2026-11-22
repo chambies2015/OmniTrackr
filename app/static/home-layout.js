@@ -240,6 +240,7 @@
     '#your-week': 'yourWeek', '#backlog-draw': 'backlogDraw', '#badges': 'badgeCase', '#challenge': 'monthlyChallenge',
     '#goals': 'yearGoals', '#on-this-day': 'onThisDay', '#release-calendar': 'comingUp', '#week-one': 'weekOne',
     '#homeNews': 'homeNews', '#advent': 'adventCard', '#on-your-services': 'onYourServices', '#together': 'togetherHome',
+    '#swap': 'swapHome',
   };
   // Shown now and then under their own rules (first week only, a few times a year): never tucked.
   const ALWAYS = new Set(['weekOne', 'stayPosted', 'supportAsk']);
@@ -301,6 +302,8 @@
     }
     // Watch together only shows while a plan with friends is running, so it never waits behind "Show more".
     if (id === 'togetherHome') return true;
+    // Pick swap only shows while the member is in a swap that hasn't been unwrapped for long.
+    if (id === 'swapHome') return true;
     // Something on the member's list just arrived on one of their streaming services.
     if (id === 'onYourServices') return unit.dataset.status === 'new';
     // Rankings: a title finished this week, one part-way placed, or one that just landed.

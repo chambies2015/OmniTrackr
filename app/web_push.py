@@ -105,6 +105,17 @@ TITLES = {
     "together_ahead": "Done with this week",
     "together_done": "Finished it",
     "together_week": "A new week together",
+    "swap_invite": "Join a pick swap?",
+    "swap_joined": "Someone joined your swap",
+    "swap_short": "Draw day",
+    "swap_drawn": "Names are drawn",
+    "swap_wrapped": "A pick is wrapped for you",
+    "swap_reminder": "Still time to pick",
+    "swap_unwrap": "It's unwrap day",
+    "swap_late": "Someone is waiting on your pick",
+    "swap_added": "Your pick went down well",
+    "swap_thanks": "A reaction to your pick",
+    "swap_off": "A swap was called off",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -123,6 +134,10 @@ TOPICS = (
     ("together", "Watch together", "When a friend asks you in, joins, leaves a note you can read, or gets "
      "through the week before you, and when a new week starts.", True,
      ("together_invite", "together_joined", "together_note", "together_ahead", "together_done", "together_week")),
+    ("swaps", "Pick swaps", "When names are drawn, a pick is wrapped for you, unwrap day comes, someone joins your "
+     "swap or reacts to your pick, and a reminder if you haven't picked.", True,
+     ("swap_invite", "swap_joined", "swap_short", "swap_drawn", "swap_wrapped", "swap_reminder", "swap_unwrap",
+      "swap_late", "swap_added", "swap_thanks", "swap_off")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
      ("friend_recommendation", "friend_recommendation_added", "recommendation_received",
       "recommendation_invitation", "take_received")),
