@@ -1847,6 +1847,8 @@ async def where_to_watch_lookup(request: Request, response: Response,
     client = getattr(request.app.state, "external_api_client", None)
     metadata = await title_metadata.get_or_fetch(db, client, kind, normalized, display, year)
     where = await where_to_watch.get_or_fetch(db, client, kind, normalized, display, year, metadata, wait=8) or {}
+    # In the threadpool like the cache reads above: waiting on a pooled connection here would stall the event loop.
+    mine = await run_in_threadpool(_mine, db, user.id, where)
     return {
         "kind": kind,
         "title": display,
@@ -1860,7 +1862,7 @@ async def where_to_watch_lookup(request: Request, response: Response,
         "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
         "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
         "searches": where_to_watch.searches(kind, display),
-        "mine": _mine(db, user.id, where),
+        "mine": mine,
     }
 
 

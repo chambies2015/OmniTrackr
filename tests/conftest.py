@@ -53,6 +53,16 @@ def offline_release_radar(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def fresh_guide_lists():
+    """The guide library and the corrections notes keep the day's list of guides. A test that opens an
+    edition early (by moving its date) must not leave it listed for the next test in the process."""
+    from app import corrections_log, guide_library
+    yield
+    guide_library._rows_for.cache_clear()
+    corrections_log._guide_names_on.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def fresh_title_charts():
     """Member charts and the title slug index live per process; each test starts from its own database."""
     from app import memories, people_to_follow, picked_for_you, title_charts, title_metadata, title_pages, tonight_polls, trending, weekly_preview

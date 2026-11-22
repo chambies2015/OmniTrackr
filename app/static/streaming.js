@@ -12,6 +12,8 @@
   const KIND_WORDS = { movies: ['film', 'films'], 'tv-shows': ['show', 'shows'], anime: ['anime', 'anime'] };
   // Each pending recheck waits longer: the server looks titles up a dozen at a time after a save.
   const RETRY_DELAYS = [15000, 45000, 120000];
+  // About what the lookups right after a save and the next half-hourly run get through.
+  const PENDING_SOON = 24;
   const state = {
     epoch: 0, card: null, chosen: [], request: null, loadedAt: 0, filter: '', expanded: false, editing: false,
     busy: false, retries: 0, retryTimer: 0, seen: new Set(), observer: null, filterCounted: false, hashDone: false,
@@ -374,7 +376,12 @@
       parts.push(`Nothing on your list is streaming on ${names} right now.`);
       if (card.alerts) parts.push('We’ll tell you when something arrives.');
     }
-    if (card.pending) parts.push(`Still checking ${plural(card.pending, 'title', 'titles')}, so more may turn up within the hour.`);
+    if (card.pending && card.pending <= PENDING_SOON) {
+      parts.push(`Still checking ${plural(card.pending, 'title', 'titles')}, so more may turn up within the hour.`);
+    } else if (card.pending) {
+      // The server looks titles up a few dozen an hour, shared between members, so a big list takes a while.
+      parts.push(`Still checking ${plural(card.pending, 'title', 'titles')}. We look them up a few dozen an hour, so more will turn up through the day.`);
+    }
     return parts.join(' ');
   }
 

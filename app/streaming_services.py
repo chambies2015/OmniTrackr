@@ -13,8 +13,10 @@ half hour, and then compares each refreshed title with what it was on before.
 
 ``service_sightings`` keeps, per title and service, when it was first and last seen there. The first
 time a title is compared sets a baseline: whatever it is already on is not news. After that, a
-service that appears is an arrival. A title that drops off a service and is back within two weeks
-was most likely a source that failed for a week, so it doesn't count as arriving again.
+service that appears is an arrival, as long as the answer read before was recent enough to date it
+(a lookup from weeks ago can't say when something turned up). A title that drops off a service and
+is back within two weeks was most likely a source that failed for a week, so it doesn't count as
+arriving again.
 
 The services a member picks are private and are never shown to anyone else. Counters go into
 ``site_traffic_daily`` under kind "stream" and name no member.
@@ -460,7 +462,9 @@ def ids_on_services(db: Session, user: models.User, category: str) -> set[int]:
 
 # ---------------------------------------------------------------- comparing titles
 
-def _diff(db: Session, key: str, where: dict, first: bool, now: datetime) -> tuple[int, int]:
+def _diff(db: Session, key: str, where: dict, first: bool, now: datetime, undated: bool = False) -> tuple[int, int]:
+    """Record what this answer lists. ``undated``: the answer read before this one is too old to say
+    when a service we haven't seen on the title before turned up, so it's recorded but isn't news."""
     current = services_in(where)
     # Without TMDB's part of the answer (it failed or found nothing this time), what's missing may only
     # be missing from this lookup, so nothing is marked gone.
@@ -471,9 +475,10 @@ def _diff(db: Session, key: str, where: dict, first: bool, now: datetime) -> tup
     for service in sorted(current):
         row = existing.get(service)
         if row is None:
+            quiet = first or undated
             db.add(models.ServiceSighting(title_key=key, service=service, first_seen_at=now, last_seen_at=now,
-                                          baseline=first))
-            arrived += 0 if first else 1
+                                          baseline=quiet))
+            arrived += 0 if quiet else 1
             continue
         if row.gone_at is not None:
             if now - row.gone_at >= BLIP:
@@ -512,7 +517,12 @@ def sync(db: Session, keys: Iterable[str], now: Optional[datetime] = None) -> di
                     where = None
                 if not isinstance(where, dict):
                     continue
-                arrived, left = _diff(db, key, where, check is None, now)
+                # Titles on these lists are re-read every few days. When the answer read last time is
+                # older than the alert window (a where-to-watch lookup from weeks ago, read the moment
+                # the member picked their services), a new service could have arrived any day since.
+                undated = check is not None and (check.source_fetched_at is None
+                                                 or fetched_at - check.source_fetched_at > ALERT_WINDOW)
+                arrived, left = _diff(db, key, where, check is None, now, undated)
                 stats["compared"] += 1
                 stats["arrived"] += arrived
                 stats["left"] += left
@@ -555,23 +565,46 @@ def stale_entries(db: Session, now: Optional[datetime] = None, user_id: Optional
                   limit: int = WARM_BATCH) -> list[Entry]:
     """Unfinished titles on these members' lists whose where-to-watch answer is missing or getting old.
 
-    Titles nobody has looked up come first, then the oldest answers.
+    For each member, titles nobody has looked up come first, then the oldest answers. Members take
+    turns, so one member importing a thousand-title watchlist doesn't hold up everyone else's checks.
     """
     now = now or _now()
     user_ids = [user_id] if user_id is not None else [row.user_id for row in _members(db)]
-    unique: dict[str, Entry] = {}
+    lists: list[list[Entry]] = []
+    seen: set[str] = set()
     for uid in user_ids:
+        mine = []
         for entry in entries_for(db, uid):
-            unique.setdefault(entry.key, entry)
+            if entry.key not in seen:
+                seen.add(entry.key)
+                mine.append(entry)
+        lists.append(mine)
     cached = {}
-    for chunk in _chunks(sorted(unique)):
+    for chunk in _chunks(sorted(seen)):
         for key, status, fetched_at in db.query(models.TitleMetadata.key, models.TitleMetadata.status,
                                                 models.TitleMetadata.fetched_at).filter(
                 models.TitleMetadata.key.in_(chunk)).all():
             cached[key] = (status, fetched_at)
-    due = [entry for key, entry in unique.items() if _due(cached.get(key), now)]
-    due.sort(key=lambda entry: (entry.key in cached, cached.get(entry.key, (None, datetime.min))[1]))
-    return due[:limit]
+    queues = []
+    for mine in lists:
+        due = [entry for entry in mine if _due(cached.get(entry.key), now)]
+        due.sort(key=lambda entry: (entry.key in cached, cached.get(entry.key, (None, datetime.min))[1]))
+        if due:
+            queues.append(due)
+    picked: list[Entry] = []
+    for turn in range(max((len(queue) for queue in queues), default=0)):
+        for queue in queues:
+            if turn < len(queue):
+                picked.append(queue[turn])
+                if len(picked) >= limit:
+                    return picked
+    return picked
+
+
+def _still_due(db: Session, key: str, now: datetime) -> bool:
+    row = db.query(models.TitleMetadata.status, models.TitleMetadata.fetched_at).filter(
+        models.TitleMetadata.key == key).first()
+    return _due(tuple(row) if row else None, now)
 
 
 async def warm(session_factory, client, limit: int = WARM_BATCH, user_id: Optional[int] = None,
@@ -583,6 +616,10 @@ async def warm(session_factory, client, limit: int = WARM_BATCH, user_id: Option
     try:
         entries = await run_in_threadpool(stale_entries, db, None, user_id, limit)
         for entry in entries:
+            # Another run (the half-hourly one, or the lookups after a save) may have refreshed this
+            # title since the list was made, and force=True below would look it up all over again.
+            if not await run_in_threadpool(_still_due, db, entry.key, _now()):
+                continue
             normalized = title_pages.normalize(entry.title)
             metadata = await title_metadata.get_or_fetch(db, client, entry.kind, normalized, entry.title, entry.year,
                                                          entry.creator, wait=20)
@@ -739,11 +776,17 @@ def sync_member(db: Session, user_id: int) -> dict:
         return {}
 
 
+_after_save_running: set[int] = set()
+
+
 async def after_save(app, user_id: int) -> None:
-    """Look up a member's unchecked titles soon after they pick services, so the card fills in."""
-    if not enabled_for_process():
+    """Look up a member's unchecked titles soon after they pick services, so the card fills in.
+
+    One round per member at a time: saving again while one is running doesn't start another."""
+    if not enabled_for_process() or user_id in _after_save_running:
         return
     from .database import SessionLocal
+    _after_save_running.add(user_id)
     try:
         client = getattr(app.state, "external_api_client", None)
         if client is not None:
@@ -751,6 +794,8 @@ async def after_save(app, user_id: int) -> None:
         await asyncio.to_thread(_sync_and_alert, SessionLocal, user_id, False)
     except Exception:
         logger.exception("Streaming services lookups after saving failed")
+    finally:
+        _after_save_running.discard(user_id)
 
 
 async def run_once(session_factory, client) -> dict:
