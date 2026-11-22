@@ -52,6 +52,8 @@ IMAGE_HOSTS = (
     "books.google.com",
     "books.googleusercontent.com",
 )
+# TMDB's poster CDN (title facts and where-to-watch use it): only this exact host, and only over https.
+HTTPS_IMAGE_HOSTS = ("image.tmdb.org",)
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif")
 IMAGE_MAX_BYTES = 4 * 1024 * 1024
 
@@ -85,6 +87,8 @@ def image_allowed(url) -> bool:
     if parts.scheme not in ("http", "https") or parts.username or parts.password or port not in (None, 80, 443):
         return False
     host = (parts.hostname or "").lower().rstrip(".")
+    if host in HTTPS_IMAGE_HOSTS:
+        return parts.scheme == "https"
     return any(host == allowed or host.endswith("." + allowed) for allowed in IMAGE_HOSTS)
 
 

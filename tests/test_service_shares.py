@@ -325,3 +325,14 @@ def test_account_removal_takes_the_link(client, db_session):
     _, path = shared(client, db_session)
     table = models.ServiceShare.__table__
     assert any(fk.column.table is models.User.__table__ and fk.ondelete == "CASCADE" for fk in table.foreign_keys)
+
+
+def test_tmdb_posters_are_allowed_on_this_exact_host_over_https_only():
+    from app import tier_list
+    assert tier_list.image_allowed("https://image.tmdb.org/t/p/w342/abc.jpg")
+    assert not tier_list.image_allowed("http://image.tmdb.org/t/p/w342/abc.jpg")
+    assert not tier_list.image_allowed("https://evil.image.tmdb.org/t/p/w342/abc.jpg")
+    assert not tier_list.image_allowed("https://image.tmdb.org.evil.com/abc.jpg")
+    assert not tier_list.image_allowed("https://tmdb.org/abc.jpg")
+    assert not tier_list.image_allowed("https://image.tmdb.org:8443/abc.jpg")
+    assert not tier_list.image_allowed("https://user@image.tmdb.org/abc.jpg")
