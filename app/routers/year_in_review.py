@@ -514,7 +514,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/year-in-review.css?v={CSS_VERSION}">

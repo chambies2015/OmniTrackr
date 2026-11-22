@@ -120,7 +120,7 @@ def _page(*, title: str, description: str, canonical: str, robots: str, body: st
   <meta name="twitter:card" content="summary">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/discussions.css?v={ASSET_VERSION}">
   <script src="/static/discussions.js?v={ASSET_VERSION}" defer></script>
   {structured}

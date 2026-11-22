@@ -12,13 +12,17 @@ from .guide_links import add_crosslinks
 from .image_sizes import shrink_html
 from .link_hints import nofollow_account_links
 from .page_breadcrumbs import add_breadcrumbs
-from .page_hints import add_preconnects, add_theme_color, allow_large_image_previews
+from .page_hints import SPECULATION_RULES_HEADER, add_preconnects, add_theme_color, allow_large_image_previews
 from .publisher_data import link_publisher
 from .site_chrome import fill_join_prompt
 
 STEPS = (shrink_html, add_preconnects, add_theme_color, allow_large_image_previews, add_breadcrumbs, fill_join_prompt,
          add_crosslinks, nofollow_account_links, mark_signup_pages, mark_guest_pages, link_publisher, add_change_notes,
          add_reading_layout)
+
+
+# Pages with the public header and footer (they load site.js) get the prefetch rules.
+PUBLIC_CHROME_MARK = "/static/site.js"
 
 
 def finish(html: str) -> str:
@@ -78,15 +82,19 @@ class HtmlFinishMiddleware:
                 if message.get("more_body", False):
                     return
                 body = b"".join(chunks)
+                public_chrome = False
                 try:
                     text = body.decode("utf-8")
                     new_text = finish(text)
                     if new_text != text:
                         body = new_text.encode("utf-8")
+                    public_chrome = PUBLIC_CHROME_MARK in new_text
                 except UnicodeDecodeError:
                     pass
                 headers = [(k, v) for k, v in start.get("headers", []) if k.lower() != b"content-length"]
                 headers.append((b"content-length", str(len(body)).encode()))
+                if public_chrome and start.get("status") == 200:
+                    headers.append((b"speculation-rules", SPECULATION_RULES_HEADER.encode()))
                 await send({**start, "headers": headers})
                 await send({"type": "http.response.body", "body": body, "more_body": False})
                 return

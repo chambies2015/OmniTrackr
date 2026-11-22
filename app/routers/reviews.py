@@ -772,7 +772,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <meta name="twitter:image:alt" content="{_escape(review.get("title"))} review artwork">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261120-a11y-1">
   <link rel="stylesheet" href="/static/review-detail.css?v=20261118-talk-1">

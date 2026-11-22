@@ -162,3 +162,22 @@
   sync();
   if (narrow.addEventListener) narrow.addEventListener('change', sync);
 })();
+
+/* Wikipedia posters arrive as Wikimedia thumbnails (app/image_sizes.py). If one
+   fails to load, show the original upload instead. */
+(function () {
+  const THUMB = /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/[a-z]+\/)thumb\/([0-9a-f]\/[0-9a-f]{2}\/[^/?#]+)\/\d+px-[^/?#]+$/;
+  const restore = function (img) {
+    if (!img || img.tagName !== 'IMG' || img.dataset.thumbFailed) return;
+    const match = THUMB.exec(img.getAttribute('src') || '');
+    if (!match) return;
+    img.dataset.thumbFailed = '1';
+    img.src = match[1] + match[2];
+  };
+  // "error" does not bubble, so listen in the capture phase; images that failed
+  // before this script ran are picked up by the check below.
+  document.addEventListener('error', function (event) { restore(event.target); }, true);
+  document.querySelectorAll('img[src*="upload.wikimedia.org/wikipedia/"][src*="/thumb/"]').forEach(function (img) {
+    if (img.complete && img.naturalWidth === 0 && img.currentSrc) restore(img);
+  });
+})();

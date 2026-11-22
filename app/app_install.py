@@ -258,7 +258,7 @@ def app_page_html() -> str:
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/install-app.css?v={PAGE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/app-page.css?v={PAGE_CSS_VERSION}">
   <script src="/static/pwa.js?v={PWA_JS_VERSION}" defer></script>
