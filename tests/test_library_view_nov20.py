@@ -22,9 +22,11 @@ def test_stylesheet_loads_between_workspace_and_accessibility_layers():
     names = [href.split("?")[0] for href in links]
     view = names.index("/static/library-view.css")
     assert names[view - 1] == "/static/workspace-2026.css"
-    # The member phone layer (Nov 21 2026) sits between the library view and accessibility.
-    assert names[view + 1] == "/static/member-phone.css"
-    assert names[view + 2] == "/static/a11y.css"
+    # The member look refresh (Nov 22 2026) and the member phone layer (Nov 21 2026)
+    # sit between the library view and accessibility.
+    assert names[view + 1] == "/static/member-look.css"
+    assert names[view + 2] == "/static/member-phone.css"
+    assert names[view + 3] == "/static/a11y.css"
 
 
 def test_each_library_uses_the_title_page_colour():
@@ -76,7 +78,8 @@ def test_quick_marks_refresh_the_counts():
     # Since the Nov 20 evening sweep a quick save asks once, after a short pause (test_sweep_nov20c).
     assert "(hero?.refreshSoon || hero?.refresh)?.();" in QUICK
     assert '<script src="/static/library-quick.js?v=20261120-sweep-1"></script>' in INDEX
-    assert '<script src="/static/home-hero.js?v=20261120-sweep-1"></script>' in INDEX
+    # Bumped since (member look refresh, Nov 22 2026); any later tag still loads the fix.
+    assert re.search(r'<script src="/static/home-hero\.js\?v=(\d{8}[^"]*)"></script>', INDEX).group(1) >= "20261120-sweep-1"
 
 
 def test_filter_checkboxes_stay_in_the_page_for_keyboards():

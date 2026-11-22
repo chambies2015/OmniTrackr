@@ -111,6 +111,7 @@
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/library-view.css?v=20261120-sweep-1">
+  <link rel="stylesheet" href="/static/member-look.css?v=20261122-member-look-1">
   <link rel="stylesheet" href="/static/member-phone.css?v=20261121-sweep-d-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261120-settle-1"></script>
@@ -2422,12 +2423,28 @@
 
   <!-- Footer for Logged-in View -->
   <footer class="landing-footer app-footer" id="mainFooter">
-    <div class="app-footer__grid">
-      <div>
+    <div class="app-footer__top">
+      <div class="app-footer__intro">
         <a class="app-footer__brand" href="/"><img src="/vortex-still.webp" alt="" width="26" height="26">OmniTrackr</a>
         <p>A free, independent media tracker for everything you watch, play, read, and hear.</p>
-        <p><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support OmniTrackr on Ko-fi ↗</a></p>
+        <p class="app-footer__actions"><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">♥</span> Support OmniTrackr on Ko-fi</a></p>
       </div>
+      <nav class="app-footer__formats" aria-labelledby="appFooterLibrariesTitle">
+        <h2 id="appFooterLibrariesTitle">Your libraries</h2>
+        <ul>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="movies">Movies</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="tv-shows">TV shows</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="anime">Anime</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="video-games">Games</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="music">Music</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="books">Books</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="manga">Manga</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="podcasts">Podcasts</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="audiobooks">Audiobooks</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="app-footer__grid">
       <nav aria-label="Explore">
         <h2>Explore</h2>
         <a href="/discover">Discover</a>
@@ -2638,7 +2655,7 @@
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261120-pass-it-on-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
-  <script src="/static/home-hero.js?v=20261120-sweep-1"></script>
+  <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261121-feed-runs-1"></script>
   <script src="/static/home-layout.js?v=20261121-sweep-f-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>

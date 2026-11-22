@@ -40,6 +40,18 @@
     return `Good evening${who}`;
   }
 
+  // The name sits in its own span so the page can colour it. Everything stays text.
+  function setGreeting(title, text, name) {
+    const who = name ? String(name) : '';
+    const at = who ? text.lastIndexOf(who) : -1;
+    if (at < 1) {
+      title.textContent = text;
+      return;
+    }
+    const rest = text.slice(at + who.length);
+    title.replaceChildren(text.slice(0, at), el('span', 'home-hero__name', who), ...(rest ? [rest] : []));
+  }
+
   function summaryText(data, now) {
     const month = MONTHS[now.getMonth()];
     const done = Number(data.finished_this_month) || 0;
@@ -194,7 +206,7 @@
     const date = $('homeHeroDate');
     if (date) date.textContent = `${DAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}`;
     const title = $('homeHeroTitle');
-    if (title) title.textContent = greeting(now, data.name);
+    if (title) setGreeting(title, greeting(now, data.name), data.name);
     const summary = $('homeHeroSummary');
     if (summary) summary.textContent = summaryText(data, now);
     renderStats(data);
