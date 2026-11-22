@@ -38,13 +38,17 @@ def _card(db: Session, user: models.User) -> Optional[dict]:
     except Exception:
         db.rollback()
         return None  # optional card; the home screen never waits on it
-    if card is not None and card.get("state") == "list":
-        card["share"] = _share_state(db, user)
+    if card is not None:
+        # While the card asks for services again (they were cleared), a link that's out still shows, paused,
+        # so it can be turned off from here.
+        card["share"] = _share_state(db, user, linked_only=card.get("state") != "list")
     return card
 
 
-def _share_state(db: Session, user: models.User) -> Optional[dict]:
+def _share_state(db: Session, user: models.User, linked_only: bool = False) -> Optional[dict]:
     try:
+        if linked_only and service_shares.mine(db, user.id) is None:
+            return None
         return service_shares.state(db, user)
     except Exception:
         db.rollback()

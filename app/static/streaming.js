@@ -177,12 +177,16 @@
         render(data.card);
         return;
       }
+      // A share link keeps working while the card is hidden, and its page is where it can be turned off.
+      const linked = Boolean(state.card && state.card.share && SHARE_PATH.test(state.card.share.path || ''));
       render(null);
       if (typeof showNotice === 'function') {
         showNotice({
           later: 'We’ll ask about streaming services another time.',
           stop: 'Okay, we won’t ask about streaming services again.',
-          hide: 'Hidden for three weeks. The “On my services” filter in your library still works.',
+          hide: linked
+            ? 'Hidden for three weeks. Your share link still works, and you can turn it off from its page.'
+            : 'Hidden for three weeks. The “On my services” filter in your library still works.',
         }[what] || 'Done.', 'success');
       }
     } catch (error) {
@@ -467,10 +471,20 @@
     }
   }
 
+  // "Your anime stays off it, because that shelf is private or hidden." when the link leaves a format out.
+  function leftOut(share) {
+    const kinds = Array.isArray(share.left_out) ? share.left_out.filter(kind => KIND_WORDS[kind]) : [];
+    if (!kinds.length) return '';
+    const words = kinds.map(kind => KIND_WORDS[kind][1]);
+    const stay = kinds.length === 1 && kinds[0] === 'anime' ? 'stays' : 'stay';
+    return ` Your ${andList(words)} ${stay} off it, because ${kinds.length === 1 ? 'that shelf is' : 'those shelves are'} private or hidden.`;
+  }
+
   function renderShare(card) {
     const box = $('onYourServicesShare');
     const privacy = $('onYourServicesPrivacy');
-    const share = card && card.state === 'list' ? card.share : null;
+    // In the asking state the server only sends a link that's already out (services were cleared).
+    const share = card ? card.share || null : null;
     const linked = Boolean(share && SHARE_PATH.test(share.path || ''));
     if (privacy) {
       privacy.textContent = linked
@@ -494,7 +508,7 @@
     } else if (linked) {
       const opened = Number(share.opened) || 0;
       copy.append(el('p', 'on-services__share-title', 'This list is shared by link'),
-        el('p', 'on-services__share-text', `Friends see the titles here and which services they’re on, never your scores or the rest of your library. They can tick their own services to see what they can watch too.${opened ? ` Opened ${plural(opened, 'time', 'times')} so far.` : ''}`));
+        el('p', 'on-services__share-text', `Friends see the titles here and which services they’re on, never your scores or the rest of your library.${leftOut(share)} They can tick their own services to see what they can watch too.${opened ? ` Opened ${plural(opened, 'time', 'times')} so far.` : ''}`));
       row.append(
         button('on-services__btn on-services__btn--primary', navigator.share ? 'Share link' : 'Copy link', () => shareLink(share.path)),
         button('on-services__btn', 'Save image for stories', control => saveStory(share.path, control)));
@@ -503,7 +517,7 @@
       row.appendChild(open);
     } else {
       copy.append(el('p', 'on-services__share-title', 'Show friends what you can stream tonight'),
-        el('p', 'on-services__share-text', 'Get a link to this list. Friends see the titles and which services they’re on, never your scores or the rest of your library, and can check which ones they can watch too.'));
+        el('p', 'on-services__share-text', `Get a link to this list. Friends see the titles and which services they’re on, never your scores or the rest of your library, and can check which ones they can watch too.${leftOut(share)}`));
       row.appendChild(button('on-services__btn on-services__btn--primary', 'Get a share link', async control => {
         const made = await shareCall('/api/streaming/share', control);
         if (!made) return;
@@ -739,7 +753,7 @@
   window.OmniStreaming = { refresh, reset, renderFilters: renderLibraryFilter, get chosen() { return state.chosen.slice(); } };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { render, summaryFor, serviceNames, kindWords, filtered, state, renderLibraryFilter, renderShare };
+    module.exports = { render, summaryFor, serviceNames, kindWords, filtered, state, renderLibraryFilter, renderShare, leftOut };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {
