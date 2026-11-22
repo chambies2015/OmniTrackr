@@ -234,7 +234,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         '<p>Release years are for the first release in the original language. Running times, editions and availability vary by '
         'region. Links go to OmniTrackr title pages, not shops. Your progress is worked out from your own library each time you '
         'open the page; nothing about it is shared.</p>',
-        f'<p class="muted">First published {_e(_long_date(FIRST_PUBLISHED))}. Checked {_e(_long_date(reviewed))}. '
+        f'<p class="muted">First published {_e(_long_date(entry.get("published") or FIRST_PUBLISHED))}. Checked {_e(_long_date(reviewed))}. '
         '<a href="/contact">Suggest a franchise or send a correction</a> · <a href="/content-quality">Editorial standards</a> · '
         '<a href="/if-you-liked">If you liked guides</a></p></section></article>',
     ])
@@ -248,7 +248,7 @@ def _structured(slug: str, entry: dict) -> dict:
     return {
         "@context": "https://schema.org", "@type": "Article",
         "headline": f"{entry['name']} in order", "description": entry["summary"],
-        "datePublished": FIRST_PUBLISHED, "dateModified": entry["reviewed"],
+        "datePublished": entry.get("published") or FIRST_PUBLISHED, "dateModified": entry["reviewed"],
         "mainEntityOfPage": url, "url": url, "inLanguage": "en-US",
         "author": {"@type": "Organization", "name": "OmniTrackr", "url": SITE + "/about"},
         "publisher": {"@type": "Organization", "name": "OmniTrackr", "url": SITE + "/"},

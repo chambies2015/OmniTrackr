@@ -135,6 +135,7 @@ FOOTER_GROUPS = (
         ("Get the app", "/app"),
         ("Roadmap", "/roadmap"),
         ("Editorial standards", "/content-quality"),
+        ("Corrections", "/corrections"),
         ("Site map", "/site-map"),
     )),
 )
