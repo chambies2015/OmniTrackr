@@ -72,10 +72,11 @@ SHELF_SLOTS = 8
 
 def shelf_html() -> str:
     """The "Your library" panel beside the picks. home-shelf.js fills it from the visitor's saved list;
-    <!--SHELF_SIGNUP--> becomes the sign-up buttons (main.shelf_signup_html)."""
+    <!--SHELF_SIGNUP--> becomes the sign-up buttons (main.shelf_signup_html). A labelled <section>,
+    not an <aside>: it sits inside the picks' section, and a complementary landmark belongs at the top."""
     slots = '<li class="lp-shelf__slot" aria-hidden="true"></li>' * SHELF_SLOTS
     return (
-        '<aside class="lp-shelf is-empty" id="your-library" data-guest-shelf aria-labelledby="lp-shelf-title">'
+        '<section class="lp-shelf is-empty" id="your-library" data-guest-shelf aria-labelledby="lp-shelf-title">'
         '<div class="lp-shelf__head"><h3 id="lp-shelf-title">Your library</h3>'
         '<p class="lp-shelf__count" data-shelf-count>Nothing on it yet</p></div>'
         f'<ol class="lp-shelf__slots" data-shelf-slots aria-label="Titles on your list">{slots}</ol>'
@@ -86,7 +87,7 @@ def shelf_html() -> str:
         '<ul class="lp-shelf__perks" data-shelf-perks></ul>'
         '<div class="lp-shelf__actions"><!--SHELF_SIGNUP--></div>'
         '<p class="lp-shelf__note">No card needed. Your titles move into your account when you sign up.</p></div>'
-        '</aside>'
+        '</section>'
     )
 
 

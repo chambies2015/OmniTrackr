@@ -44,15 +44,36 @@ def round_down(count: int) -> str:
 ENGLISH_WORDS = frozenset("the and a an to of is it in i this that was for but with you on not as are be its my "
                           "so if at by from have has had they he she we what all just more than very really".split())
 ENGLISH_SHARE = 0.12
+ACCENTED_SHARE = 0.04
+# Everyday words of the other languages members write in (Spanish, Portuguese, Polish, French,
+# German, Italian) that aren't English words too. A Spanish review with an English phrase in it
+# ("unsettling at times pero eso añade a la experiencia") clears the share above on "a" and "at"
+# alone; these outnumber the English ones in it. Polish "i", "a", "to" and "on" count as English
+# above, so Polish needs its own words here.
+# Words that are also everyday English ("do", "per", "con", "pour") are left out.
+OTHER_WORDS = frozenset("que de la el los las y es una un por muy pero se del lo su para como más también "
+                        "não é uma com os muito mas da são "
+                        "jest nie się na w z że ale jak bardzo tak już tylko "
+                        "le les et est des une pas qui dans du très avec "
+                        "und der das ist nicht ein eine mit sehr auch ich "
+                        "che di il è non sono molto anche".split())
 
 
 def reads_as_english(text: str) -> bool:
-    """True when common English words make up a fair share of the text (a rough check, no library)."""
+    """True when common English words make up a fair share of the text and clearly outnumber
+    the everyday words of other languages (a rough check, no library)."""
     words = [word.strip(".,;:!?\"'()[]…-—’“”").casefold() for word in (text or "").split()]
     words = [word for word in words if word]
     if len(words) < 8:
         return False
-    return sum(word in ENGLISH_WORDS for word in words) / len(words) >= ENGLISH_SHARE
+    english = sum(word in ENGLISH_WORDS for word in words)
+    other = sum(word in OTHER_WORDS for word in words)
+    letters = [char for char in text if char.isalpha()]
+    # About one letter in seventeen of Polish is ą, ł, ś or the like; English rarely needs more
+    # than a "Pokémon" or a "Sōsō no Frieren".
+    accented = sum(not char.isascii() for char in letters)
+    return (english / len(words) >= ENGLISH_SHARE and english > 2 * other
+            and accented <= ACCENTED_SHARE * len(letters))
 
 
 def pick_reviews(reviews: list[dict]) -> list[dict]:
