@@ -123,12 +123,18 @@ PREFETCH_PATHS = (
     "/*-tracker", "/faq", "/about", "/media-tracking", "/use-cases", "/export-import-guide",
     "/review-guidelines", "/sample-library", "/reviews", "/collections/explore",
 )
+# Pages under the paths above that count an open on the server when a visitor without an
+# account loads them: a shared Essential 100 count ("Share my count" links to it) and a shared
+# advent calendar door. A prefetch would count a hover as an open. tests/test_sweep_nov22_together.py
+# checks every listed GET route for funnel counts.
+NO_PREFETCH_PATHS = ("/essentials/score/*", "/essentials/*/score/*", "/holidays/advent-calendar/*/*")
 SPECULATION_RULES = {
     "prefetch": [{
         "source": "document",
         "where": {"and": [
             {"href_matches": list(PREFETCH_PATHS)},
             {"not": {"selector_matches": "[rel~=nofollow], [download], [target=_blank], [data-no-prefetch]"}},
+            {"not": {"href_matches": list(NO_PREFETCH_PATHS)}},
         ]},
         "eagerness": "moderate",
     }],

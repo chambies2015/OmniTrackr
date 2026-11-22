@@ -19,7 +19,7 @@ from .discover import page
 
 router = APIRouter(tags=["together"])
 CSS_VERSION = "20261122-together-1"
-JS_VERSION = "20261122-together-1"
+JS_VERSION = "20261122-together-sweep-1"
 DESCRIPTION = ("Watch a show, read a book or get through a podcast with friends at the same pace, even from different "
                "cities. Everyone's place on one track, a few episodes or chapters a week, and notes that stay hidden "
                "until you get there. Free.")
@@ -239,7 +239,8 @@ def join_page(token: str, request: Request, user=Depends(get_optional_current_us
     path = together.invite_path(plan)
     member = together.member_of(db, plan.id, user.id) if user is not None else None
     owner = info["owner"] or "A friend"
-    art = (f'<img src="{_e(info["image"])}" alt="" width="120" height="180" referrerpolicy="no-referrer">'
+    art = (f'<img src="{_e(info["image"])}" alt="" width="120" height="180" referrerpolicy="no-referrer" '
+           f'data-letter="{_e(info["title"][:1].upper())}">'
            if info["image"] else f'<span class="tg-art__empty" aria-hidden="true">{_e(info["title"][:1].upper())}</span>')
     facts = " · ".join(part for part in (info["label"], info["scope"], info["length"]) if part)
     when = (f'Week {info["week"]} of {info["weeks"]} now' if info["started"] else f'Starts {info["starts_label"]}')
@@ -250,6 +251,8 @@ def join_page(token: str, request: Request, user=Depends(get_optional_current_us
         actions = '<p class="tg-muted">This plan has finished. Start your own with the button below.</p>'
     elif info["full"]:
         actions = '<p class="tg-muted">This plan is full. Ask whoever runs it to make room.</p>'
+    elif user is not None and together.removed_from(db, plan.id, user.id):
+        actions = f'<p class="tg-muted">{_e(together.REMOVED_MESSAGE)}</p>'
     elif user is not None:
         actions = ('<div class="tg-join" data-together-join data-token="' + _e(plan.token) + '" data-total="'
                    + str(plan.total) + '" data-unit="' + _e(plan.unit) + '"><p class="tg-muted">Loading…</p></div>')
@@ -342,7 +345,8 @@ def plan_page(plan_id: PositiveDatabaseId, request: Request, user=Depends(get_op
                         (("Your plans", "/together"), ("Go to my library", "/")))
     if request.query_params.get("utm_campaign") == "together" and request.query_params.get("utm_source") == "email":
         funnel.record("together_back_from_email", request)
-    art = (f'<img src="{_e(plan.image)}" alt="" width="96" height="144" referrerpolicy="no-referrer">'
+    art = (f'<img src="{_e(plan.image)}" alt="" width="96" height="144" referrerpolicy="no-referrer" '
+           f'data-letter="{_e(plan.title[:1].upper())}">'
            if plan.image else f'<span class="tg-art__empty" aria-hidden="true">{_e(plan.title[:1].upper())}</span>')
     facts = " · ".join(part for part in (together.CATEGORIES[plan.category][2], together.scope_label(plan),
                                          together.pace_label(plan)) if part)
@@ -579,6 +583,9 @@ def friends_to_ask(request: Request, plan_id: PositiveDatabaseId, response: Resp
     plan, _ = _plan_for(db, plan_id, user)
     from ..crud.friends import get_friends
     inside = {user_id for user_id, in db.query(models.TogetherMember.user_id).filter_by(plan_id=plan.id)}
+    if plan.owner_id != user.id:
+        # Only whoever runs the plan can ask back someone they took out.
+        inside |= {user_id for user_id, in db.query(models.TogetherRemoval.user_id).filter_by(plan_id=plan.id)}
     return {"friends": [{"id": friend.id, "username": friend.username}
                         for friend in get_friends(db, user.id) if friend.is_active and friend.id not in inside][:50]}
 

@@ -60,6 +60,8 @@ ENDED_SHOWN = 6
 QUIET_END_WEEKS = 8             # a plan this many weeks past its last week ends on its own
 EMAIL_AWAY_DAYS = 3             # the reminder only goes to members who haven't opened OmniTrackr for this long
 EMAIL_FROM_DAY = 2              # ...and not before the third day of a plan week
+EMAIL_EVERY_DAYS = 7            # one reminder a week per person, however many plans they're in
+INVITE_AGAIN_DAYS = 3           # a friend asked into a plan isn't asked again for this long
 SEND_PREFIX = "together-"
 CHECK_EVERY_SECONDS = 3600
 FIRST_CHECK_DELAY_SECONDS = 600
@@ -352,7 +354,23 @@ def get_for_member(db: Session, plan_id: int, user) -> tuple[models.TogetherPlan
     member = member_of(db, plan_id, user.id) if plan is not None else None
     if plan is None or member is None:
         raise TogetherError("This plan isn't here, or you're not in it.", 404)
+    settle_owner(db, plan)
     return plan, member
+
+
+def settle_owner(db: Session, plan) -> None:
+    """A plan whose owner deactivated their account goes to the next person in it, so the pace,
+    the link and who's in it can still be changed. Commits when it hands over."""
+    owner_here = (db.query(models.TogetherMember.id)
+                  .join(models.User, models.User.id == models.TogetherMember.user_id)
+                  .filter(models.TogetherMember.plan_id == plan.id, models.TogetherMember.user_id == plan.owner_id,
+                          models.User.is_active.is_(True)).first())
+    if owner_here is None and _hand_over(db, plan, plan.owner_id):
+        db.commit()
+
+
+def removed_from(db: Session, plan_id: int, user_id: int) -> bool:
+    return db.query(models.TogetherRemoval.id).filter_by(plan_id=plan_id, user_id=user_id).first() is not None
 
 
 # ---------------------------------------------------------------- moving
@@ -494,17 +512,35 @@ def create(db: Session, user, row, category: str, *, total: int, pace: int, star
     return plan
 
 
-def invite_friends(db: Session, plan, user, friend_ids: list[int]) -> int:
-    """Ask friends in. Only real friends who aren't in the plan get the note. Does not commit."""
+def invite_friends(db: Session, plan, user, friend_ids: list[int], now: Optional[datetime] = None) -> int:
+    """Ask friends in. Only real friends who aren't in the plan get the note, and a friend asked in
+    the last few days isn't asked again, read or not. Someone the owner took out is only asked
+    back by the owner, and that lets them use the link again. Does not commit."""
     from .crud.friends import are_friends
+    now = now or _now()
     asked = 0
+    if len(rows(db, plan.id)) >= MEMBERS_MAX:
+        return 0
     inside = {user_id for user_id, in db.query(models.TogetherMember.user_id).filter_by(plan_id=plan.id)}
+    owner = plan.owner_id == user.id
     for friend_id in dict.fromkeys(friend_ids or []):
         if friend_id == user.id or friend_id in inside or not are_friends(db, user.id, friend_id):
             continue
+        removal = db.query(models.TogetherRemoval).filter_by(plan_id=plan.id, user_id=friend_id).first()
+        if removal is not None and not owner:
+            continue
+        recent = None if removal is not None else db.query(models.Notification.id).filter(
+            models.Notification.user_id == friend_id, models.Notification.type == "together_invite",
+            models.Notification.link == invite_path(plan),
+            or_(models.Notification.read_at.is_(None),
+                models.Notification.created_at >= now - timedelta(days=INVITE_AGAIN_DAYS))).first()
+        if recent is not None:
+            continue
+        if removal is not None:
+            db.delete(removal)
         _notify(db, friend_id, "together_invite",
                 f"{user.username} wants to {verb(plan).lower()} {plan.title} with you, {pace_label(plan)}.",
-                invite_path(plan), once_unread=True)
+                invite_path(plan))
         asked += 1
     return asked
 
@@ -538,6 +574,8 @@ def join(db: Session, plan, user, *, position: Optional[int] = None, add_to_libr
         return existing, False
     if plan.ended_at is not None:
         raise TogetherError("This plan has finished. Ask whoever made it to start a new one.", 409)
+    if removed_from(db, plan.id, user.id):
+        raise TogetherError(REMOVED_MESSAGE, 403)
     people = rows(db, plan.id)
     if len(people) >= MEMBERS_MAX:
         raise TogetherError(f"This plan is full: {MEMBERS_MAX} people is the most.", 409)
@@ -577,6 +615,9 @@ def join(db: Session, plan, user, *, position: Optional[int] = None, add_to_libr
     return member, True
 
 
+REMOVED_MESSAGE = "Whoever runs this plan took you out of it, so this link won't add you back. They can ask you in again."
+
+
 def _hand_over(db: Session, plan, leaving_user_id: int) -> bool:
     """Give the plan to the next person in it. False when nobody else is left."""
     for member, person in rows(db, plan.id):
@@ -609,6 +650,8 @@ def remove(db: Session, plan, owner, member_id: int) -> None:
         raise TogetherError("They aren't in this plan.", 404)
     if member.user_id == owner.id:
         raise TogetherError("Use Leave to take yourself out.", 422)
+    if not removed_from(db, plan.id, member.user_id):
+        db.add(models.TogetherRemoval(plan_id=plan.id, user_id=member.user_id, created_at=_now()))
     leave(db, plan, member)
 
 
@@ -1069,6 +1112,14 @@ def _opted_out(db: Session, user_id: int) -> bool:
     return db.query(models.EmailOptOut.id).filter(models.EmailOptOut.user_id == user_id).first() is not None
 
 
+def _emailed_lately(db: Session, user_id: int, now: datetime) -> bool:
+    """The email promises "at most once a week", so someone behind in three plans gets one, not three."""
+    return db.query(models.EmailCampaignSend.id).filter(
+        models.EmailCampaignSend.user_id == user_id,
+        models.EmailCampaignSend.campaign_key.like(f"{SEND_PREFIX}%"),
+        models.EmailCampaignSend.sent_at >= now - timedelta(days=EMAIL_EVERY_DAYS) + timedelta(hours=1)).first() is not None
+
+
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
     from .digest import _send as send_mail
     await send_mail(to, subject, html, unsubscribe_url)
@@ -1124,7 +1175,7 @@ async def run_once(session_factory, now: Optional[datetime] = None, sender=_send
             if plan is None or member is None:
                 continue
             user = db.get(models.User, member.user_id)
-            if user is None or not user.is_active or _opted_out(db, user.id):
+            if user is None or not user.is_active or _opted_out(db, user.id) or _emailed_lately(db, user.id, now):
                 continue
             lock_email_budget(db)
             if allowance(db, now) <= 0:
