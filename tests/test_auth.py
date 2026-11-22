@@ -12,6 +12,22 @@ from app import auth, crud, email as email_utils, models, return_prompt as retur
 from app.database import SessionLocal
 
 
+@pytest.mark.parametrize("key", [
+    "", "short", " " * 40, "dev-secret-key-change-in-production",
+    "your-super-secret-key-change-this-in-production-use-openssl-rand-hex-32",
+    "replace-with-a-local-development-secret", "omnitrackr-tests-only-secret-key-32-bytes",
+    "omnitrackr-isolated-test-key-not-for-deployment",
+])
+def test_signing_key_rejects_missing_weak_and_published_values(monkeypatch, key):
+    monkeypatch.setenv("SECRET_KEY", key)
+    with pytest.raises(ValueError, match="SECRET_KEY"):
+        auth._signing_key()
+
+
+def test_email_and_session_signing_use_configured_key():
+    assert auth.SECRET_KEY == auth._signing_key() == email_utils.SECRET_KEY
+
+
 class TestPasswordHashing:
     """Test password hashing and verification."""
     
@@ -588,7 +604,8 @@ class TestResendVerification:
         response = client.post(f"/auth/resend-verification?email={test_user_data['email']}")
         
         assert response.status_code == 200
-        assert "already verified" in response.json()["message"].lower()
+        unknown = client.post("/auth/resend-verification?email=unused@example.com")
+        assert response.json() == unknown.json()
     
     def test_resend_verification_nonexistent_email(self, client):
         """Test resending verification email to non-existent email (should not reveal if email exists)."""

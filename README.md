@@ -160,7 +160,7 @@ Current security measures include:
 
 - Password hashing with bcrypt.
 - JWT-based auth with production-only secure cookie behavior.
-- Required production `SECRET_KEY`.
+- Required private signing key (`SECRET_KEY`).
 - Required production `DATABASE_URL`.
 - Production CORS guard against wildcard origins.
 - Security headers and CSP middleware.
@@ -188,12 +188,12 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Create a `.env` file. For local SQLite development, this is enough:
+Generate a key once with `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Put the result in the `SECRET_KEY` field of your local `.env` file and keep it across restarts.
 
 ```env
 ENVIRONMENT=development
 DATABASE_URL=sqlite:///./movies.db
-SECRET_KEY=replace-with-a-local-development-secret
+SECRET_KEY=
 APP_URL=http://localhost:8000
 SITE_URL=http://localhost:8000
 ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
@@ -219,7 +219,7 @@ Core:
 | --- | --- | --- |
 | `ENVIRONMENT` | Recommended | Use `production` on Render and `development` locally. |
 | `DATABASE_URL` | Required in production | PostgreSQL URL in production, SQLite URL locally. |
-| `SECRET_KEY` | Required in production | JWT and signed-token secret. |
+| `SECRET_KEY` | Required | Private, persistent signing key of at least 32 bytes. Changing it invalidates sessions, signed links, authenticator setups and their recovery codes. |
 | `APP_URL` | Recommended | Base URL used in email links. |
 | `SITE_URL` | Recommended | Public site URL for sitemap, reviews, and SEO output. |
 | `SITE_DOMAIN` | Optional | Domain used in seller/ads metadata. |

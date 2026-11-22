@@ -2010,6 +2010,14 @@ class MemberStart(Base):
     skipped_at = Column(DateTime, nullable=True)
 
 
+class UsedPasskeyChallenge(Base):
+    """Successful ceremonies retain a replay marker until their signed cookie expires."""
+    __tablename__ = "used_passkey_challenges"
+
+    digest = Column(String(64), primary_key=True)
+    used_at = Column(DateTime, nullable=False, index=True)
+
+
 class UserPasskey(Base):
     """A passkey (WebAuthn credential) a member can log in with (Oct 2026).
 
