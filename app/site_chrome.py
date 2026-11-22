@@ -57,6 +57,7 @@ NAV_MENUS = (
         ("discussions", "Discussions", "/discussions", "Talk about what you're watching, playing and reading"),
         ("collections", "Collections", "/collections/explore", "Themed lists people put together"),
         ("lists", "Shared lists & clubs", "/lists", "Plan what to watch or read with friends"),
+        ("together", "Watch together", "/together", "A show or book with friends at the same weekly pace"),
         ("supporters", "Supporters", "/supporters", "The people who keep the site running"),
     )),
 )
@@ -115,6 +116,7 @@ FOOTER_GROUPS = (
         ("Discussions", "/discussions"),
         ("Collections", "/collections/explore"),
         ("Shared lists & clubs", "/lists"),
+        ("Watch together", "/together"),
         ("Supporters", "/supporters"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),

@@ -99,6 +99,12 @@ TITLES = {
     "advent_door": "A new door is open",
     "your_week": "Your week",
     "service_arrival": "Now on your services",
+    "together_invite": "Watch it together?",
+    "together_joined": "Someone joined your plan",
+    "together_note": "A note is waiting",
+    "together_ahead": "Done with this week",
+    "together_done": "Finished it",
+    "together_week": "A new week together",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -114,6 +120,9 @@ TOPICS = (
      ("service_arrival",)),
     ("clubs", "Watch club picks", "A new pick on your shared lists, and a nudge two days before it's due.", True,
      ("club_pick", "club_due_soon", "shared_list_added")),
+    ("together", "Watch together", "When a friend asks you in, joins, leaves a note you can read, or gets "
+     "through the week before you, and when a new week starts.", True,
+     ("together_invite", "together_joined", "together_note", "together_ahead", "together_done", "together_week")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
      ("friend_recommendation", "friend_recommendation_added", "recommendation_received",
       "recommendation_invitation", "take_received")),

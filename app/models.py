@@ -2527,3 +2527,86 @@ class ServiceShare(Base):
     token = Column(String(32), nullable=False, unique=True, index=True)
     opened = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TogetherPlan(Base):
+    """Watch or read one title together at a weekly pace (Nov 2026): /together/<id>.
+
+    New tables only. A plan covers one run of parts of one title: a season of a show, an
+    anime, a book or manga by chapter, a podcast or audiobook. The title is copied in when
+    the plan starts, so nobody's library is read for it later. ``token`` is the invite link
+    (/together/join/<token>); a new link retires the old one. ``week_sent`` is the last week
+    whose "this week" notice went out, so each week is announced once.
+    """
+    __tablename__ = "together_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    category = Column(String(16), nullable=False)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    image = Column(String(500), nullable=True)
+    unit = Column(String(8), nullable=False)  # episode, chapter
+    season = Column(Integer, nullable=True)
+    total = Column(Integer, nullable=False)
+    pace = Column(Integer, nullable=False)  # parts a week
+    starts_on = Column(Date, nullable=False)
+    week_sent = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+
+    members = relationship("TogetherMember", cascade="all, delete-orphan", back_populates="plan")
+    notes = relationship("TogetherNote", cascade="all, delete-orphan")
+
+
+class TogetherMember(Base):
+    """One person in a together plan and how far they've got.
+
+    ``position`` is the last part they finished (0 before the first). It follows their own
+    library checkpoint while ``follow_library`` is on and ``item_id`` points at their copy of
+    the title, but only checkpoints saved after ``moved_at`` count, so joining with an old
+    checkpoint (a rewatch) never jumps anyone ahead. ``done_week`` and ``emailed_week`` keep
+    the "done for the week" notice and the reminder email to once a week each. ``seen_at`` and
+    ``seen_position`` are when and where the member last had the plan open, so a note counts as
+    new when it was written since then or sits past the place they had reached.
+    """
+    __tablename__ = "together_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    position = Column(Integer, nullable=False, default=0)
+    moved_at = Column(DateTime, nullable=True)
+    item_id = Column(Integer, nullable=True)
+    follow_library = Column(Boolean, nullable=False, default=True)
+    done_week = Column(Integer, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    seen_at = Column(DateTime, nullable=True)
+    seen_position = Column(Integer, nullable=True)
+    remind_email = Column(Boolean, nullable=False, default=True)
+    emailed_week = Column(Integer, nullable=True)
+
+    plan = relationship("TogetherPlan", back_populates="members")
+
+    __table_args__ = (UniqueConstraint("plan_id", "user_id", name="uq_together_member"),)
+
+
+class TogetherNote(Base):
+    """A note left at one part of a together plan. Others read it once they reach that part.
+
+    Part 0 means "before we start" and everyone can read it.
+    """
+    __tablename__ = "together_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    part = Column(Integer, nullable=False)
+    body = Column(String(500), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (Index("ix_together_notes_plan_part", "plan_id", "part"),)

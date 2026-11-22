@@ -104,6 +104,7 @@
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
   <link rel="stylesheet" href="/static/streaming.css?v=20261122-tonight-share-1">
   <link rel="stylesheet" href="/static/rankings.css?v=20261122-ranked-share-1">
+  <link rel="stylesheet" href="/static/together-home.css?v=20261122-together-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -706,6 +707,19 @@
           </div>
         </section>
         </div>
+        <!-- Watch together: plans the member shares with friends, where everyone is this week, and a button
+             that moves them one episode or chapter on (together-home.js). Only shown with a plan running. -->
+        <section id="togetherHome" class="together-home" aria-labelledby="togetherHomeTitle" hidden>
+          <div class="together-home__head">
+            <div class="together-home__intro">
+              <p class="together-home__eyebrow">Watch together</p>
+              <h2 id="togetherHomeTitle" class="together-home__title">With friends this week</h2>
+            </div>
+            <a class="together-home__more" href="/together">All plans</a>
+          </div>
+          <ul id="togetherHomeList" class="together-home__list" aria-live="polite"></ul>
+          <p id="togetherHomeStatus" class="together-home__status" role="status" aria-live="polite"></p>
+        </section>
         <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
              newest arrivals first. Asks which services once, then lists them (streaming.js). -->
         <section id="onYourServices" class="on-services" aria-labelledby="onYourServicesTitle" hidden>
@@ -783,6 +797,7 @@
             <div class="next-up-queue__actions">
               <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
               <a class="next-up-queue__toggle next-up-queue__poll" href="/tonight">Let friends vote</a>
+              <a class="next-up-queue__toggle next-up-queue__poll" href="/together">Watch with friends</a>
               <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
             </div>
           </div>
@@ -2759,7 +2774,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261121-feed-runs-1"></script>
-  <script src="/static/home-layout.js?v=20261122-rankings-1"></script>
+  <script src="/static/home-layout.js?v=20261122-together-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261122-streaming-1"></script>
@@ -2791,6 +2806,7 @@
   <script src="/static/your-week.js?v=20261120-your-week-2" defer></script>
   <script src="/static/streaming.js?v=20261122-svc-sweep-1" defer></script>
   <script src="/static/rankings.js?v=20261122-ranked-sweep-1" defer></script>
+  <script src="/static/together-home.js?v=20261122-together-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261122-shelf-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
