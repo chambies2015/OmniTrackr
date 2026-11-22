@@ -224,6 +224,7 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "compare.html",
     "contact.html",
     "content_quality.html",
+    "corrections.html",
     "demo.html",
     "export_import_guide.html",
     "faq.html",
@@ -1619,6 +1620,19 @@ async def content_quality_page(request: Request):
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+@app.get("/corrections", tags=["public"])
+async def corrections_page(request: Request):
+    from . import corrections_log
+    response = strict_template_response("corrections.html", request, {
+        "<!--LOG_MODIFIED-->": corrections_log.latest_date(),
+        "<!--CORRECTIONS_LOG-->": corrections_log.log_html(),
+        "<!--POLICY_LOG-->": corrections_log.policy_html(),
+    })
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/site-map", tags=["public"])
 async def site_map_page(request: Request):
     from . import editorial_index
@@ -1631,7 +1645,9 @@ async def site_map_page(request: Request):
 
 @app.get("/about", tags=["public"])
 async def about_page(request: Request):
-    response = strict_template_response("about.html", request)
+    from . import editorial_index
+    response = strict_template_response("about.html", request,
+                                        {"<!--GUIDE_COUNT-->": f"{len(editorial_index.entries()):,}"})
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

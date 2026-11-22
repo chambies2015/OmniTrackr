@@ -382,3 +382,48 @@ html[data-reader][data-theme="light"] .public-reader .reader-shell {
 .public-reader .reader-shell .reader-related__card { box-shadow: var(--reader-card-shadow, inset 0 1px 0 rgba(255, 255, 255, .06)); }
 .public-reader :is(.guide-card, .hub-card, .directory-card):hover,
 .public-reader .reader-shell .reader-related__card:hover { box-shadow: var(--reader-card-shadow-hover, inset 0 1px 0 rgba(255, 255, 255, .08)); }
+
+/* /corrections: the change log (corrections_log.py). */
+.public-reader .reader-shell { --fix-amber: #fbbf24; }
+html[data-reader][data-theme="light"] .public-reader .reader-shell { --fix-amber: #a16207; }
+@media (prefers-color-scheme: light) {
+  html[data-reader]:not([data-theme="dark"]) .public-reader .reader-shell { --fix-amber: #a16207; }
+}
+.public-reader .fix-kind {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-block;
+  font-family: var(--site-font);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.5;
+  margin-right: 6px;
+  padding: 0 8px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+.public-reader .fix-kind--correction { color: var(--fix-amber); }
+.public-reader .fix-kind--update { color: var(--site-teal); }
+.public-reader .fix-kind--added { color: var(--site-violet-soft); }
+.public-reader .fix-kind--edited { color: var(--site-muted); }
+.public-reader ul.fix-kinds { list-style: none; padding-left: 0; }
+.public-reader .fix-kinds li { margin: 0 0 8px; }
+.public-reader .fix-day { font-size: 1rem; margin: 28px 0 10px; }
+.public-reader .fix-day time { color: var(--reader-strong); }
+.public-reader ul.fix-log { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.public-reader .fix-entry {
+  background: var(--reader-card);
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  box-shadow: var(--reader-card-shadow);
+  padding: 14px 18px;
+}
+.public-reader .fix-entry__what { font-weight: 700; }
+.public-reader .fix-entry__date { color: var(--site-muted); display: block; font-size: .85rem; }
+.public-reader .fix-entry p { margin: 6px 0 0; }
+.public-reader .fix-pages { margin-top: 8px; }
+.public-reader .fix-pages summary { color: var(--site-muted); cursor: pointer; font-size: .9rem; font-weight: 600; }
+.public-reader .fix-pages ul { columns: 2 16rem; column-gap: 28px; margin: 8px 0 0; padding-left: 1.1rem; }
+.public-reader .fix-pages li { break-inside: avoid; font-size: .92rem; margin: 0 0 4px; }

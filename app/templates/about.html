@@ -39,9 +39,40 @@
     "description": "OmniTrackr is a free, independent media tracker for movies, TV shows, anime, video games, music, books, manga, podcasts and audiobooks, with free guides to what to watch, play, read and hear next.",
     "url": "https://omnitrackr.xyz/about",
     "inLanguage": "en-US",
-    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
-    "dateModified": "2026-11-17",
-    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "OmniTrackr",
+      "url": "https://omnitrackr.xyz"
+    },
+    "dateModified": "2026-11-22",
+    "mainEntity": {
+      "@type": "Organization",
+      "@id": "https://omnitrackr.xyz/#organization",
+      "name": "OmniTrackr",
+      "url": "https://omnitrackr.xyz/",
+      "logo": "https://omnitrackr.xyz/omnitrackr_vortex.png",
+      "description": "An independent, free media tracker for movies, TV shows, anime, video games, music, books, manga, podcasts and audiobooks, with free written guides to what to try next. Run by one person.",
+      "email": "omnitrackr@gmail.com",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "omnitrackr@gmail.com",
+        "url": "https://omnitrackr.xyz/contact",
+        "availableLanguage": "English"
+      },
+      "publishingPrinciples": "https://omnitrackr.xyz/content-quality",
+      "correctionsPolicy": "https://omnitrackr.xyz/corrections",
+      "ethicsPolicy": "https://omnitrackr.xyz/content-quality",
+      "actionableFeedbackPolicy": "https://omnitrackr.xyz/corrections#send",
+      "ownershipFundingInfo": "https://omnitrackr.xyz/about#money-heading",
+      "sameAs": [
+        "https://ko-fi.com/omnitrackr",
+        "https://github.com/chambies2015/OmniTrackr"
+      ]
+    },
+    "publisher": {
+      "@id": "https://omnitrackr.xyz/#organization"
+    }
   }
   </script>
 </head>
@@ -70,7 +101,7 @@
         <ul>
           <li><strong><a href="/in-order">In order</a></strong> guides walk through long franchises such as Star Wars, The Witcher, Dune and Zelda. Each gives more than one order, says who each one suits and recommends one.</li>
           <li><strong><a href="/if-you-liked">If you liked</a></strong> guides start from one favourite and suggest what to try next in other formats, with a caveat for every pick.</li>
-          <li><strong><a href="/discover">Discover</a></strong> guides connect a film, a show, a game, an album and a book through one idea, compare them by pace and commitment, and link the sources used to check the facts. A monthly edition on the <a href="/discover">Discover page</a> adds a new theme each month.</li>
+          <li><strong><a href="/discover">Discover</a></strong> guides connect four titles in different formats through one idea, such as a film, an anime, a game and a book about finding your feet. They compare the four by pace and commitment and link the sources used to check the facts. A monthly edition on the <a href="/discover">Discover page</a> adds a new theme each month.</li>
           <li><strong><a href="/daily">OmniTrackr Daily</a></strong> is a guess-the-title puzzle with a new movie, show, anime, game, book or album every day. Past puzzles stay playable, with the answer and a short note on why the title is worth your time.</li>
           <li><strong><a href="/essentials">The Essential 100</a></strong> is nine lists of 100 all-time titles each, from films and albums to manga, podcasts and audiobooks, with why each one is there and where to start. Every list doubles as a checklist you can tick off.</li>
           <li><strong><a href="/best-of">Best of the year</a></strong> lists pick the year's best new releases in nine formats, from movies and anime to manga, podcasts and audiobooks. Each pick says why it made the cut and what might put you off. The <a href="/holidays">holiday guide</a> does the same for the winter break, sorted by how festive you want it.</li>
@@ -86,14 +117,21 @@
 
       <section class="privacy-section" aria-labelledby="who-heading">
         <h2 id="who-heading">Who runs it</h2>
-        <p>OmniTrackr is an independent project run by one person. It is not part of a studio, publisher, streaming service or media company, and nobody pays to be included in a guide or to be ranked higher in one.</p>
-        <p>Every guide is reviewed by the site owner before it is published. Release years, cast, creators and story order are checked against public and official sources, and the Discover guides link every source they use. Opinions about mood, pace and who a title suits are labelled as editorial opinion, never presented as facts or as first-hand experience. Every guide shows the date it was last checked. The <a href="/content-quality">editorial standards</a> page explains the rules in full.</p>
-        <p>If something is wrong, out of date or spoils more than it should, <a href="/contact">tell us</a>. Corrections are made on the page itself and the checked date moves forward.</p>
+        <p>OmniTrackr is an independent project run by one person. It is not part of a studio, publisher, streaming service or media company, and nobody pays to be included in a guide or to be ranked higher in one. The code that runs the site is <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer">public on GitHub</a>, so anyone can read how the tracker works and how private data is handled.</p>
+        <p>Every guide is reviewed by the site owner before it is published. Drafts are written with AI writing tools. Release years, cast, creators and story order are then checked against public and official sources, and the Discover guides link every source they use. Opinions about mood, pace and who a title suits are labelled as editorial opinion, never presented as facts or as first-hand experience. Every guide shows the date it was last checked. The <a href="/content-quality">editorial standards</a> page explains the rules in full.</p>
+        <p>If something is wrong, out of date or spoils more than it should, <a href="/corrections#send">tell us</a>. Corrections are made on the page itself, the checked date moves forward, and the change goes in the <a href="/corrections">corrections log</a>, which lists what each guide used to say.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="history-heading">
+        <h2 id="history-heading">How it got here</h2>
+        <p>Work on OmniTrackr began in September 2025. By the end of that November it tracked movies, TV shows and anime, video games followed in December, and music and books in February 2026.</p>
+        <p>The written guides started in September 2026 with ten Discover guides. The If you liked and In order guides followed in October, the same month manga, podcasts and audiobooks got shelves of their own and the tracker reached nine formats. November added the "how long does it take" guides, the best of the year in all nine formats, awards ballots, the holiday guides and the Essential 100.</p>
+        <p>There are <!--GUIDE_COUNT--> written guides today. Each shows the date it was first published and the date it was last checked, and <a href="/changelog">What's new</a> lists the tracker's releases since June 2026.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="money-heading">
         <h2 id="money-heading">How it is paid for</h2>
-        <p>OmniTrackr has no paywall: every tracking feature is free and stays free. Hosting is paid for in two ways: advertising on some public guide pages, and readers who choose to <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">support the site on Ko-fi</a>, either once or with a monthly membership from $3. Memberships add cosmetic extras such as profile banners and a supporter badge; they never unlock tracking features. Signed-in members do not see ads, and ads never appear inside a private library. The <a href="/advertising">ads and affiliates</a> page lists where ads can appear and how affiliate links are labelled, and the <a href="/supporters">supporters page</a> thanks the people who chip in.</p>
+        <p>OmniTrackr has no paywall: every tracking feature is free and stays free. The site owner pays for hosting. Three things help cover it: advertising on some public guide pages, Amazon affiliate links on a few pages that say so, and readers who choose to <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">support the site on Ko-fi</a>, either once or with a monthly membership from $3. Memberships add cosmetic extras such as profile banners and a supporter badge; they never unlock tracking features. Signed-in members do not see ads, and ads never appear inside a private library. The <a href="/advertising">ads and affiliates</a> page lists where ads can appear and how affiliate links are labelled, and the <a href="/supporters">supporters page</a> thanks the people who chip in.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="trust-heading">

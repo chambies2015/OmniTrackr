@@ -20,7 +20,7 @@ from .profiles import _CardCache
 
 router = APIRouter(tags=["awards"])
 _CARDS = _CardCache(size=64)
-CSS_VERSION = "20261112-awards-1"
+CSS_VERSION = "20261122-trust-1"
 JS_VERSION = "20261112-awards-1"
 COMPLETE_WORDS = {"movie": "Watched", "tv": "Watched", "anime": "Watched", "game": "Played", "album": "Listened", "book": "Read"}
 MAX_CATEGORIES = 80
