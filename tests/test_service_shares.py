@@ -97,7 +97,8 @@ def shared(client, db, name="nova"):
 def test_the_home_card_offers_a_link_and_makes_one_once(client, db_session):
     user = stocked(client, db_session)
     card = client.get("/api/streaming", headers=headers(user)).json()["card"]
-    assert card["share"] == {"path": None, "opened": 0, "allowed": True, "reason": None, "count": 4, "story": None}
+    assert card["share"] == {"path": None, "opened": 0, "allowed": True, "reason": None, "count": 4, "story": None,
+                             "left_out": []}
     user_path = share_on(client, user).json()["share"]["path"]
     assert re.fullmatch(r"/on-my-services/[A-Za-z0-9_-]{16,32}", user_path)
     again = share_on(client, user).json()["share"]

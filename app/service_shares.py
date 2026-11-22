@@ -110,13 +110,32 @@ def items_for(db: Session, user: models.User, now: Optional[datetime] = None) ->
     return items, picked
 
 
+def _count(db: Session, user: models.User, picked: dict, categories: list[str]) -> int:
+    """How many titles items_for() would list, without building them.
+
+    The home card asks on every refresh, so this reads only the matching keys: items_for() loads every
+    sighting on every service and works out each title's link, which doubled the card's time on a big list.
+    """
+    if not picked or not categories:
+        return 0
+    keys = sorted({entry.key for entry in streaming_services.entries_for(db, user.id, categories=categories)})
+    found = set()
+    for chunk in streaming_services._chunks(keys):
+        found.update(key for key, in db.query(models.ServiceSighting.title_key).filter(
+            models.ServiceSighting.title_key.in_(chunk), models.ServiceSighting.gone_at.is_(None),
+            models.ServiceSighting.service.in_(sorted(picked))).distinct())
+    return len(found)
+
+
 def state(db: Session, user: models.User, now: Optional[datetime] = None) -> dict:
     """What the home card shows about the link."""
     share = mine(db, user.id)
-    items, picked = items_for(db, user, now)
+    picked = streaming_services.chosen(streaming_services.get_choice(db, user.id))
+    categories = _categories(user)
+    count = _count(db, user, picked, categories)
     if not picked:
         reason = "services"
-    elif len(items) < MIN_TITLES:
+    elif count < MIN_TITLES:
         reason = "few"
     else:
         reason = None
@@ -125,8 +144,10 @@ def state(db: Session, user: models.User, now: Optional[datetime] = None) -> dic
         "opened": int(share.opened or 0) if share else 0,
         "allowed": reason is None,
         "reason": reason,
-        "count": len(items),
+        "count": count,
         "story": f"{path_for(share)}/story.png" if share else None,
+        # Formats the link leaves out because the shelf is private or hidden; the card still lists them.
+        "left_out": [category for category in streaming_services.CATEGORIES if category not in categories],
     }
 
 
@@ -214,7 +235,9 @@ def view(db: Session, share: models.ServiceShare, now: Optional[datetime] = None
 
 
 def fingerprint(data: dict) -> str:
-    parts = [str(data["total"]), str(data["new"]), data.get("by") or ""]
+    # Everything the pictures draw: the services line and the formats line too, not only the first posters.
+    parts = [str(data["total"]), str(data["new"]), data.get("by") or "",
+             ",".join(service["id"] for service in data["services"]), ",".join(data["kinds"])]
     parts += [f'{item["title"]}|{item.get("year") or ""}|{item.get("image") or ""}|'
               + ",".join(f'{service["id"]}{"*" if service["new"] else ""}' for service in item["services"])
               for item in data["items"][:PICTURE_SHOWN]]
@@ -314,9 +337,10 @@ def render_card(data: dict, posters: dict) -> bytes:
     draw.text((pad, 116), _fit(draw, line, line_font, CARD_W - pad * 2), font=line_font, fill=MUTED)
 
     shown = data["items"][:PICTURE_SHOWN]
-    columns = PICTURE_SHOWN
-    cell = (CARD_W - pad * 2) // columns
-    art_w, art_h = cell - 16, (cell - 16) * 3 // 2
+    columns, gap = PICTURE_SHOWN, 16
+    # The gap sits between posters only, so the last one ends at the right margin like the line below.
+    cell = (CARD_W - pad * 2 + gap) // columns
+    art_w, art_h = cell - gap, (cell - gap) * 3 // 2
     top = 160
     name_font, where_font, letter_font, badge_font = _font(18, bold=True), _font(15, bold=True), _font(60, bold=True), _font(13, bold=True)
     for index, item in enumerate(shown):

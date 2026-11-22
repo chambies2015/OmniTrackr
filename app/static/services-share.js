@@ -160,6 +160,7 @@
     const copy = box.querySelector('[data-svc-copy]');
     const share = box.querySelector('[data-svc-share]');
     const story = box.querySelector('[data-svc-story]');
+    const off = box.querySelector('[data-svc-off]');
     if (copy) copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(url);
@@ -178,6 +179,27 @@
         } catch (error) { /* closed the share sheet */ }
       });
     }
+    // The home card can be hidden for three weeks, so the link can be ended from its own page too.
+    if (off) off.addEventListener('click', async () => {
+      if (off.disabled) return;
+      off.disabled = true;
+      say('Turning the link off…');
+      const headers = { Accept: 'application/json' };
+      try {
+        const token = window.localStorage.getItem('omnitrackr_token');
+        if (token) headers.Authorization = `Bearer ${token}`;
+      } catch (error) { /* the session cookie is enough */ }
+      try {
+        const response = await fetch('/api/streaming/share/off', { method: 'POST', credentials: 'same-origin', headers });
+        if (response.status === 401) { window.location.href = '/#login'; return; }
+        if (!response.ok) throw new Error(String(response.status));
+        box.querySelectorAll('.svc-actions button').forEach(button => { button.disabled = true; button.hidden = true; });
+        say('The link is off. Anyone who opens it now sees that it isn’t shared anymore. You can make a new one from your home card.');
+      } catch (error) {
+        off.disabled = false;
+        say('That didn’t work. Try again in a minute.');
+      }
+    });
     if (story) story.addEventListener('click', async () => {
       const src = story.dataset.src || '';
       if (!/^\/on-my-services\/[A-Za-z0-9_-]{16,32}\/story\.png$/.test(src)) return;

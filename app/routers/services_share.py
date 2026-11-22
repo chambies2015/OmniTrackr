@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from html import escape
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
@@ -13,7 +14,7 @@ from ..dependencies import get_db, get_optional_current_user
 
 router = APIRouter(tags=["streaming services"])
 CSS_VERSION = "20261122-svc-share-1"
-JS_VERSION = "20261122-svc-share-1"
+JS_VERSION = "20261122-svc-sweep-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 SITE = "https://omnitrackr.xyz"
 CARD_POSTER_SECONDS = 8.0
@@ -35,15 +36,27 @@ def _person(request: Request) -> bool:
     return person(request)
 
 
-def _not_found():
+def _not_found(paused: Optional[str] = None):
+    """The page for a link that shows nothing. ``paused`` is the owner's own reason ("services" or "few")."""
     from ..csp import strict_html_response
     from ..site_chrome import message_page
-    response = strict_html_response(message_page(
-        "List not found", "This list isn't shared anymore",
-        "Whoever shared it may have turned the link off or changed their services. "
-        "Pick the services you have and OmniTrackr shows what on your own list you can stream on them.",
-        actions=(("Create a free account", "/#signup"), ("See what OmniTrackr does", "/about"))),
-        status_code=404)
+    if paused:
+        # The member's own link with nothing to show right now. Visitors get the page below instead.
+        why = ("You have no streaming services picked, so anyone who opens it sees that it isn't shared anymore. "
+               "Pick them again on your home card and the same link works.") if paused == "services" else (
+               "Fewer than three titles from your list are on your services right now, so anyone who opens it sees "
+               "that it isn't shared anymore. It comes back by itself when there are three again. Titles on "
+               "private or hidden shelves don't count.")
+        page = message_page("Your link is paused", "Your link is paused",
+                            why + " To end it for good, turn it off on your home card.",
+                            actions=(("Open your home card", "/#on-your-services"),))
+    else:
+        page = message_page(
+            "List not found", "This list isn't shared anymore",
+            "Whoever shared it may have turned the link off or changed their services. "
+            "Pick the services you have and OmniTrackr shows what on your own list you can stream on them.",
+            actions=(("Create a free account", "/#signup"), ("See what OmniTrackr does", "/about")))
+    response = strict_html_response(page, status_code=404)
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
@@ -117,6 +130,8 @@ def shared_services_page(token: str, request: Request, user=Depends(get_optional
     share = service_shares.by_token(db, token)
     data = service_shares.view(db, share) if share is not None else None
     if data is None:
+        if share is not None and user is not None and user.id == share.user_id:
+            return _not_found(paused=service_shares.state(db, user)["reason"] or "few")
         return _not_found()
     owner = user is not None and user.id == data["owner_id"]
     signed_in = user is not None
@@ -154,7 +169,9 @@ def shared_services_page(token: str, request: Request, user=Depends(get_optional
                   '<button type="button" class="site-btn site-btn--primary site-btn--sm" data-svc-copy>Copy link</button>'
                   '<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-svc-share hidden>Share</button>'
                   f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-svc-story data-src="{_e(data["path"])}/story.png">Save image for stories</button>'
-                  '<a class="site-btn site-btn--ghost site-btn--sm" href="/#on-your-services">Open your home card</a></div>'
+                  '<a class="site-btn site-btn--ghost site-btn--sm" href="/#on-your-services">Open your home card</a>'
+                  # The home card can be hidden for three weeks, so the link can be ended from here too.
+                  '<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-svc-off>Turn off the link</button></div>'
                   '<p class="svc-status" data-svc-owner-status role="status" aria-live="polite"></p></aside>') if owner else ''
     guest_html = '' if signed_in else (
         '<aside class="svc-cta"><div><p class="svc-cta__title">Know when the rest start streaming</p>'
