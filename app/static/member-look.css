@@ -1,0 +1,325 @@
+/* Member app look refresh, Nov 22 2026.
+
+   The signed-in app in the same dress as the public pages after their Nov 21 refresh
+   (site.css): the nine-format spectrum as the brand mark, Poppins 800 at a slightly
+   looser track for page titles, a hairline of light along the top of dark cards, and
+   one filled button colour that keeps white text above 4.5:1.
+
+   Visual only: every id, handler and layout hook stays where library.js, home.js and
+   friends.js expect it. Loaded after library-view.css and before member-phone.css, so
+   the phone layer still has the last word on small screens. */
+
+/* ---------- Tokens ---------- */
+body.app-shell {
+  /* The nine format colours and their spectrum, the same values as site.css :root. */
+  --fmt-movie: #f472b6;
+  --fmt-tv: #60a5fa;
+  --fmt-anime: #f87171;
+  --fmt-game: #34d399;
+  --fmt-album: #a78bfa;
+  --fmt-book: #fbbf24;
+  --fmt-manga: #fb923c;
+  --fmt-podcast: #2dd4bf;
+  --fmt-audiobook: #e879f9;
+  --spectrum: linear-gradient(90deg, #f87171, #fb923c, #fbbf24, #34d399, #2dd4bf, #60a5fa, #a78bfa, #e879f9, #f472b6);
+  --spectrum-fade: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  /* Page titles. Poppins 800 at the old -.04em let letters touch. */
+  --display-track: -.032em;
+  /* Filled buttons: the public site's button violet. White text on #a855f7 was 4.0:1. */
+  --cta: #7f4ef0;
+  --cta-2: #963cf0;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 8px 18px -10px rgba(127, 78, 240, .75);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .22), 0 12px 24px -12px rgba(127, 78, 240, .9);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .7);
+  --name-ink: linear-gradient(100deg, #be185d 0%, #7c3aed 40%, #1d4ed8 70%, #0f766e 100%);
+  --bar-lift: 0 16px 36px -18px rgba(26, 34, 56, .28);
+}
+body.app-shell.dark-mode {
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 10px 24px -10px rgba(127, 78, 240, .9);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .22), 0 16px 32px -12px rgba(127, 78, 240, 1);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .06);
+  /* Every card already takes --shadow-sm; this lifts its top-edge highlight from .03 to the public cards' .06. */
+  --shadow-sm: var(--edge), 0 8px 24px rgba(0, 0, 0, .25);
+  --name-ink: linear-gradient(100deg, #f9a8d4 0%, #c4b5fd 38%, #93c5fd 66%, #5eead4 100%);
+  --bar-lift: 0 18px 40px -16px rgba(0, 0, 0, .6);
+}
+/* Supporter themes (app-themes.css) recolour the filled buttons too, through their own
+   accent. Every theme accent keeps white text at 4.8:1 or better, and the second stop
+   is darker still. */
+body.app-shell[data-app-theme] {
+  --cta: var(--accent-solid);
+  --cta-2: color-mix(in srgb, var(--accent-solid) 86%, #000);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 8px 18px -10px color-mix(in srgb, var(--accent-solid) 80%, transparent);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .2), 0 12px 24px -12px color-mix(in srgb, var(--accent-solid) 95%, transparent);
+}
+
+/* ---------- App bar ---------- */
+/* The header card carries the brand line along its bottom edge, like the public header. */
+body.app-shell .header { position: relative; }
+body.app-shell .header::after {
+  background: var(--spectrum);
+  bottom: -1px;
+  content: "";
+  height: 1px;
+  left: 18px;
+  -webkit-mask-image: var(--spectrum-fade);
+  mask-image: var(--spectrum-fade);
+  opacity: .75;
+  pointer-events: none;
+  position: absolute;
+  right: 18px;
+}
+body.app-shell .app-explore > summary { border-radius: var(--radius-pill); box-shadow: var(--edge); }
+body.app-shell .app-explore__panel { border-radius: var(--radius-lg); }
+body.app-shell .app-explore__group p { color: var(--teal); letter-spacing: .12em; }
+
+/* Wider screens: the bar stays in reach while a long library scrolls. It floats 10px
+   below the top edge, frosts what passes under it and settles a shadow once the page
+   has moved (scroll-driven where supported; a static shadow elsewhere is fine). From
+   768px down the search drops to a second row, and phones have the bottom bar, so
+   the bar only sticks while it is one row. */
+@media (min-width: 769px) {
+  html:has(> body.app-shell) { scroll-padding-top: 112px; }
+  body.app-shell .account-toolbar { z-index: 45; }
+  body.app-shell .header {
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    background: color-mix(in srgb, var(--card-bg) 86%, transparent);
+    position: sticky;
+    top: 10px;
+    z-index: 40;
+  }
+  body.app-shell.dark-mode .header {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)), color-mix(in srgb, var(--card-bg) 84%, transparent);
+  }
+  @supports (animation-timeline: scroll()) {
+    body.app-shell .header {
+      animation: member-bar-lift linear both;
+      animation-range: 0 140px;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+@keyframes member-bar-lift {
+  from { box-shadow: var(--shadow-sm); }
+  to { box-shadow: var(--edge), var(--bar-lift); }
+}
+
+/* ---------- Filled buttons ---------- */
+/* The violet gradients these used ended on #a855f7, where white text is 4.0:1. */
+body.app-shell :is(.quick-capture-trigger,
+  .library-add-form button[type="submit"],
+  .library-launchpad__primary,
+  .todays-pick button.action-btn:first-of-type,
+  .home-board .todays-pick__open,
+  .backlog-draw__btn--primary,
+  .for-you-item__add,
+  .home-focus__actions button.home-focus__primary,
+  .account-toolbar .site-stats-link) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  border-color: transparent;
+  box-shadow: var(--cta-shadow);
+  color: #fff;
+}
+body.app-shell :is(.quick-capture-trigger,
+  .library-add-form button[type="submit"],
+  .library-launchpad__primary,
+  .todays-pick button.action-btn:first-of-type,
+  .home-board .todays-pick__open,
+  .backlog-draw__btn--primary,
+  .for-you-item__add,
+  .home-focus__actions button.home-focus__primary,
+  .account-toolbar .site-stats-link):hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.04);
+}
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  box-shadow: var(--cta-shadow);
+}
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall):hover:not(:disabled) { box-shadow: var(--cta-shadow-hover); filter: brightness(1.04); }
+body.app-shell .quick-capture-trigger kbd { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .34); opacity: 1; }
+@media (max-width: 760px) {
+  .app-dock__add { background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 12px 24px -8px rgba(127, 78, 240, .8); }
+  .app-dock__item[aria-current="page"]::before { background: var(--spectrum, var(--primary)); left: 26%; right: 26%; }
+}
+
+/* ---------- Library tabs ---------- */
+/* The open library takes its own format colour, like the chips in the public footer. */
+body.app-shell .tabs .library-nav__group:not(.library-nav__group--tools) .tab[data-switch-tab].active {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 15%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 62%, transparent);
+  box-shadow: var(--edge);
+}
+body.app-shell .library-nav__label { letter-spacing: .14em; }
+
+/* ---------- Page titles and kickers ---------- */
+body.app-shell :is(.home-hero__title,
+  .library-section .library-panel > .library-heading h2,
+  .stats-head h2,
+  .social-head h2,
+  .picks-hero h2,
+  .activity-hero h2,
+  .postcards-hero h2,
+  .collections-hero h2) {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: var(--display-track);
+}
+/* The member's name in the welcome line runs through four of the format colours,
+   like "One library." on the homepage. */
+body.app-shell .home-hero__name {
+  background: var(--name-ink);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+@media (forced-colors: active) {
+  body.app-shell .home-hero__name { background: none; color: inherit; -webkit-text-fill-color: currentColor; }
+}
+/* A short spectrum tick before each page's kicker line, as on the public pages. */
+body.app-shell :is(.home-hero__date:not(:empty),
+  .stats-head__eyebrow,
+  .social-head__eyebrow,
+  .picks-hero__eyebrow,
+  .activity-hero__eyebrow,
+  .postcards-hero .postcards-eyebrow,
+  .collections-hero__eyebrow)::before {
+  background: var(--spectrum);
+  border-radius: 2px;
+  content: "";
+  display: inline-block;
+  height: 2px;
+  margin-right: 10px;
+  vertical-align: .32em;
+  width: 18px;
+}
+
+/* ---------- Welcome strip ---------- */
+/* A faint dot grid behind the fanned covers, fading out before the greeting. */
+body.app-shell .home-hero::before {
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 13%, transparent) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  content: "";
+  inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse 42% 80% at 86% 50%, #000 10%, transparent 72%);
+  mask-image: radial-gradient(ellipse 42% 80% at 86% 50%, #000 10%, transparent 72%);
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+/* One column (covers above the greeting) leaves no quiet corner for it. */
+body.app-shell .home-hero:not(.home-hero--covers)::before { display: none; }
+@media (max-width: 900px) {
+  body.app-shell .home-hero::before { display: none; }
+}
+body.app-shell .home-hero__mix { box-shadow: var(--edge); }
+
+/* ---------- Statistics ---------- */
+/* Finished, by format: each bar in its format's colour, the rest of it a tint of the same. */
+body.app-shell .stats-mix__row[data-format] .stats-mix__done { background: hsl(var(--fmt-hue) 72% var(--fmt-dot-l)); }
+body.app-shell .stats-mix__row[data-format] .stats-mix__total { background: hsl(var(--fmt-hue) 60% var(--fmt-dot-l) / .2); }
+body.app-shell .stats-legend__key--done { background: var(--spectrum); }
+body.app-shell .stats-tab[data-format][aria-selected="true"] {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 15%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 62%, transparent);
+}
+
+/* ---------- Footer ---------- */
+/* Same three bands as the public footer: who we are with the Ko-fi ask and the nine
+   libraries, the link columns, then the legal line. The spectrum runs along the top. */
+body.app-shell #mainFooter.app-footer { border-top: 0; padding-top: 0; position: relative; }
+body.app-shell #mainFooter.app-footer::before {
+  background: var(--spectrum);
+  content: "";
+  height: 1px;
+  left: 0;
+  -webkit-mask-image: var(--spectrum-fade);
+  mask-image: var(--spectrum-fade);
+  opacity: .6;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+body.app-shell .app-footer__top {
+  align-items: end;
+  display: grid;
+  gap: 28px 56px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  padding: 40px 0 32px;
+}
+body.app-shell .app-footer__intro p { max-width: 380px; }
+body.app-shell .app-footer__actions { margin-top: 16px; }
+body.app-shell #mainFooter .app-footer__support {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--edge);
+  color: var(--fg);
+  display: inline-flex;
+  font-size: .88rem;
+  font-weight: 600;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+}
+body.app-shell #mainFooter .app-footer__support:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell #mainFooter .app-footer__support span { color: #e11d48; }
+body.app-shell.dark-mode #mainFooter .app-footer__support span { color: #fb7185; }
+body.app-shell .app-footer__formats ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+body.app-shell .app-footer__lib {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--edge);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  gap: 9px;
+  min-height: 36px;
+  padding: 0 14px 0 12px;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+body.app-shell .app-footer__lib::before {
+  background: hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%));
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%) / .22);
+  content: "";
+  flex: none;
+  height: 7px;
+  width: 7px;
+}
+body.app-shell .app-footer__lib:hover {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 10%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 55%, transparent);
+}
+/* A library the member hid from the tab row is hidden here too. */
+body.app-shell:has(.tabs .tab[data-switch-tab="movies"][style*="none"]) .app-footer__lib[data-switch-tab="movies"],
+body.app-shell:has(.tabs .tab[data-switch-tab="tv-shows"][style*="none"]) .app-footer__lib[data-switch-tab="tv-shows"],
+body.app-shell:has(.tabs .tab[data-switch-tab="anime"][style*="none"]) .app-footer__lib[data-switch-tab="anime"],
+body.app-shell:has(.tabs .tab[data-switch-tab="video-games"][style*="none"]) .app-footer__lib[data-switch-tab="video-games"],
+body.app-shell:has(.tabs .tab[data-switch-tab="music"][style*="none"]) .app-footer__lib[data-switch-tab="music"],
+body.app-shell:has(.tabs .tab[data-switch-tab="books"][style*="none"]) .app-footer__lib[data-switch-tab="books"],
+body.app-shell:has(.tabs .tab[data-switch-tab="manga"][style*="none"]) .app-footer__lib[data-switch-tab="manga"],
+body.app-shell:has(.tabs .tab[data-switch-tab="podcasts"][style*="none"]) .app-footer__lib[data-switch-tab="podcasts"],
+body.app-shell:has(.tabs .tab[data-switch-tab="audiobooks"][style*="none"]) .app-footer__lib[data-switch-tab="audiobooks"] { display: none; }
+body.app-shell .app-footer__grid {
+  background: linear-gradient(var(--border), var(--border)) center top / 100% 1px no-repeat;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 32px;
+}
+@media (max-width: 900px) {
+  body.app-shell .app-footer__top { align-items: start; grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .app-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  body.app-shell .app-footer__lib { min-height: 40px; }
+}

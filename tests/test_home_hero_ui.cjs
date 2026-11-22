@@ -81,7 +81,12 @@ test('render fills the strip, tab counts, stat line and covers as text only', ()
     recent: [{ id: 4, category: 'movies', title: '<img src=x>', image: 'https://example.com/a.jpg' }],
   }, new Date(2026, 10, 9, 19));
   assert.equal(nodes.homeHero.hidden, false);
-  assert.equal(nodes.homeHeroTitle.textContent, 'Good evening, <b>maya</b>');
+  // The name is a span of its own (coloured by member-look.css), still set as text.
+  const [before, name, ...after] = nodes.homeHeroTitle.children;
+  assert.equal(before, 'Good evening, ');
+  assert.equal(name.className, 'home-hero__name');
+  assert.equal(name.textContent, '<b>maya</b>');
+  assert.deepEqual(after, []);
   assert.equal(nodes.homeHeroDate.textContent, 'Monday, November 9');
   assert.equal(nodes.homeHeroStats.children.length, 4);
   assert.equal(tab.dataset.count, '8');
