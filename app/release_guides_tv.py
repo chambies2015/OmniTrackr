@@ -18,7 +18,7 @@ GUIDES = {
         "summary": ("Nineteen winter 2027 TV premieres worth your time, from The Pitt, Ahsoka and 3 Body Problem "
                     "to The Wanted Man and Criminal, with what to watch first."),
         "published": "2026-11-20",
-        "reviewed": "2026-11-20",
+        "reviewed": "2026-11-22",
         "starts": "2027-01-01",
         "ends": "2027-03-31",
         "lead": [
@@ -477,6 +477,9 @@ GUIDES = {
             ("Oswald (February, Disney+).",
              "A three-part miniseries from Jon Favreau that brings back Oswald the Lucky Rabbit, the character Walt "
              "Disney and Ub Iwerks created before Mickey Mouse, mixing hand-drawn animation with live action."),
+            ("Invincible, season 5 (February 17, Prime Video).",
+             "The animated series from Robert Kirkman's comic comes back, with Mark Grayson looking for a way to make "
+             "the world better even if it costs him his friends."),
             ("Overcompensating, season 2 (February 17, Prime Video).",
              "Benito Skinner's college comedy picks up with Benny home for Christmas and still in the closet, with "
              "AnnaSophia Robb and Tom Francis joining the cast."),
@@ -551,6 +554,7 @@ GUIDES = {
             ("What's on Netflix: Grown Ups release date", "https://www.whats-on-netflix.com/news/grown-ups-marian-keys-netflix-series-release-date-first-looks/"),
             ("What's on Netflix: Ginny & Georgia season 4 release date", "https://www.whats-on-netflix.com/news/ginny-georgia-season-4-netflix-release-date-first-look/"),
             ("GamesRadar+: Your Friendly Neighborhood Spider-Man season 2 date", "https://www.gamesradar.com/entertainment/marvel-tv-shows/your-friendly-neighborhood-spider-man-season-2-confirms-venom-and-a-new-release-date/"),
+            ("Comic Book Movie: Invincible season 5 returns February 17", "https://comicbookmovie.com/tv/amazon/invincible/invincible-season-5-first-teaser-reveals-2027-premiere-date-as-new-synopsis-teases-huge-stakes-a231098"),
             ("PinkNews: Overcompensating season 2 release date", "https://www.thepinknews.com/2026/11/09/prime-video-overcompensating-season-2-release-benito-skinner/"),
             ("TheWrap: Jon Favreau's Oswald sets its Disney+ premiere", "https://www.thewrap.com/creative-content/tv-shows/oswald-jon-favreau-miniseries-footage-description-release-date"),
             ("AMC: first look at the final season of Daryl Dixon", "https://www.amc.com/blogs/amc-debuts-first-look-at-the-final-season-of-the-walking-dead-daryl-dixon--1075773"),
