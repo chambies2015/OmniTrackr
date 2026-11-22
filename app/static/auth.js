@@ -65,6 +65,9 @@ function validateDiscoverAuthReturn(value) {
     const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);
     if (sharedCollection && sharedCollection[0] === value
         && (sharedCollection[1] === undefined || Number(sharedCollection[1]) <= 2147483647)) return value;
+    // A top ten someone shared from Rankings, back where a ranking made before signing up is kept.
+    const ranked = value.match(/^\/ranked\/[A-Za-z0-9_-]{16,32}$/);
+    if (ranked && ranked[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
