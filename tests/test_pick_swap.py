@@ -199,9 +199,15 @@ def test_draw_day_draws_on_its_own(client, db_session):
     assert pick_swap.advance(db_session, swap, later)["short"] is False
     join(client, db_session, swap.id, sam)
     db_session.refresh(swap)
-    assert pick_swap.advance(db_session, swap, later)["drawn"] is True
+    # The host was told to draw by hand, so a second person joining doesn't set off a draw of two.
+    assert pick_swap.advance(db_session, swap, later)["drawn"] is False
     db_session.refresh(swap)
-    assert swap.drawn_at is not None
+    assert swap.drawn_at is None
+    # A new draw day starts the clock again.
+    sign_in(client, dana)
+    assert client.patch(f"/api/swaps/{swap.id}", json={"draw_on": (today + timedelta(days=2)).isoformat()}).status_code == 200
+    db_session.refresh(swap)
+    assert pick_swap.advance(db_session, swap, swap.draw_at + timedelta(minutes=1))["drawn"] is True
 
 
 # ---------------------------------------------------------------- picks
@@ -225,7 +231,8 @@ def test_wrapping_a_pick_and_the_formats_rule(client, db_session):
     sign_in(client, sam)
     data = client.get(f"/api/swaps/{made['id']}").json()
     assert "Piranesi" not in str(data) and "received" not in data["me"]
-    assert [person["wrapped"] for person in data["people"]] == [True, False]
+    # Only your own box says whose it is before unwrap day; the count says the rest.
+    assert [person["wrapped"] for person in data["people"]] == [None, False] and data["wrapped"] == 1
 
 
 def test_picking_something_they_have_asks_first(client, db_session):

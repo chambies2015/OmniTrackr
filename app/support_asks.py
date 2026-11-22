@@ -425,7 +425,8 @@ def recent_work(limit: int = 6) -> tuple:
         return ()
     found = []
     for anchor, date, title in _ENTRY.findall(text):
-        if _SKIP.search(title):
+        # Sweep entries are titled "Checking ..." these days, so the anchor is the surer sign.
+        if _SKIP.search(title) or anchor.startswith("security-"):
             continue
         found.append((anchor, date, title.replace("&amp;", "&").replace("&#x27;", "'").replace("&quot;", '"')))
         if len(found) >= limit:

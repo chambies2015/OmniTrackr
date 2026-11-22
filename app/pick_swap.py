@@ -54,6 +54,7 @@ GIFT_NOTE_MAX = 500
 REVEAL_WITHIN_DAYS = 90
 OPEN_HOUR = 8                   # draws and unwrap days start at 8 a.m. in the host's time zone
 REMIND_DAYS = 2
+REMIND_AFTER_DRAW_HOURS = 24    # names drawn close to unwrap day: the reminder doesn't land with the draw
 SHOWN_AFTER_DAYS = 30           # an unwrapped swap stays on the home card and hub this long
 STALE_DAYS = 30                 # a swap never drawn is closed this long after its unwrap day
 INVITE_AGAIN_DAYS = 3
@@ -351,6 +352,17 @@ def settle(db: Session, swap, now: Optional[datetime] = None) -> bool:
 
 # ---------------------------------------------------------------- making and joining
 
+def draw_day(swap) -> Optional[date]:
+    """The draw day still to come. Once it has passed with too few people in, the host draws by hand."""
+    return swap.draw_on if swap.draw_on and swap.short_at is None else None
+
+
+def _draw_ahead(draw_on: Optional[date], tz: int, now: datetime) -> None:
+    if draw_on is not None and _moment(draw_on, tz) <= now:
+        raise SwapError("Names are drawn at 8 a.m. on the draw day, and that time has passed. Pick a later day, "
+                        "or leave it empty and draw by hand.", 422)
+
+
 def _dates(today: date, draw_on: Optional[date], reveal_on: date) -> None:
     if reveal_on <= today:
         raise SwapError("Pick an unwrap day after today.", 422)
@@ -372,6 +384,7 @@ def create(db: Session, user, *, name: str, note: Optional[str], kinds: list[str
         raise SwapError("Give the swap a name, like \"Office swap\" or \"Family picks\".", 422)
     _dates(today, draw_on, reveal_on)
     tz = clamp_tz(tz)
+    _draw_ahead(draw_on, tz, now)
     swap = models.PickSwap(owner_id=user.id, token=secrets.token_urlsafe(16), name=name,
                            note=clean_text(note, NOTE_MAX) or None, kinds=",".join(clean_kinds(kinds)), tz=tz,
                            draw_on=draw_on, draw_at=_moment(draw_on, tz) if draw_on else None,
@@ -412,8 +425,11 @@ def update(db: Session, swap, user, *, name=None, note=None, kinds=None, draw_on
     new_reveal = reveal_on or swap.reveal_on
     if new_draw != swap.draw_on or new_reveal != swap.reveal_on:
         if new_reveal != swap.reveal_on or new_draw is not None:
-            _dates(today, new_draw if current == "open" else None, new_reveal)
+            # A draw day that already passed with too few people in is spent; it doesn't stop a new unwrap day.
+            spent = new_draw == swap.draw_on and swap.short_at is not None
+            _dates(today, new_draw if current == "open" and not spent else None, new_reveal)
         if new_draw != swap.draw_on:
+            _draw_ahead(new_draw, swap.tz, now)
             swap.draw_on = new_draw
             swap.draw_at = _moment(new_draw, swap.tz) if new_draw else None
             swap.short_at = None
@@ -582,7 +598,12 @@ def cancel(db: Session, swap, user, now: Optional[datetime] = None) -> None:
 def new_link(db: Session, swap, user) -> str:
     if swap.owner_id != user.id:
         raise SwapError("Only the host can make a new link.", 403)
+    old = invite_path(swap)
     swap.token = secrets.token_urlsafe(16)
+    # Friends asked in from the friends list were asked by name, so their bell keeps working.
+    db.query(models.Notification).filter(models.Notification.type == "swap_invite",
+                                         models.Notification.link == old).update(
+        {"link": invite_path(swap)}, synchronize_session=False)
     db.commit()
     return invite_url(swap)
 
@@ -700,13 +721,15 @@ def advance(db: Session, swap, now: Optional[datetime] = None) -> dict:
         db.commit()
         db.refresh(swap)
         return done
-    if current == "open" and swap.draw_at is not None and now >= swap.draw_at:
+    # After a draw day with too few people the host was told to draw by hand, so the next person
+    # to join doesn't set off a draw of two.
+    if current == "open" and swap.draw_at is not None and now >= swap.draw_at and swap.short_at is None:
         if len(rows(db, swap.id)) >= DRAW_MIN:
             try:
                 done["drawn"] = draw(db, swap, now)
             except SwapError:
                 db.rollback()
-        elif swap.short_at is None:
+        else:
             swap.short_at = now
             _notify(db, swap.owner_id, "swap_short",
                     f"It's draw day for {swap.name}, but you're the only one in. Send the link to friends and "
@@ -720,7 +743,8 @@ def advance(db: Session, swap, now: Optional[datetime] = None) -> dict:
                 done["revealed"] = reveal(db, swap, now)
             except SwapError:
                 db.rollback()
-        elif swap.reminded_at is None and now >= swap.reveal_at - timedelta(days=REMIND_DAYS):
+        elif (swap.reminded_at is None and now >= swap.reveal_at - timedelta(days=REMIND_DAYS)
+              and (swap.drawn_at is None or now >= swap.drawn_at + timedelta(hours=REMIND_AFTER_DRAW_HOURS))):
             done["reminded"] = remind(db, swap, now)
     return done
 
@@ -931,7 +955,7 @@ def preview(db: Session, swap, today: date) -> dict:
     return {
         "name": swap.name, "note": swap.note or "", "owner": owner, "people": [p.username for _m, p in people],
         "count": len(people), "kinds": kinds_of(swap), "kinds_label": kinds_label(kinds_of(swap)),
-        "draw_label": _day(swap.draw_on) if swap.draw_on else "", "reveal_label": _day(swap.reveal_on),
+        "draw_label": _day(draw_day(swap)) if draw_day(swap) else "", "reveal_label": _day(swap.reveal_on),
         "reveal_on": swap.reveal_on.isoformat(), "state": state_of(swap), "full": len(people) >= MEMBERS_MAX,
         "days": _days_until(swap.reveal_on, today),
     }
@@ -953,14 +977,17 @@ def detail(db: Session, swap, me, viewer, today: date, now: Optional[datetime] =
             "id": member.id, "username": person.username, "initials": _initials(person.username),
             "you": person.id == viewer.id, "host": person.id == swap.owner_id, "wish": member.wish or "",
             "in_draw": bool(member.gives_to) if drawn else None,
-            "wrapped": bool(member.picked_at) if drawn and member.gives_to else None,
+            # Before unwrap day only your own: whose box is wrapped, next to "a pick is wrapped for
+            # you", would tell people who drew them. The totals below are enough for the boxes.
+            "wrapped": (bool(member.picked_at) if drawn and member.gives_to
+                        and (current == "revealed" or person.id == viewer.id) else None),
         })
     data = {
         "id": swap.id, "name": swap.name, "note": swap.note or "", "state": current, "kinds": kinds,
         "kinds_label": kinds_label(kinds), "host": viewer.id == swap.owner_id,
         "owner": names.get(swap.owner_id, ""),
-        "draw_on": swap.draw_on.isoformat() if swap.draw_on else None,
-        "draw_label": _day(swap.draw_on) if swap.draw_on else "",
+        "draw_on": draw_day(swap).isoformat() if draw_day(swap) else None,
+        "draw_label": _day(draw_day(swap)) if draw_day(swap) else "",
         "reveal_on": swap.reveal_on.isoformat(), "reveal_label": _day(swap.reveal_on),
         "days": _days_until(swap.reveal_on, today), "people": out_people, "count": len(people),
         "min": DRAW_MIN, "max": MEMBERS_MAX,
@@ -1016,8 +1043,8 @@ def _line(db: Session, swap, member, today: date) -> dict:
                             if item["host"] else "Unwrap day came before the draw. The host can pick a new day.")
         elif total < DRAW_MIN:
             item["line"] = "Just you so far. Send the link to the people you want in."
-        elif swap.draw_on:
-            item["line"] = f"{total} people in · names drawn {_day(swap.draw_on)}"
+        elif draw_day(swap):
+            item["line"] = f"{total} people in · names drawn {_day(draw_day(swap))}"
         else:
             item["line"] = f"{total} people in · {'you draw' if item['host'] else 'the host draws'} names"
         item["action"] = {"label": "Invite people" if total < DRAW_MIN else "Open the swap", "path": path}
@@ -1078,7 +1105,7 @@ def card_facts(db: Session, swap) -> dict:
     owner = next((person.username for _member, person in people if person.id == swap.owner_id), "A friend")
     return {"name": swap.name, "owner": owner, "people": len(people), "reveal": _day(swap.reveal_on),
             "kinds": kinds_label(kinds_of(swap)), "state": state_of(swap),
-            "draw": _day(swap.draw_on) if swap.draw_on else ""}
+            "draw": _day(draw_day(swap)) if draw_day(swap) else ""}
 
 
 # ---------------------------------------------------------------- email
