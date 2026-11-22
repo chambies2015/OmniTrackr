@@ -262,7 +262,6 @@ def policy_html() -> str:
     return f'<ul class="fix-log fix-log--policies">{items}</ul>'
 
 
-@lru_cache(maxsize=512)
 def _page_name(path: str) -> str:
     names = _guide_names()
     if path in names:
@@ -272,8 +271,14 @@ def _page_name(path: str) -> str:
     return hubs.get(path, path)
 
 
-@lru_cache(maxsize=1)
 def _guide_names() -> dict[str, str]:
+    # Monthly editions and release guides go live on their own dates, so the list is rebuilt
+    # daily. Cached for good, a page that went live after the last restart got no note.
+    return _guide_names_on(date.today().isoformat())
+
+
+@lru_cache(maxsize=1)
+def _guide_names_on(_day: str) -> dict[str, str]:
     from . import editorial_index
     return {piece["href"]: piece["name"] for piece in editorial_index.entries()}
 

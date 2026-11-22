@@ -168,3 +168,30 @@ def test_changelog_lists_the_sweep():
     changelog = (ROOT / "app/templates/changelog.html").read_text()
     assert 'id="security-nov22b-2026-heading"' in changelog
     assert changelog.index("security-nov22b-2026-heading") < changelog.index("on-your-services-nov22-2026-heading")
+
+
+# ---------------------------------------------------------------- #301: change notes on guides that go live later
+
+def test_a_guide_that_goes_live_after_a_restart_still_gets_its_note(monkeypatch):
+    from datetime import date
+
+    from app import corrections_log
+    from app.discover_catalog import MONTHLY_EDITIONS
+
+    class Today(date):
+        current = date(2026, 11, 30)
+
+        @classmethod
+        def today(cls):
+            return cls.current
+
+    monkeypatch.setattr(corrections_log, "date", Today)
+    corrections_log._guide_names_on.cache_clear()
+    path = "/discover/monthly/december-2026"
+    monkeypatch.setitem(MONTHLY_EDITIONS["december-2026"], "published_date", "2099-01-01")
+    assert path not in corrections_log._guide_names()
+    # The server was started before the edition's day. The list of guides used to be cached for
+    # the life of the process, so the new edition never got its "About this guide" note.
+    monkeypatch.setitem(MONTHLY_EDITIONS["december-2026"], "published_date", "2026-01-01")
+    Today.current = date(2026, 12, 1)
+    assert path in corrections_log._guide_names()
