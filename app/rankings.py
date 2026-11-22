@@ -78,6 +78,10 @@ COUNTERS = {
     "public_on": "Put a top ten on their profile",
     "public_off": "Took a top ten off their profile",
     "collection": "Saved a top ten as a collection",
+    "link_on": "Made a share link for a top ten",
+    "link_off": "Turned a share link off",
+    "link_opened": "Shared top tens opened by someone else",
+    "taken": "Kept a ranking made on someone's shared top ten",
 }
 SOURCES = ("home", "tab", "finish")
 
@@ -401,7 +405,15 @@ def _placed(db: Session, user_id: int, category: str, ranked: list[int], positio
         "above": above,
         "below": below,
         "steps": steps,
+        "shared": _shared_path(db, user_id, category) if len(ranked) >= 3 and position <= PUBLIC_TOP else None,
     }
+
+
+def _shared_path(db: Session, user_id: int, category: str) -> Optional[str]:
+    """The member's share link for this format, so a title landing in the top ten can offer it."""
+    share = db.query(models.RankingShare.token).filter(models.RankingShare.user_id == user_id,
+                                                       models.RankingShare.category == category).first()
+    return f"/ranked/{share[0]}" if share else None
 
 
 def answer(db: Session, user: models.User, category: str, placing_id: int, against_id: int, choice: str,
@@ -700,7 +712,17 @@ def detail(db: Session, user: models.User, category: str, now: Optional[datetime
         "public": bool(row and row.public),
         "question": question(db, user, category, now),
         "profile": _profile_state(db, user),
+        "share": _share_state(db, user, category),
     }
+
+
+def _share_state(db: Session, user: models.User, category: str) -> dict:
+    try:
+        from . import ranking_shares
+        return ranking_shares.state(db, user, category)
+    except Exception:
+        db.rollback()
+        return {"path": None, "opened": 0, "allowed": False, "card": None}
 
 
 def home(db: Session, user: models.User, now: Optional[datetime] = None) -> Optional[dict]:

@@ -140,6 +140,14 @@ GUEST = (
     ("tier_list_remix_started", "Tier list: someone started ranking a shared list's titles themselves"),
     ("tier_list_signup_clicked", "Tier list: sign-up pressed from the maker or a shared list"),
     ("tier_list_link_claimed", "Tier list: links made before sign-up moved into a new account"),
+    ("rank_link_created", "Rankings: a member made a share link for a top ten"),
+    ("rank_link_shared", "Rankings: a top ten link copied, shared or saved as an image"),
+    ("rank_link_opened", "Rankings: a shared top ten opened by a visitor without an account"),
+    ("rank_take_started", "Rankings: someone started ranking a shared top ten themselves"),
+    ("rank_take_finished", "Rankings: someone finished ranking a shared top ten and saw how much they agree"),
+    ("rank_result_shared", "Rankings: an agreement result shared"),
+    ("rank_signup_clicked", "Rankings: sign-up pressed on a shared top ten"),
+    ("rank_take_saved", "Rankings: a ranking made on a shared top ten moved into a library"),
     ("daily_played", "Daily puzzle: a game started"),
     ("daily_solved", "Daily puzzle: solved"),
     ("daily_shared", "Daily puzzle: result shared"),
@@ -256,7 +264,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "title_signup_clicked", "title_trailer_played",
                  "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked",
                  "signup_sheet_opened", "signup_sheet_google", "signup_sheet_email", "signup_sheet_login",
-                 "essentials_ticked", "essentials_signup_clicked", "essentials_shared"}
+                 "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
+                 "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

@@ -2488,3 +2488,24 @@ class Ranking(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", name="uq_rankings_member_category"),
     )
+
+
+class RankingShare(Base):
+    """A member's share link for the top ten of one ranking (Nov 2026): /ranked/<token>.
+
+    A new table only. The link shows the ranking as it is when someone opens it, never the
+    scores, and only while the format stays visible and not private. Deleting the row ends the
+    link. ``opened`` counts opens by people other than the member (not bots or prefetches).
+    """
+    __tablename__ = "ranking_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", name="uq_ranking_shares_member_category"),
+    )

@@ -971,11 +971,22 @@ for route in rankings_router.router.routes:
         bind_rate_limited_endpoint(route, limiter.limit("120/minute")(route.endpoint))
     elif path in ("/api/rankings", "/api/rankings/card"):
         bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
-    elif path == "/api/rankings/collection":
+    elif path in ("/api/rankings/collection", "/api/rankings/take"):
         bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+    elif path in ("/api/rankings/share", "/api/rankings/share/off"):
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
     elif path and path.startswith("/api/rankings/"):
         bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
 app.include_router(rankings_router.router)
+from .routers import ranked_share as ranked_share_router
+# A shared top ten: every open by someone else counts (a write), and the pictures are drawn on demand.
+for route in ranked_share_router.router.routes:
+    path = getattr(route, "path", None)
+    if path and path.endswith(".png"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+app.include_router(ranked_share_router.router)
 from .routers import your_week as your_week_router
 # Your week: one read per home refresh, and buttons pressed a click at a time.
 for route in your_week_router.router.routes:

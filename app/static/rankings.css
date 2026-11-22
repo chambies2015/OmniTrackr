@@ -355,6 +355,22 @@ body.app-shell.dark-mode .rank-format[aria-pressed="true"] .rank-format__count {
 .rank-switch input { accent-color: var(--rank-accent); height: 18px; margin: 0; width: 18px; }
 .rank-switch:has(input:disabled) { color: var(--fg-secondary); cursor: default; }
 
+/* The top ten's share link (/ranked/<token>), under the ranking. */
+.rank-share {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--rank-accent) 10%, transparent), color-mix(in srgb, var(--rank-accent-2) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--rank-accent) 28%, var(--border, rgba(127, 127, 127, .25)));
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 14px 16px;
+}
+.rank-share[hidden] { display: none; }
+.rank-share__title { color: var(--fg); font-size: .95rem; font-weight: 800; margin: 0 0 3px; }
+.rank-share__text { color: var(--fg-secondary); font-size: .84rem; line-height: 1.5; margin: 0; max-width: 62ch; }
+.rank-share__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.rank-share .rank-status { margin: 0; }
+
 .rank-podium { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0 0 10px; padding: 0; }
 .rank-podium__spot {
   align-content: start;

@@ -1,15 +1,15 @@
 """Rankings: the endpoints behind the Rankings tab, the home card and the finish dialog (see app/rankings.py)."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import models, rankings
+from .. import funnel, models, ranking_shares, rankings
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(tags=["rankings"])
@@ -60,6 +60,16 @@ class Save(BaseModel):
 
 class Seen(BaseModel):
     where: Literal["home", "tab"]
+
+
+class ShareFormat(BaseModel):
+    category: Category
+
+
+class Take(BaseModel):
+    token: str = Field(..., min_length=16, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
+    titles: list[Annotated[str, StringConstraints(max_length=ranking_shares.MAX_TITLE)]] = Field(
+        ..., min_length=2, max_length=rankings.PUBLIC_TOP)
 
 
 def _stale(db: Session, user: models.User, category: str) -> JSONResponse:
@@ -194,3 +204,50 @@ def rankings_seen(payload: Seen, request: Request, response: Response, user: mod
     _no_store(response)
     rankings.count(f"seen_{payload.where}")
     return {"ok": True}
+
+
+@router.post("/api/rankings/share")
+def rankings_share_on(payload: ShareFormat, request: Request, response: Response,
+                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Make (or return) the member's link to the top ten of one format."""
+    _no_store(response)
+    try:
+        share = ranking_shares.turn_on(db, user, payload.category)
+    except LookupError as error:
+        db.rollback()
+        raise HTTPException(409, str(error))
+    funnel.record("rank_link_created", request)
+    return {"share": ranking_shares.state(db, user, payload.category)}
+
+
+@router.post("/api/rankings/share/off")
+def rankings_share_off(payload: ShareFormat, request: Request, response: Response,
+                       user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """End the link. Anyone who opens it afterwards sees that it isn't shared anymore."""
+    _no_store(response)
+    ranking_shares.turn_off(db, user, payload.category)
+    return {"share": ranking_shares.state(db, user, payload.category)}
+
+
+@router.post("/api/rankings/take")
+def rankings_take(payload: Take, request: Request, response: Response,
+                  user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Keep a ranking made on someone's shared top ten: the titles go into the library, finished, in that order."""
+    _no_store(response)
+    share = ranking_shares.by_token(db, payload.token)
+    if share is None:
+        raise HTTPException(404, "This list isn't shared anymore.")
+    try:
+        result = ranking_shares.take(db, user, share, payload.titles)
+    except PermissionError as error:
+        db.rollback()
+        raise HTTPException(409, str(error))
+    except LookupError as error:
+        db.rollback()
+        raise HTTPException(404 if "anymore" in str(error) else 409, str(error))
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "That didn't save. Please try again.")
+    if result["added"]:
+        funnel.record("rank_take_saved", request)
+    return result

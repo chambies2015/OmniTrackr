@@ -16,7 +16,7 @@
     epoch: 0, card: null, request: null, loadedAt: 0, observer: null, seenDay: '',
     homeBusy: false, homePlaced: null,
     tab: null, tabCategory: '', tabRequest: 0, tabSeen: false, waitingAll: false,
-    dialogCategory: '', dialogReturn: null,
+    dialogCategory: '', dialogReturn: null, focusShare: false,
   };
 
   const $ = id => document.getElementById(id);
@@ -213,6 +213,142 @@
     return wrap;
   }
 
+  // ------------------------------------------------------------------ sharing a top ten (/ranked/<token>)
+
+  function countFunnel(event) {
+    try {
+      if (navigator.sendBeacon && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
+  }
+
+  const sharePath = path => typeof path === 'string' && /^\/ranked\/[A-Za-z0-9_-]{16,32}$/.test(path);
+
+  async function shareLink(path, title, statusId) {
+    if (!sharePath(path)) return;
+    const url = `${window.location.origin}${path}`;
+    countFunnel('rank_link_shared');
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); return; } catch (error) {
+        if (error && error.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus(statusId, 'Link copied. Paste it anywhere.');
+    } catch (error) {
+      window.prompt('Copy this link:', url);
+    }
+  }
+
+  async function saveStory(path, category, statusId, node) {
+    if (!sharePath(path)) return;
+    if (node) node.disabled = true;
+    setStatus(statusId, 'Getting your image ready…');
+    try {
+      const response = await fetch(`${path}/story.png`, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(String(response.status));
+      const blob = await response.blob();
+      const name = `omnitrackr-top-${category || 'ten'}.png`;
+      const file = typeof File === 'function' ? new File([blob], name, { type: 'image/png' }) : null;
+      countFunnel('rank_link_shared');
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); setStatus(statusId, ''); } catch (error) {
+          setStatus(statusId, error && error.name === 'AbortError' ? '' : 'Sharing didn’t open. Please try again.');
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+        setStatus(statusId, 'Image saved. It’s sized for stories.');
+      }
+    } catch (error) {
+      setStatus(statusId, 'The image didn’t load. Please try again.');
+    }
+    if (node) node.disabled = false;
+  }
+
+  // A title that lands in the top ten offers the link: straight to the share sheet when there is one,
+  // otherwise to the Rankings tab, where the link is made.
+  function shareAction(placed, statusId, before, here) {
+    if (!placed || placed.position > 10 || placed.total < 3) return null;
+    return button('rank-btn rank-btn--quiet', 'Share your top ten', () => {
+      if (before) before();
+      if (sharePath(placed.shared)) { shareLink(placed.shared, `My top ten ${placed.nouns}`, statusId); return; }
+      const box = $('rankShare');
+      if (here && box && !box.hidden) {
+        if (box.scrollIntoView) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        box.querySelector('button')?.focus({ preventScroll: true });
+        return;
+      }
+      state.focusShare = true;
+      openTab(placed.category);
+    });
+  }
+
+  function renderShare(detail) {
+    const box = $('rankShare');
+    if (!box) return;
+    if (!detail || detail.ranked.length < 3) { box.hidden = true; box.replaceChildren(); return; }
+    const share = detail.share || {};
+    box.hidden = false;
+    const copy = el('div', 'rank-share__copy');
+    const row = el('div', 'rank-share__actions');
+    if (sharePath(share.path)) {
+      copy.appendChild(el('p', 'rank-share__title', `Your top ten ${detail.nouns} are shared by link`));
+      const opened = Number(share.opened) || 0;
+      copy.appendChild(el('p', 'rank-share__text', `Anyone with it sees your current top ten in order, never your scores, and can rank the same ten to see how much you agree.${opened ? ` Opened ${plural(opened, 'time', 'times')} so far.` : ''}`));
+      row.appendChild(button('rank-btn rank-btn--primary rank-btn--small', navigator.share ? 'Share link' : 'Copy link',
+        () => shareLink(share.path, `My top ten ${detail.nouns}`, 'rankShareStatus')));
+      row.appendChild(button('rank-btn rank-btn--small', 'Save image for stories', node => saveStory(share.path, detail.category, 'rankShareStatus', node)));
+      const open = el('a', 'rank-link', 'See the page');
+      open.href = share.path;
+      open.target = '_blank';
+      open.rel = 'noopener';
+      row.appendChild(open);
+      row.appendChild(button('rank-link rank-link--button', 'Turn the link off', async node => {
+        node.disabled = true;
+        const result = await call('POST', '/api/rankings/share/off', { category: detail.category }).catch(() => null);
+        node.disabled = false;
+        if (!result || !result.ok) { setStatus('rankShareStatus', result ? problem(result) : 'Couldn’t reach OmniTrackr.'); return; }
+        detail.share = result.data.share;
+        renderShare(detail);
+        setStatus('rankShareStatus', 'The link is off. Anyone who opens it now sees that it isn’t shared anymore.');
+      }));
+    } else if (share.allowed === false) {
+      copy.appendChild(el('p', 'rank-share__title', `Share your top ten ${detail.nouns}`));
+      copy.appendChild(el('p', 'rank-share__text', 'This shelf is hidden or private, so it can’t have a share link. You can change that in Settings, under Privacy.'));
+    } else {
+      copy.appendChild(el('p', 'rank-share__title', `Share your top ten ${detail.nouns}`));
+      copy.appendChild(el('p', 'rank-share__text', 'Get a link that shows your top ten in order, never your scores. Friends can rank the same ten themselves and see how close they are to you. It works without a public profile, and you can turn it off any time.'));
+      row.appendChild(button('rank-btn rank-btn--primary rank-btn--small', 'Get a share link', async node => {
+        node.disabled = true;
+        const result = await call('POST', '/api/rankings/share', { category: detail.category }).catch(() => null);
+        node.disabled = false;
+        if (!result || !result.ok) { setStatus('rankShareStatus', result ? problem(result) : 'Couldn’t reach OmniTrackr.'); return; }
+        detail.share = result.data.share;
+        renderShare(detail);
+        setStatus('rankShareStatus', 'Your link is ready.');
+        $('rankShare')?.querySelector('.rank-share__actions button')?.focus({ preventScroll: true });
+      }));
+    }
+    const status = el('p', 'rank-status');
+    status.id = 'rankShareStatus';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    box.replaceChildren(copy, ...(row.children.length ? [row] : []), status);
+    if (state.focusShare) {
+      state.focusShare = false;
+      if (box.scrollIntoView) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      box.querySelector('button')?.focus({ preventScroll: true });
+    }
+  }
+
   // Where a title landed, with its neighbours, and what to do next.
   function placedView(placed, actions) {
     const wrap = el('div', 'rank-placed');
@@ -329,7 +465,8 @@
         refresh(true).then(() => $('rankDuelBody')?.querySelector('.rank-pick--placing')?.focus({ preventScroll: true }));
       });
       const all = button('rank-btn', `See all your ${body.placed.nouns}`, () => openTab(body.placed.category));
-      target.replaceChildren(placedView(body.placed, [next, all]));
+      const shared = shareAction(body.placed, 'rankDuelStatus');
+      target.replaceChildren(placedView(body.placed, shared ? [next, all, shared] : [next, all]));
       announce('rankDuelStatus', placedWords(body.placed));
       next.focus({ preventScroll: true });
       if (state.tab && state.tabCategory === body.placed.category) state.tab = null;
@@ -511,7 +648,8 @@
       }));
       const again = button('rank-btn rank-btn--quiet', 'Not right? Place it again', () => placeAgain(placed.category, placed.title.id));
       $('rankAskTitle').textContent = 'Placed';
-      $('rankAskBody').replaceChildren(placedView(placed, placed.title ? [next, again] : [next]));
+      const shared = shareAction(placed, 'rankAskStatus', null, true);
+      $('rankAskBody').replaceChildren(placedView(placed, [next, ...(placed.title ? [again] : []), ...(shared ? [shared] : [])]));
       announce('rankAskStatus', placedWords(placed));
       next.focus({ preventScroll: true });
       refreshListOnly(placed.title && placed.title.id);
@@ -605,6 +743,7 @@
     if (!body) return;
     if (title) title.textContent = detail.ranked.length ? `Your ${detail.nouns}, best first` : `Your ${detail.nouns}`;
     renderTools(detail);
+    renderShare(detail);
     if (!detail.ranked.length) {
       body.replaceChildren(emptyView(`Nothing ranked yet. Answer the question ${window.matchMedia?.('(min-width: 900px)').matches ? 'on the left' : 'above'} and your first two ${detail.nouns} go in.`));
       return;
@@ -773,7 +912,8 @@
       $('rankDialogTitle').textContent = 'Placed';
       const done = button('rank-btn rank-btn--primary', 'Done', () => closeDialog());
       const all = button('rank-btn', `See all your ${body.placed.nouns}`, () => { closeDialog(); openTab(body.placed.category); });
-      target.replaceChildren(placedView(body.placed, [done, all]));
+      const shared = shareAction(body.placed, 'rankDialogStatus', () => { if (!sharePath(body.placed.shared)) closeDialog(); });
+      target.replaceChildren(placedView(body.placed, shared ? [done, all, shared] : [done, all]));
       announce('rankDialogStatus', placedWords(body.placed));
       done.focus();
       state.tab = null;
