@@ -14,8 +14,8 @@ from .. import funnel, ranking_shares, rankings
 from ..dependencies import get_db, get_optional_current_user
 
 router = APIRouter(tags=["rankings"])
-CSS_VERSION = "20261122-ranked-share-1"
-JS_VERSION = "20261122-ranked-share-1"
+CSS_VERSION = "20261122-ranked-sweep-1"
+JS_VERSION = "20261122-ranked-sweep-1"
 SITE = "https://omnitrackr.xyz"
 CARD_POSTER_SECONDS = 8.0
 
@@ -167,9 +167,13 @@ def _cache():
 
 async def _posters(request: Request, data: dict, limit: int) -> dict:
     """{place: poster bytes} for the first ``limit`` places, fetched through the image proxy's cache."""
+    from .. import tier_list
     from .tier_list import _poster_bytes
     client = getattr(request.app.state, "external_api_client", None)
-    wanted = [(item["position"], item["image"]) for item in data["items"][:limit] if item.get("image")]
+    # A library poster can be any address the member typed in, so the server only fetches the poster
+    # hosts the tier list image proxy allows. Anything else gets the drawn tile.
+    wanted = [(item["position"], item["image"]) for item in data["items"][:limit]
+              if item.get("image") and tier_list.image_allowed(item["image"])]
     if client is None or not wanted:
         return {}
     urls = list(dict.fromkeys(url for _, url in wanted))

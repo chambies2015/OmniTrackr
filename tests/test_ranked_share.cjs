@@ -81,7 +81,7 @@ test('a ranking kept before sign-up belongs to one link and expires', () => {
   const token = 'abcdefghijklmnop';
   assert.equal(share.readTake(token), null);
   assert.ok(share.storeTake(token, ['Jaws', 'Alien', 'Heat'], true));
-  assert.deepEqual(share.readTake(token), { token, titles: ['Jaws', 'Alien', 'Heat'], pending: true });
+  assert.deepEqual(share.readTake(token), { token, titles: ['Jaws', 'Alien', 'Heat'], positions: null, pending: true });
   assert.equal(share.readTake('qrstuvwxyzabcdef'), null);
   assert.equal(share.readTake(token, Date.now() + 4 * 24 * 60 * 60 * 1000), null);
   localStorage.setItem(share.KEY, JSON.stringify({ v: 1, token, titles: ['Only one'], at: Date.now(), pending: true }));

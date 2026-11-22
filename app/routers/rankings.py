@@ -70,6 +70,9 @@ class Take(BaseModel):
     token: str = Field(..., min_length=16, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")
     titles: list[Annotated[str, StringConstraints(max_length=ranking_shares.MAX_TITLE)]] = Field(
         ..., min_length=2, max_length=rankings.PUBLIC_TOP)
+    # The places the page showed for those titles, in the same order (pages from before Nov 22 send none).
+    positions: Optional[list[Annotated[int, Field(ge=1, le=rankings.PUBLIC_TOP)]]] = Field(
+        None, max_length=rankings.PUBLIC_TOP)
 
 
 def _stale(db: Session, user: models.User, category: str) -> JSONResponse:
@@ -238,7 +241,7 @@ def rankings_take(payload: Take, request: Request, response: Response,
     if share is None:
         raise HTTPException(404, "This list isn't shared anymore.")
     try:
-        result = ranking_shares.take(db, user, share, payload.titles)
+        result = ranking_shares.take(db, user, share, payload.titles, payload.positions)
     except PermissionError as error:
         db.rollback()
         raise HTTPException(409, str(error))
