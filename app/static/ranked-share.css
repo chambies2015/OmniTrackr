@@ -41,6 +41,8 @@
 .rk-play__lead { color: var(--site-soft); line-height: 1.55; margin: 0 0 16px; }
 .rk-stage { display: grid; gap: 12px; }
 .rk-stage:empty { display: none; }
+/* Focus and scrolling land below the sticky site header, which otherwise covers the score on a phone. */
+.rk-step, .rk-duel, .rk-result__score { scroll-margin-top: 84px; }
 .rk-step { color: var(--site-text); font: 800 1.08rem var(--site-display); margin: 0; }
 .rk-step:focus { outline: none; }
 .rk-hint, .rk-status { color: var(--site-muted); font-size: .88rem; line-height: 1.5; margin: 0; }

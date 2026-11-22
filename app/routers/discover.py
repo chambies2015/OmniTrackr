@@ -1,6 +1,7 @@
 """Public editorial trails with authenticated, atomic library saves."""
 from html import escape
 import json
+import re
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -51,6 +52,9 @@ DEFAULT_SHARE_IMAGE = ('<meta property="og:image" content="https://omnitrackr.xy
                        '<meta name="twitter:card" content="summary">')
 
 
+TEMPLATE_KEYS = re.compile(r"\{\{(TITLE|DESCRIPTION|PATH|ROBOTS|CONTENT|STRUCTURED_DATA)\}\}")
+
+
 def page(title, description, path, content, *, indexable=True, structured_data=None, head='', member=False,
          share_image=None, body_class=''):
     template = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
@@ -70,14 +74,16 @@ def page(title, description, path, content, *, indexable=True, structured_data=N
             f'<meta property="og:image" content="{image}"><meta property="og:image:width" content="1200">'
             '<meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">'
             f'<meta name="twitter:image" content="{image}">'), 1)
-    for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
-        html = html.replace("{{" + key + "}}", value)
     # Escape script delimiters even though the editorial catalog is maintained in code.
     structured = ''
     if structured_data:
         payload = json.dumps(structured_data, ensure_ascii=False).replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
         structured = f'<script type="application/ld+json">{payload}</script>'
-    html = html.replace('{{STRUCTURED_DATA}}', structured + head)
+    values = {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots,
+              "CONTENT": content, "STRUCTURED_DATA": structured + head}
+    # One pass over the template, so a member's own text that happens to read "{{CONTENT}}" (a list or
+    # title name on a shared page) stays text instead of pulling the page into itself.
+    html = TEMPLATE_KEYS.sub(lambda match: values[match.group(1)], html)
     response = strict_html_response(html)
     if not indexable:
         response.headers["X-Robots-Tag"] = "noindex, follow"

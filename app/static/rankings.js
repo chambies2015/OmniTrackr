@@ -291,15 +291,36 @@
     });
   }
 
+  function offButton(detail) {
+    return button('rank-link rank-link--button', 'Turn the link off', async node => {
+      node.disabled = true;
+      const result = await call('POST', '/api/rankings/share/off', { category: detail.category }).catch(() => null);
+      node.disabled = false;
+      if (!result || !result.ok) { setStatus('rankShareStatus', result ? problem(result) : 'Couldn’t reach OmniTrackr.'); return; }
+      detail.share = result.data.share;
+      renderShare(detail);
+      setStatus('rankShareStatus', 'The link is off. Anyone who opens it now sees that it isn’t shared anymore.');
+    });
+  }
+
   function renderShare(detail) {
     const box = $('rankShare');
     if (!box) return;
-    if (!detail || detail.ranked.length < 3) { box.hidden = true; box.replaceChildren(); return; }
-    const share = detail.share || {};
+    const share = (detail && detail.share) || {};
+    const linked = sharePath(share.path);
+    // A link stays listed while it can't show anything, so it can still be turned off from here.
+    if (!detail || (detail.ranked.length < 3 && !linked)) { box.hidden = true; box.replaceChildren(); return; }
     box.hidden = false;
     const copy = el('div', 'rank-share__copy');
     const row = el('div', 'rank-share__actions');
-    if (sharePath(share.path)) {
+    if (linked && (share.allowed === false || detail.ranked.length < 3)) {
+      // The page says "not shared anymore" right now, so nothing here offers to send it.
+      copy.appendChild(el('p', 'rank-share__title', 'Your share link is paused'));
+      copy.appendChild(el('p', 'rank-share__text', share.allowed === false
+        ? `Your ${detail.nouns} shelf is hidden or private, so anyone who opens the link sees that it isn’t shared anymore. Make the shelf public again in Settings, under Privacy, and the same link works again.`
+        : `A top ten needs at least three ranked ${detail.nouns}, so anyone who opens the link sees that it isn’t shared anymore. Rank a few more and the same link works again.`));
+      row.appendChild(offButton(detail));
+    } else if (linked) {
       copy.appendChild(el('p', 'rank-share__title', `Your top ten ${detail.nouns} are shared by link`));
       const opened = Number(share.opened) || 0;
       copy.appendChild(el('p', 'rank-share__text', `Anyone with it sees your current top ten in order, never your scores, and can rank the same ten to see how much you agree.${opened ? ` Opened ${plural(opened, 'time', 'times')} so far.` : ''}`));
@@ -311,15 +332,7 @@
       open.target = '_blank';
       open.rel = 'noopener';
       row.appendChild(open);
-      row.appendChild(button('rank-link rank-link--button', 'Turn the link off', async node => {
-        node.disabled = true;
-        const result = await call('POST', '/api/rankings/share/off', { category: detail.category }).catch(() => null);
-        node.disabled = false;
-        if (!result || !result.ok) { setStatus('rankShareStatus', result ? problem(result) : 'Couldn’t reach OmniTrackr.'); return; }
-        detail.share = result.data.share;
-        renderShare(detail);
-        setStatus('rankShareStatus', 'The link is off. Anyone who opens it now sees that it isn’t shared anymore.');
-      }));
+      row.appendChild(offButton(detail));
     } else if (share.allowed === false) {
       copy.appendChild(el('p', 'rank-share__title', `Share your top ten ${detail.nouns}`));
       copy.appendChild(el('p', 'rank-share__text', 'This shelf is hidden or private, so it can’t have a share link. You can change that in Settings, under Privacy.'));

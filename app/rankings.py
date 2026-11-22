@@ -410,10 +410,20 @@ def _placed(db: Session, user_id: int, category: str, ranked: list[int], positio
 
 
 def _shared_path(db: Session, user_id: int, category: str) -> Optional[str]:
-    """The member's share link for this format, so a title landing in the top ten can offer it."""
+    """The member's share link for this format, so a title landing in the top ten can offer it.
+
+    None while the shelf is hidden or private: the link shows "not shared anymore" then, so
+    sending it would hand friends a dead page.
+    """
     share = db.query(models.RankingShare.token).filter(models.RankingShare.user_id == user_id,
                                                        models.RankingShare.category == category).first()
-    return f"/ranked/{share[0]}" if share else None
+    if not share:
+        return None
+    from .ranking_shares import _shareable
+    user = db.get(models.User, user_id)
+    if user is None or not _shareable(user, category):
+        return None
+    return f"/ranked/{share[0]}"
 
 
 def answer(db: Session, user: models.User, category: str, placing_id: int, against_id: int, choice: str,

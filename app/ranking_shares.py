@@ -202,31 +202,50 @@ def heading(data: dict) -> str:
 
 # ---------------------------------------------------------------- keeping a ranking made on the page
 
-def take(db: Session, user: models.User, share: models.RankingShare, titles: Iterable[str]) -> dict:
+def _picked(items: list[dict], titles: Iterable[str], positions: Optional[Iterable] = None) -> list[dict]:
+    """The list's items in the order the visitor ranked them, matched by name.
+
+    A top ten can hold two titles with one name (Dune 1984 and Dune 2021), so each name takes the
+    next item of that name not used yet, and ``positions`` (the places the page showed, sent along
+    with the names) settles which one was meant while that place still holds that name. The list
+    can change between ranking and signing up, so a place alone never decides.
+    """
+    by_name: dict[str, list[dict]] = {}
+    for item in items:
+        by_name.setdefault(title_pages.normalize(item["title"]), []).append(item)
+    at = {item["position"]: item for item in items}
+    places = list(positions) if positions is not None else []
+    picked, used = [], set()
+    for index, title in enumerate(titles):
+        if not isinstance(title, str) or len(title) > MAX_TITLE:
+            continue
+        key = title_pages.normalize(title)
+        place = places[index] if index < len(places) else None
+        chosen = at.get(place) if type(place) is int else None
+        if chosen is None or chosen["position"] in used or title_pages.normalize(chosen["title"]) != key:
+            chosen = next((item for item in by_name.get(key, ()) if item["position"] not in used), None)
+        if chosen is not None:
+            used.add(chosen["position"])
+            picked.append(chosen)
+    return picked
+
+
+def take(db: Session, user: models.User, share: models.RankingShare, titles: Iterable[str],
+         positions: Optional[Iterable[int]] = None) -> dict:
     """Put titles from someone's shared top ten into this member's library, finished, in the order they picked.
 
     ``titles`` are names from the page, best first; only ones on the shared list count. Titles the
     member already has are left as they are. The order goes into their Rankings when that format's
     ranking is still empty; otherwise the new titles wait there to be placed against their own.
     """
-    from . import essentials
+    from . import essentials, tier_list
     from .progress import lock_progress_owner
     data = view(db, share)
     if data is None:
         raise LookupError("This list isn't shared anymore.")
     if data["owner_id"] == user.id:
         raise PermissionError("This is your own ranking.")
-    on_list = {}
-    for item in data["items"]:
-        on_list.setdefault(title_pages.normalize(item["title"]), item)
-    picked, seen = [], set()
-    for title in titles:
-        if not isinstance(title, str) or len(title) > MAX_TITLE:
-            continue
-        key = title_pages.normalize(title)
-        if key in on_list and key not in seen:
-            seen.add(key)
-            picked.append(on_list[key])
+    picked = _picked(data["items"], titles, positions)
     if len(picked) < 2:
         raise LookupError("Rank at least two of the titles on this list first.")
     category = data["category"]
@@ -238,7 +257,9 @@ def take(db: Session, user: models.User, share: models.RankingShare, titles: Ite
     for item in picked:
         entry = {"id": f"ranked/{data['token']}/{item['position']}", "kind": kind, "slug": "",
                  "title": item["title"], "year": item.get("year"), "creator": item.get("creator")}
-        state, record = essentials.add(db, user, entry, True, item.get("image"))
+        # The poster comes along only from the usual poster hosts, not from any address the sharer typed in.
+        image = item.get("image") if tier_list.image_allowed(item.get("image")) else None
+        state, record = essentials.add(db, user, entry, True, image)
         if state == "created":
             added += 1
         else:

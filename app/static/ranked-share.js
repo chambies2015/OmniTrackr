@@ -97,15 +97,21 @@
       if (!data || data.v !== 1 || data.token !== token || !TOKEN.test(token)) return null;
       if (!Number.isFinite(data.at) || data.at > now || now - data.at > KEEP_MS) return null;
       const titles = Array.isArray(data.titles) ? data.titles.filter(title => typeof title === 'string' && title.length <= 500).slice(0, 10) : [];
-      return titles.length >= 2 ? { token, titles, pending: data.pending === true } : null;
+      if (titles.length < 2) return null;
+      // The places the page showed, one per title, so two titles with one name (a film and its remake) stay apart.
+      const positions = Array.isArray(data.positions) && data.positions.length === titles.length
+        && data.positions.every(place => Number.isInteger(place) && place >= 1 && place <= 10) ? data.positions : null;
+      return { token, titles, positions, pending: data.pending === true };
     } catch (error) {
       return null;
     }
   }
 
-  function storeTake(token, titles, pending) {
+  function storeTake(token, titles, pending, positions) {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ v: 1, token, titles: titles.slice(0, 10), at: Date.now(), pending: Boolean(pending) }));
+      const kept = { v: 1, token, titles: titles.slice(0, 10), at: Date.now(), pending: Boolean(pending) };
+      if (Array.isArray(positions)) kept.positions = positions.slice(0, 10);
+      localStorage.setItem(KEY, JSON.stringify(kept));
       return true;
     } catch (error) {
       return false;
@@ -242,7 +248,10 @@
       game = start(shuffled(chosen));
       history = [];
       if (!started) { started = true; count('rank_take_started'); }
-      duel();
+      duel(true);
+      // "Rank these" sits at the foot of a long list, so on a phone the first question would open above the screen.
+      const ask = stage.querySelector('.rk-duel');
+      if (ask && ask.scrollIntoView && ask.getBoundingClientRect().top < 80) ask.scrollIntoView({ block: 'start' });
     }
 
     function side(item, choice) {
@@ -316,7 +325,9 @@
       const theirs = mine.slice().sort((a, b) => a.position - b.position);
       const percent = agreement(mine);
       count('rank_take_finished');
-      storeTake(token, mine.map(item => item.title), false);
+      const titles = mine.map(item => item.title);
+      const positions = mine.map(item => item.position);
+      storeTake(token, titles, false, positions);
       const wrap = el('div', 'rk-result');
       const score = el('p', 'rk-result__score');
       score.appendChild(el('strong', '', `${percent}%`));
@@ -335,12 +346,12 @@
         const keep = el('a', 'button', 'Keep my ranking');
         keep.href = signup;
         keep.addEventListener('click', () => {
-          storeTake(token, mine.map(item => item.title), true);
+          storeTake(token, titles, true, positions);
           count('rank_signup_clicked');
         });
         actions.appendChild(keep);
       } else if (!owner) {
-        actions.appendChild(button('button', 'Add them to my library', node => save(mine.map(item => item.title), node)));
+        actions.appendChild(button('button', 'Add them to my library', node => save(titles, positions, node)));
       }
       actions.appendChild(button('button button--ghost', 'Share my result', node => shareResult(percent, node)));
       actions.appendChild(button('rk-quiet', 'Start again', () => { picked = new Set(mine.map(item => item.position)); pick(); }));
@@ -401,13 +412,14 @@
       return wrap;
     }
 
-    async function save(titles, node) {
+    async function save(titles, positions, node) {
       if (node) node.disabled = true;
       const status = stage.querySelector('.rk-status');
       if (status) status.textContent = 'Saving…';
       let response;
       try {
-        response = await fetch('/api/rankings/take', { method: 'POST', credentials: 'same-origin', headers: headers(), body: JSON.stringify({ token, titles }) });
+        const body = positions ? { token, titles, positions } : { token, titles };
+        response = await fetch('/api/rankings/take', { method: 'POST', credentials: 'same-origin', headers: headers(), body: JSON.stringify(body) });
       } catch (error) {
         if (status) status.textContent = 'Couldn’t reach OmniTrackr. Check your connection and try again.';
         if (node) node.disabled = false;
@@ -421,8 +433,10 @@
         return false;
       }
       if (!response.ok) {
-        clearTake();
-        const detail = typeof data.detail === 'string' ? data.detail : 'That didn’t save. Please try again.';
+        // A busy or restarting server keeps the ranking for another try; only a definite no drops it.
+        const retry = response.status === 429 || response.status >= 500;
+        if (!retry) clearTake();
+        const detail = !retry && typeof data.detail === 'string' ? data.detail : 'That didn’t save. Please try again in a moment.';
         if (status) status.textContent = detail;
         else show(el('p', 'rk-status', detail));
         if (node) node.disabled = false;
@@ -438,10 +452,30 @@
     const waiting = readTake(token);
     if (member && !owner && waiting && waiting.pending) {
       show(el('p', 'rk-status', 'Saving the ranking you made before signing up…'));
-      save(waiting.titles).then(ok => { if (!ok && !stage.querySelector('.rk-status')?.textContent) intro(); });
+      save(waiting.titles, waiting.positions).then(ok => {
+        if (ok) return;
+        // Say why, and still offer to rank them here instead of leaving only the message.
+        const why = stage.querySelector('.rk-status')?.textContent || '';
+        intro();
+        if (why) stage.appendChild(el('p', 'rk-status', why));
+      });
     } else {
       intro();
     }
+  }
+
+  function initBoard(root) {
+    root.querySelectorAll('.rk-item__art img').forEach(img => {
+      const fallback = () => {
+        const item = img.closest('[data-rk-item]');
+        const letter = ((item && item.dataset.title) || '?').trim().slice(0, 1).toUpperCase();
+        const box = img.parentElement;
+        img.remove();
+        if (box) box.textContent = letter;
+      };
+      if (img.complete && img.naturalWidth === 0) fallback();
+      else img.addEventListener('error', fallback, { once: true });
+    });
   }
 
   function initOwner(root) {
@@ -502,6 +536,7 @@
     const boot = () => {
       const root = document.getElementById('rankedShare');
       if (!root) return;
+      initBoard(root);
       init(root);
       initOwner(root);
     };
