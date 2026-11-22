@@ -98,6 +98,7 @@ TITLES = {
     "awards_results": "The winners are in",
     "advent_door": "A new door is open",
     "your_week": "Your week",
+    "service_arrival": "Now on your services",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -108,6 +109,9 @@ TOPICS = (
      ("release_day",)),
     ("episodes", "New episodes", "The moment a new episode of a show or anime you're watching is out.", True,
      ("episode_today",)),
+    ("streaming", "On your services", "When a film, show or anime on your list starts streaming on a service you "
+     "picked on your home screen.", True,
+     ("service_arrival",)),
     ("clubs", "Watch club picks", "A new pick on your shared lists, and a nudge two days before it's due.", True,
      ("club_pick", "club_due_soon", "shared_list_added")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,

@@ -260,6 +260,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "app": _installed_app(db, days, now),
         "backlog_draw": _backlog_draw(db, days, now),
         "your_week": _your_week(db, days, now),
+        "streaming": _streaming(db, days, now),
         "widgets": _profile_widgets(db, days, now),
     }
 
@@ -279,6 +280,16 @@ def _your_week(db: Session, days: int, now: datetime) -> dict:
     try:
         from .. import your_week
         return your_week.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _streaming(db: Session, days: int, now: datetime) -> dict:
+    """On your services: members who picked services, which ones, arrivals found and the notes that went out."""
+    try:
+        from .. import streaming_services
+        return streaming_services.stats(db, days, now)
     except Exception:
         db.rollback()
         return {}

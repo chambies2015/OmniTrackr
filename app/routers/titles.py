@@ -1848,7 +1848,18 @@ async def where_to_watch_lookup(request: Request, response: Response,
         "buy": [{"name": link["merchant"], "url": link["url"]} for link in affiliate.links_for(kind, display)],
         "disclosure": affiliate.disclosure_text() if affiliate.affiliate_enabled() else None,
         "searches": where_to_watch.searches(kind, display),
+        "mine": _mine(db, user.id, where),
     }
+
+
+def _mine(db: Session, user_id: int, where: dict) -> list[str]:
+    """Services in the answer that the member picked on the "On your services" card."""
+    try:
+        from .. import streaming_services
+        return streaming_services.mine(db, user_id, where)
+    except Exception:
+        db.rollback()
+        return []
 
 
 @router.get("/api/titles/search")

@@ -4,12 +4,12 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import String, case, cast, func, or_
+from sqlalchemy import String, case, cast, false, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import episodes, image_sizes, models, schemas, title_origins
+from .. import episodes, image_sizes, models, schemas, streaming_services, title_origins
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -121,11 +121,17 @@ def library_page(
     completion: Literal["all", "unfinished", "finished"] = Query("all"),
     unrated: bool = Query(False), has_progress: bool = Query(False),
     tag: str = Query("", max_length=40), recommended_by: str = Query("", max_length=80),
+    on_services: bool = Query(False),
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
     if category not in CATEGORIES:
         raise HTTPException(status_code=404, detail="Unknown media category")
+    if on_services and category not in streaming_services.CATEGORIES:
+        raise HTTPException(
+            status_code=422, detail="Streaming services are available for movies, TV shows and anime",
+            headers={"Cache-Control": "private, no-store"},
+        )
     if has_progress and category not in {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"}:
         raise HTTPException(
             status_code=422, detail="Saved progress is available for TV shows, anime, books, manga, podcasts and audiobooks",
@@ -175,6 +181,10 @@ def library_page(
             origin.source.in_(title_origins.PEOPLE),
             origin.who_key == wanted_who,
         ).exists())
+    if on_services:
+        # Titles streaming on a service the member picked on the home card (app/streaming_services.py).
+        streaming_ids = sorted(streaming_services.ids_on_services(db, current_user, category))
+        query = query.filter(model.id.in_(streaming_ids)) if streaming_ids else query.filter(false())
     total = query.count()
     # A direct item navigation can surface an exact ID even among duplicate titles.
     if focus_id is not None:

@@ -532,12 +532,14 @@ _locks: dict[str, asyncio.Lock] = {}
 
 async def get_or_fetch(db: Session, client, kind: str, normalized_title: str, display_title: str,
                        year: Optional[int], metadata: Optional[dict], wait: float = 5.0,
-                       creator: Optional[str] = None) -> Optional[dict]:
+                       creator: Optional[str] = None, force: bool = False) -> Optional[dict]:
+    """The cached result, refreshed first when it's stale. ``force`` refreshes a fresh one too
+    (streaming_services checks titles on members' lists more often than once a week)."""
     if kind not in KINDS:
         return None
     key = cache_key(kind, normalized_title, year)
     data, fresh = await run_in_threadpool(cached, db, key)
-    if fresh or client is None:
+    if (fresh and not force) or client is None:
         return data
     lock = _locks.setdefault(key, asyncio.Lock())
     if lock.locked():

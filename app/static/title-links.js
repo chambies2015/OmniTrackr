@@ -104,14 +104,18 @@
     return day.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   }
 
-  function whereGroup(label, providers, rel) {
+  // Rent and buy cost extra, so "You have it" only goes on the groups you can just press play in.
+  const MINE_GROUPS = new Set(['Stream', 'Free', 'Free with ads', 'Official streams', 'Made for']);
+
+  function whereGroup(label, providers, rel, mine) {
     const section = el('div', 'where-dialog__group');
     section.appendChild(el('h3', '', label));
     const list = el('ul');
     providers.forEach(provider => {
       const item = el('li');
       const url = safeUrl(provider.url);
-      const chip = el(url ? 'a' : 'span', 'where-dialog__provider');
+      const yours = Boolean(mine && MINE_GROUPS.has(label) && mine.has(provider.name));
+      const chip = el(url ? 'a' : 'span', yours ? 'where-dialog__provider where-dialog__provider--mine' : 'where-dialog__provider');
       if (url) { chip.href = url; chip.target = '_blank'; chip.rel = rel; }
       const logo = safeUrl(provider.logo);
       if (logo) {
@@ -120,6 +124,8 @@
         chip.appendChild(img);
       }
       chip.appendChild(el('span', '', provider.name));
+      // Services the member picked on the home screen's "On your services" card.
+      if (yours) chip.appendChild(el('span', 'where-dialog__mine', 'You have it'));
       item.appendChild(chip);
       list.appendChild(item);
     });
@@ -133,7 +139,8 @@
     if (!groups.length) {
       body.appendChild(el('p', 'progress-dialog__hint', WHERE_EMPTY[WHERE_KINDS[kind]] || WHERE_EMPTY.watch));
     }
-    groups.forEach(group => body.appendChild(whereGroup(group.label, group.providers || [], 'noopener nofollow')));
+    const mine = new Set(Array.isArray(data.mine) ? data.mine.filter(name => typeof name === 'string') : []);
+    groups.forEach(group => body.appendChild(whereGroup(group.label, group.providers || [], 'noopener nofollow', mine)));
     const buy = Array.isArray(data.buy) ? data.buy.filter(link => safeUrl(link.url)) : [];
     if (buy.length) body.appendChild(whereGroup('Buy a copy', buy, 'sponsored noopener'));
     const more = safeUrl(data.more);

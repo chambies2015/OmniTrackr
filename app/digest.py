@@ -622,6 +622,26 @@ def _friends_section(activity: list | None, base: str) -> tuple[str, list[str]]:
     return html, text + [""]
 
 
+def _streaming_section(arrived: list | None, base: str) -> tuple[str, list[str]]:
+    """'New on your services' block: titles on the member's list that started streaming on a service they picked."""
+    if not arrived:
+        return "", []
+    rows, text = [], ["New on your services:"]
+    for item in arrived:
+        where = _and_list(item["services"])
+        rows.append('<tr><td style="padding:6px 0;border-bottom:1px solid #eee;color:#1f1640;font-size:14px">'
+                    f'<strong>{escape(item["title"])}</strong> <span style="color:#6f6a8a">({escape(item["label"])})</span>'
+                    f'<br><span style="color:#0f766e">Now on {escape(where)}</span></td></tr>')
+        text.append(f"- {item['title']} ({item['label']}) - now on {where}")
+    text += [f"See them all: {base}/#on-your-services", ""]
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">New on your services</h2>'
+            '<p style="color:#6f6a8a;font-size:13px;margin:0 0 6px">From your list, on services you picked in OmniTrackr.</p>'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{"".join(rows)}</table>'
+            f'<p style="margin:8px 0 0"><a href="{escape(base, quote=True)}/#on-your-services" style="color:#6d28d9;'
+            'font-size:14px">See everything you can stream</a></p>')
+    return html, text
+
+
 def _support_section(support: dict | None, base: str) -> tuple[str, list[str]]:
     """A quiet line about Ko-fi support, about every six weeks for members who don't support yet; empty otherwise."""
     if not support:
@@ -647,7 +667,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
                  friends: list | None = None, episodes: list | None = None,
                  next_up: dict | None = None, past: list | None = None,
                  following: list | None = None, support: dict | None = None,
-                 copy_url: str | None = None) -> tuple[str, str, str] | None:
+                 copy_url: str | None = None, streaming: list | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
     `challenge`, `badge`, `recap`, `next_up`, `past` and `following` never force a send; friend activity and episodes can.
     `copy_url` marks a one-off copy the member asked for (app/weekly_preview.py): it adds a "want one every
@@ -682,6 +702,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if episodes_html:
         sections.append(episodes_html)
         text += episodes_text
+    streaming_html, streaming_text = _streaming_section(streaming, base)
+    if streaming_html:
+        sections.append(streaming_html)
+        text += streaming_text
     next_up_html, next_up_text = _next_up_section(next_up, base)
     if next_up_html:
         sections.append(next_up_html)
@@ -887,9 +911,15 @@ def gather_extras(db: Session, user, now: datetime, today: date | None = None) -
     except Exception:
         db.rollback()
         support = None  # Optional, like the ask above.
+    try:
+        from . import streaming_services
+        streaming = streaming_services.digest_line(db, user, now)
+    except Exception:
+        db.rollback()
+        streaming = []  # Optional, like the ask above.
     return {"ask": ask, "invite": invite, "goals": member_goals, "goals_year": now.year, "challenge": challenge,
             "badge": badge, "recap": recap, "next_up": next_up, "past": past, "following": following,
-            "support": support}
+            "support": support, "streaming": streaming}
 
 
 def build_from_parts(username: str, core: dict, extras: dict, unsubscribe_url: str, spotlight=None,
@@ -897,7 +927,8 @@ def build_from_parts(username: str, core: dict, extras: dict, unsubscribe_url: s
     return build_digest(username, core["report"], unsubscribe_url, spotlight, extras["ask"], extras["invite"],
                         extras["goals"], extras["goals_year"], extras["challenge"], extras["badge"],
                         extras["recap"], core["friends"], core["episodes"], extras["next_up"], extras["past"],
-                        extras["following"], extras["support"], copy_url=copy_url)
+                        extras["following"], extras["support"], copy_url=copy_url,
+                        streaming=extras.get("streaming"))
 
 
 def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: date | None = None,

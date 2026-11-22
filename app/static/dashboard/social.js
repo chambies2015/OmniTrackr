@@ -54,6 +54,8 @@ async function loadNotifications() {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">See it on Release Radar</a>`;
         } else if (notif.type === 'episode_today' && /^\/titles\/(tv|anime)\/[a-z0-9-]{1,120}$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Open the show</a>`;
+        } else if (notif.type === 'service_arrival' && notif.link === '/#on-your-services') {
+          actionButtons = '<a class="notification-action-btn" href="/#on-your-services">See what you can stream</a>';
         }
 
         return `

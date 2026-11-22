@@ -794,6 +794,7 @@ function resetDailyDashboard() {
   window.OmniWeekOne?.reset();
   window.OmniBacklogDraw?.reset();
   window.OmniYourWeek?.reset();
+  window.OmniStreaming?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1829,6 +1830,8 @@ function runDashboardLayoutBatch() {
   window.OmniBacklogDraw?.refresh();
   // Your week: the day tiles light up as the member logs, so every batch after an edit asks again.
   window.OmniYourWeek?.refresh();
+  // On your services: what on the member's list streams on services they picked (at most once a minute).
+  window.OmniStreaming?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

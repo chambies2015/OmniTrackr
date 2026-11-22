@@ -2377,3 +2377,82 @@ class ProgressMark(Base):
     __table_args__ = (
         Index("ix_progress_marks_user_at", "user_id", "at"),
     )
+
+
+class StreamingChoice(Base):
+    """The streaming services one member says they have (Nov 2026), for the "On your services" card.
+
+    A new table only, one row per member. ``services`` is JSON: {service id: when it was picked},
+    so an arrival on a service picked later than the arrival isn't news. ``alerts`` is the member's
+    "tell me when something arrives" switch. The choice is private: nothing shows it to anyone else.
+    Before anything is picked, ``hidden_until`` is "Not now" and ``stopped_at`` is "No thanks";
+    after, ``hidden_until`` is "Hide this card".
+    """
+    __tablename__ = "streaming_choices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    services = Column(Text, nullable=True)
+    alerts = Column(Boolean, nullable=False, default=True)
+    hidden_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class ServiceSighting(Base):
+    """One title seen streaming on one service, shared by every member (Nov 2026).
+
+    Never linked to a member. ``title_key`` is the title's where-to-watch cache key. ``baseline``
+    rows were already there the first time the title was checked, so they are not news;
+    ``first_seen_at`` on any other row is when the title arrived. ``gone_at`` is set while the
+    title is no longer listed there.
+    """
+    __tablename__ = "service_sightings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title_key = Column(String(300), nullable=False, index=True)
+    service = Column(String(24), nullable=False)
+    first_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    gone_at = Column(DateTime, nullable=True)
+    baseline = Column(Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        UniqueConstraint("title_key", "service", name="uq_service_sightings_title_service"),
+    )
+
+
+class ServiceTitleCheck(Base):
+    """When the streaming check last read one title's where-to-watch cache row (Nov 2026).
+
+    ``source_fetched_at`` is that row's ``fetched_at``, so a title is only compared again after its
+    cache row was refreshed. Never linked to a member.
+    """
+    __tablename__ = "service_title_checks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title_key = Column(String(300), nullable=False, unique=True, index=True)
+    first_checked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    checked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    source_fetched_at = Column(DateTime, nullable=True)
+
+
+class ServiceAlert(Base):
+    """A member was told that a title on their list arrived on one of their services (Nov 2026).
+
+    One row per member, title and service, so nobody hears about the same arrival twice. If the
+    title leaves and comes back weeks later, the row's ``created_at`` moves forward instead.
+    """
+    __tablename__ = "service_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title_key = Column(String(300), nullable=False)
+    service = Column(String(24), nullable=False)
+    title = Column(String(200), nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "title_key", "service", name="uq_service_alerts_member_title_service"),
+    )

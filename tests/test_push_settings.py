@@ -59,7 +59,7 @@ CHICAGO_MORNING = datetime(2026, 10, 27, 14, 0)
 
 def test_quiet_defaults_push_only_what_is_worth_a_buzz():
     chosen = {topic["key"]: topic["on"] for topic in web_push.settings_for(None)["topics"]}
-    assert chosen == {"releases": True, "episodes": True, "clubs": True, "recommendations": True, "friends": True,
+    assert chosen == {"releases": True, "episodes": True, "streaming": True, "clubs": True, "recommendations": True, "friends": True,
                       "discussions": True, "shelf_talk": False, "club_talk": False, "milestones": False, "memories": False,
                       "followers": False, "reminders": True}
     assert web_push.wants(None, "release_day") and web_push.wants(None, "club_pick")
