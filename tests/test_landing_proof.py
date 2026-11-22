@@ -36,6 +36,7 @@ def test_round_down_never_inflates(count, expected):
 
 
 def test_pick_reviews_one_per_member_and_mixed_media():
+    text = "It was slower than I expected, but the last hour is one of the best things I have seen this year."
     rows = [
         {"id": 1, "user_id": 1, "category": "movie", "title": "A", "search_ready": True},
         {"id": 2, "user_id": 1, "category": "anime", "title": "B", "search_ready": True},
@@ -44,6 +45,7 @@ def test_pick_reviews_one_per_member_and_mixed_media():
         {"id": 5, "user_id": 4, "category": "game", "title": "E", "search_ready": False},
         {"id": 6, "user_id": 5, "category": "movie", "title": " ", "search_ready": True},
     ]
+    rows = [dict(row, review=text) for row in rows]
     chosen = landing_proof.pick_reviews(rows)
     assert [r["id"] for r in chosen] == [1, 4, 3]
 

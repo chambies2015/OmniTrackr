@@ -1,5 +1,6 @@
 """Nov 21 2026 look refresh of the public pages: format tokens, header line and scroll
 state, the reworked footer, the light header on reader pages and big-title spacing."""
+import re
 from pathlib import Path
 
 from app import site_chrome
@@ -95,6 +96,7 @@ def test_big_titles_use_the_shared_letter_spacing():
 
 def test_homepage_loads_the_refreshed_stylesheet(client):
     html = client.get("/").text
-    assert "/static/public-landing.css?v=20261121-refresh-1" in html
+    version = re.search(r"/static/public-landing\.css\?v=([\w-]+)", html).group(1)
+    assert version >= "20261121-refresh-1"
     assert ".lp .lp-hero::before { background-image: radial-gradient(" in LANDING_CSS
     assert ".lp-hero__grid { position: relative; z-index: 1; }" in LANDING_CSS

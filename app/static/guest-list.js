@@ -37,11 +37,20 @@
     return list.some(item => item.kind === kind && item.slug === slug);
   }
 
-  function add(kind, slug, title) {
+  // A cover kept with the title so the homepage's "Your library" panel can show it. Only a plain
+  // web address is kept; anything else is dropped and the panel shows the title's first letter.
+  const IMAGE = /^https?:\/\/[^\s"'<>]{1,490}$/;
+
+  function imageOf(value) {
+    return typeof value === 'string' && IMAGE.test(value) ? value : '';
+  }
+
+  function add(kind, slug, title, image) {
     const list = read();
     if (has(list, kind, slug)) return { list, added: false };
     if (list.length >= MAX) return { list, added: false, full: true };
     const item = { kind, slug, title: String(title || '').slice(0, 200) };
+    if (imageOf(image)) item.image = image;
     if (!valid(item)) return { list, added: false };
     list.push(item);
     if (!write(list)) return { list: read(), added: false, storageError: true };
@@ -101,11 +110,16 @@
       if (typeof counter.appendChild === 'function') counter.appendChild(ask);
       else counter.textContent += ask.textContent;
     });
+    // The homepage's library panel (home-shelf.js) redraws from this.
+    if (typeof CustomEvent === 'function' && typeof document.dispatchEvent === 'function') {
+      document.dispatchEvent(new CustomEvent('omni:guest-list', { detail: { list } }));
+    }
   }
 
   function toggleTile(tile) {
     const { guestKind: kind, guestSlug: slug, guestTitle: title } = tile.dataset;
-    const result = has(read(), kind, slug) ? { list: remove(kind, slug) } : add(kind, slug, title);
+    const cover = tile.dataset.guestImage || (typeof tile.querySelector === 'function' && tile.querySelector('img') ? tile.querySelector('img').getAttribute('src') : '');
+    const result = has(read(), kind, slug) ? { list: remove(kind, slug) } : add(kind, slug, title, cover);
     refreshTiles();
     return result;
   }
@@ -360,7 +374,7 @@
     setTimeout(importList, 800);
   }
 
-  const api = { read, write, add, remove, importList, refreshTiles, toggleTile, openSheet, readReturn, KEY, MAX };
+  const api = { read, write, add, remove, has, imageOf, importList, refreshTiles, toggleTile, openSheet, readReturn, KEY, MAX };
   window.OmniGuestList = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {

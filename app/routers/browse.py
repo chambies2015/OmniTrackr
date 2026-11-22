@@ -27,7 +27,7 @@ router = APIRouter()
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261121-phone-1"
 JS_VERSION = "20261120-explore-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261121-phone-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 PAGE_CACHE_SECONDS = 600
 TRACKER_GUIDES = {"manga": "/manga-tracker", "podcasts": "/podcast-tracker", "audiobooks": "/audiobook-tracker"}
 INDEX_DESCRIPTION = ("Hand-picked manga, podcasts and audiobooks to start a library from, with the current charts "

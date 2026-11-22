@@ -274,7 +274,7 @@ def test_homepage_picks_section(db_session):
     items = guest_picks.picks(db_session)
     assert len(items) == 6
     html = guest_picks.section_html(items)
-    assert 'data-guest-slug="interstellar-2014"' in html and "Start your list" in html
+    assert 'data-guest-slug="interstellar-2014"' in html and "Start your library" in html
     assert "data-guest-bar" not in html  # the page's one save bar offers sign-up
     assert guest_picks.section_html(items[:5]) == ""  # too few to be worth showing
 
