@@ -1410,7 +1410,7 @@ class TestSecurityMiddleware:
         for heading in ("Who writes the guides", "How facts are checked", "How picks are chosen", "Spoilers",
                         "Corrections and updates", "Member reviews and collections", "What we do not publish"):
             assert heading in content, heading
-        assert '"dateModified": "2026-11-04"' in content
+        assert '"dateModified": "2026-11-22"' in content
         assert "The site owner reads, edits and fact-checks every guide before it is published" in content
         assert "No studio, publisher, platform or advertiser pays to appear in a guide" in content
         assert "Reviews that contain links, email addresses, phone numbers or promotional wording" in content

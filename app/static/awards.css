@@ -364,3 +364,44 @@
 @media (prefers-reduced-motion: reduce) {
   .aw-nom, .aw-progress__fill { transition: none; }
 }
+
+/* "Changes to this guide": dates and logged corrections at the end of a guide
+   (corrections_log.add_change_notes). */
+.guide-changes {
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  margin: 28px 0 0;
+  max-width: 44rem;
+  padding: 18px 20px;
+}
+.guide-changes h3 { color: var(--site-text); font-size: 1.02rem; margin: 0 0 10px; }
+.guide-changes p { color: var(--site-soft); font-size: .95rem; line-height: 1.6; margin: 0; }
+/* Inside a sources section, which lays its own <ol> out in two columns (discover.css). */
+.guide-changes ol.guide-changes__list { display: grid; gap: 10px; grid-template-columns: 1fr; list-style: none; margin: 0 0 12px; padding: 0; }
+.guide-changes ol.guide-changes__list li { color: var(--site-soft); font-size: .95rem; line-height: 1.6; padding: 0; }
+.guide-body .guide-changes p.guide-changes__dates, .guide-body .guide-changes p.guide-changes__links {
+  color: var(--site-soft); font-family: var(--site-font, inherit); font-size: .95rem; line-height: 1.6; max-width: none;
+}
+.guide-changes__list time { color: var(--site-text); font-weight: 600; margin-right: 6px; }
+.guide-changes .guide-changes__dates + ol.guide-changes__list { margin-top: 12px; }
+.guide-changes__links { margin-top: 12px !important; }
+.guide-changes__dates + .guide-changes__links { margin-top: 10px !important; }
+.guide-changes a { color: var(--site-violet-soft); }
+.fix-kind {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-block;
+  font-family: var(--site-font, inherit);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.5;
+  margin-right: 6px;
+  padding: 0 8px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.fix-kind--correction { color: var(--site-amber, #fbbf24); }
+.fix-kind--update { color: var(--site-teal, #5eead4); }
+.fix-kind--added { color: var(--site-violet-soft, #c4b5fd); }
+.fix-kind--edited { color: var(--site-muted, #aeb6d2); }

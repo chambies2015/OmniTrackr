@@ -22,7 +22,7 @@ import re
 from html import escape, unescape
 from urllib.parse import urlsplit
 
-CSS_VERSION = "20261121-library-1"
+CSS_VERSION = "20261122-trust-1"
 JS_VERSION = "20261120-a11y-1"
 SERIF_FONT = "/static/fonts/source-serif-4-latin-var-normal.woff2"
 MARKER = "data-guide-layout"
@@ -77,7 +77,8 @@ def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = ""
         '<div class="guide-rail__about"><p class="guide-rail__label">About this guide</p>'
         f'<ul><li>{minutes} min read</li>{when}<li>Reviewed by the site owner</li></ul>'
         '<p><a href="/content-quality">How we write guides</a></p>'
-        f'<p><a href="/contact">Send a correction</a></p></div>{library}</div></aside>'
+        '<p><a href="/corrections#send">Send a correction</a></p>'
+        f'<p><a href="/corrections">Corrections log</a></p></div>{library}</div></aside>'
     )
 
 

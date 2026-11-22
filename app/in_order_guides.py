@@ -674,8 +674,15 @@ from .in_order_guides_anime import GUIDES as _ANIME_GUIDES  # noqa: E402
 from .in_order_guides_games import GUIDES as _GAME_GUIDES  # noqa: E402
 from .in_order_guides_books import GUIDES as _BOOK_GUIDES  # noqa: E402
 
+# The day the November guides went up. The first ten carry no "published" of their own
+# and use the router's FIRST_PUBLISHED (October 17).
+NOVEMBER_PUBLISHED = "2026-11-14"
+NOVEMBER_GUIDES = frozenset().union(_FILM_GUIDES, _SERIES_GUIDES, _ANIME_GUIDES, _GAME_GUIDES, _BOOK_GUIDES)
+
 for _more in (_FILM_GUIDES, _SERIES_GUIDES, _ANIME_GUIDES, _GAME_GUIDES, _BOOK_GUIDES):
     _clash = set(_more) & set(GUIDES)
     if _clash:
         raise ValueError(f"In order guide slugs used twice: {sorted(_clash)}")
+    for _guide in _more.values():
+        _guide.setdefault("published", NOVEMBER_PUBLISHED)
     GUIDES.update(_more)
