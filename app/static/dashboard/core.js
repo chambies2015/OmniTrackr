@@ -109,7 +109,8 @@ function libraryPageSignature(category) {
   const [, sortId] = libraryPageConfig(category);
   const filters = getLibraryFilters(category);
   return JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value,
-    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '', filters.recommendedBy || '']);
+    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '', filters.recommendedBy || '',
+    !!filters.onServices]);
 }
 
 function renderLibraryFilters(category) {
@@ -152,7 +153,7 @@ function renderLibraryFilters(category) {
     const reset = document.createElement('button');
     reset.type = 'button'; reset.className = 'library-filter-reset'; reset.textContent = 'Clear search & filters';
     reset.addEventListener('click', () => applyLibraryFilters(category,
-      { completion: 'all', unrated: false, hasProgress: false, tag: '', recommendedBy: '' }, { clearSearch: true }));
+      { completion: 'all', unrated: false, hasProgress: false, tag: '', recommendedBy: '', onServices: false }, { clearSearch: true }));
     host.appendChild(reset);
     const feedback = document.createElement('p');
     feedback.id = `${tableId}FilterStatus`; feedback.className = 'library-filter-status';
@@ -164,9 +165,10 @@ function renderLibraryFilters(category) {
   });
   host.querySelectorAll('[data-library-filter]').forEach(input => { input.checked = filters[input.dataset.libraryFilter]; });
   host.querySelector('.library-filter-reset').disabled = filters.completion === 'all' && !filters.unrated
-    && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !document.getElementById(source.input).value;
+    && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !filters.onServices && !document.getElementById(source.input).value;
   window.OmniLibraryTags?.renderFilters(category, host);
   window.OmniTitleOrigins?.renderFilters(category, host);
+  window.OmniStreaming?.renderFilters(category, host);
   syncLibraryFilterCounts(category);
 }
 
@@ -182,7 +184,7 @@ function syncLibraryFilterCounts(category) {
   const filters = getLibraryFilters(category);
   const total = Number(panel.dataset.shelfTotal);
   const finished = Number(panel.dataset.shelfFinished);
-  const narrowed = filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
+  const narrowed = filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy || !!filters.onServices
     || !!document.getElementById(source.input)?.value;
   const known = !narrowed && panel.dataset.shelfTotal !== undefined && Number.isInteger(total) && Number.isInteger(finished)
     && total > 0 && finished >= 0 && finished <= total;
@@ -209,6 +211,8 @@ function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   if (typeof next.tag !== 'string' || !next.tag) delete next.tag;
   // Likewise the "Recommended by" filter (title-origins.js).
   if (typeof next.recommendedBy !== 'string' || !next.recommendedBy) delete next.recommendedBy;
+  // "On my services" (streaming.js) is only for films, shows and anime, and only while it's ticked.
+  if (!['movies', 'tv-shows', 'anime'].includes(category) || !next.onServices) delete next.onServices;
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   if (clearSearch) document.getElementById(source.input).value = '';
   libraryFilters.set(category, next);
@@ -254,7 +258,7 @@ function renderLibraryPager(category, page, loading = false, error = '') {
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   const filters = getLibraryFilters(category);
   const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
-    || !!document.getElementById(source.input).value;
+    || !!filters.onServices || !!document.getElementById(source.input).value;
   const panel = table.closest?.('.library-panel');
   if (panel) panel.dataset.libraryFiltered = String(filtered);
   if (feedback) feedback.textContent = error || (loading ? 'Loading titles…' : page.total
@@ -364,6 +368,7 @@ async function fetchLibraryPage(url) {
   parsed.searchParams.set('has_progress', String(filters.hasProgress));
   if (filters.tag) parsed.searchParams.set('tag', filters.tag);
   if (filters.recommendedBy) parsed.searchParams.set('recommended_by', filters.recommendedBy);
+  if (filters.onServices) parsed.searchParams.set('on_services', 'true');
   if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
   renderLibraryPager(category, page, true);
   try {

@@ -291,6 +291,7 @@
     applyLibraryFilters(category, {
       completion: view.filters.completion, unrated: view.filters.unrated,
       hasProgress: view.filters.has_progress, tag: view.filters.tag, recommendedBy: view.filters.recommended_by || '',
+      onServices: false,
     });
   }
   async function saveView(category, name, status) {

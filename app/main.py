@@ -142,6 +142,10 @@ async def lifespan(application: FastAPI):
     your_week_task = None
     if your_week.emails_enabled():
         your_week_task = asyncio.create_task(your_week.your_week_loop(application))
+    from . import streaming_services
+    streaming_task = None
+    if streaming_services.enabled_for_process():
+        streaming_task = asyncio.create_task(streaming_services.streaming_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -159,7 +163,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
-                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task):
+                     episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -924,6 +928,16 @@ for route in week_one_router.router.routes:
     elif path and path.startswith("/api/week-one/"):
         bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 app.include_router(week_one_router.router)
+from .routers import streaming as streaming_router
+# On your services: one read per home refresh, and buttons pressed a click at a time.
+for route in streaming_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/streaming":
+        methods = getattr(route, "methods", set())
+        bind_rate_limited_endpoint(route, limiter.limit("20/minute" if "PUT" in methods else "30/minute")(route.endpoint))
+    elif path and path.startswith("/api/streaming/"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+app.include_router(streaming_router.router)
 from .routers import backlog_draw as backlog_draw_router
 # Draw from your backlog: one read per home refresh, and buttons pressed a click at a time.
 for route in backlog_draw_router.router.routes:

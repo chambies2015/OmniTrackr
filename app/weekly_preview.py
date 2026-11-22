@@ -41,6 +41,7 @@ SECTIONS = {
     "library": "From your library",
     "episodes": "New episodes this week",
     "friends": "New on your friends' shelves",
+    "streaming": "New on your services",
     "next_up": "Next in your queue",
     "following": "From people you follow",
     "past": "This week in past years",
@@ -121,6 +122,9 @@ def _content(db: Session, user, now: datetime, client=None, today: date | None =
         first = next((entry for entry in friend["titles"] if entry.get("path")), None)
         lines.append(_line("friends", f"{friend['username']} added {digest._and_list(titles)}",
                            url=first["path"] if first else ""))
+    for item in extras.get("streaming") or []:
+        lines.append(_line("streaming", item["title"], item["label"], f"Now on {digest._and_list(item['services'])}",
+                           "/#on-your-services"))
     personal = bool(lines)
     next_up = extras["next_up"]
     if next_up:

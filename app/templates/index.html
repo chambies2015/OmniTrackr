@@ -80,7 +80,7 @@
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
   <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
-  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261103-where-2">
+  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261122-streaming-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/supporter.css?v=20261114-profile-1">
   <link rel="stylesheet" href="/static/app-themes.css?v=20261104-themes-1">
@@ -102,6 +102,7 @@
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
+  <link rel="stylesheet" href="/static/streaming.css?v=20261122-streaming-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -703,6 +704,50 @@
           </div>
         </section>
         </div>
+        <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
+             newest arrivals first. Asks which services once, then lists them (streaming.js). -->
+        <section id="onYourServices" class="on-services" aria-labelledby="onYourServicesTitle" hidden>
+          <div class="on-services__head">
+            <div class="on-services__intro">
+              <p id="onYourServicesEyebrow" class="on-services__eyebrow">Streaming tonight</p>
+              <h2 id="onYourServicesTitle" class="on-services__title">On your services</h2>
+              <p id="onYourServicesSummary" class="on-services__summary"></p>
+            </div>
+            <button type="button" id="onYourServicesEdit" class="on-services__edit" aria-expanded="false" aria-controls="onYourServicesPicker" hidden>Edit services</button>
+          </div>
+          <form id="onYourServicesPicker" class="on-services__picker" hidden>
+            <fieldset class="on-services__group">
+              <legend>Subscriptions</legend>
+              <div class="on-services__chips" data-services="paid"></div>
+            </fieldset>
+            <fieldset class="on-services__group">
+              <legend>Free with ads or a library card</legend>
+              <div class="on-services__chips" data-services="free"></div>
+            </fieldset>
+            <label class="on-services__alerts">
+              <input type="checkbox" id="onYourServicesAlerts" checked>
+              <span>Tell me when something on my list starts streaming on one of these</span>
+            </label>
+            <div class="on-services__actions">
+              <button type="submit" id="onYourServicesSave" class="on-services__btn on-services__btn--primary">Show what I can watch</button>
+              <button type="button" id="onYourServicesCancel" class="on-services__quiet" hidden>Cancel</button>
+            </div>
+            <p class="on-services__privacy">Only you can see which services you pick.</p>
+          </form>
+          <div id="onYourServicesFilters" class="on-services__filters" role="group" aria-label="Show titles on" hidden></div>
+          <ul id="onYourServicesList" class="on-services__list" hidden></ul>
+          <p id="onYourServicesEmpty" class="on-services__empty" hidden></p>
+          <button type="button" id="onYourServicesMore" class="on-services__more" aria-controls="onYourServicesList" aria-expanded="false" hidden></button>
+          <div class="on-services__foot">
+            <p id="onYourServicesCredit" class="on-services__credit"></p>
+            <div class="on-services__foot-actions">
+              <button type="button" id="onYourServicesLater" class="on-services__quiet" hidden>Not now</button>
+              <button type="button" id="onYourServicesStop" class="on-services__quiet" hidden>No thanks</button>
+              <button type="button" id="onYourServicesHide" class="on-services__quiet" hidden>Hide this card</button>
+            </div>
+          </div>
+          <p id="onYourServicesStatus" class="on-services__status" role="status" aria-live="polite"></p>
+        </section>
         <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
         <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
           <div class="home-news__head">
@@ -2652,15 +2697,15 @@
   <script src="/static/next-up-drag.js?v=20261109-queue-1" defer></script>
   <script src="/static/library-quick.js?v=20261120-sweep-1"></script>
   <script src="./app.js"></script>
-  <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
+  <script src="/static/library-tags.js?v=20261122-streaming-1"></script>
   <script src="/static/title-origins.js?v=20261120-pass-it-on-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261121-feed-runs-1"></script>
-  <script src="/static/home-layout.js?v=20261121-sweep-f-1"></script>
+  <script src="/static/home-layout.js?v=20261122-streaming-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
-  <script src="/static/title-links.js?v=20261103-where-1"></script>
+  <script src="/static/title-links.js?v=20261122-streaming-1"></script>
   <script src="/static/public-profile.js?v=20261120-widgets-1"></script>
   <script src="/static/supporter.js?v=20261112-settings-1"></script>
   <script src="/static/support-ask.js?v=20261116-support-1" defer></script>
@@ -2687,6 +2732,7 @@
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
   <script src="/static/backlog-draw.js?v=20261121-sweep-f-1" defer></script>
   <script src="/static/your-week.js?v=20261120-your-week-2" defer></script>
+  <script src="/static/streaming.js?v=20261122-streaming-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261121-phone-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>

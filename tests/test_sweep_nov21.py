@@ -26,9 +26,10 @@ def test_changed_assets_carry_new_tags():
     # challenges.js changed again for the May (#276), June, July, August, September and October challenges, and home-layout.js for the
     # member phone pass ("Mark watched" on Do this next) and the Nov 21 morning sweep, so they carry later tags
     # (challenges.js again for the Nov 21 midday sweep and the October, November and December challenges;
-    # styles.css for the review length limit; home-layout.js again for the Nov 21 afternoon sweep's reveal).
+    # styles.css for the review length limit; home-layout.js again for the Nov 21 afternoon sweep's reveal and
+    # the Nov 22 "On your services" card).
     for tag in ("./styles.css?v=20261121-text-limits-1", "/static/challenges.js?v=20261121-between-the-years-1",
-                "/static/home-layout.js?v=20261121-sweep-f-1"):
+                "/static/home-layout.js?v=20261122-streaming-1"):
         assert tag in INDEX, tag
 
 
