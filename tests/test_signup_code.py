@@ -252,6 +252,12 @@ def test_a_confirmed_email_still_gets_log_in_or_reset(client, db_session, record
 
 
 def test_register_says_whether_the_email_went(client, monkeypatch):
+    unconfigured = email_utils.send_verification_email
+
+    async def delivered(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(email_utils, "send_verification_email", delivered)
     assert register(client).headers["X-Verification-Email"] == "sent"
 
     async def broken(*args, **kwargs):
@@ -259,6 +265,11 @@ def test_register_says_whether_the_email_went(client, monkeypatch):
 
     monkeypatch.setattr(email_utils, "send_verification_email", broken)
     response = register(client, username="second", email="second@example.com")
+    assert response.status_code == 201 and response.headers["X-Verification-Email"] == "failed"
+
+    # With no mail server set up nothing is sent, so the inbox step says so.
+    monkeypatch.setattr(email_utils, "send_verification_email", unconfigured)
+    response = register(client, username="third", email="third@example.com")
     assert response.status_code == 201 and response.headers["X-Verification-Email"] == "failed"
 
 

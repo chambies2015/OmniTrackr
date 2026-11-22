@@ -750,7 +750,7 @@ class TestSecurityMiddleware:
             "/content-quality": "Editorial Standards",
             "/site-map": "Site Map",
             "/faq": "OmniTrackr FAQ",
-            "/guides": "Track Media, Reviews, Stats",
+            "/guides": "Series in Order, Binge Times and Best-Of Lists",
             "/compare": "OmniTrackr vs Spreadsheets",
             "/use-cases": "Media Tracking Use Cases",
             "/changelog": "OmniTrackr Changelog",
@@ -1298,7 +1298,7 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "<h1>How-To Guides</h1>" in content
+        assert "<h1>Guides</h1>" in content
         assert ".privacy-header h1" in content
         guides_h1_rule = content.split(".privacy-header h1", 1)[1].split("}", 1)[0]
         assert "color: var(--primary)" in guides_h1_rule

@@ -124,8 +124,10 @@ def test_light_theme_is_opt_in_and_scoped(client):
     light = css[css.index("@media (prefers-color-scheme: light)"):]
     assert 'html[data-reader]:not([data-theme="dark"]) .public-reader .reader-shell' in light
     assert 'html[data-reader][data-theme="light"] .public-reader .reader-shell' in light
-    # The site header keeps its dark look; only the reading area changes.
-    assert "--site-text: #16132b" in light and ".site-header { background: rgba(11, 10, 24, .96); }" in light
+    # The reading area and the site header both turn light; the header reads the same tokens.
+    assert "--site-text: #16132b" in light
+    assert 'html[data-reader][data-theme="light"] .public-reader .site-header {' in light
+    assert "--site-strong: #16132b" in light and "rgba(11, 10, 24, .96)" not in light
     # The switch is invisible until the script sets it up, so the row never shifts.
     assert '.reader-theme:not([data-next]) { visibility: hidden; }' in css
     script = reader_pages.THEME_SCRIPT

@@ -170,7 +170,7 @@ def test_hero_search_results_sit_under_the_box_on_phones(client):
     script = (ROOT / "app/static/title-search.js").read_text(encoding="utf-8")
     assert "form.classList.toggle('lp-search--open', open)" in script and "input.blur()" in script
     page = client.get("/").text
-    assert "/static/public-landing.css?v=20261121-phone-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
+    assert "/static/public-landing.css?v=20261121-refresh-1" in page and "/static/title-search.js?v=20261121-phone-1" in page
 
 
 def test_public_pages_tint_the_phone_address_bar(client):

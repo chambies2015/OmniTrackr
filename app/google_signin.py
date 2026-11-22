@@ -9,8 +9,9 @@ first name, used once to suggest a username. No Google token is stored.
 
 Account rules:
 - A Google account already linked to a member signs that member in.
-- Email-based linking and account creation require a Gmail or Google Workspace identity.
-  Members using another mailbox can sign up or log in with email.
+- Linking to an existing member by email requires a Gmail or Google Workspace identity,
+  the addresses Google is authoritative for. A member using another mailbox logs in with
+  email. A new account can still be made from any verified Google address.
 - A member whose email matches Google's authoritative email is linked and signed in.
   If that member had never verified the address, Google has now proved who owns it, so
   the account is marked verified and its unproven password is replaced (whoever chose
@@ -247,24 +248,29 @@ def _random_password_hash() -> str:
     return auth.get_password_hash(secrets.token_urlsafe(32))
 
 
+def _google_owns_address(profile: dict) -> bool:
+    """Gmail, or a managed Google Workspace account (the hosted-domain claim)."""
+    hosted_domain = profile.get("hd")
+    return (profile["email"].rsplit("@", 1)[-1].lower() == "gmail.com"
+            or (isinstance(hosted_domain, str) and bool(hosted_domain.strip())))
+
+
 def find_or_create_user(db: Session, profile: dict) -> tuple[models.User, str]:
     """Return (user, outcome) where outcome is "signed_in", "linked" or "created"."""
     user = db.query(models.User).filter(models.User.google_sub == profile["sub"]).first()
     if user is not None:
         outcome = "signed_in"
     else:
-        # Google may once have verified a third-party mailbox that has changed hands.
-        # The hosted-domain claim identifies a managed Google Workspace account.
-        hosted_domain = profile.get("hd")
-        if (profile["email"].rsplit("@", 1)[-1].lower() != "gmail.com"
-                and not (isinstance(hosted_domain, str) and hosted_domain.strip())):
-            raise SignInError("unverified")
         user = (db.query(models.User)
                 .filter(func.lower(models.User.email) == profile["email"].lower())
                 # A capitalised copy someone else registered must not win over the real account.
                 .order_by(case((models.User.email == profile["email"], 0), else_=1),
                           case((models.User.is_verified.is_(True), 0), else_=1), models.User.id).first())
         if user is not None:
+            # Google may once have verified a third-party mailbox that has changed hands, so
+            # only an address Google is authoritative for can take over an existing account.
+            if not _google_owns_address(profile):
+                raise SignInError("unverified")
             if not user.is_active:
                 raise SignInError("deactivated")  # Leave a deactivated account exactly as it was.
             if user.google_sub and user.google_sub != profile["sub"]:

@@ -20,8 +20,9 @@ from __future__ import annotations
 import math
 import re
 from html import escape, unescape
+from urllib.parse import urlsplit
 
-CSS_VERSION = "20261120-speed-1"
+CSS_VERSION = "20261121-library-1"
 JS_VERSION = "20261120-a11y-1"
 SERIF_FONT = "/static/fonts/source-serif-4-latin-var-normal.woff2"
 MARKER = "data-guide-layout"
@@ -38,6 +39,8 @@ _SKIP = re.compile(r"<(script|style|template|noscript)\b.*?</\1>", re.S | re.I)
 _TAGS = re.compile(r"<[^>]+>")
 _NONCE = re.compile(r'<script\b[^>]*\snonce="([A-Za-z0-9+/=_-]+)"')
 _WORD = re.compile(r"[A-Za-z0-9À-ɏ'’]+")
+_CANONICAL = re.compile(r'<link rel="canonical" href="(https://omnitrackr\.xyz[^"]*)"')
+_BACK_LINK = re.compile(r'\s*<a href="[^"]*">\s*←[^<]*</a>')
 
 
 def _matching_close(html: str, start: int, pattern: re.Pattern) -> int:
@@ -62,7 +65,7 @@ def _contents(header: str) -> list[tuple[str, str]]:
     return [(href, _TAGS.sub("", label).strip()) for href, label in _LINK.findall(jump.group(1)) if _TAGS.sub("", label).strip()]
 
 
-def _rail(links: list[tuple[str, str]], minutes: int, checked) -> str:
+def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = "") -> str:
     # The links are copied from finished HTML, so an href is already escaped once.
     items = "".join(f'<li><a href="{escape(unescape(href), quote=True)}">{label}</a></li>' for href, label in links)
     toc = (f'<nav class="guide-toc" aria-label="Contents"><p class="guide-rail__label">On this page</p>'
@@ -74,8 +77,50 @@ def _rail(links: list[tuple[str, str]], minutes: int, checked) -> str:
         '<div class="guide-rail__about"><p class="guide-rail__label">About this guide</p>'
         f'<ul><li>{minutes} min read</li>{when}<li>Reviewed by the site owner</li></ul>'
         '<p><a href="/content-quality">How we write guides</a></p>'
-        '<p><a href="/contact">Send a correction</a></p></div></div></aside>'
+        f'<p><a href="/contact">Send a correction</a></p></div>{library}</div></aside>'
     )
+
+
+def _canonical_path(html: str):
+    match = _CANONICAL.search(html)
+    return urlsplit(unescape(match.group(1))).path.rstrip("/") or "/" if match else None
+
+
+def _crumbs(html: str) -> str:
+    """A visible trail above the title (Home / Guides / Franchises in order), from the same
+    steps as the page's BreadcrumbList data. The page itself is left off: its title is right below."""
+    match = _CANONICAL.search(html)
+    if not match:
+        return ""
+    from .page_breadcrumbs import trail
+    steps = trail(unescape(match.group(1)), "")[:-1]
+    if len(steps) < 2:
+        return ""
+    items = "".join(f'<li><a href="{escape(urlsplit(url).path or "/", quote=True)}">{escape(name)}</a></li>'
+                    for name, url in steps)
+    return f'<nav class="guide-crumbs" aria-label="Breadcrumb"><ol>{items}</ol></nav>'
+
+
+def _library(html: str) -> str:
+    path = _canonical_path(html)
+    if not path:
+        return ""
+    from .guide_library import rail_html
+    return rail_html(path)
+
+
+def _with_crumbs(header: str, crumbs: str) -> str:
+    """Put the trail first in the header. It replaces the old "← Back to the hub" link,
+    which named the same hub."""
+    if not crumbs:
+        return header
+    opened = _HEADER_TAG.match(header.lstrip())
+    lead = len(header) - len(header.lstrip())
+    start = lead + opened.end()
+    back = _BACK_LINK.match(header, start)
+    if back:
+        return header[:start] + crumbs + header[back.end():]
+    return header[:start] + crumbs + header[start:]
 
 
 def _head_tags(html: str) -> str:
@@ -120,7 +165,15 @@ def add_reading_layout(html: str) -> str:
         header = (header[:byline.end(2)] + f' <span class="guide-readtime">· {minutes} min read</span>'
                   + header[byline.end(2):])
 
+    try:
+        header = _with_crumbs(header, _crumbs(html))
+    except Exception:
+        pass  # the page keeps its own back link
+    try:
+        library = _library(html)
+    except Exception:
+        library = ""
     layout = (f'{header}<div class="guide-columns" {MARKER}><div class="guide-body">{body}</div>'
-              f'{_rail(_contents(header), minutes, checked)}</div>')
+              f'{_rail(_contents(header), minutes, checked, library)}</div>')
     html = html[:inner_start] + layout + html[close_start:]
     return html.replace("</head>", _head_tags(html) + "</head>", 1)
