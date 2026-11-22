@@ -102,7 +102,7 @@
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/support-ask.css?v=20261116-support-1">
   <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
-  <link rel="stylesheet" href="/static/streaming.css?v=20261122-streaming-1">
+  <link rel="stylesheet" href="/static/streaming.css?v=20261122-tonight-share-1">
   <link rel="stylesheet" href="/static/rankings.css?v=20261122-ranked-share-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
@@ -734,12 +734,14 @@
               <button type="submit" id="onYourServicesSave" class="on-services__btn on-services__btn--primary">Show what I can watch</button>
               <button type="button" id="onYourServicesCancel" class="on-services__quiet" hidden>Cancel</button>
             </div>
-            <p class="on-services__privacy">Only you can see which services you pick.</p>
+            <p id="onYourServicesPrivacy" class="on-services__privacy">Only you can see which services you pick.</p>
           </form>
           <div id="onYourServicesFilters" class="on-services__filters" role="group" aria-label="Show titles on" hidden></div>
           <ul id="onYourServicesList" class="on-services__list" hidden></ul>
           <p id="onYourServicesEmpty" class="on-services__empty" hidden></p>
           <button type="button" id="onYourServicesMore" class="on-services__more" aria-controls="onYourServicesList" aria-expanded="false" hidden></button>
+          <!-- Share link for this list, /on-my-services/<token> (streaming.js, app/service_shares.py) -->
+          <div id="onYourServicesShare" class="on-services__share" hidden></div>
           <div class="on-services__foot">
             <p id="onYourServicesCredit" class="on-services__credit"></p>
             <div class="on-services__foot-actions">
@@ -2787,7 +2789,7 @@
   <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
   <script src="/static/backlog-draw.js?v=20261121-sweep-f-1" defer></script>
   <script src="/static/your-week.js?v=20261120-your-week-2" defer></script>
-  <script src="/static/streaming.js?v=20261122-sweep-b-1" defer></script>
+  <script src="/static/streaming.js?v=20261122-tonight-share-1" defer></script>
   <script src="/static/rankings.js?v=20261122-ranked-sweep-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261122-shelf-1"></script>

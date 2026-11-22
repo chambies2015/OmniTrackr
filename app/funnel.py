@@ -148,6 +148,12 @@ GUEST = (
     ("rank_result_shared", "Rankings: an agreement result shared"),
     ("rank_signup_clicked", "Rankings: sign-up pressed on a shared top ten"),
     ("rank_take_saved", "Rankings: a ranking made on a shared top ten moved into a library"),
+    ("svc_link_created", "On your services: a member made a share link for their list"),
+    ("svc_link_shared", "On your services: a list link copied, shared or saved as an image"),
+    ("svc_link_opened", "On your services: a shared list opened by a visitor without an account"),
+    ("svc_services_ticked", "On your services: someone ticked their own services on a shared list"),
+    ("svc_title_saved", "On your services: a title saved from a shared list"),
+    ("svc_signup_clicked", "On your services: sign-up pressed on a shared list"),
     ("daily_played", "Daily puzzle: a game started"),
     ("daily_solved", "Daily puzzle: solved"),
     ("daily_shared", "Daily puzzle: result shared"),
@@ -265,7 +271,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked",
                  "signup_sheet_opened", "signup_sheet_google", "signup_sheet_email", "signup_sheet_login",
                  "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
-                 "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked"}
+                 "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
+                 "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

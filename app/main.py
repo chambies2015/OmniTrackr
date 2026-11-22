@@ -987,6 +987,15 @@ for route in ranked_share_router.router.routes:
     elif path:
         bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
 app.include_router(ranked_share_router.router)
+from .routers import services_share as services_share_router
+# A shared "On your services" list: every open by someone else counts (a write), and the pictures are drawn on demand.
+for route in services_share_router.router.routes:
+    path = getattr(route, "path", None)
+    if path and path.endswith(".png"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    elif path:
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+app.include_router(services_share_router.router)
 from .routers import your_week as your_week_router
 # Your week: one read per home refresh, and buttons pressed a click at a time.
 for route in your_week_router.router.routes:

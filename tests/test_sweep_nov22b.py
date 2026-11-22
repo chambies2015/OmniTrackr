@@ -162,7 +162,7 @@ def test_site_stats_script_tag_moved_with_the_streaming_block():
 
 def test_streaming_script_tag_moved_with_the_new_summary():
     index = (ROOT / "app/templates/index.html").read_text()
-    assert '/static/streaming.js?v=20261122-sweep-b-1" defer' in index
+    assert '/static/streaming.js?v=20261122-tonight-share-1" defer' in index
 
 
 def test_changelog_lists_the_sweep():

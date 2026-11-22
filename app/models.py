@@ -2509,3 +2509,21 @@ class RankingShare(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", name="uq_ranking_shares_member_category"),
     )
+
+
+class ServiceShare(Base):
+    """A member's share link for their "On your services" list (Nov 2026): /on-my-services/<token>.
+
+    A new table only, one row per member. The page reads the list when someone opens it: films,
+    shows and anime the member hasn't finished that stream on the services they picked, from
+    shelves that aren't hidden or private. It never shows scores, notes or the rest of the
+    library. Deleting the row ends the link. ``opened`` counts opens by other people (not bots
+    or prefetches).
+    """
+    __tablename__ = "service_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
