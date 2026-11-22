@@ -197,10 +197,44 @@ def _spring_tv_dates() -> Change:
     )
 
 
+def _switch_sections() -> Change:
+    from .switch_guides import GUIDES, NOTES, path
+    pages = tuple(
+        (path(slug), "Added the sections " + " and ".join(f"“{note['heading']}”" for note in notes) + ".")
+        for slug, notes in NOTES.items() if slug in GUIDES
+    )
+    return Change(
+        "2026-11-22", "added", f"{len(pages)} switching guides", "/switch",
+        "Each Switch from guide gained two sections written for that service, on how its ratings convert and on the "
+        "parts of its export that change what arrives, such as Goodreads series names in titles, the Steam box that "
+        "hides playtime, and how Trakt decides a show is finished. They were checked against the Import Studio code "
+        "the same day.",
+        pages,
+    )
+
+
+def _switch_fixes() -> Change:
+    pages = (
+        ("/switch/myanimelist",
+         "This guide said the export only holds each series' total episode count. The export also records how many "
+         "episodes or chapters you've got through; the import doesn't read that number yet, and the guide now says so."),
+        ("/switch/goodreads",
+         "The answer to “Will books I already added be duplicated?” said no. Goodreads puts the series in some "
+         "titles, and those don't match a book you added under its plain title, so the answer now says that."),
+    )
+    return Change(
+        "2026-11-22", "correction", "Two switching guides", "/switch",
+        "The MyAnimeList guide said the export holds only each series' episode total, when it also records your own "
+        "progress, which the import doesn't read yet. The Goodreads guide said books you already track are never "
+        "duplicated, which isn't true of titles Goodreads writes with the series in brackets.",
+        pages,
+    )
+
+
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [_in_order_dates(), _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(),
-               *_grammys(), _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
+    changes = [_switch_fixes(), _switch_sections(), _in_order_dates(), _binge_sections(), _if_you_liked_decks(),
+               _best_of_decks(), _hubs(), *_grammys(), _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))
 
 
@@ -284,7 +318,12 @@ def _page_name(path: str) -> str:
     if path in names:
         return names[path]
     hubs = {"/if-you-liked": "If you liked", "/new-releases": "Release guides", "/challenges": "Monthly challenges",
-            "/browse": "Browse shelves"}
+            "/browse": "Browse shelves", "/switch": "Switching guide"}
+    if path.startswith("/switch/"):
+        from .switch_guides import GUIDES
+        guide = GUIDES.get(path.removeprefix("/switch/"))
+        if guide:
+            return f"Switch from {guide['name']}"
     return hubs.get(path, path)
 
 

@@ -203,6 +203,8 @@ def mark_winner(slug: str, body: ResultBody, request: Request, response: Respons
 
 def _status_line(show: dict, state: str, today: date) -> str:
     """The small capital line above the heading."""
+    if state == "coming" and awards.nominees_pending(show):
+        return "NOMINEES OUT · BALLOT BEING CHECKED"
     if state == "coming":
         return f"NOMINEES DUE {show['nominees_label'].upper()}"
     if state == "open":
@@ -347,11 +349,19 @@ def _ballot_section(slug: str, show: dict, *, member: Optional[dict], states: Op
         else:
             action = (f'<a class="button" href="{_e(_signup_path(slug))}" rel="nofollow" data-award-signup>'
                       'Make a free account to get a reminder</a>')
+        if awards.nominees_pending(show):
+            heading = "The nominees are out, and the ballot is being checked"
+            note = (f'The nominees were announced on {_e(show["nominees_label"])}. Every name on a ballot here is typed '
+                    'from the official list and compared with a second published list before the ballot opens, so it '
+                    'can take a few days after the announcement.')
+        else:
+            heading = "The ballot opens when the nominees are announced"
+            note = (f'{_e(show["nominees_note"])} The list is checked against the official one before it goes up here, '
+                    'so the ballot may open a few hours later.')
         return (f'<section id="ballot" class="aw-ballot aw-ballot--coming" aria-labelledby="aw-ballot-heading"{data}>'
                 '<p class="aw-ballot__kicker">YOUR BALLOT</p>'
-                '<h2 id="aw-ballot-heading">The ballot opens when the nominees are announced</h2>'
-                f'<p>{_e(show["nominees_note"])} The list is checked against the official one before it goes up here, '
-                'so the ballot may open a few hours later.</p>'
+                f'<h2 id="aw-ballot-heading">{heading}</h2>'
+                f'<p>{note}</p>'
                 f'<div class="aw-actions">{action}</div>{status}</section>')
 
     locked = state != "open"
@@ -553,7 +563,9 @@ def _show_card(db: Session, slug: str, show: dict, user, now: datetime) -> str:
             mine = f'<p class="aw-card__mine">You called {marks["correct"]} of {marks["judged"]}</p>'
         elif chosen:
             mine = f'<p class="aw-card__mine">Your ballot: {len(chosen)} of {total} picked</p>'
-    if state == "coming":
+    if state == "coming" and awards.nominees_pending(show, now):
+        chip, action = "Ballot opening soon", "Dates and details"
+    elif state == "coming":
         chip, action = f"Ballot opens {show['nominees_label']}", "Dates and details"
     elif state == "open":
         chip, action = "Ballot open", "Fill in your ballot"
