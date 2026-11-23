@@ -64,7 +64,7 @@ CALLOUTS = {
         ],
     },
     "thanksgiving": {
-        "heading": "Drawing names this weekend?",
+        "heading": "Drawing names at Thanksgiving?",
         "intro": "If your family does Secret Santa, Thanksgiving is often when the names come out of the hat. "
                  "Both of these can be set up before everyone heads home.",
         "tools": [
@@ -97,6 +97,27 @@ CALLOUTS = {
     },
 }
 
+# Lines that tie a tool to Christmas morning or the week after. From the day after each date until
+# Dec 31 the plain text below replaces them; the rest of the year the Christmas plan still holds.
+LATE_DECEMBER = {
+    ("christmas", SWAP): (22, "Draw names in the family group chat and give one recommendation each: a film, a show, "
+                              "a book, a game or an album, with a note on why. Nobody finds out who had whom until "
+                              "unwrap day."),
+    ("christmas", TOGETHER): (26, "Choose a show you'll all start before New Year's, set two episodes a week, and keep "
+                                  "going into January from wherever you live. Notes about an episode stay locked "
+                                  "until you've seen it."),
+    ("thanksgiving", SWAP): (22, "Run the draw on OmniTrackr and make the gift a recommendation. Everyone picks one "
+                                 "title for the person they drew, and you choose the unwrap day."),
+}
+
+
+def _text(page: str, tool: str, text: str, today: date) -> str:
+    late = LATE_DECEMBER.get((page, tool))
+    if late and today.month == 12 and today.day > late[0]:
+        return late[1]
+    return text
+
+
 TOOLS = {
     SWAP: {"name": "Pick swap", "kicker": "Secret Santa", "path": "/swap",
            "guest": "See how a swap works", "member": "Start a pick swap"},
@@ -116,13 +137,15 @@ def _art(tool: str) -> str:
             f'<div class="ft-track"><i></i>{dots}</div><p class="ft-track__note">2 notes waiting at episode 6</p></div>')
 
 
-def callout_html(page: str, signed_in: bool) -> str:
+def callout_html(page: str, signed_in: bool, today: Optional[date] = None) -> str:
     """The "with your people" section for a guide page; empty for a page without one."""
     entry = CALLOUTS.get(page)
     if not entry:
         return ""
+    today = today or date.today()
     cards = []
     for tool, text in entry["tools"]:
+        text = _text(page, tool, text, today)
         info = TOOLS[tool]
         href = info["path"] + ("#start" if signed_in else "")
         label = info["member"] if signed_in else info["guest"]

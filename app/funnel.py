@@ -67,7 +67,7 @@ GUEST = (
     ("home_tour_opened", "Homepage: a visitor switched screens in the Look inside tour"),
     ("home_import_clicked", "Homepage: Sign up and import pressed"),
     ("home_binge_demo_used", "Homepage: binge calculator demo changed"),
-    ("home_tool_opened", "Homepage: a free tool or switching guide opened"),
+    ("home_tool_opened", "Homepage: a free tool, switching guide, Pick swap or Watch together opened"),
     ("home_picks_filtered", "Homepage: a format chip over the Start your library picks used"),
     ("home_shelf_suggestion_added", "Homepage: a title added from Members also track in the Your library panel"),
     ("home_shelf_signup", "Homepage: a sign-up button in the Your library panel pressed"),

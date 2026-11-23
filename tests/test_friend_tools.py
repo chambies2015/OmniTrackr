@@ -73,6 +73,52 @@ def test_callout_copy_is_escaped_and_needs_no_inline_styles():
         assert "'" not in re.sub(r"<[^>]+>", "", html)  # apostrophes come out as &#x27;
 
 
+def _card_text(page, tool, today):
+    html = friend_tools.callout_html(page, False, today)
+    card = html[html.index(f'ft-card--{tool}'):]
+    return card[:card.index("</article>")]
+
+
+def test_christmas_morning_lines_give_way_after_the_swap_season():
+    # Up to Dec 22 a swap can still unwrap on Christmas morning; from Dec 23 the copy stops promising it.
+    for page in ("christmas", "thanksgiving"):
+        assert "Christmas morning" in _card_text(page, "swap", date(2026, 12, 22))
+        assert "Christmas morning" not in _card_text(page, "swap", date(2026, 12, 23))
+        assert "Christmas morning" not in _card_text(page, "swap", date(2026, 12, 31))
+        # Read in the new year, the guide is about next Christmas again.
+        assert "Christmas morning" in _card_text(page, "swap", date(2027, 1, 2))
+    assert "day after Christmas" in _card_text("christmas", "together", date(2026, 12, 26))
+    assert "day after Christmas" not in _card_text("christmas", "together", date(2026, 12, 27))
+    assert "day after Christmas" in _card_text("christmas", "together", date(2027, 11, 20))
+    # Pages without a late version keep their copy all year.
+    assert _card_text("holidays", "swap", date(2026, 12, 28)) == _card_text("holidays", "swap", IN_SEASON)
+    for (page, tool), (day, text) in friend_tools.LATE_DECEMBER.items():
+        assert any(item[0] == tool for item in friend_tools.CALLOUTS[page]["tools"])
+        assert 1 <= day < 31 and text
+        html = friend_tools.callout_html(page, False, date(2026, 12, 31))
+        assert "'" not in re.sub(r"<[^>]+>", "", html)  # apostrophes escaped in the late copy too
+
+
+def test_thanksgiving_heading_reads_right_after_the_weekend():
+    assert friend_tools.CALLOUTS["thanksgiving"]["heading"] == "Drawing names at Thanksgiving?"
+
+
+def test_guide_pages_use_the_server_date_for_the_late_copy(client, monkeypatch):
+    from app.routers import seasonal as seasonal_router
+
+    class LateDecember(date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 12, 28)
+
+    monkeypatch.setattr(seasonal_router, "date", LateDecember)
+    page = client.get("/holidays/christmas").text
+    section = page[page.index('<section class="ft-callout'):]
+    section = section[:section.index("</section>")]
+    assert "Christmas morning" not in section and "day after Christmas" not in section
+    assert "Nobody finds out who had whom until unwrap day" in section
+
+
 def test_season_card_lists_pick_swap_after_the_gift_guide_in_season(authenticated_client, monkeypatch, in_season):
     monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
     paths = [link["path"] for link in authenticated_client.get("/api/seasonal/current").json()["links"]]
