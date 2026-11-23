@@ -545,6 +545,9 @@ def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
         raise LookupError("Payment not found")
     if payment.user_id is not None:
         raise ValueError("That payment is already linked")
+    if payment.gift:
+        # Its perks belong to whoever opens the gift. Linking it as well would pay out twice.
+        raise ValueError("That payment bought a gift, so it can't be linked to a member")
     _link(db, payment, user.id)
     db.commit()
     _thank(db, user.id, 1)
@@ -915,7 +918,9 @@ def handle_webhook(db: Session, data: dict) -> dict:
         if marker is not None:
             giver = db.get(models.User, marker["giver_id"]) if marker["giver_id"] else None
             if giver is None or not giver.is_active:
-                giver = _match(db, data, email)
+                # Only the payer's own email, not a supporter code: a plain OT-123-abc code written next to
+                # OT-GIFT is as likely to be the person it's for, and the giver can never open their gift.
+                giver = _match(db, data, email, codes=False)
             gift = gift_memberships.from_webhook(db, payment, giver)
             if giver is not None:
                 from .support_asks import note_support  # avoids a circular import
@@ -935,9 +940,10 @@ def handle_webhook(db: Session, data: dict) -> dict:
     return {"status": "recorded", "linked": False, "gift": True, "_gift_id": gift.id, "_email": email}
 
 
-def _match(db: Session, data: dict, email: Optional[str]):
-    """The member a new payment belongs to: a supporter code anywhere the payer could type it, else one verified email."""
-    for field in ("message", "from_name"):
+def _match(db: Session, data: dict, email: Optional[str], codes: bool = True):
+    """The member a new payment belongs to: a supporter code anywhere the payer could type it, else one verified email.
+    ``codes=False`` skips the codes and goes by the email alone."""
+    for field in ("message", "from_name") if codes else ():
         code_id = user_id_from_text(data.get(field) if isinstance(data.get(field), str) else None)
         user = db.get(models.User, code_id) if code_id is not None else None
         if user is not None:
