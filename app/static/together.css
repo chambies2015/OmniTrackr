@@ -453,3 +453,31 @@
 @media (prefers-reduced-motion: reduce) {
   .tg-card, .tg-pick { transition: none; }
 }
+
+/* -------------------------------------------------------------- phones (Nov 23 2026) */
+@media (max-width: 560px) {
+  /* A plan page opened with six weeks of track and the people list; "Where are you?", the
+     button people come back to press, started a screen and a half down. It goes first. */
+  .tg-plan__main > .tg-move { order: -1; }
+
+  /* Picking a title listed up to 18 library rows in one column, about 1,500px before the
+     search box and the rest of the form. Three rows that swipe sideways instead. */
+  .tg-picks:not(.tg-picks--results) {
+    grid-auto-columns: 84%;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-template-rows: repeat(3, auto);
+    margin-inline: -18px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 18px 6px;
+    scroll-padding-inline: 18px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .tg-picks:not(.tg-picks--results)::-webkit-scrollbar { display: none; }
+  .tg-picks:not(.tg-picks--results) > li { scroll-snap-align: start; }
+
+  /* "← All your plans" was a 20px line. */
+  .tg-back a { display: inline-block; margin-block: -12px; padding-block: 12px; }
+}

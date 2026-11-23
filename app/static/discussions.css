@@ -321,3 +321,10 @@ a.disc-author:hover { color: var(--site-violet-soft); text-decoration: underline
   .disc-waits { grid-template-columns: minmax(0, 1fr); }
   .disc-opener { font-size: .8rem; }
 }
+
+/* Phones (Nov 23 2026): each "waiting for a first post" card has two links 8px apart, both
+   about 20px tall. Taller links, a little more room between them. */
+@media (max-width: 760px) {
+  .disc-wait__title, .disc-wait__opener { display: block; margin-block: -8px; padding-block: 8px; }
+  .disc-wait__opener { margin-top: 4px; }
+}
