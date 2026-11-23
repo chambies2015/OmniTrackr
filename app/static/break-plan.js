@@ -75,7 +75,25 @@
     return 'All done';
   }
 
-  const helpers = { isoDay, parseDay, daysBetween, hoursWords, lengthWords, dayDefaults, fillShare, phaseLine };
+  // Titles ticked on "From a friend's plan": the ones saved from it before signing up (the browser's guest
+  // list) and the ones already on the member's own list. Nothing they'd have to add is ticked for them.
+  function defaultPicks(titles, guestList) {
+    const saved = new Set((Array.isArray(guestList) ? guestList : [])
+      .filter(item => item && typeof item.kind === 'string' && typeof item.slug === 'string')
+      .map(item => `${item.kind}/${item.slug}`));
+    return (titles || []).filter(entry => entry.mine !== 'finished'
+      && (entry.mine === 'open' || saved.has(`${entry.kind}/${entry.slug}`))).map(entry => `${entry.kind}/${entry.slug}`);
+  }
+
+  function takenLine(taken, by) {
+    if (!taken || !taken.picked) return '';
+    const from = by ? `${by}'s plan` : 'the shared plan';
+    if (taken.placed === taken.picked) return taken.picked === 1 ? ` The one from ${from} is on it.` : ` All ${taken.picked} from ${from} are on it.`;
+    if (!taken.placed) return ` None of the ones from ${from} fit the time you have, so they wait on your list.`;
+    return ` ${taken.placed} of the ${taken.picked} from ${from} fit. The rest wait on your list.`;
+  }
+
+  const helpers = { isoDay, parseDay, daysBetween, hoursWords, lengthWords, dayDefaults, fillShare, phaseLine, defaultPicks, takenLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = helpers;
   if (typeof document === 'undefined') return;
 
@@ -260,7 +278,29 @@
 
   // ------------------------------------------------------------------ the member's plan
 
-  const state = { data: null, busy: false, panel: '', asks: new Map(), status: '', tone: '', setup: null };
+  const state = { data: null, busy: false, panel: '', asks: new Map(), status: '', tone: '', setup: null, from: null };
+  const FROM_TOKEN = /^[A-Za-z0-9_-]{16,40}$/;
+
+  // /break?from=<token>: started from a plan someone shared.
+  function fromToken() {
+    const value = new URLSearchParams(window.location.search).get('from') || '';
+    return FROM_TOKEN.test(value) ? value : '';
+  }
+
+  function forgetFrom() {
+    try { window.localStorage.removeItem('omnitrackr_break_from'); } catch (error) { /* nothing kept */ }
+  }
+
+  function guestList() {
+    try {
+      const list = JSON.parse(window.localStorage.getItem('omnitrackr_guest_list') || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  if (window.location.hash === '#share') state.panel = 'share';
 
   function setStatus(text, tone) {
     state.status = text || '';
@@ -293,8 +333,24 @@
   }
 
   async function load() {
+    const token = fromToken();
+    // Coming back here from the shared plan's page is done with, so it doesn't send them here again.
+    if (token) forgetFrom();
     try {
-      state.data = await api('/api/break');
+      const [data, from] = await Promise.all([api('/api/break'),
+        token ? api(`/api/break/from/${token}`).catch(error => ({ error: error.message })) : Promise.resolve(null)]);
+      state.data = data;
+      if (from && !from.error && !from.own) {
+        state.from = { ...from, picks: new Set(defaultPicks(from.titles, guestList())) };
+      } else if (from && from.own) {
+        setStatus('That\'s your own plan\'s link.');
+      } else if (from && from.error) {
+        setStatus(from.error, 'error');
+      }
+      if (state.from && state.data.plan && state.data.plan.phase !== 'after') {
+        setStatus(`You already have a plan for ${state.data.plan.name}. Add titles from the shared plan to your list on its page, then put them on a day with Add a title.`);
+        state.from = null;
+      }
       render();
       const plan = state.data.plan;
       if (plan && plan.phase === 'during') api('/api/break/seen', { method: 'POST', body: {} }).catch(() => {});
@@ -312,7 +368,7 @@
     status.setAttribute('role', 'status');
     status.textContent = state.status;
     status.dataset.tone = state.tone;
-    if (!data.plan) {
+    if (!data.plan || (state.from && data.plan.phase === 'after')) {
       root.replaceChildren(setupForm(data), status);
       return;
     }
@@ -328,6 +384,13 @@
 
   function setupForm(data) {
     const presets = data.presets || [];
+    const same = state.from && state.from.days;
+    if (!state.setup && same) {
+      const match = presets.find(entry => entry.key === same.preset) || null;
+      state.setup = { key: match ? match.key : 'custom', starts_on: same.starts_on, ends_on: same.ends_on,
+        daily: data.default_minutes, light: match ? match.light : [], minutes: {}, games: true, emails: Boolean(data.email_offer) };
+      state.setup.minutes = dayDefaults(daysBetween(same.starts_on, same.ends_on, data.max_days), data.default_minutes, state.setup.light, data.light_minutes);
+    }
     if (!state.setup) {
       const first = presetFromQuery(presets) || presets[0] || null;
       const start = first ? first.starts_on : data.today;
@@ -339,7 +402,8 @@
     const setup = state.setup;
     const form = el('form', 'bp-setup');
     form.noValidate = true;
-    form.appendChild(el('h2', null, data.plan === null && presets.length ? 'Plan a break' : 'Plan a break'));
+    form.appendChild(el('h2', null, state.from ? (state.from.days ? 'Plan the same days' : 'Plan your own break') : 'Plan a break'));
+    if (state.from) form.appendChild(fromStep(state.from));
 
     const refreshDays = () => {
       const days = daysBetween(setup.starts_on, setup.ends_on, data.max_days);
@@ -452,18 +516,92 @@
         setStatus('Pick the first and last day.', 'error');
         return;
       }
-      act('/api/break', { method: 'POST', body: {
+      const from = state.from;
+      const body = {
         starts_on: setup.starts_on, ends_on: setup.ends_on, minutes: setup.minutes,
         preset: setup.key === 'custom' ? null : setup.key, games: setup.games, emails: setup.emails, tz: tz(),
-      } }, data => {
+      };
+      if (from) {
+        body.from_token = from.token;
+        body.picks = [...from.picks].slice(0, from.max_picks || 30).map(key => {
+          const [kind, slug] = key.split('/');
+          return { kind, slug };
+        });
+      }
+      act('/api/break', { method: 'POST', body }, data => {
         const plan = data && data.plan;
         if (!plan) return '';
         state.setup = null;
-        return plan.totals.titles ? `Planned: ${plan.totals.titles} titles, about ${plan.totals.hours}.`
+        if (from) {
+          state.from = null;
+          try { window.history.replaceState(null, '', '/break'); } catch (error) { /* the address keeps ?from */ }
+        }
+        const extra = from ? takenLine(data.taken, from.by) : '';
+        return plan.totals.titles ? `Planned: ${plan.totals.titles} titles, about ${plan.totals.hours}.${extra}`
           : 'Nothing on your list fits yet. Add something to your library, or put a title on a day by hand.';
       });
     });
     return form;
+  }
+
+  // "From nova's plan": the shared plan's titles, ticked ones going in first.
+  function fromStep(from) {
+    const step = el('fieldset', 'bp-step bp-from');
+    step.appendChild(el('legend', null, from.by ? `From ${from.by}'s plan` : 'From the plan you opened'));
+    step.appendChild(el('p', 'bp-step__hint', from.days
+      ? `The days are ${from.days.span}, the same as ${from.name}. Ticked titles go on first, and anything you don't have yet goes on your list. The planner fills the rest from your own list.`
+      : `Those days are over, so pick your own below. Ticked titles go on first, and anything you don't have yet goes on your list.`));
+    const titles = from.titles || [];
+    if (!titles.length) {
+      step.appendChild(el('p', 'bp-muted', 'Everything on that plan is on shelves kept private, so the planner uses your own list.'));
+      return step;
+    }
+    const list = el('ul', 'bp-from__list');
+    const boxes = [];
+    titles.forEach(entry => {
+      const key = `${entry.kind}/${entry.slug}`;
+      const row = el('li', 'bp-from__item');
+      row.dataset.category = entry.category || '';
+      const label = el('label', 'bp-from__pick');
+      const input = el('input');
+      input.type = 'checkbox';
+      input.checked = from.picks.has(key);
+      input.disabled = entry.mine === 'finished';
+      input.addEventListener('change', () => {
+        if (input.checked && from.picks.size >= (from.max_picks || 30)) { input.checked = false; return; }
+        if (input.checked) from.picks.add(key); else from.picks.delete(key);
+        count.textContent = countWords();
+      });
+      boxes.push({ input, key, entry });
+      const body = el('span', 'bp-from__body');
+      body.append(el('strong', null, entry.title),
+        el('span', 'bp-from__meta', [entry.kind_label, entry.when].filter(Boolean).join(' · ')));
+      const tag = entry.mine === 'finished' ? el('span', 'bp-from__tag', 'You finished it')
+        : entry.mine === 'open' ? el('span', 'bp-from__tag bp-from__tag--mine', 'On your list') : null;
+      label.append(input, art(entry), body);
+      if (tag) label.appendChild(tag);
+      row.appendChild(label);
+      list.appendChild(row);
+    });
+    step.appendChild(list);
+    const row = el('div', 'bp-from__row');
+    const countWords = () => (from.picks.size ? `${from.picks.size} ticked` : 'None ticked');
+    const count = el('span', 'bp-muted', countWords());
+    const all = button('Tick them all', 'bp-link', () => {
+      boxes.forEach(({ input, key }) => {
+        if (!input.disabled && from.picks.size < (from.max_picks || 30)) { input.checked = true; from.picks.add(key); }
+      });
+      count.textContent = countWords();
+    });
+    all.dataset.free = '';
+    const none = button('Untick all', 'bp-link', () => {
+      boxes.forEach(({ input, key }) => { input.checked = false; from.picks.delete(key); });
+      count.textContent = countWords();
+    });
+    none.dataset.free = '';
+    row.append(count, all, none);
+    step.appendChild(row);
+    return step;
   }
 
   function minutesSelect(choices, value, onChange) {
@@ -662,36 +800,96 @@
   }
 
   function sharePanel(plan) {
-    const panel = el('section', 'bp-panel');
+    const panel = el('section', 'bp-panel bp-share');
     panel.setAttribute('aria-label', 'Share your plan');
     panel.appendChild(el('h3', null, 'Share your plan'));
     if (!plan.share) {
-      panel.appendChild(el('p', 'bp-muted', 'A link anyone can open. It shows titles from the shelves you share on your profile, what you\'ve ticked off, and nothing else. You can turn it off any time.'));
-      panel.appendChild(button('Make a link', 'bp-pill bp-pill--primary', () => act(`/api/break/${plan.id}/share`, { method: 'POST', body: {} }, 'Link made.')));
+      panel.appendChild(el('p', 'bp-muted', 'A link anyone can open. It shows titles from the shelves you share on your profile and what you\'ve ticked off, never your scores, notes or how much time you set aside. Friends can plan the same days from it. You can turn it off any time.'));
+      panel.appendChild(button('Make a link', 'bp-pill bp-pill--primary', () => act(`/api/break/${plan.id}/share`, { method: 'POST', body: {} }, 'Link made. Send it to someone, or save the picture for a story.')));
       return panel;
     }
-    panel.appendChild(el('p', 'bp-share-url', plan.share));
+    const layout = el('div', 'bp-share__layout');
+    const copy = el('div', 'bp-share__copy');
+    copy.appendChild(el('p', 'bp-share-url', plan.share));
+    const until = parseDay(plan.share_until);
+    const seen = plan.share_opened ? `Opened ${plan.share_opened} ${plan.share_opened === 1 ? 'time' : 'times'} so far. ` : '';
+    copy.appendChild(el('p', 'bp-muted bp-share__note', `${seen}It follows your plan as you tick things off${until ? ` and stops working on ${until.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}` : ''}.`));
     const row = el('div', 'bp-share-row');
     const text = `My plan for ${plan.name}`;
     if (navigator.share) {
-      row.appendChild(button('Send it', 'bp-pill bp-pill--primary', async () => {
-        try { await navigator.share({ title: text, text, url: plan.share }); } catch (error) { /* closed */ }
-      }));
+      const send = button('Send it', 'bp-pill bp-pill--primary', async () => {
+        try { await navigator.share({ title: text, text, url: plan.share }); report('break_link_shared'); } catch (error) { /* closed */ }
+      });
+      send.dataset.free = '';
+      row.appendChild(send);
     }
-    const copy = button('Copy link', 'bp-pill', async () => {
+    const copyLink = button('Copy link', navigator.share ? 'bp-pill' : 'bp-pill bp-pill--primary', async () => {
       try {
         await navigator.clipboard.writeText(plan.share);
-        copy.textContent = 'Link copied ✓';
-        setTimeout(() => { copy.textContent = 'Copy link'; }, 2200);
+        copyLink.textContent = 'Link copied ✓';
+        report('break_link_shared');
+        setTimeout(() => { copyLink.textContent = 'Copy link'; }, 2200);
       } catch (error) {
         setStatus(`Copy this link: ${plan.share}`);
       }
     });
-    copy.dataset.free = '';
-    row.appendChild(copy);
-    row.appendChild(button('Turn the link off', 'bp-link bp-link--danger', () => act(`/api/break/${plan.id}/share`, { method: 'DELETE' }, 'The link is off.')));
-    panel.appendChild(row);
+    copyLink.dataset.free = '';
+    row.appendChild(copyLink);
+    if (plan.share_story && /^\/break\/s\/[A-Za-z0-9_-]{16,40}\/story\.png$/.test(plan.share_story)) {
+      const story = button('Save picture for stories', 'bp-pill', () => saveStory(plan.share_story, story));
+      story.dataset.free = '';
+      row.appendChild(story);
+    }
+    const open = el('a', 'bp-pill bp-pill--quiet', 'Open the page');
+    open.href = plan.share;
+    row.appendChild(open);
+    copy.appendChild(row);
+    copy.appendChild(button('Turn the link off', 'bp-link bp-link--danger', () => act(`/api/break/${plan.id}/share`, { method: 'DELETE' }, 'The link is off.')));
+    layout.appendChild(copy);
+    if (plan.share_card && /^\/break\/s\/[A-Za-z0-9_-]{16,40}\/card\.png$/.test(plan.share_card)) {
+      const figure = el('figure', 'bp-share__preview');
+      const image = el('img');
+      image.src = plan.share_card;
+      image.alt = 'The picture chat apps show with your link';
+      image.width = 600;
+      image.height = 315;
+      image.loading = 'lazy';
+      image.addEventListener('error', () => figure.remove(), { once: true });
+      figure.append(image, el('figcaption', null, 'What people see when you send the link'));
+      layout.appendChild(figure);
+    }
+    panel.appendChild(layout);
     return panel;
+  }
+
+  async function saveStory(src, control) {
+    control.disabled = true;
+    setStatus('Getting your picture ready…');
+    try {
+      const response = await fetch(src, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(String(response.status));
+      const blob = await response.blob();
+      const file = typeof File === 'function' ? new File([blob], 'omnitrackr-break-plan.png', { type: 'image/png' }) : null;
+      report('break_story_saved');
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: 'My break plan' }); setStatus(''); } catch (error) {
+          setStatus(error && error.name === 'AbortError' ? '' : 'Sharing didn\'t open, so try again.');
+        }
+      } else {
+        const link = el('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'omnitrackr-break-plan.png';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+        setStatus('Picture saved. Add it to a story and put the link on it.');
+      }
+    } catch (error) {
+      setStatus('The picture didn\'t load. Try again in a minute.', 'error');
+    } finally {
+      control.disabled = false;
+    }
   }
 
   function morePanel(plan, data) {

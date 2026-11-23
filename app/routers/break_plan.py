@@ -1,7 +1,7 @@
 """Plan your break (/break): the guide and planner page, the share page and the API (see app/break_plan.py)."""
 from __future__ import annotations
 
-import hashlib
+import asyncio
 import json
 from datetime import date, timedelta
 from html import escape
@@ -12,15 +12,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
-from .. import break_plan, funnel, models
+from .. import break_plan, break_share, funnel, models
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..integer_bounds import PositiveDatabaseId
 from .discover import page
 
 router = APIRouter(tags=["break plan"])
-CSS_VERSION = "20261123-break-1"
-JS_VERSION = "20261123-break-sweep-1"
+CSS_VERSION = "20261123-break-share-1"
+JS_VERSION = "20261123-break-share-1"
 TITLE = "Plan your break: fill your days off from your own list"
 DESCRIPTION = ("Tell OmniTrackr which days you have off and about how much time each one has, and it fills them "
                "from your own list: the show you're halfway through, the film you keep saving, a book in real "
@@ -53,6 +54,11 @@ class Today(BaseModel):
     today: Optional[str] = Field(None, max_length=10)
 
 
+class Pick(BaseModel):
+    kind: str = Field(..., max_length=10)
+    slug: str = Field(..., max_length=130)
+
+
 class PlanCreate(Today):
     starts_on: date
     ends_on: date
@@ -62,6 +68,9 @@ class PlanCreate(Today):
     games: bool = True
     emails: bool = False
     tz: int = Field(0, ge=-14 * 60, le=14 * 60)
+    # Started from someone's shared plan (/break?from=<token>): its token and the titles ticked from it.
+    from_token: Optional[str] = Field(None, max_length=40)
+    picks: list[Pick] = Field(default_factory=list, max_length=break_plan.MAX_PICKS)
 
 
 class PlanUpdate(Today):
@@ -224,8 +233,13 @@ FAQ = (
      "Only if you ask, with the switch on your plan. Then you get two emails: the morning the break starts, with "
      "day one, and the morning after it ends, with how it went."),
     ("Can other people see my plan?",
-     "No, unless you make a share link. A shared plan shows titles from the shelves you share on your profile, and "
-     "you can turn the link off at any time."),
+     "No, unless you make a share link. A shared plan shows titles from the shelves you share on your profile and "
+     "what you've ticked off, never your scores, notes or the time you set aside. You can turn the link off at any "
+     "time, and it stops working a month after the break."),
+    ("Can I plan the same days as a friend?",
+     "Yes. Open the plan they sent and press \"Plan the same days\". The planner starts on those dates and lists "
+     "their titles, and the ones you tick go on first. Anything you don't have yet goes on your list. The rest comes "
+     "from your own library, with your own time on each day."),
     ("Is it free?", "Yes, like everything else on OmniTrackr."),
 )
 
@@ -296,86 +310,214 @@ def break_page(request: Request, user=Depends(get_optional_current_user)):
     return _shell("Plan your break", "/break", content, member=True, indexable=True, structured_data=_structured())
 
 
-def _share_board(view: dict) -> str:
+SHARE_CSS_VERSION = "20261123-break-share-1"
+SHARE_JS_VERSION = "20261123-break-share-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
+CARD_POSTER_SECONDS = 8.0
+
+
+def _person(request: Request) -> bool:
+    from .tier_list import _person as person
+    return person(request)
+
+
+def _shared_name(view: dict) -> str:
+    """The plan's name as its owner would say it to someone else: "Your weekend" reads "My weekend"."""
+    name = view["name"]
+    return f"My {name[5:]}" if name.startswith("Your ") else name
+
+
+def _save_button(title: dict, signed_in: bool) -> str:
+    label = f'Save {title["title"]} to my list'
+    if signed_in:
+        return (f'<button type="button" class="bs-save" data-bs-add data-kind="{_e(title["kind"])}" '
+                f'data-slug="{_e(title["slug"])}" aria-label="{_e(label)}"><span class="bs-save__idle">+ Add to my list'
+                '</span><span class="bs-save__done">✓ On your list</span></button>')
+    image = f' data-guest-image="{_e(title["image"])}"' if title.get("image") else ""
+    return (f'<button type="button" class="bs-save" data-guest-kind="{_e(title["kind"])}" '
+            f'data-guest-slug="{_e(title["slug"])}" data-guest-title="{_e(title["title"])}"{image} '
+            f'aria-pressed="false" aria-label="{_e(label)}"><span class="bs-save__idle">+ Save</span>'
+            '<span class="bs-save__done">✓ Saved</span></button>')
+
+
+def _share_board(view: dict, *, saves: bool, signed_in: bool) -> str:
+    titles = view["titles"]
     columns = []
     for day in view["days"]:
         items = []
         for entry in day["items"]:
-            art = (f'<img src="{_e(entry["image"])}" alt="" width="48" height="72" loading="lazy" '
+            title = titles[entry["index"]]
+            art = (f'<img src="{_e(entry["image"])}" alt="" width="48" height="72" loading="lazy" decoding="async" '
                    'referrerpolicy="no-referrer">' if entry["image"] else
                    f'<span class="bp-art__empty" aria-hidden="true">{_e(entry["title"][:1].upper())}</span>')
             done = ' bp-chip--done' if entry["done"] else ''
             tick = '<span class="bp-chip__tick" aria-label="Done">✓</span>' if entry["done"] else ''
-            items.append(f'<li class="bp-chip bp-chip--art{done}" data-category="{_e(entry["category"])}">'
-                         f'<span class="bp-art">{art}</span><span class="bp-chip__body">'
+            save = _save_button(title, signed_in) if saves and entry["first"] else ''
+            items.append(f'<li class="bp-chip bp-chip--art bs-chip{done}" data-category="{_e(entry["category"])}">'
+                         f'<a class="bp-art bs-art" href="{_e(title["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'
+                         '<span class="bp-chip__body">'
                          f'<span class="bp-chip__kind">{_e(entry["kind_label"])}</span>'
-                         f'<strong>{_e(entry["title"])}</strong>'
-                         f'<span class="bp-chip__what">{_e(break_plan.what_line(entry))}</span></span>'
+                         f'<a class="bs-chip__name" href="{_e(title["url"])}">{_e(entry["title"])}</a>'
+                         f'<span class="bp-chip__what">{_e(break_plan.what_line(entry))}</span>{save}</span>'
                          f'{tick}</li>')
         body = "".join(items) or '<li class="bp-chip bp-chip--rest">A rest day</li>'
-        columns.append(f'<li class="bp-col"><p class="bp-col__day">{_e(day["label"])}</p>'
+        today = ' data-today="true"' if day["today"] else ''
+        mark = '<span class="bp-col__today">Today</span>' if day["today"] else ''
+        columns.append(f'<li class="bp-col bs-col"{today}><p class="bp-col__day">{_e(day["label"])}{mark}</p>'
                        f'<ul class="bp-col__items">{body}</ul></li>')
     return f'<ol class="bp-board bp-board--shared">{"".join(columns)}</ol>'
 
 
+def _share_line(view: dict, who: str) -> str:
+    totals = view["totals"]
+    if view["phase"] == "after":
+        finished = totals["finished"]
+        line = f'Got through {totals["done"]} of {totals["stretches"]} things on the plan'
+        return line + (f' and finished {finished} {"title" if finished == 1 else "titles"}.' if finished else '.')
+    if view["phase"] == "during":
+        return (f'Day {view["day_number"]} of {view["day_count"]}. {totals["done"]} of {totals["stretches"]} '
+                'things ticked off so far.')
+    titles = totals["titles"]
+    return (f'{titles} {"title" if titles == 1 else "titles"} over {view["day_count"]} '
+            f'{"day" if view["day_count"] == 1 else "days"}, about {_e(totals["hours"])}, all from {who} own list.')
+
+
+def _same_label(same: Optional[dict]) -> str:
+    """The member's button: "Plan my Thanksgiving weekend", "Plan the same days", "Plan my own break"."""
+    if same is None:
+        return "Plan my own break"
+    if same.get("name") == "This weekend":
+        return "Plan my weekend"
+    if same.get("name"):
+        return f'Plan my {same["name"]}'
+    return "Plan the same days"
+
+
+def _ends_words(plan: models.BreakPlan) -> str:
+    ends = plan.ends_on + timedelta(days=break_plan.SHARE_KEEP_DAYS)
+    return f'{ends.strftime("%B")} {ends.day}'
+
+
 @router.get("/break/s/{token}", include_in_schema=False)
 def shared_page(token: str, request: Request, user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
-    plan = break_plan.by_token(db, token)
+    today = break_plan._now().date()
+    plan = break_plan.by_token(db, token, today)
     if plan is None:
         return _message("Link not working", "This plan isn't shared anymore",
-                        "Whoever sent it may have turned the link off. You can plan your own break in a minute.",
+                        "Whoever sent it may have turned the link off, or the break was over a while ago. "
+                        "You can plan your own break in a minute.",
                         (("Plan my break", "/break"), ("See what OmniTrackr does", "/about")))
-    today = date.today()
     view = break_plan.shared_view(db, plan, today)
-    if user is None or user.id != plan.user_id:
-        plan.share_opened = (plan.share_opened or 0) + 1
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
+    owner = user is not None and user.id == plan.user_id
+    signed_in = user is not None
+    # Chat apps fetch the page to show a preview and browsers prefetch it; neither is someone opening the link.
+    if not owner and _person(request):
+        break_plan.count_open(db, plan)
+        if user is None:
+            funnel.record("break_link_opened", request)
+    by = view["by"]
+    name = _shared_name(view)
+    eyebrow = f'{by}\'s break plan' if by else "My break plan"
+    who = f'{_e(by)}\'s' if by else "their"
     totals = view["totals"]
-    owner = view["owner"]
-    if view["phase"] == "after":
-        line = (f'{_e(owner)} got through {totals["done"]} of {totals["stretches"]} things on the plan and finished '
-                f'{totals["finished"]} {"title" if totals["finished"] == 1 else "titles"}.')
-    elif view["phase"] == "during":
-        line = f'{totals["titles"]} titles, about {_e(totals["hours"])}. {totals["done"]} ticked off so far.'
-    else:
-        line = f'{totals["titles"]} titles over {view["day_count"]} days, about {_e(totals["hours"])}.'
-    private = (f'<p class="bp-muted">Plus {view["private_titles"]} from shelves {_e(owner)} keeps private.</p>'
-               if view["private_titles"] else '')
+    private = (f'<p class="bp-muted bs-private">Plus {view["private_titles"]} more from shelves '
+               f'{"this member" if not by else _e(by)} keeps private.</p>' if view["private_titles"] else '')
+    credit = (f'<p class="bs-by">Planned by <a href="{_e(view["profile"])}">{_e(by)}</a> on OmniTrackr</p>'
+              if by and view.get("profile") else '')
+    meter = ''
+    if view["phase"] != "upcoming" and totals["stretches"]:
+        meter = (f'<div class="bs-meter" data-bs-meter data-done="{totals["done"]}" data-total="{totals["stretches"]}" '
+                 f'role="img" aria-label="{totals["done"]} of {totals["stretches"]} ticked off"><span></span></div>')
+    same = break_plan.same_days(plan, today)
+    from_link = f'/break?from={quote(token)}'
+    current = break_plan.active(db, user.id, today) if signed_in and not owner else None
+    has_plan = current is not None and current.ends_on >= today
     if user is None:
-        funnel.record("break_link_opened", request)
-        back = quote("/break", safe="")
+        back = quote(break_plan.share_path(plan), safe="")
         invite = db.query(models.FriendInvite).filter(models.FriendInvite.user_id == plan.user_id).first()
-        join = f"/?invite={quote(invite.token)}&next={back}#signup" if invite is not None else f"/?next={back}#signup"
-        actions = (f'<a class="button" rel="nofollow" href="{_e(join)}" data-break-signup>Plan my own break</a>'
-                   '<a class="button button--ghost" href="/break">How it works</a>'
-                   '<p class="bp-muted bp-shared__small">OmniTrackr is a free tracker for films, shows, anime, games, '
-                   'books and more. The break planner fills your days off from your own list.</p>')
-    elif user.id == plan.user_id:
+        join = (f"/?invite={quote(invite.token)}&next={back}#signup" if invite is not None
+                else f"/?next={back}#signup")
+        label = "Plan these days with my list" if same else "Plan my own break"
+        actions = (f'<a class="button" rel="nofollow" href="{_e(join)}" data-break-signup data-bs-plan>{label}</a>'
+                   '<a class="button button--ghost" href="/break">How it works</a>')
+        hint = ('<p class="bp-muted bs-hint">Like the look of something? Save it, and it goes on your plan first '
+                'once you have an account.</p>')
+    elif owner:
         actions = '<a class="button" href="/break">Back to my plan</a>'
+        hint = ''
+    elif has_plan:
+        actions = '<a class="button" href="/break">Open my plan</a>'
+        hint = (f'<p class="bp-muted bs-hint">You have a plan for {_e(current.name)} already. Add anything here to '
+                'your list, then put it on a day with Add a title.</p>')
     else:
-        actions = '<a class="button" href="/break">Plan my own break</a>'
+        actions = (f'<a class="button" href="{_e(from_link)}" data-bs-same>{_e(_same_label(same))}</a>'
+                   '<a class="button button--ghost" href="/break">How it works</a>')
+        hint = ('<p class="bp-muted bs-hint">Pick any of these to go first and the planner fills the rest from '
+                'your own list.</p>')
+    owner_html = ''
+    if owner:
+        opened = view["opened"]
+        seen = f' Opened {opened:,} time{"" if opened == 1 else "s"} so far.' if opened else ''
+        owner_html = (
+            f'<aside class="bs-owner" data-bs-owner data-plan="{plan.id}">'
+            '<p><strong>This is your link.</strong> It shows titles from the shelves you share on your profile and '
+            'what you\'ve ticked off, never your scores, notes or the time you set aside. It follows your plan as it '
+            f'changes and stops working on {_ends_words(plan)}.{seen}</p>'
+            '<div class="bs-actions">'
+            '<button type="button" class="site-btn site-btn--primary site-btn--sm" data-bs-copy>Copy link</button>'
+            '<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-bs-share hidden>Send it</button>'
+            f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-bs-story '
+            f'data-src="{_e(view["path"])}/story.png">Save picture for stories</button>'
+            '<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-bs-off>Turn off the link</button>'
+            '</div><p class="bs-status" data-bs-status role="status" aria-live="polite"></p></aside>')
+    guest_html = '' if signed_in else (
+        '<aside class="bs-cta"><div><p class="bs-cta__title">Plan your own days off</p>'
+        '<p>OmniTrackr is a free library for films, shows, anime, games, books and more. Tell it which days you '
+        'have off and about how much time each one has, and it fills them from your own list, starting with '
+        'whatever you\'re halfway through. Tick things off as the days go and your library keeps up.</p></div>'
+        f'<a class="site-btn site-btn--primary" rel="nofollow" href="{_e(join)}" data-break-signup data-bs-plan>'
+        'Plan my own break</a></aside>')
+    board = (_share_board(view, saves=not owner, signed_in=signed_in) if view["titles"] else
+             '<p class="bp-muted bs-empty">Everything on this plan is on shelves kept private, so there\'s nothing '
+             'to show here.</p>')
     content = (
-        '<section class="bp-shared">'
-        f'<p class="eyebrow">{_e(owner).upper()}\'S BREAK PLAN</p>'
-        f'<h1>{_e(view["name"])}</h1>'
+        f'<article class="bp-shared bs-page" id="breakShare" data-token="{_e(token)}" '
+        f'data-member="{"true" if signed_in else "false"}" data-owner="{"true" if owner else "false"}" '
+        f'data-from="{_e(from_link)}" data-has-plan="{"true" if has_plan else "false"}">'
+        '<header class="bs-head">'
+        f'<p class="eyebrow">{_e(eyebrow.upper())} · {view["day_count"]} {"DAY" if view["day_count"] == 1 else "DAYS"}</p>'
+        f'<h1>{_e(name)}</h1>'
         f'<p class="bp-shared__span">{_e(view["span"])}</p>'
-        f'<p class="bp-shared__line">{line}</p>{private}'
-        f'{_share_board(view)}'
-        f'<div class="bp-shared__actions">{actions}</div></section>')
+        f'<p class="bp-shared__line">{_share_line(view, who)}</p>{meter}{private}{credit}'
+        f'<div class="bp-shared__actions">{actions}</div>{hint}</header>'
+        f'{owner_html}'
+        f'<section class="bs-board" aria-label="The plan, day by day">{board}</section>'
+        f'{guest_html}'
+        + (explore_dock() if not signed_in else '')
+        + '</article>')
     facts = break_plan.card_facts(db, plan, today)
-    version = hashlib.sha256(json.dumps(facts, sort_keys=True).encode()).hexdigest()[:10]
     from ..digest import app_url
-    path = break_plan.share_path(plan)
-    response = _shell(f"{owner}'s plan for {view['name']}", path, content, member=user is not None,
-                      description=f"{owner} planned {view['name'].lower()} on OmniTrackr: {totals['titles']} titles, "
-                                  f"about {totals['hours']}. Plan your own break from your list.",
-                      share_image=f"{app_url()}{path}/card.png?v={version}")
+    path = view["path"]
+    description = (f'{by + " planned" if by else "A plan for"} {name}: {totals["titles"]} '
+                   f'{"title" if totals["titles"] == 1 else "titles"} over {view["day_count"]} days, about '
+                   f'{totals["hours"]}. Plan your own break from your list.')
+    title = f"{by}'s plan for {name}" if by else f"A plan for {name}"
+    head = (f'<link rel="stylesheet" href="/static/break-plan.css?v={CSS_VERSION}">'
+            f'<link rel="stylesheet" href="/static/break-share.css?v={SHARE_CSS_VERSION}">'
+            + ('' if signed_in else f'<script src="{GUEST_LIST_JS}" defer></script>')
+            + f'<script src="/static/break-share.js?v={SHARE_JS_VERSION}" defer></script>')
+    response = page(title.replace("{", "(").replace("}", ")"), description.replace("{", "(").replace("}", ")"),
+                    path, content, indexable=False, head=head, member=signed_in,
+                    share_image=f"{app_url()}{path}/card.png?v={break_share.fingerprint(facts)}")
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Vary"] = "Cookie"
     return response
+
+
+def explore_dock() -> str:
+    from .. import explore_art
+    return explore_art.dock("Keep my list")
 
 
 _CARDS = None
@@ -389,28 +531,65 @@ def _card_cache():
     return _CARDS
 
 
-@router.get("/break/s/{token}/card.png", include_in_schema=False)
-def shared_card(token: str, request: Request, db: Session = Depends(get_db)):
-    plan = break_plan.by_token(db, token)
-    if plan is None:
+async def _posters(request: Request, urls: dict[int, str]) -> dict[int, bytes]:
+    """{place: cover bytes}, fetched through the tier list image proxy's cache (allowed hosts only)."""
+    from .tier_list import _poster_bytes
+    client = getattr(request.app.state, "external_api_client", None)
+    if client is None or not urls:
+        return {}
+    unique = list(dict.fromkeys(urls.values()))
+    tasks = {url: asyncio.ensure_future(_poster_bytes(client, url)) for url in unique}
+    done, pending = await asyncio.wait(tasks.values(), timeout=CARD_POSTER_SECONDS)
+    for task in pending:
+        task.cancel()
+    bodies = {}
+    for url, task in tasks.items():
+        if task in done and not task.cancelled() and task.exception() is None:
+            bodies[url] = task.result()
+    return {place: bodies[url] for place, url in urls.items() if url in bodies}
+
+
+async def _picture(token: str, request: Request, db: Session, kind: str) -> Response:
+    def facts():
+        today = break_plan._now().date()
+        plan = break_plan.by_token(db, token, today)
+        return (plan.id, break_plan.card_facts(db, plan, today)) if plan is not None else None
+    found = await run_in_threadpool(facts)
+    if found is None:
         raise HTTPException(404, "This plan isn't shared anymore")
-    facts = break_plan.card_facts(db, plan, date.today())
-    fingerprint = hashlib.sha256(json.dumps(facts, sort_keys=True).encode("utf-8")).hexdigest()[:16]
-    etag = f'"{fingerprint}"'
-    headers = {"Cache-Control": "private, max-age=300", "ETag": etag, "X-Content-Type-Options": "nosniff",
+    plan_id, data = found
+    fingerprint = break_share.fingerprint(data)
+    etag = f'"{kind}-{fingerprint}"'
+    # Short-lived, so a link turned off stops showing its picture soon after.
+    headers = {"Cache-Control": "public, max-age=600", "ETag": etag, "X-Content-Type-Options": "nosniff",
                "X-Robots-Tag": "noindex"}
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers=headers)
-    cache = _card_cache()
-    png = cache.get(("break", plan.id, fingerprint))
+    key = ("break", plan_id, kind, fingerprint)
+    png = _card_cache().get(key)
     if png is None:
-        from .. import break_card
+        posters = await _posters(request, break_share.poster_urls(data, kind))
+        render = break_share.render_story if kind == "story" else break_share.render_card
         try:
-            png = break_card.render(facts)
+            png = await run_in_threadpool(render, data, posters)
         except Exception:
             raise HTTPException(404, "Card unavailable")
-        cache.put(("break", plan.id, fingerprint), png)
+        _card_cache().put(key, png)
+    if kind == "story":
+        headers["Content-Disposition"] = 'inline; filename="omnitrackr-break-plan.png"'
     return Response(content=png, media_type="image/png", headers=headers)
+
+
+@router.get("/break/s/{token}/card.png", include_in_schema=False)
+async def shared_card(token: str, request: Request, db: Session = Depends(get_db)):
+    """The picture chat apps show for a shared plan."""
+    return await _picture(token, request, db, "card")
+
+
+@router.get("/break/s/{token}/story.png", include_in_schema=False)
+async def shared_story(token: str, request: Request, db: Session = Depends(get_db)):
+    """A 1080x1920 picture of the plan, day by day, for stories."""
+    return await _picture(token, request, db, "story")
 
 
 # ------------------------------------------------------------------ API: no plan id
@@ -481,17 +660,38 @@ def create_plan(request: Request, payload: PlanCreate, response: Response, user=
     _private(response)
     _check_minutes(payload.minutes)
     today = _today(payload.today)
+    taken = None
     try:
-        break_plan.create(db, user, starts_on=payload.starts_on, ends_on=payload.ends_on, minutes=payload.minutes,
-                          today=today, tz_minutes=payload.tz, name=payload.name, preset_key=payload.preset,
-                          games=payload.games, emails=payload.emails)
+        refs, shared = break_share.take_titles(db, user, payload.from_token, [(pick.kind, pick.slug) for pick in payload.picks],
+                                              today) if payload.from_token else ([], False)
+        plan = break_plan.create(db, user, starts_on=payload.starts_on, ends_on=payload.ends_on,
+                                 minutes=payload.minutes, today=today, tz_minutes=payload.tz, name=payload.name,
+                                 preset_key=payload.preset, games=payload.games, emails=payload.emails, picks=refs)
+        if shared:
+            placed = {(item.category, item.item_id) for item in break_plan.items_of(db, plan)}
+            taken = {"picked": len(refs), "placed": sum(1 for ref in refs if ref in placed)}
+            break_plan.count("break_from_link_created", request)
     except break_plan.BreakError as error:
         db.rollback()
         _fail(error)
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "That didn't save. Please try again.")
-    return _state(db, user, today)
+    state = _state(db, user, today)
+    if taken is not None:
+        state["taken"] = taken
+    return state
+
+
+@router.get("/api/break/from/{token}")
+def from_shared_plan(token: str, request: Request, response: Response, today: Optional[str] = TODAY,
+                     user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """A plan someone shared, as /break?from=<token> starts a new plan from it: its days and its titles."""
+    _private(response)
+    try:
+        return break_share.from_link(db, user, token, _today(today))
+    except break_plan.BreakError as error:
+        _fail(error)
 
 
 # ------------------------------------------------------------------ API: one plan

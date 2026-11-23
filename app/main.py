@@ -1117,6 +1117,8 @@ BREAK_PLAN_LIMITS = {
     ("/api/break/{plan_id}/calendar.ics", "GET"): "10/minute",
     ("/break/s/{token}", "GET"): "60/minute",
     ("/break/s/{token}/card.png", "GET"): "30/minute",
+    ("/break/s/{token}/story.png", "GET"): "20/minute",
+    ("/api/break/from/{token}", "GET"): "20/minute",
 }
 for route in break_plan_router.router.routes:
     path = getattr(route, "path", None)

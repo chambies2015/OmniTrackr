@@ -19,8 +19,10 @@ the home screen gives a reason to open OmniTrackr on every day of the break.
   library ticks the matching stretches here too.
 * Swap, move, remove or add a title, "Try another mix", fill any free time again.
 * Optional: one email the morning the break starts and one the morning after it ends; a .ics
-  with one event per day; a share link (/break/s/<token>) with a 1200x630 card that shows the
-  plan from the shelves the member shares publicly.
+  with one event per day; a share link (/break/s/<token>) that shows the plan from the shelves
+  the member shares publicly, with a 1200x630 card and a 1080x1920 story picture
+  (app/break_share.py). Whoever opens it can plan the same days from their own list, with the
+  titles they liked from it going in first.
 
 New tables only (break_plans, break_plan_items). Funnel events are "break_*" (funnel.py).
 """
@@ -31,6 +33,7 @@ import json
 import math
 import os
 import random
+import re
 import secrets
 import zlib
 from dataclasses import dataclass, field
@@ -65,6 +68,9 @@ CHECK_EVERY_SECONDS = 900
 FIRST_CHECK_DELAY_SECONDS = 540
 PER_RUN_LIMIT = 20
 UTM = "utm_source=email&utm_campaign=break"
+SHARE_KEEP_DAYS = 30        # a share link stops working this long after the break ends
+SHARE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,40}")
+MAX_PICKS = 30              # titles taken from a shared plan onto a new one
 
 CATEGORIES = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "audiobooks")
 LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game", "music": "Album",
@@ -547,8 +553,13 @@ def candidate_for(category: str, row, facts: dict, group: str, episode_state=Non
 
 
 def candidates(db: Session, user: models.User, plan: Optional[models.BreakPlan] = None, seed: str = "",
-               exclude: Iterable[tuple[str, int]] = (), games: bool = True) -> list[Candidate]:
-    """Everything the plan could hold, best first: part-way through, Up next, then saved titles in a mix."""
+               exclude: Iterable[tuple[str, int]] = (), games: bool = True,
+               first: Iterable[tuple[str, int]] = ()) -> list[Candidate]:
+    """Everything the plan could hold, best first: part-way through, Up next, then saved titles in a mix.
+
+    ``first`` are titles the member picked from a plan someone shared with them. They go ahead of
+    everything else, and like the Up next queue they don't have to finish over the break.
+    """
     refs = _refs(db, user)
     unfinished = {(category, item_id) for category, ids in refs.items() for item_id in ids}
     skip = set(exclude)
@@ -565,13 +576,19 @@ def candidates(db: Session, user: models.User, plan: Optional[models.BreakPlan] 
                   and (games or ref[0] != "video-games")]
     # The saved pool stops at POOL_PER_CATEGORY rows a format, so a big library's newer titles can fall outside
     # it. What the member is part-way through or queued is checked on its own.
-    unfinished |= _still_open(db, user.id, [ref for ref in started_all[:60] + queued_all[:60] if ref not in unfinished])
-    started_refs = [ref for ref in started_all if ref in unfinished][:30]
-    queued = [ref for ref in queued_all if ref in unfinished][:30]
-    taken = set(started_refs) | set(queued)
+    picked = [ref for ref in dict.fromkeys(first) if ref[0] in visible and ref not in skip
+              and (games or ref[0] != "video-games")][:MAX_PICKS]
+    unfinished |= _still_open(db, user.id, [ref for ref in started_all[:60] + queued_all[:60] + picked
+                                            if ref not in unfinished])
+    picked = [ref for ref in picked if ref in unfinished]
+    chosen = set(picked)
+    started_refs = [ref for ref in started_all if ref in unfinished and ref not in chosen][:30]
+    queued = [ref for ref in queued_all if ref in unfinished and ref not in chosen][:30]
+    taken = set(started_refs) | set(queued) | chosen
     saved_pool = [ref for ref in unfinished if ref not in skip and ref not in taken]
     saved = _mixed(saved_pool, f"{user.id}:{seed}")[:SAVED_LOOKED_AT]
-    ordered = [(ref, "started") for ref in started_refs] + [(ref, "queued") for ref in queued] + \
+    ordered = [(ref, "started" if ref in started else "queued") for ref in picked] + \
+              [(ref, "started") for ref in started_refs] + [(ref, "queued") for ref in queued] + \
               [(ref, "saved") for ref in saved]
     rows = _rows(db, user.id, [ref for ref, _ in ordered])
     facts = _facts(db, rows)
@@ -887,13 +904,14 @@ def _titles_waiting(db: Session, plan: models.BreakPlan) -> set[tuple[str, int]]
     return {(item.category, item.item_id) for item in items_of(db, plan) if item.done_at is None}
 
 
-def fill(db: Session, user: models.User, plan: models.BreakPlan, today: date, only: Optional[date] = None) -> int:
+def fill(db: Session, user: models.User, plan: models.BreakPlan, today: date, only: Optional[date] = None,
+         first: Iterable[tuple[str, int]] = ()) -> int:
     """Put titles into the free time from today on. Returns how many stretches went in. Doesn't commit."""
     days = _open_days(db, plan, today, only)
     if not days:
         return 0
     waiting = _titles_waiting(db, plan)
-    pool = candidates(db, user, plan, seed=f"{plan.id}:{plan.seed}", exclude=waiting, games=plan.games)
+    pool = candidates(db, user, plan, seed=f"{plan.id}:{plan.seed}", exclude=waiting, games=plan.games, first=first)
     titles_in = len(waiting)
     games_in = len({ref for ref in waiting if ref[0] == "video-games"})
     chunks = fill_days(days, pool, max_titles=max_titles_for(len(minutes_by_day(plan))), titles_in=titles_in,
@@ -937,7 +955,9 @@ def _clean_name(value: Optional[str], fallback: str) -> str:
 
 def create(db: Session, user: models.User, *, starts_on: date, ends_on: date, minutes: dict[str, int],
            today: date, tz_minutes: int = 0, name: Optional[str] = None, preset_key: Optional[str] = None,
-           games: bool = True, emails: bool = False) -> models.BreakPlan:
+           games: bool = True, emails: bool = False, picks: Iterable[tuple[str, int]] = ()) -> models.BreakPlan:
+    """A new plan, filled. ``picks`` are library titles to put in first (titles taken from a shared plan);
+    they count as put there by hand, so "Try another mix" leaves them where they are."""
     _check_dates(starts_on, ends_on, today)
     current = active(db, user.id, today)
     if current is not None and current.ends_on >= today:
@@ -961,7 +981,14 @@ def create(db: Session, user: models.User, *, starts_on: date, ends_on: date, mi
                             updated_at=now)
     db.add(plan)
     db.flush()
-    fill(db, user, plan, today)
+    picks = list(dict.fromkeys(picks))[:MAX_PICKS]
+    fill(db, user, plan, today, first=picks)
+    if picks:
+        wanted = set(picks)
+        db.flush()
+        for item in items_of(db, plan):
+            if (item.category, item.item_id) in wanted:
+                item.added = True
     db.commit()
     count("break_created")
     return plan
@@ -1556,6 +1583,10 @@ def view(db: Session, user: models.User, plan: models.BreakPlan, today: date, no
         "games": plan.games, "emails": plan.emails,
         "email_offer": bool(user.email and user.is_verified),
         "share": f"{app_url()}{share_path(plan)}" if plan.share_token else None,
+        "share_opened": int(plan.share_opened or 0) if plan.share_token else 0,
+        "share_story": f"{share_path(plan)}/story.png" if plan.share_token else None,
+        "share_card": f"{share_path(plan)}/card.png" if plan.share_token else None,
+        "share_until": (plan.ends_on + timedelta(days=SHARE_KEEP_DAYS)).isoformat(),
         "days": days, "totals": totals, "finished": finished_list,
         "budget_minutes": sum(budgets.values()), "choices": list(DAY_CHOICES),
         "max_days": MAX_DAYS,
@@ -1639,6 +1670,7 @@ def share_path(plan: models.BreakPlan) -> str:
 def share_on(db: Session, plan: models.BreakPlan) -> str:
     if not plan.share_token:
         plan.share_token = secrets.token_urlsafe(16)
+        plan.share_opened = 0
         db.commit()
         count("break_shared")
     return share_path(plan)
@@ -1649,12 +1681,21 @@ def share_off(db: Session, plan: models.BreakPlan) -> None:
     db.commit()
 
 
-def by_token(db: Session, token: str) -> Optional[models.BreakPlan]:
-    if not token or len(token) > 40:
+def valid_token(token) -> bool:
+    return isinstance(token, str) and SHARE_TOKEN.fullmatch(token) is not None
+
+
+def share_ended(plan: models.BreakPlan, today: date) -> bool:
+    """A link stops working a month after the break, so an old plan doesn't stay out there for good."""
+    return plan.ends_on < today - timedelta(days=SHARE_KEEP_DAYS)
+
+
+def by_token(db: Session, token: str, today: Optional[date] = None) -> Optional[models.BreakPlan]:
+    if not valid_token(token):
         return None
     plan = db.query(models.BreakPlan).filter(models.BreakPlan.share_token == token,
                                              models.BreakPlan.status == "active").first()
-    if plan is None:
+    if plan is None or share_ended(plan, today or _now().date()):
         return None
     owner = db.get(models.User, plan.user_id)
     if owner is None or not owner.is_active:
@@ -1662,9 +1703,44 @@ def by_token(db: Session, token: str) -> Optional[models.BreakPlan]:
     return plan
 
 
+def count_open(db: Session, plan: models.BreakPlan) -> None:
+    try:
+        db.query(models.BreakPlan).filter(models.BreakPlan.id == plan.id).update(
+            {models.BreakPlan.share_opened: models.BreakPlan.share_opened + 1}, synchronize_session=False)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _month_day(day: date) -> str:
+    return f"{day.strftime('%b')} {day.day}"
+
+
+def _weekday_span(days: list[date], long_break: bool) -> str:
+    """When a title is on the plan: "Thursday", "Fri to Sun", "Dec 26 to 28", "3 days"."""
+    days = sorted(set(days))
+    if not days:
+        return ""
+    if len(days) == 1:
+        return _month_day(days[0]) if long_break else days[0].strftime("%A")
+    contiguous = (days[-1] - days[0]).days == len(days) - 1
+    if not contiguous:
+        return f"{len(days)} days"
+    if long_break:
+        if days[0].month == days[-1].month:
+            return f"{_month_day(days[0])} to {days[-1].day}"
+        return f"{_month_day(days[0])} to {_month_day(days[-1])}"
+    return f"{days[0].strftime('%a')} to {days[-1].strftime('%a')}"
+
+
 def shared_view(db: Session, plan: models.BreakPlan, today: date) -> dict:
-    """What a share link shows: titles from the shelves the member shares publicly, ticks, and totals."""
-    from .ranking_shares import _shareable
+    """What a share link shows: titles from the shelves the member shares publicly, ticks, and totals.
+
+    Never the member's scores, notes, library ids or the time they set aside each day. Their name only
+    shows when they already have a public profile (the same rule as the other share links).
+    """
+    from . import tier_list, title_pages
+    from .ranking_shares import _credit, _shareable
     owner = db.get(models.User, plan.user_id)
     items = items_of(db, plan)
     allowed = {category for category in CATEGORIES if _shareable(owner, category)}
@@ -1674,33 +1750,96 @@ def shared_view(db: Session, plan: models.BreakPlan, today: date) -> dict:
     shown = [item for item in items if item.category in allowed and (item.category, item.item_id) in kept]
     hidden_titles = {(item.category, item.item_id) for item in items if item.category not in allowed}
     budgets = minutes_by_day(plan)
+    long_break = len(budgets) > 7
+    titles: dict[tuple[str, int], dict] = {}
+    for item in shown:
+        ref = (item.category, item.item_id)
+        entry = titles.get(ref)
+        if entry is None:
+            kind = title_pages.LIBRARY_TO_KIND[item.category]
+            path = title_pages.title_path(kind, item.title, item.year)
+            image = title_pages._safe_image(item.image)
+            # A cover can be any address the member typed in, and visitors' browsers load it, so only the poster
+            # hosts the tier list image proxy allows show (no tracking pixels, nothing on a home network).
+            if image and not (image.startswith("https://") and tier_list.image_allowed(image)):
+                image = None
+            entry = titles[ref] = {
+                "index": len(titles), "kind": kind, "slug": path.rsplit("/", 1)[-1], "url": path,
+                "title": item.title, "year": item.year, "category": item.category,
+                "kind_label": LABELS.get(item.category, ""),
+                "image": image,
+                "stretches": 0, "done": 0, "finished": False, "_days": [],
+            }
+        entry["stretches"] += 1
+        entry["done"] += item.done_at is not None
+        entry["finished"] = entry["finished"] or bool(item.finished_title and item.done_at is not None)
+        entry["_days"].append(item.day)
+    for entry in titles.values():
+        entry["when"] = _weekday_span(entry.pop("_days"), long_break)
+        entry["all_done"] = entry["done"] == entry["stretches"]
     days = []
+    seen: set[tuple[str, int]] = set()
     for day in budgets:
         entries = []
         for item in shown:
             if item.day != day:
                 continue
-            entries.append({"title": item.title, "year": item.year, "image": item.image, "label": item.label,
+            ref = (item.category, item.item_id)
+            entries.append({"title": item.title, "year": item.year, "image": titles[ref]["image"], "label": item.label,
                             "kind_label": LABELS.get(item.category, ""), "category": item.category,
                             "length": length_words(item.minutes, item.guessed), "unit": item.unit,
-                            "done": item.done_at is not None,
-                            "finished_title": item.finished_title})
-        days.append({"day": day.isoformat(), "label": _day_label(day), "items": entries})
+                            "done": item.done_at is not None, "finished_title": item.finished_title,
+                            "index": titles[ref]["index"], "first": ref not in seen})
+            seen.add(ref)
+        days.append({"day": day.isoformat(), "label": _day_label(day), "items": entries,
+                     "weekday": day.strftime("%a").upper(), "date": _month_day(day),
+                     "today": day == today})
     totals = summary(shown, set())
-    return {"owner": owner.username, "name": plan.name, "span": span_label(plan.starts_on, plan.ends_on),
-            "phase": phase(plan, today), "days": days, "totals": totals, "private_titles": len(hidden_titles),
-            "day_count": len(budgets)}
+    credit = _credit(db, owner)
+    state = phase(plan, today)
+    return {"plan_id": plan.id, "owner_id": owner.id, "token": plan.share_token, "path": share_path(plan),
+            "by": credit[0] if credit else None, "profile": credit[1] if credit else None,
+            "name": plan.name, "span": span_label(plan.starts_on, plan.ends_on),
+            "starts_on": plan.starts_on.isoformat(), "ends_on": plan.ends_on.isoformat(),
+            "phase": state, "day_number": (today - plan.starts_on).days + 1 if state == "during" else None,
+            "days": days, "titles": list(titles.values()), "totals": totals,
+            "private_titles": len(hidden_titles), "day_count": len(budgets), "opened": int(plan.share_opened or 0)}
 
 
 def card_facts(db: Session, plan: models.BreakPlan, today: date) -> dict:
+    """Everything the two pictures draw, so their fingerprint changes when the picture would."""
     view_ = shared_view(db, plan, today)
-    return {"owner": view_["owner"], "name": view_["name"], "span": view_["span"], "phase": view_["phase"],
+    return {"by": view_["by"], "name": view_["name"], "span": view_["span"], "phase": view_["phase"],
+            "day_number": view_["day_number"], "day_count": view_["day_count"],
             "titles": view_["totals"]["titles"], "hours": view_["totals"]["hours"],
             "finished": view_["totals"]["finished"], "done": view_["totals"]["done"],
             "stretches": view_["totals"]["stretches"],
-            "days": [len(day["items"]) for day in view_["days"]],
+            "days": [[entry["index"] for entry in day["items"]] for day in view_["days"]],
             "done_days": [sum(1 for entry in day["items"] if entry["done"]) for day in view_["days"]],
-            "first_titles": [entry["title"] for day in view_["days"] for entry in day["items"]][:3]}
+            "day_labels": [[day["weekday"], day["date"]] for day in view_["days"]],
+            "shown": [[entry["title"], entry["image"] or "", entry["when"], entry["all_done"], entry["finished"],
+                       entry["category"]] for entry in view_["titles"][:24]]}
+
+
+def same_days(plan: models.BreakPlan, today: date) -> Optional[dict]:
+    """The days of a shared plan as a new plan would take them (from today on), or None once they're past.
+
+    Only the dates carry over. The time on each day starts from the planner's own defaults, so a
+    friend's plan never shows how much time its owner set aside.
+    """
+    if plan.ends_on < today:
+        return None
+    start = max(plan.starts_on, today)
+    if (start - today).days > START_WITHIN_DAYS:
+        return None
+    key, light, name = None, [], None
+    if plan.preset:
+        chosen = preset(plan.preset, today)
+        if chosen and chosen["starts_on"] == start and chosen["ends_on"] == plan.ends_on:
+            key, light, name = chosen["key"], chosen["light"], chosen["name"]
+    return {"starts_on": start.isoformat(), "ends_on": plan.ends_on.isoformat(), "preset": key, "name": name,
+            "light": [day.isoformat() for day in light], "span": span_label(start, plan.ends_on),
+            "day_count": (plan.ends_on - start).days + 1}
 
 
 # ---------------------------------------------------------------- the calendar

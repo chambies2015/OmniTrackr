@@ -189,6 +189,9 @@
       more.textContent = 'See it all';
       (card.finished || []).forEach(item => list.appendChild(row(item, card, false)));
       actions.appendChild(link(card.finished && card.finished.length ? 'Score them' : 'Open the plan', '/break', 'break-home__btn break-home__btn--primary'));
+      // How it went, as a link or a story picture: the plan's own share page, or its share panel if there's no link yet.
+      const shared = typeof card.share === 'string' && /^\/break\/s\/[A-Za-z0-9_-]{16,40}$/.test(card.share);
+      if (card.totals && card.totals.done) actions.appendChild(link('Share how it went', shared ? card.share : '/break#share', 'break-home__btn'));
       const done = el('button', 'break-home__quiet', 'Done with this');
       done.type = 'button';
       done.addEventListener('click', () => hideWrap(card, done));
