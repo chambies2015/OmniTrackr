@@ -123,6 +123,10 @@
     dropped = true;
     waiting.clear();
   }
+  // Another tab signed out or in as someone else: these answers belong to the old session.
+  window.addEventListener('storage', event => {
+    if (event.key === null || event.key === 'omnitrackr_user' || event.key === 'omnitrackr_token') dropAll();
+  });
 
   function abortError() {
     try {

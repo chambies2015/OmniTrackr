@@ -98,12 +98,19 @@ def _card_html(gift: Optional[models.GiftMembership], *, sample: bool = False, h
             f'{note_html}{from_html}</div>')
 
 
-def _inside_html(db: Session, *, you: bool = False, own: Optional[models.Supporter] = None) -> str:
+def _inside_html(db: Session, *, you: bool = False, own: Optional[models.Supporter] = None,
+                 paid_at: Optional[datetime] = None) -> str:
     """What a gift switches on, with small previews drawn in CSS. ``you`` speaks to the person opening it, and
-    ``own`` is their supporter row once they have, so the sample badge shows their real number."""
+    ``own`` is their supporter row once they have, so the sample badge shows their real number. ``paid_at`` is an
+    unopened gift's, so the sample badge is gold when that gift makes a founding supporter (after 2027 starts too)."""
     their = "your" if you else "their"
     following = own.number if own is not None and own.number else supporters.next_number(db)
-    founding = supporters.is_founding(own) if own is not None else supporters.founding_open()
+    if own is not None:
+        founding = supporters.is_founding(own)
+    elif paid_at is not None:
+        founding = supporters.is_founding(models.Supporter(since=paid_at))
+    else:
+        founding = supporters.founding_open()
     mark, label = ("★", "Founding supporter") if founding else ("♥", "Supporter")
     themes = "".join(f'<span class="gm-theme gm-theme--{name}"></span>' for name in ("lagoon", "sakura", "sunset", "ocean"))
     frames = "".join(f'<span class="avatar-frame avatar-frame--{name}"><span class="avatar-frame__face">{letter}</span>'
@@ -248,7 +255,8 @@ def give_page(request: Request, user=Depends(get_optional_current_user), db: Ses
     response = _page("Give OmniTrackr supporter perks as a gift",
                      "Buy someone OmniTrackr supporter perks on Ko-fi: app themes, an avatar frame and a numbered badge, "
                      "opened with a gift code.", GIVE_PATH, content, member=user is not None)
-    return _private(response, store=True)
+    # A member's copy lists their gifts' codes and private card links, so it isn't kept on the device.
+    return _private(response, store=user is None)
 
 
 # ---------------------------------------------------------------- /gift: type a code
@@ -360,7 +368,7 @@ def gift_page(code: str, request: Request, opened: int = Query(0, ge=0, le=1), u
         f'<div class="gm-gift__side"><p class="gm-lead">{_e(lead)}</p>{founding_html}'
         f'{_gift_actions(db, gift, user, path, bool(opened) and mine)}</div></div>'
         '<section class="gm-panel" aria-labelledby="gm-inside-title"><h2 id="gm-inside-title">What\'s inside</h2>'
-        f'{_inside_html(db, you=not giver, own=supporters.get_supporter(db, user.id) if mine else None)}'
+        f'{_inside_html(db, you=not giver, own=supporters.get_supporter(db, user.id) if mine else None, paid_at=gift.paid_at)}'
         '<p><a href="/supporters#perks-heading">See every perk</a></p></section>'
         '</article>'
     )

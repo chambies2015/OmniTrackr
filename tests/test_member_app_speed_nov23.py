@@ -42,11 +42,12 @@ def test_card_rail_waits_for_scroll_events_instead_of_watching_every_change():
 
 
 def test_home_requests_start_before_the_page_scripts():
-    tag = '<script src="/static/home-prefetch.js?v=20261123-prefetch-1"></script>'
-    assert INDEX.count(tag) == 1
+    found = re.findall(r'<script src="(/static/home-prefetch\.js\?v=[\w-]+)"></script>', INDEX)
+    assert len(found) == 1
+    tag = f'<script src="{found[0]}"></script>'
     scripts = re.findall(r'<script src="([^"]+)"', INDEX)
     # First of the end-of-body run, so the requests start while the rest download.
-    assert scripts.index("/static/home-prefetch.js?v=20261123-prefetch-1") + 1 == scripts.index("./credentials.js")
+    assert scripts.index(found[0]) + 1 == scripts.index("./credentials.js")
     assert INDEX.index(tag) > INDEX.index("</main>")
 
 
