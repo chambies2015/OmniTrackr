@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import browse, challenges, funnel, pick, seasonal, title_pages, title_search
+from .. import browse, challenges, friend_tools, funnel, pick, seasonal, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
@@ -24,7 +24,7 @@ from ..seasonal_guides import SEASONS
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
-CSS_VERSION = "20261121-valentines-1"
+CSS_VERSION = "20261123-friends-1"
 JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 SITE = "https://omnitrackr.xyz"
@@ -53,6 +53,14 @@ def extra_links(slug: str) -> list[dict]:
         if year is not None:
             links.insert(0, {"path": advent_calendar.BASE_PATH, "name": "Advent calendar",
                              "tagline": advent_calendar.edition(year)["card"]})
+    return links
+
+
+def _card_links(slug: str) -> list[dict]:
+    """The dashboard card's links: EXTRA_LINKS, with Pick swap right after the gift guide while swaps are in season."""
+    links = extra_links(slug)
+    at = next((index + 1 for index, link in enumerate(links) if link["path"] == "/holidays/gifts"), len(links))
+    links[at:at] = friend_tools.season_card_links(slug)
     return links
 
 
@@ -257,6 +265,7 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
         f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
+        friend_tools.callout_html(slug, signed_in),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
@@ -387,6 +396,7 @@ def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, to
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
         f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
+        friend_tools.callout_html(slug, signed_in),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _companion_related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
@@ -479,7 +489,7 @@ def seasonal_current(request: Request, response: Response, user=Depends(get_curr
         "year": date.today().year, "card": entry["card"], "cta": entry["card_cta"], "days_left": seasonal.days_left(entry),
         "shelves": [{"key": shelf["key"], "name": shelf["name"], "tagline": shelf["tagline"]} for shelf in entry["shelves"]],
         "total": progress["total"], "tracked": progress["tracked"], "done": progress["done"],
-        "links": extra_links(slug),
+        "links": _card_links(slug),
     }
 
 

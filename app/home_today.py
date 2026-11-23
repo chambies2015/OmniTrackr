@@ -9,6 +9,8 @@ I was away? It reads data other features already keep and writes nothing:
 * Releases already announced to them by a release-day alert (``release_alerts``).
 * Their friends' latest finishes, ratings and reviews, from the friends feed, which
   applies its own privacy rules.
+* One idea for doing something with those friends (Pick swap in December, Watch together
+  otherwise), from app/friend_tools.py.
 
 ``since`` comes from the browser (when this device last showed the home screen), so
 "new" means new to the person looking, and it is clamped to the last 30 days.
@@ -152,11 +154,19 @@ def build(db: Session, user: models.User, since: Optional[datetime] = None,
     shows = show_updates(db, user, today, since, unfinished)
     released = releases(db, user.id, today, since)
     friend_part = friends(db, user.id, since, now)
+    try:
+        from . import friend_tools
+        idea = friend_tools.home_idea(db, user.id, today)
+    except Exception:
+        db.rollback()
+        idea = None  # The card never depends on it.
     return {
         "since": since.isoformat(),
         "shows": shows,
         "releases": released,
         "friends": friend_part,
+        # Pick swap in season, else Watch together; shown under the friends list (app/friend_tools.py).
+        "idea": idea,
         "counts": {
             "episodes": sum(1 for show in shows if show["out"] and show["out"]["new"]),
             "waiting": sum(1 for show in shows if show["out"] and show["out"]["waiting"]),

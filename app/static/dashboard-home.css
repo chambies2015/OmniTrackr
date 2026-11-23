@@ -1735,3 +1735,15 @@ body.app-shell .home-focus__progress:has(.progress-checkpoint:not([hidden])) .ep
   /* One row of buttons: the next episode, the guide and Open. "Update progress" is a tap away under Open. */
   body.app-shell .home-focus__actions:has(.episode-next.home-focus__primary) .progress-update { display: none; }
 }
+
+/* What's new: one idea under the friends list, Pick swap in December or Watch together (home-today.js, Nov 23 2026). */
+body.app-shell .home-news__idea { align-items: flex-start; border-top: 1px dashed var(--border); display: flex; gap: 12px; margin-top: 12px; padding-top: 12px; }
+body.app-shell .home-news__idea-mark { background: linear-gradient(90deg, transparent 42%, rgba(255, 255, 255, .6) 42% 58%, transparent 58%), #e11d48; border-radius: 7px; flex: none; height: 30px; margin-top: 6px; position: relative; width: 30px; }
+body.app-shell .home-news__idea-mark::before { background: linear-gradient(transparent 42%, rgba(255, 255, 255, .6) 42% 58%, transparent 58%); border-radius: inherit; content: ""; inset: 0; position: absolute; }
+body.app-shell .home-news__idea[data-tool="together"] .home-news__idea-mark { background: linear-gradient(90deg, #0f766e 0 50%, color-mix(in srgb, #0f766e 30%, transparent) 50%); border-radius: 999px; height: 8px; margin-top: 12px; }
+body.app-shell .home-news__idea[data-tool="together"] .home-news__idea-mark::before { display: none; }
+body.app-shell .home-news__idea-body { min-width: 0; }
+body.app-shell .home-news__idea-title { font-size: .9rem; font-weight: 700; margin: 0; }
+body.app-shell .home-news__idea-text { color: var(--fg-secondary); font-size: .84rem; line-height: 1.5; margin: 2px 0 8px; }
+body.app-shell .home-news__idea .home-news__actions { justify-content: flex-start; }
+body.app-shell .home-news__idea .home-news__link { margin-top: 0; }

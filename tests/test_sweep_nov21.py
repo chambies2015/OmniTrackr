@@ -19,7 +19,7 @@ def test_light_mode_today_labels_are_readable():
     assert rule and ".your-week__day.is-today .your-week__day-name" in rule.group(1)
     assert ".week-one__day.is-today .week-one__day-name" in rule.group(1)
     assert rule.group(2) == "#6d28d9"
-    assert "/static/dashboard-home.css?v=20261121-sweep-1" in INDEX
+    assert "/static/dashboard-home.css?v=20261123-friends-1" in INDEX
 
 
 def test_changed_assets_carry_new_tags():

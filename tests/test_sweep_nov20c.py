@@ -57,7 +57,7 @@ def test_challenge_step_button_drops_under_its_label_on_narrow_cards():
 
 
 def test_changed_files_have_new_version_tags():
-    for tag in ('/static/library-view.css?v=20261120-sweep-1', '/static/dashboard-home.css?v=20261121-sweep-1',
+    for tag in ('/static/library-view.css?v=20261120-sweep-1', '/static/dashboard-home.css?v=20261123-friends-1',
                 '/static/library-quick.js?v=20261120-sweep-1'):
         assert tag in INDEX, tag
     # home-hero.js moved on with the member look refresh (Nov 22 2026); a later tag keeps the fix.

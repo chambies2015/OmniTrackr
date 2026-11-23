@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import affiliate, funnel, gift_lists, models, seasonal, title_pages, title_search
+from .. import affiliate, friend_tools, funnel, gift_lists, models, seasonal, title_pages, title_search
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..gift_guides import GIFTS, GUIDE, SECTIONS, SIZE_LABELS
@@ -54,7 +54,7 @@ def _private(response: Response) -> Response:
 
 def _head(*, ads: bool) -> str:
     head = (f'<link rel="stylesheet" href="/static/if-you-liked.css?v={CSS_VERSION}">'
-            f'<link rel="stylesheet" href="/static/seasonal.css?v=20261106-holiday-guides-1">'
+            f'<link rel="stylesheet" href="/static/seasonal.css?v=20261123-friends-1">'
             f'<link rel="stylesheet" href="/static/gift-guide.css?v={CSS_VERSION}">')
     if ads:
         head += '<script src="/static/ad-loader.js" defer></script>'
@@ -274,6 +274,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     ]
     parts.extend(_section_html(section, pages, owned, signed_in) for section in sections)
     parts.extend([
+        friend_tools.callout_html("gifts", signed_in),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
