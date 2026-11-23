@@ -631,3 +631,55 @@ async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
 
     message = html_message("Link your Ko-fi support to OmniTrackr", [email], html)
     await _deliver_credential_email(message)
+
+
+def gift_email_html(gifts: list, resend: bool = False) -> str:
+    """The Ko-fi gift email: each gift's link to pass on, its code, and the giver's own link for the card."""
+    blocks = []
+    for gift in gifts:
+        url = _escape_html(gift["url"])
+        manage = _escape_html(gift["manage_url"])
+        status = ("Opened already." if gift.get("state") == "opened"
+                  else "Not opened yet.") if resend else ""
+        blocks.append(f"""
+                <div style="background: #ffffff; border: 1px solid #e4e1f5; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                    <p style="margin: 0 0 6px; font-size: 18px;"><strong>{_escape_html(gift["months_label"].capitalize())} of supporter perks</strong></p>
+                    <p style="margin: 0 0 14px; color: #555;">Gift code <strong style="letter-spacing: 1px;">{_escape_html(gift["code"])}</strong>{f" · {status}" if status else ""}</p>
+                    <p style="margin: 0 0 8px;">The link to send:</p>
+                    <p style="word-break: break-all; margin: 0 0 16px;"><a href="{url}" style="color: #5b3fd6;">{url}</a></p>
+                    <a href="{manage}" style="background-color: #667eea; color: white; padding: 12px 22px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Write the card or print it</a>
+                </div>""")
+    lead = ("Here are the gifts bought from this Ko-fi email." if resend else
+            "Thank you for buying an OmniTrackr gift on Ko-fi. It's ready to give.")
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">Your gift is ready</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <p>Hi,</p>
+                <p>{lead} Send the link to the person it's for, or print the card and give it in person.
+                They open it with a free OmniTrackr account, and the perks start the day they do.</p>
+                {"".join(blocks)}
+                <p>The "Write the card" button is just for you. It lets you add who the gift is for, who it's from and a short
+                note, print a card with the code on it, and see when it's been opened. Keep that one to yourself.</p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    You're getting this because a Ko-fi payment to OmniTrackr with OT-GIFT in its message came from this
+                    address. If that wasn't you, reply and we'll sort it out.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    return html
+
+
+async def send_gift_email(email: str, gifts: list, resend: bool = False) -> bool:
+    """Send a Ko-fi gift's links to the address that paid for it."""
+    if not gifts:
+        return False
+    subject = "Your OmniTrackr gift links" if resend else "Your OmniTrackr gift is ready to give"
+    message = html_message(subject, [email], gift_email_html(gifts, resend=resend))
+    return await _deliver_credential_email(message)

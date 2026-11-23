@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import affiliate, friend_tools, funnel, gift_lists, models, seasonal, title_pages, title_search
+from .. import affiliate, friend_tools, funnel, gift_lists, models, seasonal, supporters, title_pages, title_search
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..gift_guides import GIFTS, GUIDE, SECTIONS, SIZE_LABELS
@@ -214,6 +214,23 @@ def _guest_promo() -> str:
     )
 
 
+def _supporter_gift_panel() -> str:
+    """Nov 23 2026: OmniTrackr supporter perks as a gift, bought on Ko-fi and opened with a code."""
+    founding = (" Bought before 2027, it makes them a founding supporter for good, even if they open it in January."
+                if supporters.founding_open() else "")
+    return (
+        '<section id="give-omnitrackr" class="gg-panel gg-promo gg-promo--small" aria-labelledby="give-ot-title">'
+        '<p class="eyebrow">IF THEY TRACK THINGS HERE</p>'
+        '<h2 id="give-ot-title">Give them OmniTrackr supporter perks</h2>'
+        '<p class="gg-panel__lead">For someone who already keeps their library on OmniTrackr, or would if they knew about it: '
+        'color themes for their app, an avatar frame, a numbered supporter badge and a profile banner. It\'s paid once on '
+        f'Ko-fi, each $3 coffee is a month, and nothing renews.{_e(founding)}</p>'
+        '<ol class="gg-steps"><li>Buy one coffee per month on Ko-fi, up to twelve, and write OT-GIFT in the message.</li>'
+        '<li>We email you a gift code, and a card with a QR code you can print and put in an envelope.</li>'
+        '<li>They open it with a free account, and the perks start the day they do.</li></ol>'
+        '<p class="gg-promo__actions"><a class="button" href="/supporters/gift">See how gifts work</a></p></section>')
+
+
 def _related(today: date) -> str:
     links = [
         ("/holidays", "Holiday picks", "Twenty-four movies, shows, anime, games, books and albums for the break, "
@@ -274,6 +291,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     ]
     parts.extend(_section_html(section, pages, owned, signed_in) for section in sections)
     parts.extend([
+        _supporter_gift_panel(),
         friend_tools.callout_html("gifts", signed_in, today),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(today),

@@ -41,6 +41,10 @@ before ``FOUNDING_BEFORE`` is a founding supporter, and "months supported" is
 the number of perk payments linked to the member. Founding supporters and
 anyone past ``GOLD_MONTHS`` unlock the gold accent.
 
+Gifts (Nov 23 2026, see gift_memberships): a one-time payment with OT-GIFT in its
+message buys perks for someone else. It is recorded and marked ``gift``, never linked to
+the payer and never on the owner's "to link" list.
+
 Supporter numbers (Nov 23 2026) are the exception: each new supporter row gets
 the next number (#1, #2, ...) once, and it is stored so a late-linked payment
 with an earlier date can't renumber anyone. The number shows on the badge.
@@ -482,9 +486,10 @@ def _link(db: Session, payment: models.KofiPayment, user_id: int) -> None:
 
 
 def _waiting():
-    """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner."""
+    """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner, and not
+    a gift (a gift's perks go to whoever opens it, never to the payer)."""
     return (models.KofiPayment.user_id.is_(None), not_(is_test_payment()),
-            models.KofiPayment.dismissed_at.is_(None))
+            models.KofiPayment.dismissed_at.is_(None), models.KofiPayment.gift.is_(False))
 
 
 def _waiting_for_email(db: Session, email: Optional[str]) -> list[models.KofiPayment]:
@@ -693,7 +698,18 @@ def status_payload(db: Session, user) -> dict:
         "ad_free": active,
         "code": supporter_code(user.id),
         "kofi_url": KOFI_URL,
+        "gift": _gift_summary(db, user.id),
+        "gift_path": "/supporters/gift",
     }
+
+
+def _gift_summary(db: Session, user_id: int) -> Optional[dict]:
+    from . import gift_memberships  # avoids a circular import
+    try:
+        return gift_memberships.received_summary(db, user_id)
+    except Exception:  # pragma: no cover - a status read must not fail over gifts
+        db.rollback()
+        return None
 
 
 def save_settings(db: Session, user, changes: dict) -> models.Supporter:
@@ -889,15 +905,34 @@ def handle_webhook(db: Session, data: dict) -> dict:
     )
     db.add(payment)
 
-    user = None if payment.test else _match(db, data, email)
-    if user is not None:
-        _link(db, payment, user.id)
+    from . import gift_memberships  # avoids a circular import
+
+    # OT-GIFT in a one-time payment's message: the perks are for someone else, opened with a code.
+    marker = (gift_memberships.find_marker(data)
+              if not payment.test and kind == "donation" and not monthly else None)
+    user = gift = None
     try:
+        if marker is not None:
+            giver = db.get(models.User, marker["giver_id"]) if marker["giver_id"] else None
+            if giver is None or not giver.is_active:
+                giver = _match(db, data, email)
+            gift = gift_memberships.from_webhook(db, payment, giver)
+            if giver is not None:
+                from .support_asks import note_support  # avoids a circular import
+                note_support(db, giver.id)
+        else:
+            user = None if payment.test else _match(db, data, email)
+            if user is not None:
+                _link(db, payment, user.id)
         db.commit()
     except IntegrityError:
         db.rollback()  # the same delivery arrived twice at once
         return {"status": "duplicate", "linked": False}
-    return {"status": "recorded", "linked": user is not None}
+    if gift is None:
+        return {"status": "recorded", "linked": user is not None}
+    gift_memberships.tell_giver_ready(db, gift)
+    # Keys starting with "_" are for the webhook route (the payer's email) and never go back to Ko-fi.
+    return {"status": "recorded", "linked": False, "gift": True, "_gift_id": gift.id, "_email": email}
 
 
 def _match(db: Session, data: dict, email: Optional[str]):

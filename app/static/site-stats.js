@@ -545,6 +545,13 @@
         { label: 'Ko-fi payments received', count: supporters.payments },
         { label: 'Payments waiting to be linked (now)', count: supporters.unlinked_payments },
         { label: 'Supporters (all time)', count: supporters.all_time },
+        { label: 'Gifts bought on Ko-fi', count: (supporters.gifts || {}).bought || 0 },
+        { label: 'Gifts made by hand (giveaways)', count: (supporters.gifts || {}).made || 0 },
+        { label: 'Gifts opened', count: (supporters.gifts || {}).opened || 0 },
+        { label: 'Gifts not opened yet (now)', count: (supporters.gifts || {}).waiting || 0 },
+        { label: 'Gift page views', count: (supporters.gifts || {}).gift_page_seen || 0 },
+        { label: 'Ko-fi pressed on the gift page', count: (supporters.gifts || {}).page_kofi_gift || 0 },
+        { label: 'Gift links opened by someone else', count: (supporters.gifts || {}).gift_link_opened || 0 },
       ],
       growthEmail: [
         { label: 'Subscribers (now)', count: email.subscribers },
@@ -813,6 +820,11 @@
       const aside = kofiButton('Set aside', 'stats-kofi__aside', () => setAside(payment.message_id, label.name, true, aside));
       aside.title = 'For a refund, a duplicate or a test. It stays recorded but leaves this list.';
       form.append(input, button, aside);
+      if (!payment.monthly) {
+        const gift = kofiButton('Make it a gift', 'stats-kofi__aside', () => giftFromPayment(payment.message_id, label.name, gift));
+        gift.title = 'The payer meant it as a gift but left OT-GIFT out. You get a link to send them.';
+        form.appendChild(gift);
+      }
       form.addEventListener('submit', event => {
         event.preventDefault();
         const who = input.value.trim();
@@ -905,7 +917,112 @@
     }
   }
 
+  // Gifts (Nov 23 2026): codes bought with OT-GIFT, and ones the owner makes for giveaways.
+  const GIFT_STATES = { open: 'Not opened yet', opened: 'Opened', cancelled: 'Turned off' };
+
+  function giftLinks(gift) {
+    const box = el('div', 'stats-kofi__picks');
+    const open = el('a', '', gift.url);
+    open.href = gift.url;
+    open.target = '_blank';
+    open.rel = 'noopener';
+    const card = el('a', '', 'The card (private)');
+    card.href = gift.manage_url;
+    card.target = '_blank';
+    card.rel = 'noopener';
+    box.append(open, el('small', '', ' · '), card);
+    return box;
+  }
+
+  function renderGifts(gifts) {
+    const list = $('giftList');
+    if (!list) return;
+    list.replaceChildren();
+    if (!gifts.length) {
+      list.appendChild(el('li', 'stats-kofi__empty', 'No gifts yet.'));
+      return;
+    }
+    gifts.forEach(gift => {
+      const row = el('li');
+      const info = el('div', 'stats-kofi__info');
+      const who = [gift.to_name ? `for ${gift.to_name}` : '', gift.giver ? `from @${gift.giver}` : (gift.source === 'owner' ? 'made by hand' : 'from a Ko-fi payer')]
+        .filter(Boolean).join(', ');
+      info.append(el('b', '', `${gift.months_label} · ${GIFT_STATES[gift.state] || gift.state}`),
+        el('span', '', [who, gift.code, gift.paid_at ? dayOnly(gift.paid_at) : ''].filter(Boolean).join(' · ')));
+      if (gift.state === 'open') info.appendChild(giftLinks(gift));
+      row.appendChild(info);
+      if (gift.state === 'open') {
+        const off = kofiButton('Turn off', 'stats-kofi__aside', () => cancelGift(gift, off));
+        off.title = 'For a refunded payment, or a code posted somewhere it shouldn\'t be. It can\'t be opened after this.';
+        row.appendChild(off);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  async function loadGifts() {
+    if (!$('giftList')) return;
+    try {
+      const response = await fetch('/api/supporters/gifts', { credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      renderGifts(result.gifts || []);
+    } catch (error) {
+      $('giftStatus').textContent = `Could not load gifts: ${error.message}`;
+    }
+  }
+
+  function giftMade(prefix, gift) {
+    const status = $('giftStatus');
+    status.replaceChildren(`${prefix} ${gift.months_label}, code ${gift.code}. Send this link: `);
+    const link = el('a', '', gift.url);
+    link.href = gift.url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    status.appendChild(link);
+  }
+
+  async function makeGift(event) {
+    event.preventDefault();
+    const months = Number($('giftMonths').value);
+    if (!window.confirm(`Make a gift link for ${months === 12 ? 'a year' : `${months} month${months === 1 ? '' : 's'}`} of supporter perks? Nobody pays for it, so it's for a giveaway or a prize.`)) return;
+    try {
+      giftMade('Made a gift of', await postKofi('/api/supporters/gifts', { months }));
+      await loadGifts();
+    } catch (error) {
+      $('giftStatus').textContent = `Could not make it: ${error.message}`;
+    }
+  }
+
+  async function giftFromPayment(messageId, name, button) {
+    if (!window.confirm(`Turn the payment from ${name} into a gift? It won't switch on anyone's perks until someone opens the gift link, which you send to ${name}.`)) return;
+    button.disabled = true;
+    try {
+      giftMade(`The payment from ${name} is now a gift of`, await postKofi('/api/supporters/gifts/from-payment', { message_id: messageId }));
+      await load();
+    } catch (error) {
+      $('kofiStatus').textContent = `Could not make it a gift: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function cancelGift(gift, button) {
+    if (!window.confirm(`Turn off the ${gift.months_label} gift ${gift.code}? Nobody will be able to open it.`)) return;
+    button.disabled = true;
+    try {
+      await postKofi(`/api/supporters/gifts/${gift.id}/cancel`, {});
+      $('giftStatus').textContent = `Turned off ${gift.code}.`;
+      await loadGifts();
+    } catch (error) {
+      $('giftStatus').textContent = `Could not turn it off: ${error.message}`;
+      button.disabled = false;
+    }
+  }
+
   function bindKofiSearch() {
+    const gifts = $('giftMake');
+    if (gifts) gifts.addEventListener('submit', makeGift);
     const form = $('kofiSearch');
     if (!form) return;
     form.addEventListener('submit', event => {
@@ -1563,6 +1680,7 @@
       render(await response.json());
       $('statsToast').textContent = '';
       loadKofiPayments();
+      loadGifts();
     } catch (error) {
       $('statsToast').textContent = 'Could not load the latest numbers. Check your connection and press Refresh.';
     } finally {

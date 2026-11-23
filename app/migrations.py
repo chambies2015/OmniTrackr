@@ -845,6 +845,24 @@ def run_migrations():
     add_week_one_start_column()
     add_follow_suggest_column()
     add_break_item_undo_column()
+    add_kofi_gift_column()
+
+
+def add_kofi_gift_column():
+    """Mark Ko-fi payments that bought a gift (Nov 23 2026). Every recorded payment gets FALSE, so it reads
+    and links exactly as before. The gift_memberships table itself is new and made by create_all."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("kofi_payments"):
+            return
+        if "gift" in {col["name"] for col in inspector.get_columns("kofi_payments")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE kofi_payments ADD COLUMN gift BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added gift column to kofi_payments table")
+    except Exception as e:
+        print(f"Migration warning (Ko-fi gifts): {e}")
 
 
 def add_follow_suggest_column():

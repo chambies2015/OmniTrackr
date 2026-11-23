@@ -208,7 +208,7 @@ def test_founding_note_shows_once_and_covers_reached_milestones(db_session):
 def test_site_stats_list_the_founding_moment(db_session):
     data = support_asks.stats(db_session, 30, datetime.utcnow())
     assert any(row["moment"] == "Last month to be a founding supporter" for row in data["asks"])
-    assert data["elsewhere_kofi"] == [{"place": "End of a written guide", "count": 0}]
+    assert data["elsewhere_kofi"] == [{"place": "End of a written guide", "count": 0}, {"place": "Gift page", "count": 0}]
 
 
 # ---------------------------------------------------------------- weekly email

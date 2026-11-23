@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/static/site.css?v=20261121-refresh-1">
   <script src="/static/site.js?v=20261121-refresh-1" defer></script>
   <link rel="stylesheet" href="/static/site-stats.css?v=20261118-search-journey-1">
-  <script src="/static/site-stats.js?v=20261123-founding-1" defer></script>
+  <script src="/static/site-stats.js?v=20261123-gift-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -149,6 +149,16 @@
         <p class="stats-kofi__members" id="kofiMembers" hidden></p>
         <ul class="stats-kofi-list" id="kofiList"></ul>
         <p class="stats-editor-status" id="kofiStatus" role="status" aria-live="polite"></p>
+        <h3 class="stats-subhead" id="giftsHeading">Gifts</h3>
+        <p class="stats-kofi__members" id="giftSummary">Gift codes bought on Ko-fi with OT-GIFT in the message, and any you make by hand.
+          A hand-made one has no payment behind it, so keep those for giveaways and prizes.</p>
+        <form class="stats-kofi__search" id="giftMake" novalidate>
+          <label for="giftMonths">Make a gift link by hand</label>
+          <select id="giftMonths"><option value="1">1 month</option><option value="3" selected>3 months</option><option value="6">6 months</option><option value="12">A year</option></select>
+          <button class="site-btn site-btn--ghost site-btn--sm" type="submit">Make the link</button>
+        </form>
+        <ul class="stats-kofi-list" id="giftList" aria-labelledby="giftsHeading"></ul>
+        <p class="stats-editor-status" id="giftStatus" role="status" aria-live="polite"></p>
       </section>
 
       <section class="stats-card stats-card--wide">
