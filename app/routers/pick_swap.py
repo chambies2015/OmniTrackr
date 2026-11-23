@@ -18,7 +18,7 @@ from ..integer_bounds import PositiveDatabaseId
 from .discover import page
 
 router = APIRouter(tags=["pick-swap"])
-CSS_VERSION = "20261123-swap-1"
+CSS_VERSION = "20261123-phone-1"
 JS_VERSION = "20261123-swap-sweep-1"
 DESCRIPTION = ("Secret Santa for recommendations: start a swap, send the link, draw names, and everyone picks one "
                "film, show, book, game or album for the person they drew, with a note on why. Everything opens on "

@@ -18,7 +18,7 @@ from ..integer_bounds import PositiveDatabaseId
 from .discover import page
 
 router = APIRouter(tags=["together"])
-CSS_VERSION = "20261122-together-1"
+CSS_VERSION = "20261123-phone-1"
 JS_VERSION = "20261122-together-sweep-1"
 DESCRIPTION = ("Watch a show, read a book or get through a podcast with friends at the same pace, even from different "
                "cities. Everyone's place on one track, a few episodes or chapters a week, and notes that stay hidden "

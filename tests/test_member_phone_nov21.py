@@ -11,7 +11,7 @@ LAYOUT = (STATIC / "home-layout.js").read_text(encoding="utf-8")
 
 
 def test_stylesheet_is_linked_once_with_a_version():
-    assert INDEX.count('/static/member-phone.css?v=20261121-sweep-d-1') == 1
+    assert INDEX.count('/static/member-phone.css?v=20261123-phone-1') == 1
 
 
 def test_edge_to_edge_rows_match_the_10px_phone_gutter():

@@ -47,7 +47,7 @@ def test_settings_copy_buttons_are_full_size_on_phones():
     # Both buttons use that class: the profile link's Copy link and the supporter code's Copy code.
     assert 'class="profile-settings__copy" id="supporterCopyCode"' in INDEX
     assert 'class="profile-settings__copy" id="profileCopyLink"' in INDEX
-    assert "/static/member-phone.css?v=20261121-sweep-d-1" in INDEX
+    assert "/static/member-phone.css?v=20261123-phone-1" in INDEX
 
 
 def test_sign_up_sheet_log_in_link_has_a_tap_band_on_phones():

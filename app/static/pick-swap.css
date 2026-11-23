@@ -602,3 +602,8 @@
   .ps-unwrap .ps-present, .ps-gift--pop, .ps-unwrap.is-opening .ps-present__body { animation: none; }
   .ps-present__lid { transition: none; }
 }
+
+/* Phones (Nov 23 2026): "← All your swaps" and a swap's name in the list were 20px tall. */
+@media (max-width: 760px) {
+  .ps-back a, .ps-list__name { display: inline-block; margin-block: -12px; padding-block: 12px; }
+}
