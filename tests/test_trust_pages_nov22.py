@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from app import corrections_log, editorial_index, in_order, publisher_data, site_chrome
+from app import corrections_log, editorial_index, in_order, publisher_data, site_chrome, switch_guides
 from app.in_order_guides import GUIDES as IN_ORDER_GUIDES, NOVEMBER_GUIDES, NOVEMBER_PUBLISHED
 
 
@@ -45,6 +45,7 @@ def test_corrections_page_lists_every_logged_change(client):
 def test_log_entries_are_dated_known_kinds_and_point_at_real_guides():
     guides = {piece["href"] for piece in editorial_index.entries()}
     hubs = {"/if-you-liked", "/new-releases", "/challenges", "/browse"}
+    guides |= {switch_guides.path(slug) for slug in switch_guides.GUIDES}
     for change in corrections_log.guide_changes():
         date.fromisoformat(change.date)
         assert change.date <= corrections_log.STARTED

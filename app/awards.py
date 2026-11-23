@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
@@ -104,6 +104,16 @@ def categories(show: dict) -> list[dict]:
 
 def has_nominees(show: dict) -> bool:
     return bool(show.get("categories"))
+
+
+def nominees_pending(show: dict, now: Optional[datetime] = None) -> bool:
+    """The nominees have been announced but the checked list isn't in the data yet.
+
+    Counted from the day after the announcement, so a morning-UTC visit on the day
+    itself still reads "announced on", not "were announced".
+    """
+    day = show.get("nominees_day")
+    return bool(day) and not has_nominees(show) and (now or _now()).date() > date.fromisoformat(day)
 
 
 def is_locked(show: dict, now: Optional[datetime] = None) -> bool:

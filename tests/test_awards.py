@@ -143,7 +143,8 @@ def test_show_page_before_nominees(client):
     response = client.get("/awards/the-game-awards-2026")
     assert response.status_code == 200
     html = response.text
-    assert "The ballot opens when the nominees are announced" in html
+    # Once the announcement day has passed, the box says the list is being checked (test_switch_guides_nov22.py).
+    assert "The ballot opens when the nominees are announced" in html or "the ballot is being checked" in html
     assert "Make a free account to get a reminder" in html
     assert "/?next=%2Fawards%2Fthe-game-awards-2026%23ballot#landing-auth" in html
     assert "Clair Obscur: Expedition 33" in html and "Key dates" in html
