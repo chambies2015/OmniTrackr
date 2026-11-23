@@ -14,20 +14,38 @@ or a new bundle is a new key. Everything else (pages, JSON) still goes through
 Starlette's GZipMiddleware, at level 6 instead of 9; pages are built per request,
 so their compressed form can't be reused, and level 9 took about 40% more time
 for about 1% fewer bytes.
+
+Since Nov 23 2026 scripts and stylesheets are minified before they are compressed
+(app/minify.py), and browsers that accept Brotli get a Brotli copy of each asset
+at level 11: 14% smaller than gzip for the signed-in app's scripts, 24% for its
+stylesheet. Level 11 is slow (about a second for that stylesheet), so the first
+request for a new body gets gzip while one background thread makes the Brotli
+copy, and every request after that gets Brotli. BROTLI_ASSETS=off goes back to
+gzip only.
 """
 from __future__ import annotations
 
 import hashlib
+import os
 import threading
 import zlib
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
 import anyio.to_thread
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.middleware.gzip import GZipMiddleware
 
+from . import minify
+
+try:
+    import brotli
+except ImportError:  # Gzip only.
+    brotli = None
+
 DYNAMIC_LEVEL = 6
 ASSET_LEVEL = 9
+BROTLI_LEVEL = 11
 MINIMUM_SIZE = 500
 # Bodies at least this big are compressed off the event loop (Starlette's own threshold).
 THREAD_MINIMUM_SIZE = 128 * 1024
@@ -122,6 +140,82 @@ async def compressed_copy(body: bytes) -> bytes:
     return compressed
 
 
+brotli_copies = CompressedCopies()
+_brotli_pending: set[bytes] = set()
+_brotli_lock = threading.Lock()
+# One thread, so a deploy's worth of new files is compressed one at a time in the background.
+_brotli_worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="brotli-assets")
+
+
+def brotli_enabled() -> bool:
+    return brotli is not None and os.getenv("BROTLI_ASSETS", "on").strip().lower() not in {"0", "off", "false", "no"}
+
+
+def _make_brotli_copy(key: bytes, body: bytes) -> None:
+    try:
+        brotli_copies.put(key, brotli.compress(body, quality=BROTLI_LEVEL))
+    except Exception:  # pragma: no cover - gzip keeps being served.
+        pass
+    finally:
+        with _brotli_lock:
+            _brotli_pending.discard(key)
+
+
+def brotli_copy(body: bytes) -> bytes | None:
+    """The kept Brotli copy of body, or None while it is being made (serve gzip meanwhile)."""
+    key = CompressedCopies.key(body)
+    found = brotli_copies.get(key)
+    if found is not None:
+        return found
+    with _brotli_lock:
+        if key in _brotli_pending:
+            return None
+        _brotli_pending.add(key)
+    _brotli_worker.submit(_make_brotli_copy, key, body)
+    return None
+
+
+def wait_for_brotli() -> None:
+    """Block until the background Brotli copies asked for so far exist (used by tests)."""
+    _brotli_worker.submit(lambda: None).result()
+
+
+def accepted_encodings(header: str) -> set[str]:
+    """Content codings an Accept-Encoding header allows ("br;q=0" doesn't count)."""
+    found = set()
+    for part in header.lower().split(","):
+        name, _, params = part.partition(";")
+        name = name.strip()
+        weight = 1.0
+        for param in params.split(";"):
+            key, _, value = param.partition("=")
+            if key.strip() == "q":
+                try:
+                    weight = float(value)
+                except ValueError:
+                    weight = 0.0
+        if name and weight > 0:
+            found.add(name)
+    return found
+
+
+async def minified_copy(body: bytes, kind: str) -> bytes:
+    found = minify.cached(body, kind)
+    if found is not None:
+        return found
+    if len(body) >= THREAD_MINIMUM_SIZE:
+        return await anyio.to_thread.run_sync(minify.minified, body, kind)
+    return minify.minified(body, kind)
+
+
+def _without_range(scope):
+    """The request with Range headers dropped, so a minified file is always sent whole."""
+    headers = [(name, value) for name, value in scope["headers"] if name not in (b"range", b"if-range")]
+    if len(headers) == len(scope["headers"]):
+        return scope
+    return {**scope, "headers": headers}
+
+
 class CompressionMiddleware:
     def __init__(self, app, minimum_size: int = MINIMUM_SIZE, compresslevel: int = DYNAMIC_LEVEL):
         self.app = app
@@ -129,28 +223,33 @@ class CompressionMiddleware:
         self.dynamic = GZipMiddleware(app, minimum_size=minimum_size, compresslevel=compresslevel)
 
     async def __call__(self, scope, receive, send):
-        if (
-            scope["type"] == "http"
-            and scope.get("method") == "GET"
-            and is_asset_path(scope.get("path", ""))
-            and "gzip" in Headers(scope=scope).get("accept-encoding", "")
-        ):
-            await AssetResponder(self.app, self.minimum_size)(scope, receive, send)
-            return
+        if scope["type"] == "http" and scope.get("method") == "GET" and is_asset_path(scope.get("path", "")):
+            path = scope["path"]
+            encodings = accepted_encodings(Headers(scope=scope).get("accept-encoding", ""))
+            minifying = minify.enabled() and path.endswith((".js", ".css")) and path not in minify.SKIP_PATHS
+            if minifying:
+                scope = _without_range(scope)
+            if minifying or "gzip" in encodings:
+                await AssetResponder(self.app, self.minimum_size, encodings, minifying)(scope, receive, send)
+                return
         await self.dynamic(scope, receive, send)
 
 
 class AssetResponder:
-    """Collect a text asset's body, then send the kept compressed copy of it.
+    """Collect a text asset's body, then send the kept minified and compressed copy of it.
 
     Images, fonts, partial and conditional responses, bodies that are already
     encoded and anything over MAX_ASSET_BYTES pass through untouched, as they
     would have through GZipMiddleware (which skips the same media types).
     """
 
-    def __init__(self, app, minimum_size: int):
+    def __init__(self, app, minimum_size: int, encodings: set[str] | None = None, minifying: bool = False):
         self.app = app
         self.minimum_size = minimum_size
+        self.encodings = {"gzip"} if encodings is None else encodings
+        self.minifying = minifying
+        self.kind = None
+        self.path = ""
         self.send = None
         self.start = None
         self.chunks: list[bytes] = []
@@ -159,6 +258,7 @@ class AssetResponder:
 
     async def __call__(self, scope, receive, send):
         self.send = send
+        self.path = scope.get("path", "")
         await self.app(scope, receive, self.wrapped_send)
 
     async def wrapped_send(self, message):
@@ -169,10 +269,13 @@ class AssetResponder:
         if kind == "http.response.start":
             headers = Headers(raw=message.get("headers", []))
             media_type = headers.get("content-type", "").partition(";")[0].strip().lower()
+            if self.minifying:
+                self.kind = minify.kind_for(self.path, media_type)
             if (
                 message["status"] != 200
                 or "content-encoding" in headers
                 or media_type not in COMPRESSIBLE_TYPES
+                or (self.kind is None and "gzip" not in self.encodings)
             ):
                 self.passthrough = True
                 await self.send(message)
@@ -208,10 +311,23 @@ class AssetResponder:
     async def send_whole(self, body: bytes):
         start, self.start = self.start, None
         headers = MutableHeaders(raw=start["headers"])
+        if self.kind is not None:
+            smaller = await minified_copy(body, self.kind)
+            if len(smaller) < len(body):  # A file it couldn't read comes back as it was.
+                body = smaller
+                headers["Content-Length"] = str(len(body))
+                if "accept-ranges" in headers:
+                    del headers["accept-ranges"]  # Ranges of the file on disk wouldn't match.
         if len(body) >= self.minimum_size:
             headers.add_vary_header("Accept-Encoding")
-            body = await compressed_copy(body)
-            headers["Content-Encoding"] = "gzip"
-            headers["Content-Length"] = str(len(body))
+            encoded, coding = None, None
+            if "br" in self.encodings and brotli_enabled():
+                encoded, coding = brotli_copy(body), "br"
+            if encoded is None and "gzip" in self.encodings:
+                encoded, coding = await compressed_copy(body), "gzip"
+            if encoded is not None:
+                body = encoded
+                headers["Content-Encoding"] = coding
+                headers["Content-Length"] = str(len(body))
         await self.send(start)
         await self.send({"type": "http.response.body", "body": body, "more_body": False})

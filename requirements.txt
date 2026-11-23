@@ -37,6 +37,9 @@ pytest-asyncio==1.3.0
 httpx==0.28.1
 pytest-cov==6.0.0
 
+# Brotli copies of scripts and stylesheets (app/compression.py); gzip is used without it
+brotli==1.2.1
+
 # Image processing
 Pillow==13.0.0
 

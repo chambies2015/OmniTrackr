@@ -14,6 +14,9 @@ os.environ["MAIL_PASSWORD"] = ""
 os.environ["DIGEST_EMAILS"] = "false"
 os.environ["ANNOUNCEMENT_EMAILS"] = "false"
 os.environ["TESTING"] = "true"  # Disable rate limiting in tests
+# Served scripts and stylesheets stay byte for byte as on disk in tests, so assertions on their
+# text keep working. tests/test_minify_assets.py turns minifying on where it checks it.
+os.environ["MINIFY_ASSETS"] = "off"
 os.environ.setdefault("RELEASE_RADAR_CACHE_DIR", "")  # No on-disk Release Radar cache in tests
 
 import pytest
