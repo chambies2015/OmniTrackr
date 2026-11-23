@@ -844,6 +844,7 @@ def run_migrations():
     split_shared_regular_badge()
     add_week_one_start_column()
     add_follow_suggest_column()
+    add_break_item_undo_column()
 
 
 def add_follow_suggest_column():
@@ -943,6 +944,22 @@ def add_week_one_start_column():
             print("Added start_seen_at column to week_one_plans table")
     except Exception as e:
         print(f"Migration warning (week one start): {e}")
+
+
+def add_break_item_undo_column():
+    """Add the checkpoint a break plan tick replaced. Existing rows keep NULL (an untick changes only the plan)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("break_plan_items"):
+            return
+        if "undo_progress" in {col["name"] for col in inspector.get_columns("break_plan_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE break_plan_items ADD COLUMN undo_progress TEXT"))
+            conn.commit()
+            print("Added undo_progress column to break_plan_items table")
+    except Exception as e:
+        print(f"Migration warning (break plan undo): {e}")
 
 
 def add_next_up_started_column():
