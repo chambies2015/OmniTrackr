@@ -368,11 +368,48 @@
     status.setAttribute('role', 'status');
     status.textContent = state.status;
     status.dataset.tone = state.tone;
+    const older = state.from ? null : olderLinks(data);
     if (!data.plan || (state.from && data.plan.phase === 'after')) {
-      root.replaceChildren(setupForm(data), status);
+      root.replaceChildren(...[setupForm(data), older, status].filter(Boolean));
       return;
     }
-    root.replaceChildren(planView(data.plan, data), status);
+    root.replaceChildren(...[planView(data.plan, data), older, status].filter(Boolean));
+  }
+
+  // Links to plans this page no longer shows (over for a few days, or followed by a newer plan) still work
+  // until a month after their break, so they're listed here to be turned off.
+  function olderLinks(data) {
+    const links = Array.isArray(data.older_links) ? data.older_links : [];
+    if (!links.length) return null;
+    const box = el('section', 'bp-panel bp-older');
+    box.setAttribute('aria-label', 'Links to earlier plans');
+    box.appendChild(el('h3', null, links.length === 1 ? 'Your link to an earlier plan still works' : 'Your links to earlier plans still work'));
+    box.appendChild(el('p', 'bp-muted', `Anyone with ${links.length === 1 ? 'the link' : 'one of these links'} can still open it. Turn it off if you'd rather they couldn't.`));
+    const list = el('ul', 'bp-older__list');
+    links.forEach(link => {
+      const row = el('li', 'bp-older__item');
+      const until = parseDay(link.until);
+      const opened = link.opened ? ` Opened ${link.opened} ${link.opened === 1 ? 'time' : 'times'}.` : '';
+      const ends = until ? ` Stops working on ${until.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.` : '';
+      const words = el('p', 'bp-older__words');
+      words.append(el('strong', null, link.name), document.createTextNode(` · ${link.span}.${ends}${opened}`));
+      row.appendChild(words);
+      const actions = el('div', 'bp-older__actions');
+      if (/^\/break\/s\/[A-Za-z0-9_-]{16,40}$/.test(String(link.path || ''))) {
+        const open = el('a', 'bp-link', 'Open it');
+        open.href = link.path;
+        actions.appendChild(open);
+      }
+      actions.appendChild(button('Turn it off', 'bp-link bp-link--danger', () => {
+        const id = Number(link.id);
+        if (!Number.isSafeInteger(id) || id <= 0) return;
+        act(`/api/break/${id}/share`, { method: 'DELETE' }, `The link to ${link.name} is off.`);
+      }));
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    return box;
   }
 
   // ------------------------------------------------------------------ setting up
@@ -549,7 +586,7 @@
     const step = el('fieldset', 'bp-step bp-from');
     step.appendChild(el('legend', null, from.by ? `From ${from.by}'s plan` : 'From the plan you opened'));
     step.appendChild(el('p', 'bp-step__hint', from.days
-      ? `The days are ${from.days.span}, the same as ${from.name}. Ticked titles go on first, and anything you don't have yet goes on your list. The planner fills the rest from your own list.`
+      ? `The days are ${from.days.span}, the same as ${from.by ? `${from.by}'s plan` : 'the plan you opened'}. Ticked titles go on first, and anything you don't have yet goes on your list. The planner fills the rest from your own list.`
       : `Those days are over, so pick your own below. Ticked titles go on first, and anything you don't have yet goes on your list.`));
     const titles = from.titles || [];
     if (!titles.length) {

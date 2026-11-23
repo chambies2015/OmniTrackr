@@ -71,6 +71,9 @@ UTM = "utm_source=email&utm_campaign=break"
 SHARE_KEEP_DAYS = 30        # a share link stops working this long after the break ends
 SHARE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,40}")
 MAX_PICKS = 30              # titles taken from a shared plan onto a new one
+OLDER_LINKS_SHOWN = 10      # older plans' links the planner lists so they can be turned off
+REPLACED = "replaced"       # a finished plan a newer one took over from; only its share link still works
+LINKED_STATUSES = ("active", REPLACED)
 
 CATEGORIES = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "audiobooks")
 LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game", "music": "Album",
@@ -929,9 +932,12 @@ def active(db: Session, user_id: int, today: date) -> Optional[models.BreakPlan]
     ).order_by(models.BreakPlan.starts_on.desc(), models.BreakPlan.id.desc()).first()
 
 
-def owned(db: Session, user_id: int, plan_id: int) -> models.BreakPlan:
+def owned(db: Session, user_id: int, plan_id: int, linked: bool = False) -> models.BreakPlan:
+    """One of the member's plans. ``linked`` also finds a finished plan a newer one replaced, whose share link
+    still works, so the link can be turned off."""
+    statuses = LINKED_STATUSES if linked else ("active",)
     plan = db.query(models.BreakPlan).filter(models.BreakPlan.id == plan_id, models.BreakPlan.user_id == user_id,
-                                             models.BreakPlan.status == "active").first()
+                                             models.BreakPlan.status.in_(statuses)).first()
     if plan is None:
         raise BreakError("That plan isn't here anymore.", 404)
     return plan
@@ -973,7 +979,9 @@ def create(db: Session, user: models.User, *, starts_on: date, ends_on: date, mi
         emails = False
     now = _now()
     if current is not None:
-        current.status = "cancelled"  # a finished break's wrap-up gives way to the next one
+        # A finished break's wrap-up gives way to the next one. Its share link keeps working until a month
+        # after that break, as its page says, so it isn't "cancelled" (which turns the link off).
+        current.status = REPLACED
     plan = models.BreakPlan(user_id=user.id, name=_clean_name(name, fallback),
                             preset=(chosen["key"] if chosen else None), starts_on=starts_on, ends_on=ends_on,
                             tz_minutes=clamp_tz(tz_minutes), day_minutes=json.dumps(clean), games=bool(games),
@@ -1685,6 +1693,27 @@ def valid_token(token) -> bool:
     return isinstance(token, str) and SHARE_TOKEN.fullmatch(token) is not None
 
 
+def older_links(db: Session, user_id: int, today: date, current: Optional[models.BreakPlan] = None) -> list[dict]:
+    """Share links that still work for plans the planner no longer shows, so the member can turn them off.
+
+    The planner shows one plan, and only for WRAP_DAYS after it ends, but its link keeps working for
+    SHARE_KEEP_DAYS. Starting a new plan hides the old one too.
+    """
+    query = db.query(models.BreakPlan).filter(
+        models.BreakPlan.user_id == user_id, models.BreakPlan.status.in_(LINKED_STATUSES),
+        models.BreakPlan.share_token.isnot(None),
+        models.BreakPlan.ends_on >= today - timedelta(days=SHARE_KEEP_DAYS))
+    if current is not None:
+        query = query.filter(models.BreakPlan.id != current.id)
+    from .digest import app_url
+    plans = query.order_by(models.BreakPlan.ends_on.desc(), models.BreakPlan.id.desc()).limit(OLDER_LINKS_SHOWN).all()
+    return [{"id": plan.id, "name": plan.name, "span": span_label(plan.starts_on, plan.ends_on),
+             "share": f"{app_url()}{share_path(plan)}", "path": share_path(plan),
+             "until": (plan.ends_on + timedelta(days=SHARE_KEEP_DAYS)).isoformat(),
+             "opened": int(plan.share_opened or 0)}
+            for plan in plans]
+
+
 def share_ended(plan: models.BreakPlan, today: date) -> bool:
     """A link stops working a month after the break, so an old plan doesn't stay out there for good."""
     return plan.ends_on < today - timedelta(days=SHARE_KEEP_DAYS)
@@ -1694,7 +1723,7 @@ def by_token(db: Session, token: str, today: Optional[date] = None) -> Optional[
     if not valid_token(token):
         return None
     plan = db.query(models.BreakPlan).filter(models.BreakPlan.share_token == token,
-                                             models.BreakPlan.status == "active").first()
+                                             models.BreakPlan.status.in_(LINKED_STATUSES)).first()
     if plan is None or share_ended(plan, today or _now().date()):
         return None
     owner = db.get(models.User, plan.user_id)
@@ -1806,9 +1835,12 @@ def shared_view(db: Session, plan: models.BreakPlan, today: date) -> dict:
             "private_titles": len(hidden_titles), "day_count": len(budgets), "opened": int(plan.share_opened or 0)}
 
 
-def card_facts(db: Session, plan: models.BreakPlan, today: date) -> dict:
-    """Everything the two pictures draw, so their fingerprint changes when the picture would."""
-    view_ = shared_view(db, plan, today)
+def card_facts(db: Session, plan: models.BreakPlan, today: date, view_: Optional[dict] = None) -> dict:
+    """Everything the two pictures draw, so their fingerprint changes when the picture would.
+
+    ``view_`` is shared_view() for the same plan and day when the caller already has it.
+    """
+    view_ = view_ if view_ is not None else shared_view(db, plan, today)
     return {"by": view_["by"], "name": view_["name"], "span": view_["span"], "phase": view_["phase"],
             "day_number": view_["day_number"], "day_count": view_["day_count"],
             "titles": view_["totals"]["titles"], "hours": view_["totals"]["hours"],
