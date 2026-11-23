@@ -225,6 +225,22 @@ GUEST = (
     ("swap_gift_added", "Pick swap: a pick someone got saved to their library"),
     ("swap_email_sent", "Pick swap: email sent (draw, reminder or unwrap day)"),
     ("swap_back_from_email", "Pick swap: a swap opened from one of its emails"),
+    ("break_created", "Break planner: a plan made"),
+    ("break_day_opened", "Break planner: plan opened on a day of the break (once a day per plan)"),
+    ("break_ticked", "Break planner: something on a plan ticked off"),
+    ("break_finished", "Break planner: a title finished from a plan"),
+    ("break_rated", "Break planner: a title scored from a plan"),
+    ("break_added", "Break planner: a title put on a plan by hand"),
+    ("break_swapped", "Break planner: a title swapped for something else"),
+    ("break_reshuffled", "Break planner: another mix tried"),
+    ("break_calendar", "Break planner: plan added to a calendar"),
+    ("break_shared", "Break planner: a share link made"),
+    ("break_link_opened", "Break planner: a shared plan opened by a visitor without an account"),
+    ("break_signup_clicked", "Break planner: sign-up pressed on the guide or a shared plan"),
+    ("break_demo_used", "Break planner: the sample plan on the guide changed"),
+    ("break_home_offer_clicked", "Break planner: \"Plan it\" pressed on the home card"),
+    ("break_email_sent", "Break planner: email sent (the morning it starts, the day after it ends)"),
+    ("break_back_from_email", "Break planner: plan opened from one of its emails"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -296,7 +312,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
                  "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
                  "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
-                 "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked"}
+                 "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked",
+                 "break_signup_clicked", "break_home_offer_clicked"}
 
 
 def record(event: str, request=None) -> bool:
