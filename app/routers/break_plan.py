@@ -20,8 +20,8 @@ from ..integer_bounds import PositiveDatabaseId
 from .discover import page
 
 router = APIRouter(tags=["break plan"])
-CSS_VERSION = "20261123-break-share-1"
-JS_VERSION = "20261123-break-share-1"
+CSS_VERSION = "20261123-share-sweep-1"
+JS_VERSION = "20261123-share-sweep-1"
 TITLE = "Plan your break: fill your days off from your own list"
 DESCRIPTION = ("Tell OmniTrackr which days you have off and about how much time each one has, and it fills them "
                "from your own list: the show you're halfway through, the film you keep saving, a book in real "
@@ -433,10 +433,11 @@ def shared_page(token: str, request: Request, user=Depends(get_optional_current_
     current = break_plan.active(db, user.id, today) if signed_in and not owner else None
     has_plan = current is not None and current.ends_on >= today
     if user is None:
+        # No friend invite on this link, unlike Watch together or Pick swap: a break plan is made to go on a
+        # story, and an invite would make everyone who signs up from it the owner's friend (friends see the
+        # owner's scores and reviews) and tell them the owner's name.
         back = quote(break_plan.share_path(plan), safe="")
-        invite = db.query(models.FriendInvite).filter(models.FriendInvite.user_id == plan.user_id).first()
-        join = (f"/?invite={quote(invite.token)}&next={back}#signup" if invite is not None
-                else f"/?next={back}#signup")
+        join = f"/?next={back}#signup"
         label = "Plan these days with my list" if same else "Plan my own break"
         actions = (f'<a class="button" rel="nofollow" href="{_e(join)}" data-break-signup data-bs-plan>{label}</a>'
                    '<a class="button button--ghost" href="/break">How it works</a>')
@@ -495,7 +496,7 @@ def shared_page(token: str, request: Request, user=Depends(get_optional_current_
         f'{guest_html}'
         + (explore_dock() if not signed_in else '')
         + '</article>')
-    facts = break_plan.card_facts(db, plan, today)
+    facts = break_plan.card_facts(db, plan, today, view)
     from ..digest import app_url
     path = view["path"]
     description = (f'{by + " planned" if by else "A plan for"} {name}: {totals["titles"]} '
@@ -606,6 +607,7 @@ def _state(db: Session, user: models.User, today: date) -> dict:
     plan = break_plan.active(db, user.id, today)
     return {
         "plan": break_plan.view(db, user, plan, today) if plan is not None else None,
+        "older_links": break_plan.older_links(db, user.id, today, plan),
         "presets": _presets_json(today), "today": today.isoformat(),
         "choices": list(break_plan.DAY_CHOICES), "default_minutes": break_plan.DEFAULT_MINUTES,
         "light_minutes": break_plan.LIGHT_MINUTES, "max_days": break_plan.MAX_DAYS,
@@ -843,7 +845,10 @@ def share_plan(request: Request, plan_id: PositiveDatabaseId, payload: Today, re
 def unshare_plan(request: Request, plan_id: PositiveDatabaseId, response: Response, today: Optional[str] = TODAY,
                  user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
-    plan = _plan(db, user, plan_id)
+    try:
+        plan = break_plan.owned(db, user.id, plan_id, linked=True)
+    except break_plan.BreakError as error:
+        _fail(error)
     break_plan.share_off(db, plan)
     return _state(db, user, _today(today))
 

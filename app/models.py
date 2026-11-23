@@ -2736,7 +2736,7 @@ class BreakPlan(Base):
     games = Column(Boolean, nullable=False, default=True)  # fill with a game too
     seed = Column(Integer, nullable=False, default=0)
     left_out = Column(Text, nullable=False, default="[]")
-    status = Column(String(12), nullable=False, default="active", index=True)  # active, cancelled
+    status = Column(String(12), nullable=False, default="active", index=True)  # active, cancelled, replaced (a newer plan took over; its link still works)
     share_token = Column(String(32), nullable=True, unique=True, index=True)
     share_opened = Column(Integer, nullable=False, default=0)
     emails = Column(Boolean, nullable=False, default=False)  # the morning it starts and the day after it ends
