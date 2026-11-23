@@ -17,7 +17,7 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from . import models, review_spoilers, title_pages
@@ -49,17 +49,19 @@ def _excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
     return cut + "…"
 
 
-def _ever_public(db: Session, category: str, ids: list[int]) -> set[int]:
+def _ever_public(db: Session, ids_by_category: dict) -> set[tuple[str, int]]:
     """Entries that were public at some point: readers marked them helpful or reported them.
 
     A member who made one of those private again did it on purpose, so it isn't offered.
+    Returns (category, item id) pairs, with one query per table for every format at once.
     """
-    if not ids:
+    wanted = {category: ids for category, ids in ids_by_category.items() if ids}
+    if not wanted:
         return set()
     found = set()
     for table in (models.ReviewReaction, models.PublicReviewState):
-        found.update(item_id for (item_id,) in db.query(table.item_id).filter(
-            table.category == category, table.item_id.in_(ids)).distinct())
+        match = or_(*(and_(table.category == category, table.item_id.in_(ids)) for category, ids in wanted.items()))
+        found.update((category, item_id) for category, item_id in db.query(table.category, table.item_id).filter(match).distinct())
     return found
 
 
@@ -83,31 +85,38 @@ def _choices(db: Session, user_id: int) -> dict:
 def candidates(db: Session, user: models.User, limit: int = LIST_LIMIT) -> dict:
     """The member's private reviews that would appear on a title page if shared, best first."""
     choices = _choices(db, user.id)
-    found = []
+    scanned = {}
     for category, (kind, model, library, label, private_flag) in CATEGORIES.items():
         rows = db.query(model).filter(
             model.user_id == user.id, model.review_public == False, model.review.isnot(None),
             func.length(func.trim(model.review)) >= MIN_CHARS,
         ).order_by(model.id.desc()).limit(SCAN_PER_CATEGORY).all()
         rows = [row for row in rows if (row.title or "").strip()]
-        if not rows:
-            continue
-        skip = _ever_public(db, category, [row.id for row in rows])
+        if rows:
+            scanned[category] = rows
+    skip = _ever_public(db, {category: [row.id for row in rows] for category, rows in scanned.items()})
+    picked = []
+    for category, rows in scanned.items():
         ready = []
         for row in rows:
             text = (row.review or "").strip()
             choice = choices.get((category, row.id))
             # A "kept" answer holds until the review is rewritten; a review shared from here
             # and then made private again in the library stays private.
-            if row.id in skip or (choice and (choice.choice == "shared" or choice.content_hash == content_hash(text))):
+            if (category, row.id) in skip or (choice and (choice.choice == "shared" or choice.content_hash == content_hash(text))):
                 continue
             quality = evaluate_public_review(text, MIN_CHARS, DETAIL_MIN_CHARS)
             if quality.community_ready:
                 ready.append((row, text, quality))
         if not ready:
             continue
+        model = CATEGORIES[category][1]
         reviewed = _reviewed_titles(db, model, user.id, {title_pages.normalize(row.title) for row, _, _ in ready})
-        flagged = review_spoilers.flagged(db, [(category, row.id) for row, _, _ in ready])
+        picked.append((category, ready, reviewed))
+    flagged = review_spoilers.flagged(db, [(category, row.id) for category, ready, _ in picked for row, _, _ in ready])
+    found = []
+    for category, ready, reviewed in picked:
+        kind, _model, library, label, private_flag = CATEGORIES[category]
         for row, text, quality in ready:
             found.append({
                 "category": category,

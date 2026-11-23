@@ -2152,20 +2152,18 @@ function initLandingPageEnhancements() {
 // Phone home board: the rail's cards appear one by one as their data loads, and
 // a snapping row stays on whichever card showed first. Hold it at the first card
 // until the member swipes or uses the row themselves.
+// The row's own scroll events do the undoing. This used to read scrollLeft from a
+// MutationObserver on every card change, and each read made the browser lay out the
+// whole page again: about two and a half seconds of a throttled phone's start-up.
 function keepHomeRailAtStart() {
   const rail = document.querySelector('.home-board__rail-cards');
-  if (!rail || typeof MutationObserver === 'undefined') return;
+  if (!rail) return;
   let touched = false;
   const touch = () => { touched = true; };
-  ['pointerdown', 'wheel', 'keydown', 'focusin'].forEach(type => rail.addEventListener(type, touch, { passive: true }));
-  const reset = () => {
-    if (touched || !rail.scrollLeft) return;
-    rail.scrollLeft = 0;
-  };
-  new MutationObserver(() => {
-    reset();
-    requestAnimationFrame(reset);
-  }).observe(rail, { attributes: true, attributeFilter: ['hidden'], childList: true, subtree: true });
+  ['pointerdown', 'touchstart', 'wheel', 'keydown', 'focusin'].forEach(type => rail.addEventListener(type, touch, { passive: true }));
+  rail.addEventListener('scroll', () => {
+    if (!touched && rail.scrollLeft) rail.scrollLeft = 0;
+  }, { passive: true });
 }
 
 // Call on DOMContentLoaded

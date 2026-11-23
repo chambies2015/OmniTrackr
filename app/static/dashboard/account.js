@@ -692,7 +692,11 @@ function updateTabVisibilityUI(tabVisibility) {
   if (audiobooksTab) {
     audiobooksTab.style.display = tabVisibility.audiobooks_visible === false ? 'none' : '';
   }
-  
+  // The footer's library links follow the tab row.
+  document.querySelectorAll('.app-footer__lib[data-switch-tab]').forEach(link => {
+    link.hidden = getTabButton(link.dataset.switchTab)?.style.display === 'none';
+  });
+
   // If current tab is hidden, switch to first visible tab
   const currentTabElement = document.querySelector('.tab.active');
   if (currentTabElement && currentTabElement.style.display === 'none') {
