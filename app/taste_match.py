@@ -121,8 +121,8 @@ def tier(score: Optional[int]) -> Optional[str]:
     return next(label for floor, label in TIERS if score >= floor)
 
 
-def compare(mine: dict[str, dict[str, dict]], theirs: dict[str, dict[str, dict]], categories: list[str]) -> dict:
-    """The match between the viewer's library and the friend's visible categories."""
+def _overlap(mine: dict[str, dict[str, dict]], theirs: dict[str, dict[str, dict]], categories: list[str]):
+    """Titles both members track (shared), those both rated (rated), and counts per category."""
     shared, rated = [], []
     per_category = []
     for category in categories:
@@ -139,11 +139,20 @@ def compare(mine: dict[str, dict[str, dict]], theirs: dict[str, dict[str, dict]]
                 rated.append((my_row, their_row))
         per_category.append({"category": category, "label": LABELS[category], "shared": count,
                              "yours": len(my_rows), "theirs": len(their_rows)})
+    return shared, rated, per_category
 
-    score = None
-    if len(rated) >= MIN_RATED:
-        agreement = sum(max(0.0, 1 - abs(a["rating"] - b["rating"]) / FULL_MISS) for a, b in rated) / len(rated)
-        score = round(agreement * 100)
+
+def _score(rated: list) -> Optional[int]:
+    if len(rated) < MIN_RATED:
+        return None
+    agreement = sum(max(0.0, 1 - abs(a["rating"] - b["rating"]) / FULL_MISS) for a, b in rated) / len(rated)
+    return round(agreement * 100)
+
+
+def compare(mine: dict[str, dict[str, dict]], theirs: dict[str, dict[str, dict]], categories: list[str]) -> dict:
+    """The match between the viewer's library and the friend's visible categories."""
+    shared, rated, per_category = _overlap(mine, theirs, categories)
+    score = _score(rated)
 
     both_loved = sorted(
         ((a, b) for a, b in rated if a["rating"] >= LOVED and b["rating"] >= LOVED),
@@ -197,10 +206,11 @@ def friend_scores(db: Session, viewer: models.User, friends: list[models.User]) 
     theirs = libraries(db, {friend.id: shared_categories(friend) for friend in friends})
     scores = []
     for friend in friends:
-        categories = shared_categories(friend)
-        result = compare(mine, theirs[friend.id], categories)
-        scores.append({"friend_id": friend.id, "score": result["score"], "tier": result["tier"],
-                       "shared_count": result["shared_count"]})
+        # Only the score: the favourites lists in compare() read the viewer's whole library
+        # again for every friend, and the friends list never shows them.
+        shared, rated, _ = _overlap(mine, theirs[friend.id], shared_categories(friend))
+        score = _score(rated)
+        scores.append({"friend_id": friend.id, "score": score, "tier": tier(score), "shared_count": len(shared)})
     return scores
 
 

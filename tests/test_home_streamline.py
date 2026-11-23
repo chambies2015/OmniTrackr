@@ -83,7 +83,7 @@ def test_tucked_cards_hide_until_show_more_and_keep_their_own_rules():
 
 
 def test_one_welcome_back_layer_and_phone_trims():
-    assert "body.app-shell:has(#returnDeck:not([hidden])) .home-focus { display: none; }" in CSS
+    assert "body.app-shell .home-focus:has(~ #returnDeck:not([hidden])) { display: none; }" in CSS
     assert "body.app-shell #returnDeck:not([hidden]) ~ #libraryLaunchpad { display: none; }" in CSS
     phone = CSS[CSS.rindex("@media (max-width: 640px)"):]
     assert ".home-focus__actions:has(.episode-next.home-focus__primary) .progress-update { display: none; }" in phone

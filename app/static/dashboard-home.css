@@ -1457,8 +1457,9 @@ body.app-shell .home-focus {
   padding: 16px 22px 16px 16px;
 }
 body.app-shell .home-focus[hidden] { display: none; }
-/* The welcome-back deck is the one thing to do while it's open; Continue and this title wait. */
-body.app-shell:has(#returnDeck:not([hidden])) .home-focus { display: none; }
+/* The welcome-back deck is the one thing to do while it's open; Continue and this title wait.
+   (The deck is a later sibling. Anchoring :has() on body instead made every change on the page restyle all of it.) */
+body.app-shell .home-focus:has(~ #returnDeck:not([hidden])) { display: none; }
 body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"],
   [data-active-tab="recommendations"], [data-active-tab="friends-feed"]) .home-focus { display: none; }
 body.app-shell .home-focus__cover {
@@ -1682,7 +1683,7 @@ body.app-shell .home-board :is(.your-week__quiet, .week-one__quiet, .backlog-dra
   body.app-shell .home-focus__meta { font-size: .8rem; }
   body.app-shell .home-focus__actions { gap: 6px; grid-column: 1 / -1; justify-content: flex-start; margin-top: 8px; }
   body.app-shell .home-focus__actions button { min-height: 44px; }
-  body.app-shell:has(#homeFocus:not([hidden])) .home-hero { margin-bottom: 14px; }
+  body.app-shell .home-hero:has(~ #homeFocus:not([hidden])) { margin-bottom: 14px; }
   body.app-shell .home-board .home-board__main > section[id] { padding: 16px; }
   body.app-shell .home-board .home-board__rail-cards > section[id] { padding: 16px; }
   body.app-shell .home-board__main :is(#weekOneTitle, #homeNewsTitle, #yourWeekTitle, #backlogDrawTitle, #stayPostedTitle,
@@ -1709,7 +1710,7 @@ body.app-shell .home-board :is(.your-week__quiet, .week-one__quiet, .backlog-dra
 }
 
 /* A new member's first week already lists what's out this week, so Quick start keeps to its popular picks, one row of them. */
-body.app-shell:has(#weekOne:not([hidden])) #starterPicks :is(#starterPicksUpcomingTitle, #starterPicksUpcoming) { display: none; }
+body.app-shell #starterPicks:has(~ .home-board #weekOne:not([hidden])) :is(#starterPicksUpcomingTitle, #starterPicksUpcoming) { display: none; }
 @media (min-width: 641px) {
   body.app-shell #starterPicks #starterPicksPopular > :nth-child(n + 7) { display: none; }
 }
@@ -1717,19 +1718,19 @@ body.app-shell:has(#weekOne:not([hidden])) #starterPicks :is(#starterPicksUpcomi
 /* Phones: with a title to pick up (or the welcome-back deck) right under it, the welcome strip keeps to
    the greeting and the one-line summary, so both fit on the first screen. The same numbers are on Statistics. */
 @media (max-width: 640px) {
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero :is(.home-hero__covers, .home-hero__stats, .home-hero__mix) { display: none; }
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero { gap: 4px; padding: 16px 18px; }
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__title { font-size: 1.5rem; }
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__news { margin-top: 6px; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) :is(.home-hero__covers, .home-hero__stats, .home-hero__mix) { display: none; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) { gap: 4px; padding: 16px 18px; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) .home-hero__title { font-size: 1.5rem; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) .home-hero__news { margin-top: 6px; }
   body.app-shell .home-focus__actions button { font-size: .78rem; padding: 0 11px; }
   body.app-shell .home-focus__actions button.home-focus__primary { flex: 0 1 auto; padding: 0 14px; }
 }
 /* "Last watched · Season 2, episode 5" already says it: the bar under it drops its own words. */
 body.app-shell .home-focus__progress:has(.progress-checkpoint:not([hidden])) .episode-progress__label { display: none; }
 @media (max-width: 640px) {
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__date { display: none; }
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero { padding: 14px 16px; }
-  body.app-shell:is(:has(#homeFocus:not([hidden])), :has(#returnDeck:not([hidden]))) .home-hero__title { font-size: 1.36rem; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) .home-hero__date { display: none; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) { padding: 14px 16px; }
+  body.app-shell .home-hero:is(:has(~ #homeFocus:not([hidden])), :has(~ #returnDeck:not([hidden]))) .home-hero__title { font-size: 1.36rem; }
   body.app-shell .home-focus__copy { align-self: center; }
   body.app-shell .home-focus__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* One row of buttons: the next episode, the guide and Open. "Update progress" is a tap away under Open. */

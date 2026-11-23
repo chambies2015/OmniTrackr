@@ -330,7 +330,8 @@ body.app-shell #statistics-tab .time-spent__actions .action-btn { margin: 0; whi
 /* Wide screens: the total on the left, the bars for each format on the right. */
 @media (min-width: 1100px) {
   body.app-shell #statistics-tab .time-spent:has(.time-spent__bars) { align-items: start; column-gap: var(--space-8); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: repeat(3, auto) 1fr; }
-  body.app-shell #statistics-tab .time-spent:has(.time-spent__bars) > * { grid-column: 1; }
+  /* Children are named, not "> *": a universal child after :has() makes every :has() change restyle the whole page. */
+  body.app-shell #statistics-tab .time-spent:has(.time-spent__bars) > :is(div, details) { grid-column: 1; }
   body.app-shell #statistics-tab #timeSpentContent { display: contents; }
   body.app-shell #statistics-tab .time-spent__hero { grid-column: 1; }
   body.app-shell #statistics-tab .time-spent__bars { grid-column: 2; grid-row: 1 / -1; margin: 0; }
@@ -375,7 +376,7 @@ body.app-shell #statistics-tab .tasteprint-card__brand { flex-wrap: wrap; gap: 4
     grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
     grid-template-rows: repeat(5, auto) 1fr;
   }
-  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) > * { grid-column: 1; }
+  body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) > :is(div, article, p) { grid-column: 1; }
   body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) > .tasteprint-card { grid-column: 2; grid-row: 1 / -1; margin-top: 0; }
   body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) .tasteprint__header { flex-direction: column; gap: var(--space-3); }
   body.app-shell #statistics-tab .tasteprint:has(#tasteprintCard:not([hidden])) .tasteprint__name-choice { flex-basis: 100%; margin: 0; order: 3; }

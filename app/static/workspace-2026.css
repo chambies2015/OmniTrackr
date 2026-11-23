@@ -375,7 +375,7 @@ body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, s
     gap: 6px;
     grid-template-columns: 1fr 1fr;
   }
-  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > * { min-width: 0; }
+  body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > :is(button, details) { min-width: 0; }
   body.app-shell.library-view-shelf .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] :is(.row-actions > button.action-btn, .row-menu > summary) {
     font-size: var(--text-sm);
     min-height: 40px;
