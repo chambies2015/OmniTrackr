@@ -297,6 +297,13 @@ Release Radar and affiliate links:
 
 Release Radar needs no new keys for movies (Wikidata), TV (TVmaze), or anime (AniList). Games use the existing `RAWG_API_KEY`.
 
+Scripts and stylesheets:
+
+| Variable | Purpose |
+| --- | --- |
+| `MINIFY_ASSETS` | On by default: scripts and stylesheets are served without comments and spare whitespace (`app/minify.py`). Set to `off` to serve them exactly as they are on disk. The test suite runs with it off. |
+| `BROTLI_ASSETS` | On by default when the `brotli` package is installed: browsers that accept Brotli get it for scripts and stylesheets. Set to `off` for gzip only. |
+
 ## Testing
 
 Run the full test suite:
@@ -319,6 +326,8 @@ Browser-side contract tests:
 $uiTests = Get-ChildItem tests -Filter *.cjs | Select-Object -ExpandProperty FullName
 node --test $uiTests
 ```
+
+`tests/test_minify_equivalence.cjs` checks every minified script and stylesheet with esbuild's parser. It is skipped unless esbuild is installed: `npm install --no-save --no-package-lock esbuild@0.25.12` (CI does this).
 
 ## Documentation
 

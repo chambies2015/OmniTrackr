@@ -228,3 +228,6 @@ logs.txt
 
 # Claude delivery archives (unpacked into the working tree, never committed)
 omni-*.tgz
+
+# esbuild for tests/test_minify_equivalence.cjs (installed with npm --no-save)
+node_modules/
