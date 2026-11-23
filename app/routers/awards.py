@@ -597,7 +597,8 @@ def hub_content(db: Session, user=None, now: Optional[datetime] = None) -> str:
         f'<li><strong>{_e(entry["name"])}</strong> <span class="aw-also__when">{_e(entry["format"])} · {_e(entry["when"])}</span>'
         f'<p>{_e(entry["note"])}</p></li>' for entry in season["also"])
     jump = ('<nav class="guide-jump" aria-label="On this page"><a href="#calendar">Calendar</a>'
-            '<a href="#ballots">How ballots work</a><a href="#voting">Who decides</a><a href="#faq">Questions</a></nav>')
+            '<a href="#ballots">How ballots work</a><a href="#voting">Who decides</a><a href="#tips">Picking well</a>'
+            '<a href="#faq">Questions</a></nav>')
     return (
         f'<header class="hero hero--guide aw-hero"><a href="/guides">← Guides</a>'
         f'<p class="eyebrow">AWARDS SEASON · 2026–27</p><h1>{_e(season["title"])}</h1>'
@@ -609,7 +610,9 @@ def hub_content(db: Session, user=None, now: Optional[datetime] = None) -> str:
         f'<h2 id="aw-ballots-heading">How the ballots work</h2>{_paragraphs(season["how"])}</section>'
         f'<section id="voting" class="editorial aw-prose" aria-labelledby="aw-voting-heading">'
         f'<h2 id="aw-voting-heading">Who decides the winners</h2>{_paragraphs(season["voting"])}</section>'
-        + _faq(season["faq"])
+        f'<section id="tips" class="editorial aw-prose" aria-labelledby="aw-tips-heading">'
+        f'<h2 id="aw-tips-heading">Picking well at each show</h2>{_paragraphs(season["tips"])}</section>'
+        + _faq(awards.season_faq(now))
         + '<section class="editorial aw-prose aw-related"><h2>While you wait for nominees</h2><ul>'
           '<li><a href="/best-of">Best of 2026</a>: the year\'s standouts in nine formats, several of them likely nominees.</li>'
           '<li><a href="/new-releases">Release guides</a>: what is still coming out before the eligibility cut-offs.</li>'
@@ -624,7 +627,8 @@ def hub_page(user=Depends(get_optional_current_user), db: Session = Depends(get_
     from .discover import page
     season = awards_data.SEASON
     canonical = awards.SITE_URL + awards.BASE_PATH
-    structured = {"@context": "https://schema.org", "@graph": [_article(season, canonical), _faq_data(season["faq"])]}
+    structured = {"@context": "https://schema.org",
+                  "@graph": [_article(season, canonical), _faq_data(awards.season_faq())]}
     response = page(season["search_title"], season["description"], awards.BASE_PATH, hub_content(db, user),
                     structured_data=structured, head=_head(user is not None), member=user is not None)
     response.headers["Cache-Control"] = "private, no-cache"

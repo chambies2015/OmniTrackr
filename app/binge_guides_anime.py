@@ -8,6 +8,7 @@ many of a part's episodes fan filler lists mark as anime-only, for the guide's
 
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
+DEEPENED = "2026-11-23"  # guides that gained a fourth section
 ONE_PIECE_EPISODES = 1180  # aired by 2026-11-10; the anime was between batches that week
 
 GUIDES = {
@@ -66,7 +67,7 @@ GUIDES = {
         ],
     },
     "death-note": {
-        "name": "Death Note", "kind": "anime", "reviewed": UPDATED,
+        "name": "Death Note", "kind": "anime", "reviewed": DEEPENED,
         "summary": "Death Note is 37 episodes, about 14 hours: short enough for a long weekend. See how its two halves split and plan your own pace.",
         "titles": [{"kind": "anime", "title": "Death Note", "year": 2006}],
         "see_also": ["cowboy-bebop", "fullmetal-alchemist-brotherhood", "attack-on-titan"],
@@ -101,6 +102,17 @@ GUIDES = {
                 "Neither has been animated and neither changes the ending. Each is a single sitting, and both are collected "
                 "in Death Note: Short Stories.",
             ]),
+            ("makers", "Who made it, and what to watch next", [
+                "Tsugumi Ohba wrote the manga and Takeshi Obata drew it. It ran in Weekly Shōnen Jump from 2003 to 2006, "
+                "108 chapters in twelve volumes. The anime was made at Madhouse and directed by Tetsurō Araki, who went "
+                "on to direct the first season of Attack on Titan at Wit Studio and stayed on as chief director for "
+                "seasons 2 and 3. If Death Note's pace suits you, that is the obvious next series, and it has its own "
+                "page here.",
+                "Ohba and Obata worked together again on Bakuman, about two teenagers trying to get a manga of their own "
+                "into Weekly Shōnen Jump. Its anime is 75 episodes over three seasons, from 2010 to 2013, about 29 hours, "
+                "and it has none of Death Note's darkness. Platinum End, their third series together, is closer in tone, "
+                "with a 24-episode anime from 2021 and 2022.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Death Note are there?",
@@ -112,7 +124,7 @@ GUIDES = {
         ],
     },
     "cowboy-bebop": {
-        "name": "Cowboy Bebop", "kind": "anime", "reviewed": UPDATED,
+        "name": "Cowboy Bebop", "kind": "anime", "reviewed": DEEPENED,
         "summary": "Cowboy Bebop is 26 episodes, about 10 and a half hours, plus an optional two-hour film. Where the film fits and how to pace the series.",
         "titles": [{"kind": "anime", "title": "Cowboy Bebop", "year": 1998}],
         "see_also": ["death-note", "fullmetal-alchemist-brotherhood", "hunter-x-hunter-2011"],
@@ -148,6 +160,18 @@ GUIDES = {
                 "that year on the satellite channel WOWOW, finishing in April 1999.",
                 "The recap special, \"Session XX: Mish-Mash Blues\", is not counted here. In the US, Cowboy Bebop was the first "
                 "anime shown on Adult Swim, on the block's opening night in September 2001.",
+            ]),
+            ("crew", "Whose story each session tells", [
+                "Spike's past is only one thread. Each of the crew gets sessions of their own, which helps if you want to "
+                "know what kind of night you are in for. Jet, who owns the ship and used to be a police officer, has "
+                "\"Ganymede Elegy\" (session 10) and \"Black Dog Serenade\" (session 16). Faye Valentine, who first "
+                "appears in session 3, has \"My Funny Valentine\" (15), \"Speak Like a Child\" (18) and \"Hard Luck "
+                "Woman\" (24).",
+                "Ein, the corgi, comes aboard in session 2, \"Stray Dog Strut\", and the hacker Ed in session 9, "
+                "\"Jamming with Edward\". Many session titles borrow from records: \"Honky Tonk Women\" and \"Sympathy "
+                "for the Devil\" from the Rolling Stones, \"Bohemian Rhapsody\" from Queen, \"Toys in the Attic\" from "
+                "Aerosmith. Yoko Kanno wrote the music and recorded it with her band, the Seatbelts, including the "
+                "opening theme, \"Tank!\".",
             ]),
         ],
         "faq": [
@@ -324,7 +348,7 @@ GUIDES = {
         ],
     },
     "attack-on-titan": {
-        "name": "Attack on Titan", "kind": "anime", "reviewed": UPDATED,
+        "name": "Attack on Titan", "kind": "anime", "reviewed": DEEPENED,
         "summary": "Attack on Titan is 87 episodes and two feature-length finale specials, about 37 hours. Season lengths and how the Final Season is split.",
         "titles": [{"kind": "anime", "title": "Attack on Titan", "year": 2013, "aka": ["Shingeki no Kyojin"]}],
         "see_also": ["fullmetal-alchemist-brotherhood", "death-note", "hunter-x-hunter-2011"],
@@ -367,6 +391,16 @@ GUIDES = {
                 "There was a four-year wait between seasons 1 and 2, from 2013 to 2017, but season 2 picks up where season 1 "
                 "left off, so there is no reason to leave a gap now. The 2024 cinema release Attack on Titan: The Last Attack "
                 "is a re-edit of the two Final Chapters specials and adds nothing you need.",
+            ]),
+            ("break", "Where to take a break", [
+                "The cleanest stopping point is the end of season 3. Episode 59, \"The Other Side of the Wall\", closes "
+                "the story inside the walls that the series has been telling since its first episode, and The Final "
+                "Season opens somewhere new, with characters you have not met. That is about 24 hours in, with about 13 "
+                "to go.",
+                "Inside season 3, the two halves split after episode 49, twelve episodes in, and that is a fair place to "
+                "pause for a few days. Don't stop between The Final Season Part 2 and The Final Chapters. Part 2 ends "
+                "partway through the last arc, and viewers at the time waited from April 2022 to March 2023 for the first "
+                "special and until November 2023 for the second. You can watch them straight through.",
             ]),
         ],
         "faq": [

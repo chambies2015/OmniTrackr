@@ -29,6 +29,8 @@ admin on the show's page on the night.
 """
 from __future__ import annotations
 
+BALLOT_WINDOW_QUESTION = "When can I fill in a ballot?"
+
 SEASON = {
     "name": "Awards season 2026–27",
     "title": "Awards season 2026–27: dates, nominees and a ballot for every show",
@@ -39,7 +41,7 @@ SEASON = {
              "This page keeps their dates in one place. Once a show's nominees are out, you can fill in a ballot "
              "here, share it, and see how many you called when the winners are read out."),
     "published": "2026-11-12",
-    "reviewed": "2026-11-17",
+    "reviewed": "2026-11-23",
     "how": (
         "Each show gets a ballot as soon as its nominees are announced and checked against the official list. Pick "
         "one nominee per category. You can skip categories you have no opinion on, and change any pick until the "
@@ -61,14 +63,26 @@ SEASON = {
         "Academy and of the Academy of Motion Picture Arts and Sciences. Both run a nominating round and a "
         "separate final round.",
     ),
+    "tips": (
+        "Each show's voters lean a different way, and knowing which way is most of what a good ballot comes down to.",
+        "At the Game Awards the jury's vote outweighs the public's nine to one. When critics and players disagree "
+        "about a game, side with the critics.",
+        "At the Golden Globes, read the nominations before you assume which side a film is on. The studio picks "
+        "drama or musical or comedy, and a film you would call a drama can turn up on the comedy list.",
+        "At the Grammys every voting member can vote in the six General Field awards, among them Album, Record and "
+        "Song of the Year and Best New Artist. Most members then vote in no more than ten other categories, spread "
+        "over up to three genre fields where they work. The general awards reflect the whole membership, and the "
+        "genre awards the people closest to that music.",
+        "At the Oscars, Best Picture is counted by ranking, which favors the film most voters like over the one a "
+        "few voters love. For that category, pick the nominee you think almost everyone would put near the top.",
+    ),
     "faq": (
         ("When does awards season start?",
          "The Game Awards open it on December 10, 2026. The Golden Globes follow on January 10, 2027, the Grammys on "
          "February 7 and the Oscars close it on March 14."),
-        ("When can I fill in a ballot?",
-         "From the day a show's nominees are announced until its ceremony starts. The Grammys ballot is open now. "
-         "Game Awards nominees are revealed on November 17, 2026, Golden Globe nominations on December 7 and Oscar "
-         "nominations on January 21, 2027."),
+        # The answer after the first sentence is written from each show's state when the page is drawn
+        # (awards.season_faq), so it never promises a date that has already gone by.
+        (BALLOT_WINDOW_QUESTION, "From the day a show's nominees are announced until its ceremony starts."),
         ("Do I need an account?",
          "No. Picks made without an account stay in your browser. A free account saves them, gives you a link and a "
          "card to share, and keeps your score after the show."),
@@ -88,6 +102,7 @@ SEASON = {
         ("The Game Awards", "https://thegameawards.com/"),
         ("Golden Globes timetable (AwardsWatch)", "https://awardswatch.com/2027-golden-globes-reveal-key-dates-adds-ai-rules-expands-podcast-pool/"),
         ("Grammy.com", "https://www.grammy.com/news/how-to-watch-2027-grammys-nominations/"),
+        ("Grammy.com: the voting process", "https://www.grammy.com/awards/voting-process/"),
         ("Oscars dates (TheWrap)", "https://www.thewrap.com/creative-content/movies/academy-sets-2027-and-2028-oscars-dates/"),
         ("10th Crunchyroll Anime Awards (Wikipedia)", "https://en.wikipedia.org/wiki/10th_Crunchyroll_Anime_Awards"),
     ),
@@ -247,6 +262,8 @@ SHOWS = {
     "the-game-awards-2026": {
         "name": "The Game Awards 2026",
         "short": "The Game Awards",
+        "ballot_name": "Game Awards",  # "The Game Awards ballot is open now."
+        "nominations_name": "Game Awards",  # "Game Awards nominations on ..."
         "format": "Video games",
         "title": "The Game Awards 2026: date, nominees and your ballot",
         "search_title": "The Game Awards 2026: date, nominees, how to watch and a ballot",
@@ -365,6 +382,8 @@ SHOWS = {
     "golden-globes-2027": {
         "name": "Golden Globes 2027",
         "short": "The Golden Globes",
+        "ballot_name": "Golden Globes",  # "The Golden Globes ballot is open now."
+        "nominations_name": "Golden Globe",  # "Golden Globe nominations on ..."
         "format": "Film and TV",
         "title": "Golden Globes 2027: date, nominations and your ballot",
         "search_title": "Golden Globes 2027: date, nominations, how to watch and a ballot",
@@ -374,7 +393,7 @@ SHOWS = {
                  "Paramount+. Nominations come out on Monday, December 7, and the ballot here opens once the list "
                  "is checked and loaded."),
         "published": "2026-11-12",
-        "reviewed": "2026-11-12",
+        "reviewed": "2026-11-23",
         "ceremony_day": "2027-01-10",
         "ceremony_at": "2027-01-11T00:00:00",
         "lock_label": "Sunday, January 10 at 4 p.m. Pacific",
@@ -399,6 +418,42 @@ SHOWS = {
                 "winners and two sets of lead acting winners each year. Last year's ceremony had 28 categories "
                 "across film, TV and podcasts.",
             )),
+            ("voters", "Who the voters are now", (
+                "For 80 years the Globes belonged to the Hollywood Foreign Press Association, a small group of "
+                "foreign journalists based in Los Angeles, founded in 1943. In February 2021 a Los Angeles Times "
+                "investigation reported that its 87 members included no Black journalists. NBC dropped the 2022 "
+                "broadcast, and that year's ceremony went ahead in private, with the winners posted online. NBC "
+                "aired the 2023 show on a one-year deal and drew 6.3 million viewers, the smallest audience the "
+                "Globes have had on television.",
+                "In June 2023 the association was wound up, and the Globes were bought by Dick Clark Productions and "
+                "Eldridge, Todd Boehly's investment firm, which run them as a business. The voting body was rebuilt "
+                "as the larger international group described above, and the show moved to CBS in 2024. Former "
+                "association members were paid $75,000 a year to vote under the 2023 deal. That ended in February "
+                "2025, so no Globes voter is paid now, which is also how the Oscars, Emmys and Grammys work. Every "
+                "voter has to apply for accreditation again each year.",
+            )),
+            ("categories", "How the categories split", (
+                "Only the biggest film awards are divided by genre. Best picture, lead actor and lead actress each "
+                "come in a drama version and a musical or comedy version. Everything else is a single category: one "
+                "director, one screenplay award where the Oscars have two, supporting actor and actress, score, song, "
+                "animated film and non-English language film. The Cinematic and Box Office Achievement award, added "
+                "in 2024, goes to one of the year's biggest hits.",
+                "Studios choose which side a film enters, and the choice is not always the obvious one. The Martian "
+                "won the musical or comedy prize in 2016, and Get Out was entered as a comedy two years later. Television "
+                "has series awards for drama, for musical or comedy and for limited series, while the two supporting "
+                "acting awards cover all of TV at once. Stand-up comedy got its own category in 2024 and podcasts in "
+                "2026.",
+            )),
+            ("oscars", "What the Globes say about the Oscars", (
+                "The Globes come early. Nominations are out on December 7, five weeks before Oscar nominations voting "
+                "opens, and the ceremony is over the day before that voting starts. That makes them the first big "
+                "list of the film season, but the voters are journalists rather than people who make films, and the "
+                "split categories hand two films a best picture prize every year.",
+                "The last three years show how that plays out. In 2024 Oppenheimer won the drama prize and then Best "
+                "Picture at the Oscars. In 2025 the Globes went to The Brutalist and Emilia Pérez, and the Oscar went "
+                "to Anora, which won neither. Last January Hamnet won drama and One Battle After Another won musical "
+                "or comedy, and One Battle After Another went on to take Best Picture.",
+            )),
             ("watch", "How to watch", (
                 "The ceremony airs live on CBS from the Beverly Hilton in Beverly Hills and streams on Paramount+ "
                 "in the United States. Nikki Glaser hosts for the third year running.",
@@ -419,6 +474,35 @@ SHOWS = {
                 "Value with eight. On the TV side The White Lotus led with six nominations and Adolescence had five.",
             ),
             "winners": (
+                ("Motion Picture, Drama", "Hamnet", "",
+                 {"kind": "movie", "title": "Hamnet", "year": 2025, "creator": "Chloé Zhao"}),
+                ("Motion Picture, Musical or Comedy", "One Battle After Another", "",
+                 {"kind": "movie", "title": "One Battle After Another", "year": 2025, "creator": "Paul Thomas Anderson"}),
+                ("Director", "Paul Thomas Anderson", "One Battle After Another",
+                 {"kind": "movie", "title": "One Battle After Another", "year": 2025, "creator": "Paul Thomas Anderson"}),
+                ("Actress, Drama", "Jessie Buckley", "Hamnet",
+                 {"kind": "movie", "title": "Hamnet", "year": 2025, "creator": "Chloé Zhao"}),
+                ("Actor, Drama", "Wagner Moura", "The Secret Agent",
+                 {"kind": "movie", "title": "The Secret Agent", "year": 2025, "creator": "Kleber Mendonça Filho"}),
+                ("Actress, Musical or Comedy", "Rose Byrne", "If I Had Legs I'd Kick You",
+                 {"kind": "movie", "title": "If I Had Legs I'd Kick You", "year": 2025, "creator": "Mary Bronstein"}),
+                ("Actor, Musical or Comedy", "Timothée Chalamet", "Marty Supreme",
+                 {"kind": "movie", "title": "Marty Supreme", "year": 2025, "creator": "Josh Safdie"}),
+                ("Screenplay", "Paul Thomas Anderson", "One Battle After Another",
+                 {"kind": "movie", "title": "One Battle After Another", "year": 2025, "creator": "Paul Thomas Anderson"}),
+                ("Animated Film", "KPop Demon Hunters", "",
+                 {"kind": "movie", "title": "KPop Demon Hunters", "year": 2025}),
+                ("Non-English Language Film", "The Secret Agent", "Brazil",
+                 {"kind": "movie", "title": "The Secret Agent", "year": 2025, "creator": "Kleber Mendonça Filho"}),
+                ("Cinematic and Box Office Achievement", "Sinners", "",
+                 {"kind": "movie", "title": "Sinners", "year": 2025, "creator": "Ryan Coogler"}),
+                ("TV Series, Drama", "The Pitt", "",
+                 {"kind": "tv", "title": "The Pitt", "year": 2025}),
+                ("TV Series, Musical or Comedy", "The Studio", "",
+                 {"kind": "tv", "title": "The Studio", "year": 2025}),
+                ("Limited Series or TV Film", "Adolescence", "",
+                 {"kind": "tv", "title": "Adolescence", "year": 2025}),
+                ("Stand-Up Comedy", "Ricky Gervais", "Mortality", None),
                 ("Best Podcast (first year)", "Good Hang with Amy Poehler", "Spotify", None),
             ),
         },
@@ -437,11 +521,17 @@ SHOWS = {
             ("AwardsWatch: 2027 Golden Globes key dates", "https://awardswatch.com/2027-golden-globes-reveal-key-dates-adds-ai-rules-expands-podcast-pool/"),
             ("83rd Golden Globe Awards (Wikipedia)", "https://en.wikipedia.org/wiki/83rd_Golden_Globe_Awards"),
             ("Golden Globe Awards (Wikipedia)", "https://en.wikipedia.org/wiki/Golden_Globe_Awards"),
+            ("TV Guide: the 2026 winners", "https://www.tvguide.com/news/the-2026-golden-globes-complete-winners-list"),
+            ("Hollywood Foreign Press Association (Wikipedia)", "https://en.wikipedia.org/wiki/HFPA"),
+            ("AwardsWatch: Dick Clark Productions and Eldridge take over", "https://awardswatch.com/dick-clark-productions-and-eldridge-take-over-golden-globes-shutters-the-hollywood-foreign-press-association-hfpa/"),
+            ("TheWrap: voter salaries end", "https://www.thewrap.com/golden-globes-ends-voter-salaries-hfpa-members/"),
         ),
     },
     "grammys-2027": {
         "name": "Grammys 2027",
         "short": "The Grammys",
+        "ballot_name": "Grammys",  # "The Grammys ballot is open now."
+        "nominations_name": "Grammy",  # "Grammy nominations on ..."
         "format": "Music",
         "title": "Grammys 2027: date, nominations and your ballot",
         "search_title": "Grammys 2027: nominees, date, new categories and a ballot",
@@ -566,6 +656,8 @@ SHOWS = {
     "oscars-2027": {
         "name": "Oscars 2027",
         "short": "The Oscars",
+        "ballot_name": "Oscars",  # "The Oscars ballot is open now."
+        "nominations_name": "Oscar",  # "Oscar nominations on ..."
         "format": "Film",
         "title": "Oscars 2027: date, nominations and your ballot",
         "search_title": "Oscars 2027: date, nominations, key dates and a ballot",
@@ -575,7 +667,7 @@ SHOWS = {
                  "ABC at 7 p.m. Eastern. Nominations are announced on Thursday, January 21, and the ballot here "
                  "opens once the list is checked and loaded."),
         "published": "2026-11-12",
-        "reviewed": "2026-11-12",
+        "reviewed": "2026-11-23",
         "ceremony_day": "2027-03-14",
         "ceremony_at": "2027-03-14T23:00:00",
         "lock_label": "Sunday, March 14 at 4 p.m. Pacific",
@@ -601,6 +693,42 @@ SHOWS = {
                 "shortlist first, on December 15, 2026. It is the first look at which films are still in the race "
                 "there.",
             )),
+            ("eligible", "Which films can compete", (
+                "A film has to run longer than 40 minutes and open in a cinema between January 1 and December 31, "
+                "2026. The run that qualifies it is seven days in a row at one cinema, with at least three screenings "
+                "a day and one of them starting between 6 and 10 p.m., in one of six US areas: Los Angeles County, "
+                "New York City, the San Francisco Bay Area, Chicago, Dallas-Fort Worth or Atlanta. A premiere on a "
+                "streaming service doesn't count on its own.",
+                "Best Picture asks for more. Within 45 days of that first run, a film also has to play for at least "
+                "seven days in nine more of the 50 biggest US markets, and it has to meet two of the Academy's four "
+                "inclusion standards, which look at who is on screen, who made the film, paid training places for "
+                "newcomers, and who it was marketed to. That is why films made for streaming services still open in "
+                "a handful of cinemas first.",
+            )),
+            ("counting", "How the votes are counted", (
+                "Nominations come from the Academy's branches: actors nominate actors, directors nominate directors, "
+                "cinematographers nominate cinematographers, and so on. Every voting member can nominate for Best "
+                "Picture. In the final round every member can vote in every category, with one condition that began "
+                "last year: you have to have watched all the nominees in a category to vote in it. The Academy checks "
+                "viewing on its own online screening room, and members declare any film they saw somewhere else, such "
+                "as at a festival.",
+                "Most categories go to the nominee with the most votes. Best Picture works differently. It has had "
+                "exactly ten nominees every year since the 2022 ceremony, and voters rank them. If no film is first on "
+                "more than half the ballots, the film with the fewest first places drops out and those ballots move "
+                "to their next choice, and that repeats until one film is past half. A film that most voters rank "
+                "second or third can beat one that splits them, which is worth keeping in mind when you pick that "
+                "category.",
+            )),
+            ("shortlists", "What the December shortlists tell you", (
+                "In a shortlisted category, the nominees can only come from the list. Last year there were twelve "
+                "lists, published on December 16, 2025: animated short, casting, cinematography, documentary feature, "
+                "documentary short, international feature, live action short, makeup and hairstyling, original score, "
+                "original song, sound and visual effects. Most ran to 10 or 15 titles, and the score list had 20.",
+                "Two of them work differently this year. The cinematography list is now always 20 films, where it "
+                "used to be anything from 10 to 20. And in visual effects, members can only vote in the final round "
+                "once they have watched each finalist's three-minute before-and-after reel from the bake-off, the "
+                "evening when shortlisted teams show their work to the branch.",
+            )),
             ("watch", "How to watch", (
                 "The ceremony airs live on ABC at 7 p.m. Eastern, 4 p.m. Pacific, and streams on Hulu. Conan "
                 "O'Brien hosts for the third year in a row.",
@@ -610,7 +738,8 @@ SHOWS = {
                 "Cannes, Sundance, Toronto or Venice. An actor can be nominated more than once in the same "
                 "category. And the acting and writing categories have new rules on generative AI.",
                 "The casting award is in its second year. It was handed out for the first time in 2026, to "
-                "Cassandra Kulukundis for One Battle After Another.",
+                "Cassandra Kulukundis for One Battle After Another, and it can now go to as many as three people on "
+                "a film instead of two.",
             )),
         ),
         "categories": [],
@@ -671,6 +800,10 @@ SHOWS = {
             ("AwardsWatch: Oscars dates", "https://awardswatch.com/the-oscars-set-march-dates-for-99th-and-100th-academy-awards/"),
             ("99th Academy Awards (Wikipedia)", "https://en.wikipedia.org/wiki/99th_Academy_Awards"),
             ("98th Academy Awards (Wikipedia)", "https://en.wikipedia.org/wiki/98th_Academy_Awards"),
+            ("Academy: rules approved for the 99th Oscars", "https://press.oscars.org/news/awards-rules-and-campaign-promotional-regulations-approved-99th-oscarsr"),
+            ("Academy: Best Picture rules", "https://www.oscars.org/sites/oscars/files/2025-04/98th_aa_best_picture.pdf"),
+            ("Academy: last year's shortlists", "https://press.oscars.org/news/98th-oscarsr-shortlists-12-award-categories-announced"),
+            ("NPR: voters must watch the nominees", "https://www.npr.org/2025/04/22/nx-s1-5372650/oscar-voting-changes"),
         ),
     },
 }

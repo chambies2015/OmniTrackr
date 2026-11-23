@@ -40,7 +40,7 @@ def test_every_guide_is_complete_and_hand_written():
         assert re.fullmatch(r"[a-z0-9-]{1,80}", slug)
         assert entry["kind"] in binge.KIND_ORDER and entry["name"]
         assert 60 <= len(entry["summary"]) <= 170, slug
-        assert len(entry["lead"]) == 2 and len(entry["sections"]) in (2, 3) and len(entry["faq"]) == 3, slug
+        assert len(entry["lead"]) == 2 and len(entry["sections"]) in (2, 3, 4) and len(entry["faq"]) == 3, slug
         assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", entry["reviewed"])
         assert binge.words(entry) >= binge.MIN_INDEX_WORDS and binge.is_indexable(entry), slug
         ids = [section_id for section_id, _, _ in entry["sections"]]

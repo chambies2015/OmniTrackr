@@ -119,6 +119,17 @@ CHALLENGES: dict[str, dict] = {
              "detail": "Three is a low bar on purpose. It leaves room for one long game or series alongside the two steps above, and most members reach it without changing their habits. Nobody is racing."},
         ],
         "reflection": "Which of this month's finishes felt most like its own time, and which felt like it could have been made last year?",
+        # Written sections shown after the steps (added November 23, 2026; logged in corrections_log).
+        "notes": [
+            {"heading": "Where to find something older", "paragraphs": [
+                "Older films and books are often free with a library card. Kanopy and Hoopla, which many public libraries offer, stream classic and art-house films, and Kanopy carries many Criterion Collection titles. Libby lends ebooks and audiobooks from public libraries too. Project Gutenberg has more than 70,000 public-domain books to download for free, and in the United States books published in 1930 or earlier are now out of copyright.",
+                "For games, GOG sells older PC games without copy protection, many of them patched to run on current versions of Windows, and the subscriptions for Nintendo Switch Online and PlayStation Plus include libraries of classic console games. Albums are the easiest of all, since most major records from before 2000 are on the big streaming services. Watch the year when you add one, though. A remaster or deluxe edition can carry its reissue year, and step 1 goes by the year saved on the title.",
+            ]},
+            {"heading": "What counts for each step", "paragraphs": [
+                "Step 2 counts titles on your Books shelf. Manga and audiobooks have shelves of their own, so a manga volume or an audiobook you finish counts toward the three titles in step 3 but not toward this one. If you listened to a novel and want it to count here, it needs to be on Books.",
+                "Step 1 is looser. A title on any of the nine shelves counts, as long as the year saved on it is before 2000: the release date for a game, the year field for everything else. A film you watched for step 1 and a book you read for step 2 already make two of the three titles step 3 asks for.",
+            ]},
+        ],
     },
     "2026-12": {
         "name": "Close the year kindly",
