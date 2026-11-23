@@ -518,7 +518,7 @@ def show_content(db: Session, slug: str, user=None, now: Optional[datetime] = No
     return (
         f'<header class="hero hero--guide aw-hero"><a href="{awards.BASE_PATH}">← Awards season</a>'
         f'<p class="eyebrow">{_e(_status_line(show, state, today))}</p><h1>{_e(show["title"])}</h1>'
-        f'<p>{_e(show["lead"])}</p>{_byline(show)}'
+        f'<p>{_e(awards.show_words(slug, show)["lead"])}</p>{_byline(show)}'
         f'<p class="aw-hero__facts"><span class="aw-hero__fact aw-hero__fact--when">{_e(_countdown(show, today))}</span>'
         f'<span class="aw-hero__fact">{_e(show["format"])}</span>{filled}</p>{jump}</header>'
         + admin_note
@@ -538,9 +538,11 @@ def show_page(slug: str, user=Depends(get_optional_current_user), db: Session = 
     from .discover import page
     show = _show_or_404(slug)
     canonical = awards.SITE_URL + awards.path(slug)
-    structured = {"@context": "https://schema.org", "@graph": [_article(show, canonical), _faq_data(show["faq"])]}
+    words = awards.show_words(slug, show)
+    structured = {"@context": "https://schema.org",
+                  "@graph": [_article({**show, **words}, canonical), _faq_data(show["faq"])]}
     # A show still waiting for its nominees is mostly a placeholder ballot, so it carries no ads until they're in.
-    response = page(show["search_title"], show["description"], awards.path(slug), show_content(db, slug, user),
+    response = page(show["search_title"], words["description"], awards.path(slug), show_content(db, slug, user),
                     structured_data=structured, head=_head(user is not None, ads=awards.has_nominees(show)),
                     member=user is not None)
     response.headers["Cache-Control"] = "private, no-cache"

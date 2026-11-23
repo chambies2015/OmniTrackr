@@ -252,7 +252,7 @@ def copy_for(db: Session, user: models.User, moment: str, key: str, facts: Optio
         days = supporters.founding_days_left(now)
         if days <= 0:
             return None
-        title = ("Today is the last day to become a founding supporter" if days == 1
+        title = ("December 31 is the last day to become a founding supporter" if days == 1
                  else "Founding supporter closes on December 31")
         return {"eyebrow": "Last day" if days == 1 else f"{days} days left", "title": title,
                 "body": "Anyone whose support starts before 2027 stays a founding supporter for good, with the ★ badge "

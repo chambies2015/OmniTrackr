@@ -116,6 +116,43 @@ def nominees_pending(show: dict, now: Optional[datetime] = None) -> bool:
     return bool(day) and not has_nominees(show) and (now or _now()).date() > date.fromisoformat(day)
 
 
+# A show's own "lead" and "description" look ahead to its announcement ("the nominees are revealed on
+# Tuesday, November 17"). From the day after, until the checked list is in the data (nominees_pending),
+# the page uses these instead. Once has_nominees() is true the show's own words come back.
+PENDING_WORDS = {
+    "the-game-awards-2026": {
+        "lead": ("The Game Awards 2026 are on Thursday, December 10 at the Peacock Theater in Los Angeles. The "
+                 "nominees were revealed on Tuesday, November 17, and this page becomes a ballot once every name is "
+                 "checked against the official list: pick a winner in every category, save it, and see your score "
+                 "once the show is over."),
+        "description": ("The Game Awards 2026 are on December 10 in Los Angeles, and the nominees are out. Key dates, "
+                        "how the winners are chosen, where to watch, last year's results and a free ballot to pick "
+                        "the winners."),
+    },
+    "golden-globes-2027": {
+        "lead": ("The 84th Golden Globes are on Sunday, January 10, 2027 at the Beverly Hilton, live on CBS and "
+                 "Paramount+. Nominations came out on Monday, December 7, and the ballot here opens once the list is "
+                 "checked and loaded."),
+        "description": ("The 84th Golden Globes are on January 10, 2027, and the nominations are out. Who votes, what "
+                        "changed this year, where to watch and a free ballot to pick the winners."),
+    },
+    "oscars-2027": {
+        "lead": ("The 99th Academy Awards are on Sunday, March 14, 2027 at the Dolby Theatre in Hollywood, live on ABC "
+                 "at 7 p.m. Eastern. Nominations were announced on Thursday, January 21, and the ballot here opens "
+                 "once the list is checked and loaded."),
+        "description": ("The 99th Academy Awards are on March 14, 2027, and the nominations are out. Voting dates, "
+                        "what changed in the rules, last year's winners and a free ballot to pick this year's."),
+    },
+}
+
+
+def show_words(slug: str, show: dict, now: Optional[datetime] = None) -> dict:
+    """The show's lead and description for right now."""
+    pending = PENDING_WORDS.get(slug) if nominees_pending(show, now) else None
+    source = pending or show
+    return {"lead": source["lead"], "description": source["description"]}
+
+
 def is_locked(show: dict, now: Optional[datetime] = None) -> bool:
     return (now or _now()) >= ceremony_at(show)
 

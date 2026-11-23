@@ -118,7 +118,7 @@ def test_deadline_words_count_down_through_december():
     assert supporters.founding_deadline(datetime(2026, 12, 10, 23, 59)) == (
         "22 days left to become a founding supporter. It closes on December 31.")
     assert supporters.founding_deadline(datetime(2026, 12, 31, 8)) == (
-        "Today, December 31, is the last day to become a founding supporter.")
+        "December 31 is the last day to become a founding supporter.")
     assert supporters.founding_deadline(datetime(2027, 1, 1)) is None
     assert supporters.founding_days_left(datetime(2027, 3, 1)) == 0
 
