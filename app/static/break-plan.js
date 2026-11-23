@@ -586,10 +586,16 @@
     const list = el('ul', 'bp-titles');
     list.appendChild(el('li', 'bp-muted', 'Loading your list…'));
     panel.appendChild(list);
+    // The first list has a share of every format; typing searches the whole library on the server, so a
+    // title past the first couple of hundred can still be found.
     let titles = [];
+    let found = null;
+    let asked = '';
+    let timer = 0;
     const draw = () => {
-      const query = search.value.trim().toLowerCase();
-      const shown = titles.filter(entry => !query || entry.title.toLowerCase().includes(query)).slice(0, 40);
+      const query = search.value.trim().replace(/\s+/g, ' ').toLowerCase();
+      const pool = query && found ? found : titles;
+      const shown = pool.filter(entry => !query || entry.title.toLowerCase().includes(query)).slice(0, 48);
       list.replaceChildren(...shown.map(entry => {
         const item = el('li');
         const pick = button('', null, () => act(`/api/break/${plan.id}/items`, { method: 'POST',
@@ -600,7 +606,20 @@
       }));
       if (!shown.length) list.appendChild(el('li', 'bp-muted', titles.length ? 'Nothing on your list matches.' : 'Everything on your list is on the plan or finished.'));
     };
-    search.addEventListener('input', draw);
+    const lookUp = () => {
+      const query = search.value.trim();
+      if (!query) { found = null; asked = ''; draw(); return; }
+      if (query === asked) return;
+      asked = query;
+      api(`/api/break/${plan.id}/titles?q=${encodeURIComponent(query.slice(0, 80))}`)
+        .then(result => { if (asked === query) { found = result.titles || []; draw(); } })
+        .catch(() => {});
+    };
+    search.addEventListener('input', () => {
+      draw();
+      clearTimeout(timer);
+      timer = setTimeout(lookUp, 300);
+    });
     api(`/api/break/${plan.id}/titles`).then(result => { titles = result.titles || []; draw(); })
       .catch(error => { list.replaceChildren(el('li', 'bp-muted', error.message)); });
     setTimeout(() => search.focus(), 0);
@@ -801,6 +820,12 @@
         button('Not yet', 'bp-link', () => { state.asks.delete(item.id); render(); }));
       box.appendChild(answers);
       body.appendChild(box);
+    } else if (item.confirm_finish) {
+      // Its last part is ticked, but a game or a length we guessed doesn't finish the title on its own.
+      body.appendChild(button('Mark it finished', 'bp-link', () => {
+        state.asks.set(item.id, 'score');
+        act(`/api/break/${plan.id}/items/${item.id}/finish`, { method: 'POST', body: {} }, `Finished ${item.title}.`);
+      }));
     }
     if (!item.done && !day.past) body.appendChild(itemMenu(item, plan));
     row.append(tick, body);

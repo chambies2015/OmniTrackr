@@ -1103,7 +1103,7 @@ BREAK_PLAN_LIMITS = {
     ("/api/break/{plan_id}", "DELETE"): "10/minute",
     ("/api/break/{plan_id}/fill", "POST"): "10/minute",
     ("/api/break/{plan_id}/shuffle", "POST"): "10/minute",
-    ("/api/break/{plan_id}/titles", "GET"): "20/minute",
+    ("/api/break/{plan_id}/titles", "GET"): "40/minute",
     ("/api/break/{plan_id}/items", "POST"): "20/minute",
     ("/api/break/{plan_id}/items/{item_id}", "PATCH"): "40/minute",
     ("/api/break/{plan_id}/items/{item_id}", "DELETE"): "30/minute",

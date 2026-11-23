@@ -239,7 +239,9 @@
       if (epoch !== state.epoch) return;
       const name = button.closest('li')?.querySelector('.break-home__name')?.textContent || 'it';
       await refresh(true);
-      setStatus(data.ticked && data.ticked.finished ? `Finished ${name}. Score it on the plan.` : `Ticked off ${name}.`);
+      const ticked = data.ticked || {};
+      setStatus(ticked.finished ? `Finished ${name}. Score it on the plan.`
+        : ticked.ask_finish ? `Ticked off ${name}. If that was the end, mark it finished on the plan.` : `Ticked off ${name}.`);
       if (typeof window.refreshLibraryPulse === 'function') Promise.resolve(window.refreshLibraryPulse()).catch(() => {});
     } catch (error) {
       setStatus(error.message);

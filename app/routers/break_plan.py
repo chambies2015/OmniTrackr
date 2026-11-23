@@ -20,7 +20,7 @@ from .discover import page
 
 router = APIRouter(tags=["break plan"])
 CSS_VERSION = "20261123-break-1"
-JS_VERSION = "20261123-break-1"
+JS_VERSION = "20261123-break-sweep-1"
 TITLE = "Plan your break: fill your days off from your own list"
 DESCRIPTION = ("Tell OmniTrackr which days you have off and about how much time each one has, and it fills them "
                "from your own list: the show you're halfway through, the film you keep saving, a book in real "
@@ -211,8 +211,9 @@ GUIDE = (
 FAQ = (
     ("Does a plan change my library?",
      "Only when you tick something. Ticking the last part of a film, show, book or manga marks it finished in your "
-     "library, the same as ticking it there. Ticking an earlier part moves your saved place forward, never back. "
-     "Making, changing or deleting a plan changes nothing in your library."),
+     "library, the same as ticking it there. When we had to guess how long it is, the plan asks before marking it "
+     "finished. Ticking an earlier part moves your saved place forward, never back, and unticking it puts your "
+     "place back. Making, changing or deleting a plan changes nothing in your library."),
     ("What if I log progress in my library instead?",
      "The plan follows it. Mark an episode watched or save a page in your library and the matching parts of the "
      "plan tick themselves."),
@@ -557,11 +558,12 @@ def shuffle_plan(request: Request, plan_id: PositiveDatabaseId, payload: Today, 
 
 
 @router.get("/api/break/{plan_id}/titles")
-def plan_titles(request: Request, plan_id: PositiveDatabaseId, response: Response, user=Depends(get_current_user),
+def plan_titles(request: Request, plan_id: PositiveDatabaseId, response: Response,
+                q: Optional[str] = Query(None, max_length=80), user=Depends(get_current_user),
                 db: Session = Depends(get_db)):
     _private(response)
     plan = _plan(db, user, plan_id)
-    return {"titles": break_plan.addable(db, user, plan)}
+    return {"titles": break_plan.addable(db, user, plan, query=q)}
 
 
 @router.post("/api/break/{plan_id}/items")
@@ -607,7 +609,7 @@ def untick_item(request: Request, plan_id: PositiveDatabaseId, item_id: Positive
     _private(response)
     today = _today(payload.today)
     plan = _plan(db, user, plan_id)
-    return _run(db, user, today, lambda: break_plan.untick(db, plan, item_id))
+    return _run(db, user, today, lambda: break_plan.untick(db, user, plan, item_id))
 
 
 @router.post("/api/break/{plan_id}/items/{item_id}/finish")

@@ -2783,6 +2783,9 @@ class BreakPlanItem(Base):
     added = Column(Boolean, nullable=False, default=False)  # the member put it here themselves
     done_at = Column(DateTime, nullable=True)
     finished_title = Column(Boolean, nullable=False, default=False)  # ticking this finished the title
+    # JSON: the library checkpoint before this tick moved it, and the revision the tick wrote, so an
+    # untick can put it back while nobody has changed it since. Empty when the tick didn't move it.
+    undo_progress = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     plan = relationship("BreakPlan", back_populates="items")
