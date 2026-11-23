@@ -44,6 +44,7 @@ NAV_MENUS = (
         ("taste-quiz", "Taste quiz", "/taste-quiz", "Find out what kind of fan you are"),
         ("tier-list", "Tier list maker", "/tier-list", "Rank anything and share the image"),
         ("challenges", "Monthly challenge", "/challenges", "A themed goal that resets each month"),
+        ("break", "Break planner", "/break", "Fill your days off from your own list"),
     )),
     ("guides", "Guides", (
         ("in-order", "Franchises in order", "/in-order", "Watch and play the big series the right way"),
@@ -110,6 +111,7 @@ FOOTER_GROUPS = (
         ("Taste quiz", "/taste-quiz"),
         ("Tier list maker", "/tier-list"),
         ("Binge calculator", "/binge-calculator"),
+        ("Break planner", "/break"),
         ("Monthly challenge", "/challenges"),
     )),
     ("Community", (

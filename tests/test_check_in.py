@@ -325,7 +325,7 @@ def test_status_counts_returns_and_page_answers(db_session):
     info = check_in.status(db_session, NOW + timedelta(days=3))
     assert info["sent_30d"] == 1 and info["came_back"] == 1 and info["due_now"] == 0
     assert [row["source"] for row in info["page"]["by_source"]] == ["Check-in email", "Come-back email", "Backlog draw evening email",
-                                                                    "Your week Sunday nudge"]
+                                                                    "Your week Sunday nudge", "Break plan wrap-up email"]
 
 
 # ---------------------------------------------------------------- the come-back email

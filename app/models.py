@@ -2711,3 +2711,80 @@ class PickSwapRemoval(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("swap_id", "user_id", name="uq_pick_swap_removal"),)
+
+
+class BreakPlan(Base):
+    """A member's plan for a stretch of days off, filled from their own library (Nov 2026): /break.
+
+    New tables only. ``day_minutes`` is JSON ({"2026-11-26": 60, ...}): the time the member says
+    they have on each day of the break, 0 for a busy day. ``seed`` changes with "Try another mix"
+    so the same plan always fills the same way until then. ``left_out`` is JSON, a list of
+    "category:id" titles the member took off this break. Library rows are never changed here
+    except through the library's own rules (check_in.answer, progress._write_progress) when the
+    member ticks something off.
+    """
+    __tablename__ = "break_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(60), nullable=False)
+    preset = Column(String(32), nullable=True)
+    starts_on = Column(Date, nullable=False)
+    ends_on = Column(Date, nullable=False)
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    day_minutes = Column(Text, nullable=False, default="{}")
+    games = Column(Boolean, nullable=False, default=True)  # fill with a game too
+    seed = Column(Integer, nullable=False, default=0)
+    left_out = Column(Text, nullable=False, default="[]")
+    status = Column(String(12), nullable=False, default="active", index=True)  # active, cancelled
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+    share_opened = Column(Integer, nullable=False, default=0)
+    emails = Column(Boolean, nullable=False, default=False)  # the morning it starts and the day after it ends
+    start_email = Column(String(12), nullable=True)  # sent, skipped, dropped, failed
+    wrap_email = Column(String(12), nullable=True)
+    last_seen_on = Column(Date, nullable=True)  # the member's last day of the break that they opened it
+    days_opened = Column(Integer, nullable=False, default=0)
+    wrap_hidden_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    items = relationship("BreakPlanItem", cascade="all, delete-orphan", back_populates="plan")
+
+    __table_args__ = (Index("ix_break_plans_user_status", "user_id", "status"),)
+
+
+class BreakPlanItem(Base):
+    """One stretch of one library title on one day of a break plan: "Episodes 4-7", "Pages 1-120".
+
+    ``unit`` is whole (a film or album), episode, page, chapter or block (half hours, for games,
+    audiobooks and books without a page count). ``first``/``last`` count units from the start of
+    the title, ``total`` is how many it has, so the last stretch is the one with last == total.
+    The title, cover and label are copied in so a share page never reads the library.
+    """
+    __tablename__ = "break_plan_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("break_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = Column(Date, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    image = Column(String(500), nullable=True)
+    unit = Column(String(8), nullable=False)
+    first = Column(Integer, nullable=False, default=1)
+    last = Column(Integer, nullable=False, default=1)
+    total = Column(Integer, nullable=False, default=1)
+    minutes = Column(Integer, nullable=False, default=0)
+    label = Column(String(80), nullable=False, default="")
+    guessed = Column(Boolean, nullable=False, default=False)
+    added = Column(Boolean, nullable=False, default=False)  # the member put it here themselves
+    done_at = Column(DateTime, nullable=True)
+    finished_title = Column(Boolean, nullable=False, default=False)  # ticking this finished the title
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    plan = relationship("BreakPlan", back_populates="items")
+
+    __table_args__ = (Index("ix_break_plan_items_plan_day", "plan_id", "day"),)
