@@ -487,6 +487,9 @@
     if ($('googleSignin')) fillList('googleSignin', data.funnel.google || []);
     if ($('emailSignupForm')) fillList('emailSignupForm', data.funnel.email_form || []);
     if ($('emailConfirm')) fillList('emailConfirm', data.funnel.email_confirm || []);
+    if ($('emailSnags')) fillList('emailSnags', data.funnel.email_snags || []);
+    if ($('emailDelivery')) fillList('emailDelivery', data.funnel.email_delivery || []);
+    if ($('emailReturn')) fillList('emailReturn', data.funnel.email_return || []);
     if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
     if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
     renderSearchJourney(data.search_journey);
@@ -1596,6 +1599,9 @@
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.email_form ? `Email sign-up form: ${data.funnel.email_form.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel && data.funnel.email_confirm ? `Confirming the email: ${data.funnel.email_confirm.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_snags ? `Email form, what stopped people: ${data.funnel.email_snags.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_delivery ? `Sending the code email: ${data.funnel.email_delivery.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_return ? `Coming back to finish signing up: ${data.funnel.email_return.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.start ? `Start page: ${data.funnel.start.map(step => `${step.label} ${number(step.count)}`).join(' → ')}; ${(data.funnel.start_paths || []).map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',

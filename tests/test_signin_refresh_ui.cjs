@@ -291,6 +291,9 @@ test('every form change hides the inbox step and the wait', () => {
     s.context.showAuthStatus('Confirming your email', 'This takes a second.');
     assert.equal(s.$('authStatusPanel').style.display, 'block');
     assert.equal(s.$('verifySentPanel').style.display, 'none');
+    // Since Nov 23 2026 a sign-up button pressed while a sign-up waits for its code goes
+    // back to the code step; "Wrong address? Start again" clears it first.
+    if (show === 'showRegisterForm') s.context.clearSignupWaiting();
     s.context[show](false);
     assert.equal(s.$('authStatusPanel').style.display, 'none', show);
     assert.equal(s.$('verifySentPanel').style.display, 'none', show);

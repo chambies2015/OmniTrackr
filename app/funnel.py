@@ -295,9 +295,35 @@ EMAIL_CONFIRM = (
     ("signup_code_wrong", "Wrong or expired code typed"),
     ("signup_inbox_opened", "Open Gmail (or another mail service) pressed"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM + EMAIL_CONFIRM} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+# Where the email form turned people back before anything reached the server, by box,
+# and Create presses whose request never got an answer (Nov 23 2026). "Caught by form
+# checks" in REJECTIONS is the total; these say which box, so a confusing rule shows.
+EMAIL_SNAGS = (
+    ("signup_check_email", "Email box: the address didn't look right"),
+    ("signup_check_password", "Password box: fewer than 8 characters"),
+    ("signup_check_username", "Username box: the name wasn't allowed"),
+    ("signup_request_failed", "Create pressed, but no answer came back (connection or server error)"),
+)
+# The code email itself: how long the mail server took. Create waits at most 8 seconds
+# (routers/auth.py SIGNUP_EMAIL_WAIT_SECONDS) and then shows the code step while it finishes.
+EMAIL_DELIVERY = (
+    ("signup_email_quick", "Sent in under 3 seconds"),
+    ("signup_email_wait", "Sent in 3 to 8 seconds"),
+    ("signup_email_slow", "Took longer than 8 seconds (the code step showed while it finished)"),
+    ("signup_email_failed", "Failed to send"),
+)
+# Coming back to a sign-up that waits for its code (Nov 23 2026). Leaving the code step
+# to read the email, a phone often reloads the tab, and the homepage then looked as if
+# nothing had happened. Now the card opens on the code box again.
+EMAIL_RETURN = (
+    ("signup_waiting_resumed", "Came back before confirming: the code box opened again"),
+    ("signup_waiting_confirmed", "Came back after confirming in another browser: asked to log in"),
+    ("signup_restart_clicked", "Wrong address? Start again pressed"),
+)
+SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM + EMAIL_CONFIRM
+                 + EMAIL_SNAGS + EMAIL_DELIVERY + EMAIL_RETURN} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
@@ -393,6 +419,9 @@ def summary(counts: dict[str, int]) -> dict:
                       + [{"event": "signup_submitted", "label": "Reached our server", "count": count("signup_submitted")}],
         "email_confirm": [{"event": "signup_created_email", "label": "Accounts made with the email form", "count": email_created}]
                          + [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_CONFIRM],
+        "email_snags": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_SNAGS],
+        "email_delivery": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_DELIVERY],
+        "email_return": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_RETURN],
         "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
         "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
     }
