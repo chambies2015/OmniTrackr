@@ -497,3 +497,19 @@
 @media (prefers-reduced-motion: reduce) {
   .bp-bar::before, .bp-tick { transition: none; }
 }
+
+/* Links to earlier plans that still work, so they can be turned off. */
+.bp-older__list { display: grid; gap: 8px; list-style: none; margin: 10px 0 0; padding: 0; }
+.bp-older__item {
+  align-items: center;
+  border-top: 1px solid var(--site-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+.bp-older__words { color: var(--site-soft); margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.bp-older__words strong { color: #fff; }
+.bp-older__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.bp-older__actions a.bp-link { align-items: center; display: inline-flex; text-decoration: none; }
