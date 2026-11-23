@@ -1103,7 +1103,7 @@ BREAK_PLAN_LIMITS = {
     ("/api/break/{plan_id}", "DELETE"): "10/minute",
     ("/api/break/{plan_id}/fill", "POST"): "10/minute",
     ("/api/break/{plan_id}/shuffle", "POST"): "10/minute",
-    ("/api/break/{plan_id}/titles", "GET"): "20/minute",
+    ("/api/break/{plan_id}/titles", "GET"): "40/minute",
     ("/api/break/{plan_id}/items", "POST"): "20/minute",
     ("/api/break/{plan_id}/items/{item_id}", "PATCH"): "40/minute",
     ("/api/break/{plan_id}/items/{item_id}", "DELETE"): "30/minute",
@@ -1117,6 +1117,8 @@ BREAK_PLAN_LIMITS = {
     ("/api/break/{plan_id}/calendar.ics", "GET"): "10/minute",
     ("/break/s/{token}", "GET"): "60/minute",
     ("/break/s/{token}/card.png", "GET"): "30/minute",
+    ("/break/s/{token}/story.png", "GET"): "20/minute",
+    ("/api/break/from/{token}", "GET"): "20/minute",
 }
 for route in break_plan_router.router.routes:
     path = getattr(route, "path", None)

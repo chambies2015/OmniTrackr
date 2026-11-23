@@ -189,6 +189,9 @@
       more.textContent = 'See it all';
       (card.finished || []).forEach(item => list.appendChild(row(item, card, false)));
       actions.appendChild(link(card.finished && card.finished.length ? 'Score them' : 'Open the plan', '/break', 'break-home__btn break-home__btn--primary'));
+      // How it went, as a link or a story picture: the plan's own share page, or its share panel if there's no link yet.
+      const shared = typeof card.share === 'string' && /^\/break\/s\/[A-Za-z0-9_-]{16,40}$/.test(card.share);
+      if (card.totals && card.totals.done) actions.appendChild(link('Share how it went', shared ? card.share : '/break#share', 'break-home__btn'));
       const done = el('button', 'break-home__quiet', 'Done with this');
       done.type = 'button';
       done.addEventListener('click', () => hideWrap(card, done));
@@ -239,7 +242,9 @@
       if (epoch !== state.epoch) return;
       const name = button.closest('li')?.querySelector('.break-home__name')?.textContent || 'it';
       await refresh(true);
-      setStatus(data.ticked && data.ticked.finished ? `Finished ${name}. Score it on the plan.` : `Ticked off ${name}.`);
+      const ticked = data.ticked || {};
+      setStatus(ticked.finished ? `Finished ${name}. Score it on the plan.`
+        : ticked.ask_finish ? `Ticked off ${name}. If that was the end, mark it finished on the plan.` : `Ticked off ${name}.`);
       if (typeof window.refreshLibraryPulse === 'function') Promise.resolve(window.refreshLibraryPulse()).catch(() => {});
     } catch (error) {
       setStatus(error.message);

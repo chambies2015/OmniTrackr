@@ -19,8 +19,10 @@ the home screen gives a reason to open OmniTrackr on every day of the break.
   library ticks the matching stretches here too.
 * Swap, move, remove or add a title, "Try another mix", fill any free time again.
 * Optional: one email the morning the break starts and one the morning after it ends; a .ics
-  with one event per day; a share link (/break/s/<token>) with a 1200x630 card that shows the
-  plan from the shelves the member shares publicly.
+  with one event per day; a share link (/break/s/<token>) that shows the plan from the shelves
+  the member shares publicly, with a 1200x630 card and a 1080x1920 story picture
+  (app/break_share.py). Whoever opens it can plan the same days from their own list, with the
+  titles they liked from it going in first.
 
 New tables only (break_plans, break_plan_items). Funnel events are "break_*" (funnel.py).
 """
@@ -31,6 +33,7 @@ import json
 import math
 import os
 import random
+import re
 import secrets
 import zlib
 from dataclasses import dataclass, field
@@ -65,6 +68,9 @@ CHECK_EVERY_SECONDS = 900
 FIRST_CHECK_DELAY_SECONDS = 540
 PER_RUN_LIMIT = 20
 UTM = "utm_source=email&utm_campaign=break"
+SHARE_KEEP_DAYS = 30        # a share link stops working this long after the break ends
+SHARE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,40}")
+MAX_PICKS = 30              # titles taken from a shared plan onto a new one
 
 CATEGORIES = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "audiobooks")
 LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game", "music": "Album",
@@ -357,6 +363,25 @@ def _refs(db: Session, user: models.User) -> dict[str, list[int]]:
     return found
 
 
+def _still_open(db: Session, user_id: int, refs: list[tuple[str, int]]) -> set[tuple[str, int]]:
+    """Which of these library titles are the member's, unfinished and titled."""
+    from sqlalchemy import func as sql
+    wanted: dict[str, list[int]] = {}
+    for category, item_id in refs:
+        if category in CATEGORIES:
+            wanted.setdefault(category, []).append(item_id)
+    found = set()
+    for category, ids in wanted.items():
+        model = _model(category)
+        for start in range(0, len(ids), 400):
+            for (item_id,) in db.query(model.id).filter(
+                    model.user_id == user_id, model.id.in_(ids[start:start + 400]),
+                    getattr(model, _done_field(category)) != True,  # noqa: E712
+                    model.title.isnot(None), sql.trim(model.title) != ""):
+                found.add((category, item_id))
+    return found
+
+
 def _started(db: Session, user_id: int) -> dict[tuple[str, int], datetime]:
     """Titles the member is part-way through, with when they last moved, newest first later."""
     found = {}
@@ -440,7 +465,10 @@ def _episode_state(db: Session, user_id: int, category: str, rows: list) -> dict
     for row in rows:
         layout = episodes.layout_for(row, category, layouts.get(keys[row.id], []))
         summary = episodes.summarize(layout, checkpoints.get(row.id))
-        found[row.id] = (layout["seasons"], summary["watched"] or 0, summary["total"])
+        # watched is None when the member's place can't be read against the episode list (a specials
+        # checkpoint, or a later season the list doesn't have). Such a show is never planned by episode,
+        # and its checkpoint is never written from here.
+        found[row.id] = (layout["seasons"], summary["watched"], summary["total"])
     return found
 
 
@@ -474,6 +502,8 @@ def candidate_for(category: str, row, facts: dict, group: str, episode_state=Non
         return Candidate(unit="whole", step=max(1.0, float(minutes)), done=0, total=1, target=1, guessed=guessed, **base)
     if category in ("tv-shows", "anime"):
         seasons, watched, total = episode_state or ([], 0, None)
+        if watched is None:
+            return None
         per_episode = time_spent.parse_minutes(facts.get("Episode length"))
         guessed = per_episode is None or total is None
         step = per_episode or (time_spent.TV_EPISODE_MINUTES if category == "tv-shows" else time_spent.ANIME_EPISODE_MINUTES)
@@ -523,8 +553,13 @@ def candidate_for(category: str, row, facts: dict, group: str, episode_state=Non
 
 
 def candidates(db: Session, user: models.User, plan: Optional[models.BreakPlan] = None, seed: str = "",
-               exclude: Iterable[tuple[str, int]] = (), games: bool = True) -> list[Candidate]:
-    """Everything the plan could hold, best first: part-way through, Up next, then saved titles in a mix."""
+               exclude: Iterable[tuple[str, int]] = (), games: bool = True,
+               first: Iterable[tuple[str, int]] = ()) -> list[Candidate]:
+    """Everything the plan could hold, best first: part-way through, Up next, then saved titles in a mix.
+
+    ``first`` are titles the member picked from a plan someone shared with them. They go ahead of
+    everything else, and like the Up next queue they don't have to finish over the break.
+    """
     refs = _refs(db, user)
     unfinished = {(category, item_id) for category, ids in refs.items() for item_id in ids}
     skip = set(exclude)
@@ -532,14 +567,28 @@ def candidates(db: Session, user: models.User, plan: Optional[models.BreakPlan] 
         skip |= set(left_out(plan))
     if not games:
         skip |= {ref for ref in unfinished if ref[0] == "video-games"}
+    visible = set(refs)
     started = _started(db, user.id)
-    started_refs = sorted((ref for ref in started if ref in unfinished and ref not in skip),
-                          key=lambda ref: started[ref], reverse=True)[:30]
-    queued = [ref for ref in _queue(db, user.id) if ref in unfinished and ref not in skip and ref not in started][:30]
-    taken = set(started_refs) | set(queued)
+    started_all = sorted((ref for ref in started if ref[0] in visible and ref not in skip
+                          and (games or ref[0] != "video-games")),
+                         key=lambda ref: started[ref], reverse=True)
+    queued_all = [ref for ref in _queue(db, user.id) if ref[0] in visible and ref not in skip and ref not in started
+                  and (games or ref[0] != "video-games")]
+    # The saved pool stops at POOL_PER_CATEGORY rows a format, so a big library's newer titles can fall outside
+    # it. What the member is part-way through or queued is checked on its own.
+    picked = [ref for ref in dict.fromkeys(first) if ref[0] in visible and ref not in skip
+              and (games or ref[0] != "video-games")][:MAX_PICKS]
+    unfinished |= _still_open(db, user.id, [ref for ref in started_all[:60] + queued_all[:60] + picked
+                                            if ref not in unfinished])
+    picked = [ref for ref in picked if ref in unfinished]
+    chosen = set(picked)
+    started_refs = [ref for ref in started_all if ref in unfinished and ref not in chosen][:30]
+    queued = [ref for ref in queued_all if ref in unfinished and ref not in chosen][:30]
+    taken = set(started_refs) | set(queued) | chosen
     saved_pool = [ref for ref in unfinished if ref not in skip and ref not in taken]
     saved = _mixed(saved_pool, f"{user.id}:{seed}")[:SAVED_LOOKED_AT]
-    ordered = [(ref, "started") for ref in started_refs] + [(ref, "queued") for ref in queued] + \
+    ordered = [(ref, "started" if ref in started else "queued") for ref in picked] + \
+              [(ref, "started") for ref in started_refs] + [(ref, "queued") for ref in queued] + \
               [(ref, "saved") for ref in saved]
     rows = _rows(db, user.id, [ref for ref, _ in ordered])
     facts = _facts(db, rows)
@@ -855,13 +904,14 @@ def _titles_waiting(db: Session, plan: models.BreakPlan) -> set[tuple[str, int]]
     return {(item.category, item.item_id) for item in items_of(db, plan) if item.done_at is None}
 
 
-def fill(db: Session, user: models.User, plan: models.BreakPlan, today: date, only: Optional[date] = None) -> int:
+def fill(db: Session, user: models.User, plan: models.BreakPlan, today: date, only: Optional[date] = None,
+         first: Iterable[tuple[str, int]] = ()) -> int:
     """Put titles into the free time from today on. Returns how many stretches went in. Doesn't commit."""
     days = _open_days(db, plan, today, only)
     if not days:
         return 0
     waiting = _titles_waiting(db, plan)
-    pool = candidates(db, user, plan, seed=f"{plan.id}:{plan.seed}", exclude=waiting, games=plan.games)
+    pool = candidates(db, user, plan, seed=f"{plan.id}:{plan.seed}", exclude=waiting, games=plan.games, first=first)
     titles_in = len(waiting)
     games_in = len({ref for ref in waiting if ref[0] == "video-games"})
     chunks = fill_days(days, pool, max_titles=max_titles_for(len(minutes_by_day(plan))), titles_in=titles_in,
@@ -905,7 +955,9 @@ def _clean_name(value: Optional[str], fallback: str) -> str:
 
 def create(db: Session, user: models.User, *, starts_on: date, ends_on: date, minutes: dict[str, int],
            today: date, tz_minutes: int = 0, name: Optional[str] = None, preset_key: Optional[str] = None,
-           games: bool = True, emails: bool = False) -> models.BreakPlan:
+           games: bool = True, emails: bool = False, picks: Iterable[tuple[str, int]] = ()) -> models.BreakPlan:
+    """A new plan, filled. ``picks`` are library titles to put in first (titles taken from a shared plan);
+    they count as put there by hand, so "Try another mix" leaves them where they are."""
     _check_dates(starts_on, ends_on, today)
     current = active(db, user.id, today)
     if current is not None and current.ends_on >= today:
@@ -929,7 +981,14 @@ def create(db: Session, user: models.User, *, starts_on: date, ends_on: date, mi
                             updated_at=now)
     db.add(plan)
     db.flush()
-    fill(db, user, plan, today)
+    picks = list(dict.fromkeys(picks))[:MAX_PICKS]
+    fill(db, user, plan, today, first=picks)
+    if picks:
+        wanted = set(picks)
+        db.flush()
+        for item in items_of(db, plan):
+            if (item.category, item.item_id) in wanted:
+                item.added = True
     db.commit()
     count("break_created")
     return plan
@@ -949,6 +1008,8 @@ def update(db: Session, user: models.User, plan: models.BreakPlan, today: date, 
             for item in items_of(db, plan):
                 if item.day > ends_on and item.done_at is None:
                     db.delete(item)
+                elif item.day > ends_on:
+                    item.day = ends_on  # ticked already: it stays on the board, on the new last day
         plan.ends_on = ends_on
         refill = True
     if minutes is not None:
@@ -1038,15 +1099,15 @@ def move(db: Session, plan: models.BreakPlan, item_id: int, day: date) -> None:
 
 def remove(db: Session, user: models.User, plan: models.BreakPlan, item_id: int, today: date,
            swap: bool = False) -> int:
-    """Take a title's stretches still to do off the plan. With ``swap`` it stays off and the time gets filled."""
+    """Take a title's stretches still to do off the plan. It stays off when free time is filled again (adding
+    it by hand brings it back). With ``swap`` the time it leaves gets filled straight away."""
     item = _item(db, plan, item_id)
     ref = (item.category, item.item_id)
     day = item.day
     for other in items_of(db, plan):
         if (other.category, other.item_id) == ref and other.done_at is None:
             db.delete(other)
-    if swap:
-        _leave_out(plan, ref)
+    _leave_out(plan, ref)
     plan.updated_at = _now()
     db.flush()
     added = fill(db, user, plan, max(today, day)) if swap else 0
@@ -1056,19 +1117,52 @@ def remove(db: Session, user: models.User, plan: models.BreakPlan, item_id: int,
     return added
 
 
-def addable(db: Session, user: models.User, plan: models.BreakPlan, limit: int = 200) -> list[dict]:
-    """Unfinished titles the member could put on the plan by hand, A to Z within each format."""
-    waiting = _titles_waiting(db, plan)
-    refs = [(category, item_id) for category, ids in _refs(db, user).items() for item_id in ids
-            if (category, item_id) not in waiting]
-    rows = _rows(db, user.id, refs[:1000])
+SEARCH_LIMIT = 40
+
+
+def _search_refs(db: Session, user: models.User, query: str) -> list[tuple[str, int]]:
+    """Unfinished titles whose name contains ``query`` (as typed, no wildcards), in every format shown."""
+    from sqlalchemy import func as sql
+    needle = " ".join(query.split()).lower()[:80]
     found = []
+    for category in _visible(user):
+        model = _model(category)
+        found += [(category, item_id) for (item_id,) in db.query(model.id).filter(
+            model.user_id == user.id, getattr(model, _done_field(category)) != True,  # noqa: E712
+            sql.lower(model.title).contains(needle, autoescape=True),
+        ).order_by(model.title, model.id).limit(SEARCH_LIMIT)]
+    return found
+
+
+def addable(db: Session, user: models.User, plan: models.BreakPlan, limit: int = 48,
+            query: Optional[str] = None) -> list[dict]:
+    """Unfinished titles the member could put on the plan by hand, A to Z within each format.
+
+    Without a search every format gets a share of ``limit`` (the panel shows that many), so a long film list
+    can't push the shows out; a search looks through the whole library."""
+    waiting = _titles_waiting(db, plan)
+    if query and query.strip():
+        refs = [ref for ref in _search_refs(db, user, query) if ref not in waiting]
+    else:
+        refs = [(category, item_id) for category, ids in _refs(db, user).items() for item_id in ids
+                if (category, item_id) not in waiting]
+    rows = _rows(db, user.id, refs[:1000])
+    by_format: dict[str, list[dict]] = {}
     for (category, item_id), row in rows.items():
         title = _clean_title(row.title)
         if title:
-            found.append({"category": category, "id": item_id, "title": title, "label": LABELS[category],
-                          "year": _year(category, row), "image": _image(category, row)})
-    found.sort(key=lambda entry: (CATEGORIES.index(entry["category"]), entry["title"].lower()))
+            by_format.setdefault(category, []).append({
+                "category": category, "id": item_id, "title": title, "label": LABELS[category],
+                "year": _year(category, row), "image": _image(category, row)})
+    for entries in by_format.values():
+        entries.sort(key=lambda entry: entry["title"].lower())
+    if query and query.strip():
+        found = [entry for category in CATEGORIES for entry in by_format.get(category, [])]
+        found.sort(key=lambda entry: (not entry["title"].lower().startswith(" ".join(query.split()).lower()),
+                                      CATEGORIES.index(entry["category"]), entry["title"].lower()))
+        return found[:SEARCH_LIMIT]
+    share = max(6, limit // max(1, len(by_format)))
+    found = [entry for category in CATEGORIES for entry in by_format.get(category, [])[:share]]
     return found[:limit]
 
 
@@ -1094,6 +1188,9 @@ def add(db: Session, user: models.User, plan: models.BreakPlan, category: str, i
     checkpoint = None
     if category in ("tv-shows", "anime"):
         episode_state = _episode_state(db, user.id, category, [row]).get(row.id)
+        if episode_state is not None and episode_state[1] is None:
+            raise BreakError("We don't have an episode list that shows where you are in that one, so it can't "
+                             "go on the plan by episode yet.", 409)
     else:
         checkpoint = _checkpoints(db, user.id, [(category, item_id)]).get((category, item_id))
     candidate = candidate_for(category, row, facts, "added", episode_state, checkpoint,
@@ -1130,8 +1227,19 @@ def _library_row(db: Session, user_id: int, category: str, item_id: int):
     return db.query(model).filter(model.id == item_id, model.user_id == user_id).first()
 
 
+def _place(entry) -> Optional[dict]:
+    """The checkpoint's content, or None when there is none (never set, or cleared)."""
+    if entry is None or entry.unit is None:
+        return None
+    return {"unit": entry.unit, "position": entry.position, "season": entry.season}
+
+
 def _move_checkpoint(db: Session, user: models.User, item: models.BreakPlanItem) -> bool:
-    """Move the library checkpoint forward to the end of this stretch. Never back. Commits when it writes."""
+    """Move the library checkpoint forward to the end of this stretch. Never back, and never when the member's
+    place can't be read (a specials checkpoint, a season the episode list doesn't have, another unit).
+
+    Commits when it writes, and keeps what the checkpoint was in ``item.undo_progress`` so unticking can put
+    it back while nobody has changed it since."""
     from fastapi import HTTPException
     from . import episodes
     from .progress import _write_progress
@@ -1139,12 +1247,15 @@ def _move_checkpoint(db: Session, user: models.User, item: models.BreakPlanItem)
                                                          item_id=item.item_id).first()
     revision = entry.revision if entry is not None else 0
     note = entry.note if entry is not None and entry.unit is not None else None
+    before = _place(entry)
     if item.unit == "episode":
+        if entry is not None and entry.unit is not None and entry.unit != "episode":
+            return False
         row = _library_row(db, user.id, item.category, item.item_id)
         if row is None:
             return False
         seasons, watched, _total = _episode_state(db, user.id, item.category, [row]).get(row.id, ([], 0, None))
-        if (watched or 0) >= item.last:
+        if watched is None or watched >= item.last:
             return False
         numbered = [season for season in seasons if season.get("number") is not None]
         season, position = None, item.last
@@ -1163,11 +1274,89 @@ def _move_checkpoint(db: Session, user: models.User, item: models.BreakPlanItem)
     else:
         return False
     try:
-        _write_progress(db, user.id, item.category, item.item_id, revision, values)
+        written = _write_progress(db, user.id, item.category, item.item_id, revision, values)
+    except HTTPException:
+        db.rollback()
+        return False
+    item.undo_progress = json.dumps({"before": before, "revision": written["revision"]})
+    db.commit()
+    return True
+
+
+def _put_back(db: Session, user: models.User, item: models.BreakPlanItem) -> bool:
+    """Undo this stretch's own checkpoint write, only if the checkpoint is still exactly what the tick left."""
+    from fastapi import HTTPException
+    from .progress import _write_progress
+    try:
+        saved = json.loads(item.undo_progress or "null")
+    except ValueError:
+        saved = None
+    if not isinstance(saved, dict) or not isinstance(saved.get("revision"), int):
+        return False
+    entry = db.query(models.ProgressCheckpoint).filter_by(user_id=user.id, category=item.category,
+                                                         item_id=item.item_id).first()
+    if entry is None or entry.revision != saved["revision"]:
+        return False
+    before = saved.get("before")
+    if isinstance(before, dict) and before.get("unit") in ("episode", "page", "chapter") \
+            and isinstance(before.get("position"), int):
+        values = {"unit": before["unit"], "position": before["position"],
+                  "season": before.get("season") if isinstance(before.get("season"), int) else None,
+                  "note": entry.note if entry.unit is not None else None}
+    else:
+        values = {"unit": None, "position": None, "season": None, "note": None}
+    try:
+        _write_progress(db, user.id, item.category, item.item_id, saved["revision"], values)
     except HTTPException:
         db.rollback()
         return False
     return True
+
+
+def _library_past(db: Session, user: models.User, item: models.BreakPlanItem) -> bool:
+    """The library already has the member at or beyond the end of this stretch (so the plan ticks it)."""
+    if item.unit == "episode":
+        row = _library_row(db, user.id, item.category, item.item_id)
+        if row is None:
+            return False
+        _seasons, watched, _total = _episode_state(db, user.id, item.category, [row]).get(row.id, ([], 0, None))
+        return (watched or 0) >= item.last
+    if item.unit in ("page", "chapter"):
+        entry = db.query(models.ProgressCheckpoint).filter_by(user_id=user.id, category=item.category,
+                                                             item_id=item.item_id).first()
+        return entry is not None and entry.unit == item.unit and (entry.position or 0) >= item.last
+    return False
+
+
+def _ending(db: Session, user: models.User, item: models.BreakPlanItem, row) -> tuple[bool, bool]:
+    """(this stretch ends the title, and we know that rather than guess it).
+
+    The plan was made from the lengths known then. A show may have gained a season since, and a book's page
+    count may have been looked up; a length that is still a guess never finishes a title on its own."""
+    from . import time_spent
+    ref = (item.category, item.item_id)
+    if item.unit == "whole":
+        return True, True
+    if item.unit == "episode":
+        _seasons, _watched, total = _episode_state(db, user.id, item.category, [row]).get(row.id, ([], 0, None))
+        if total is None:
+            total = time_spent.parse_count(_facts(db, {ref: row}).get(ref, {}).get("Episodes"))
+        if total is None:
+            return item.last >= item.total, False
+        total = max(1, min(int(total), time_spent.MAX_COUNT))
+        if total > item.total:
+            item.total = total
+        return item.last >= total, True
+    if item.unit == "page":
+        pages = time_spent.parse_count(_facts(db, {ref: row}).get(ref, {}).get("Pages"))
+        if pages is not None:
+            if pages > item.total:
+                item.total = pages
+            return item.last >= pages, True
+        return item.last >= item.total, not item.guessed
+    if item.unit == "chapter":
+        return item.last >= item.total, not item.guessed
+    return item.last >= item.total, False
 
 
 def _finish_title(db: Session, user: models.User, plan: models.BreakPlan, ref: tuple[str, int],
@@ -1183,7 +1372,8 @@ def _finish_title(db: Session, user: models.User, plan: models.BreakPlan, ref: t
 
 
 def tick(db: Session, user: models.User, plan: models.BreakPlan, item_id: int, now: Optional[datetime] = None) -> dict:
-    """Tick one stretch. The last stretch of a title finishes it in the library."""
+    """Tick one stretch. The last stretch of a title finishes it in the library when its length is known;
+    when the length is a guess (or it's a game, an audiobook or a book counted in hours) it asks instead."""
     now = now or _now()
     item = _item(db, plan, item_id)
     if item.done_at is not None:
@@ -1197,8 +1387,8 @@ def tick(db: Session, user: models.User, plan: models.BreakPlan, item_id: int, n
     item.done_at = now
     plan.updated_at = now
     result = {"finished": False, "ask_finish": False}
-    last = item.last >= item.total
-    if item.unit == "whole" or (last and item.unit in ("episode", "page", "chapter")):
+    last, known = _ending(db, user, item, row)
+    if last and known:
         if getattr(row, _done_field(item.category), False):
             item.finished_title = True
             db.commit()
@@ -1206,22 +1396,29 @@ def tick(db: Session, user: models.User, plan: models.BreakPlan, item_id: int, n
             _finish_title(db, user, plan, ref, now, ticked=item)
             count("break_finished")
         result["finished"] = True
-    elif item.unit in ("episode", "page", "chapter"):
-        db.flush()
-        if not _move_checkpoint(db, user, item):
-            db.commit()
     else:
-        db.commit()
+        db.commit()  # the tick stands even if the library can't take the new place
+        if not last and item.unit in ("episode", "page", "chapter"):
+            _move_checkpoint(db, user, item)
         result["ask_finish"] = last
     count("break_ticked")
     return result
 
 
-def untick(db: Session, plan: models.BreakPlan, item_id: int) -> None:
+def untick(db: Session, user: models.User, plan: models.BreakPlan, item_id: int) -> None:
+    """Untick a stretch. The library's place goes back only when this tick put it there and nothing has
+    changed it since; a title finished in the library, or a place logged past this stretch, keeps it ticked."""
     item = _item(db, plan, item_id)
-    if item.finished_title:
+    if item.done_at is None:
+        return
+    row = _library_row(db, user.id, item.category, item.item_id)
+    if item.finished_title or (row is not None and getattr(row, _done_field(item.category), False)):
         raise BreakError("That one is marked finished in your library. Change it there if you need to.", 409)
+    if item.unit in ("episode", "page", "chapter") and not _put_back(db, user, item) and _library_past(db, user, item):
+        raise BreakError("Your library already has you past this part, so it stays ticked. Change your place "
+                         "there if you need to.", 409)
     item.done_at = None
+    item.undo_progress = None
     plan.updated_at = _now()
     db.commit()
 
@@ -1316,6 +1513,10 @@ def _item_view(item: models.BreakPlanItem, finished: set[tuple[str, int]], ratin
         "minutes": item.minutes, "length": length_words(item.minutes, item.guessed), "unit": item.unit,
         "first": item.first, "last": item.last, "total": item.total, "last_part": item.last >= item.total,
         "done": item.done_at is not None, "finished_title": item.finished_title or ref in finished,
+        # Its last part is ticked but the title isn't finished in the library: a game, an audiobook, or a
+        # length we guessed. The plan offers "Mark it finished" instead of finishing it on its own.
+        "confirm_finish": (item.done_at is not None and item.last >= item.total and item.unit != "whole"
+                           and not (item.finished_title or ref in finished)),
         "added": item.added, "rating": ratings.get(ref),
         "url": title_pages.title_path(kind, item.title, item.year) if kind else None,
     }
@@ -1382,6 +1583,10 @@ def view(db: Session, user: models.User, plan: models.BreakPlan, today: date, no
         "games": plan.games, "emails": plan.emails,
         "email_offer": bool(user.email and user.is_verified),
         "share": f"{app_url()}{share_path(plan)}" if plan.share_token else None,
+        "share_opened": int(plan.share_opened or 0) if plan.share_token else 0,
+        "share_story": f"{share_path(plan)}/story.png" if plan.share_token else None,
+        "share_card": f"{share_path(plan)}/card.png" if plan.share_token else None,
+        "share_until": (plan.ends_on + timedelta(days=SHARE_KEEP_DAYS)).isoformat(),
         "days": days, "totals": totals, "finished": finished_list,
         "budget_minutes": sum(budgets.values()), "choices": list(DAY_CHOICES),
         "max_days": MAX_DAYS,
@@ -1465,6 +1670,7 @@ def share_path(plan: models.BreakPlan) -> str:
 def share_on(db: Session, plan: models.BreakPlan) -> str:
     if not plan.share_token:
         plan.share_token = secrets.token_urlsafe(16)
+        plan.share_opened = 0
         db.commit()
         count("break_shared")
     return share_path(plan)
@@ -1475,12 +1681,21 @@ def share_off(db: Session, plan: models.BreakPlan) -> None:
     db.commit()
 
 
-def by_token(db: Session, token: str) -> Optional[models.BreakPlan]:
-    if not token or len(token) > 40:
+def valid_token(token) -> bool:
+    return isinstance(token, str) and SHARE_TOKEN.fullmatch(token) is not None
+
+
+def share_ended(plan: models.BreakPlan, today: date) -> bool:
+    """A link stops working a month after the break, so an old plan doesn't stay out there for good."""
+    return plan.ends_on < today - timedelta(days=SHARE_KEEP_DAYS)
+
+
+def by_token(db: Session, token: str, today: Optional[date] = None) -> Optional[models.BreakPlan]:
+    if not valid_token(token):
         return None
     plan = db.query(models.BreakPlan).filter(models.BreakPlan.share_token == token,
                                              models.BreakPlan.status == "active").first()
-    if plan is None:
+    if plan is None or share_ended(plan, today or _now().date()):
         return None
     owner = db.get(models.User, plan.user_id)
     if owner is None or not owner.is_active:
@@ -1488,42 +1703,143 @@ def by_token(db: Session, token: str) -> Optional[models.BreakPlan]:
     return plan
 
 
+def count_open(db: Session, plan: models.BreakPlan) -> None:
+    try:
+        db.query(models.BreakPlan).filter(models.BreakPlan.id == plan.id).update(
+            {models.BreakPlan.share_opened: models.BreakPlan.share_opened + 1}, synchronize_session=False)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _month_day(day: date) -> str:
+    return f"{day.strftime('%b')} {day.day}"
+
+
+def _weekday_span(days: list[date], long_break: bool) -> str:
+    """When a title is on the plan: "Thursday", "Fri to Sun", "Dec 26 to 28", "3 days"."""
+    days = sorted(set(days))
+    if not days:
+        return ""
+    if len(days) == 1:
+        return _month_day(days[0]) if long_break else days[0].strftime("%A")
+    contiguous = (days[-1] - days[0]).days == len(days) - 1
+    if not contiguous:
+        return f"{len(days)} days"
+    if long_break:
+        if days[0].month == days[-1].month:
+            return f"{_month_day(days[0])} to {days[-1].day}"
+        return f"{_month_day(days[0])} to {_month_day(days[-1])}"
+    return f"{days[0].strftime('%a')} to {days[-1].strftime('%a')}"
+
+
 def shared_view(db: Session, plan: models.BreakPlan, today: date) -> dict:
-    """What a share link shows: titles from the shelves the member shares publicly, ticks, and totals."""
-    from .ranking_shares import _shareable
+    """What a share link shows: titles from the shelves the member shares publicly, ticks, and totals.
+
+    Never the member's scores, notes, library ids or the time they set aside each day. Their name only
+    shows when they already have a public profile (the same rule as the other share links).
+    """
+    from . import tier_list, title_pages
+    from .ranking_shares import _credit, _shareable
     owner = db.get(models.User, plan.user_id)
     items = items_of(db, plan)
     allowed = {category for category in CATEGORIES if _shareable(owner, category)}
-    shown = [item for item in items if item.category in allowed]
+    # Titles are copied onto the plan, so one taken out of the library would stay on the link until the
+    # member next opened the plan. Only titles still in the library are shown.
+    kept = set(_rows(db, owner.id, list({(item.category, item.item_id) for item in items if item.category in allowed})))
+    shown = [item for item in items if item.category in allowed and (item.category, item.item_id) in kept]
     hidden_titles = {(item.category, item.item_id) for item in items if item.category not in allowed}
     budgets = minutes_by_day(plan)
+    long_break = len(budgets) > 7
+    titles: dict[tuple[str, int], dict] = {}
+    for item in shown:
+        ref = (item.category, item.item_id)
+        entry = titles.get(ref)
+        if entry is None:
+            kind = title_pages.LIBRARY_TO_KIND[item.category]
+            path = title_pages.title_path(kind, item.title, item.year)
+            image = title_pages._safe_image(item.image)
+            # A cover can be any address the member typed in, and visitors' browsers load it, so only the poster
+            # hosts the tier list image proxy allows show (no tracking pixels, nothing on a home network).
+            if image and not (image.startswith("https://") and tier_list.image_allowed(image)):
+                image = None
+            entry = titles[ref] = {
+                "index": len(titles), "kind": kind, "slug": path.rsplit("/", 1)[-1], "url": path,
+                "title": item.title, "year": item.year, "category": item.category,
+                "kind_label": LABELS.get(item.category, ""),
+                "image": image,
+                "stretches": 0, "done": 0, "finished": False, "_days": [],
+            }
+        entry["stretches"] += 1
+        entry["done"] += item.done_at is not None
+        entry["finished"] = entry["finished"] or bool(item.finished_title and item.done_at is not None)
+        entry["_days"].append(item.day)
+    for entry in titles.values():
+        entry["when"] = _weekday_span(entry.pop("_days"), long_break)
+        entry["all_done"] = entry["done"] == entry["stretches"]
     days = []
+    seen: set[tuple[str, int]] = set()
     for day in budgets:
         entries = []
         for item in shown:
             if item.day != day:
                 continue
-            entries.append({"title": item.title, "year": item.year, "image": item.image, "label": item.label,
+            ref = (item.category, item.item_id)
+            entries.append({"title": item.title, "year": item.year, "image": titles[ref]["image"], "label": item.label,
                             "kind_label": LABELS.get(item.category, ""), "category": item.category,
                             "length": length_words(item.minutes, item.guessed), "unit": item.unit,
-                            "done": item.done_at is not None,
-                            "finished_title": item.finished_title})
-        days.append({"day": day.isoformat(), "label": _day_label(day), "items": entries})
+                            "done": item.done_at is not None, "finished_title": item.finished_title,
+                            "index": titles[ref]["index"], "first": ref not in seen})
+            seen.add(ref)
+        days.append({"day": day.isoformat(), "label": _day_label(day), "items": entries,
+                     "weekday": day.strftime("%a").upper(), "date": _month_day(day),
+                     "today": day == today})
     totals = summary(shown, set())
-    return {"owner": owner.username, "name": plan.name, "span": span_label(plan.starts_on, plan.ends_on),
-            "phase": phase(plan, today), "days": days, "totals": totals, "private_titles": len(hidden_titles),
-            "day_count": len(budgets)}
+    credit = _credit(db, owner)
+    state = phase(plan, today)
+    return {"plan_id": plan.id, "owner_id": owner.id, "token": plan.share_token, "path": share_path(plan),
+            "by": credit[0] if credit else None, "profile": credit[1] if credit else None,
+            "name": plan.name, "span": span_label(plan.starts_on, plan.ends_on),
+            "starts_on": plan.starts_on.isoformat(), "ends_on": plan.ends_on.isoformat(),
+            "phase": state, "day_number": (today - plan.starts_on).days + 1 if state == "during" else None,
+            "days": days, "titles": list(titles.values()), "totals": totals,
+            "private_titles": len(hidden_titles), "day_count": len(budgets), "opened": int(plan.share_opened or 0)}
 
 
 def card_facts(db: Session, plan: models.BreakPlan, today: date) -> dict:
+    """Everything the two pictures draw, so their fingerprint changes when the picture would."""
     view_ = shared_view(db, plan, today)
-    return {"owner": view_["owner"], "name": view_["name"], "span": view_["span"], "phase": view_["phase"],
+    return {"by": view_["by"], "name": view_["name"], "span": view_["span"], "phase": view_["phase"],
+            "day_number": view_["day_number"], "day_count": view_["day_count"],
             "titles": view_["totals"]["titles"], "hours": view_["totals"]["hours"],
             "finished": view_["totals"]["finished"], "done": view_["totals"]["done"],
             "stretches": view_["totals"]["stretches"],
-            "days": [len(day["items"]) for day in view_["days"]],
+            "days": [[entry["index"] for entry in day["items"]] for day in view_["days"]],
             "done_days": [sum(1 for entry in day["items"] if entry["done"]) for day in view_["days"]],
-            "first_titles": [entry["title"] for day in view_["days"] for entry in day["items"]][:3]}
+            "day_labels": [[day["weekday"], day["date"]] for day in view_["days"]],
+            "shown": [[entry["title"], entry["image"] or "", entry["when"], entry["all_done"], entry["finished"],
+                       entry["category"]] for entry in view_["titles"][:24]]}
+
+
+def same_days(plan: models.BreakPlan, today: date) -> Optional[dict]:
+    """The days of a shared plan as a new plan would take them (from today on), or None once they're past.
+
+    Only the dates carry over. The time on each day starts from the planner's own defaults, so a
+    friend's plan never shows how much time its owner set aside.
+    """
+    if plan.ends_on < today:
+        return None
+    start = max(plan.starts_on, today)
+    if (start - today).days > START_WITHIN_DAYS:
+        return None
+    key, light, name = None, [], None
+    if plan.preset:
+        chosen = preset(plan.preset, today)
+        if chosen and chosen["starts_on"] == start and chosen["ends_on"] == plan.ends_on:
+            key, light, name = chosen["key"], chosen["light"], chosen["name"]
+    return {"starts_on": start.isoformat(), "ends_on": plan.ends_on.isoformat(), "preset": key, "name": name,
+            "light": [day.isoformat() for day in light], "span": span_label(start, plan.ends_on),
+            "day_count": (plan.ends_on - start).days + 1}
 
 
 # ---------------------------------------------------------------- the calendar
