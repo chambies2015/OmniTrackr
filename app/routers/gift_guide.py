@@ -274,7 +274,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     ]
     parts.extend(_section_html(section, pages, owned, signed_in) for section in sections)
     parts.extend([
-        friend_tools.callout_html("gifts", signed_in),
+        friend_tools.callout_html("gifts", signed_in, today),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',

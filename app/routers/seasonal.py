@@ -265,7 +265,7 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
         f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
-        friend_tools.callout_html(slug, signed_in),
+        friend_tools.callout_html(slug, signed_in, today),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
@@ -396,7 +396,7 @@ def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, to
         _guest_bar(signed_in),
         f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
         f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
-        friend_tools.callout_html(slug, signed_in),
+        friend_tools.callout_html(slug, signed_in, today),
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _companion_related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
