@@ -46,7 +46,7 @@ def test_review_directory_and_feed_carry_the_badge(client, db_session):
     db_session.commit()
     assert '<a class="supporter-chip" href="/supporters"' in client.get("/reviews").text
     feed = {r["username"]: r["supporter"] for r in client.get("/api/public/review-feed").json()["reviews"]}
-    assert feed == {"fan": {"accent": None, "since": "October 2026", "founding": True}, "plain": None}
+    assert feed == {"fan": {"accent": None, "since": "October 2026", "founding": True, "number": None}, "plain": None}
 
 
 def test_review_page_shows_the_badge_in_the_byline(client, db_session):

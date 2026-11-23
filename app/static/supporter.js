@@ -42,12 +42,17 @@
     return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
   }
 
+  function numberText(number) {
+    return Number.isInteger(number) && number > 0 ? `#${number}` : '';
+  }
+
   function statusText(status) {
     if (status.active) {
       const since = monthYear(status.since);
       const until = longDate(status.active_until);
       const who = status.founding ? 'Thank you for being a founding supporter of OmniTrackr' : 'Thank you for supporting OmniTrackr';
-      const head = `${who}${since ? ` since ${since}` : ''}!`;
+      const number = numberText(status.number);
+      const head = `${who}${since ? ` since ${since}` : ''}!${number ? ` You're supporter ${number}.` : ''}`;
       if (status.member && status.tier_name) return `${head} You're a ${status.tier_name} member, so your perks renew with your Ko-fi membership.`;
       if (status.monthly) return `${head} Your perks renew with your Ko-fi membership.`;
       return `${head}${until ? ` Your perks are on until ${until}.` : ''}`;
@@ -593,7 +598,8 @@
     const title = document.createElement('strong');
     title.textContent = status.founding ? '★ You\'re a founding supporter!' : '♥ Your supporter perks are on!';
     const text = document.createElement('p');
-    text.textContent = 'Thank you for keeping OmniTrackr running. Pick a color theme for your app, a banner and frame for your profile, and choose whether to join the supporter wall.';
+    const number = numberText(status.number);
+    text.textContent = `${number ? `You're supporter ${number}, and that number stays on your badge. ` : ''}Thank you for keeping OmniTrackr running. Pick a color theme for your app, a banner and frame for your profile, and choose whether to join the supporter wall.`;
     const actions = document.createElement('div');
     actions.className = 'supporter-welcome__actions';
     const pick = document.createElement('button');

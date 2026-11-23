@@ -1,5 +1,6 @@
-// Guide pages: a thin reading-progress line under the header, and the contents
-// rail marks the section you are reading. Both are extras; the page works without them.
+// Guide pages: a thin reading-progress line under the header, the contents rail marks the
+// section you are reading, and the Ko-fi button in the closing note is counted. All extras;
+// the page works without them.
 (() => {
   const article = document.querySelector('.trail-guide');
   const body = article && article.querySelector('.guide-body');
@@ -26,6 +27,17 @@
   window.addEventListener('resize', queue);
   // Measure in the next frame, after the browser's own first layout, not in a forced one while the page loads.
   queue();
+
+  // The Ko-fi button in the note at the end: an anonymous daily count of presses, nothing about the reader.
+  article.querySelectorAll('[data-guide-kofi]').forEach(link => {
+    link.addEventListener('click', () => {
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/support/event', new Blob([JSON.stringify({ event: 'page_kofi', place: 'guide' })], { type: 'application/json' }));
+        }
+      } catch (error) { /* counting is optional */ }
+    });
+  });
 
   const links = Array.from(article.querySelectorAll('.guide-toc a[href^="#"]'));
   if (!links.length || !('IntersectionObserver' in window)) return;

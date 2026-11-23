@@ -1111,6 +1111,10 @@ class Supporter(Base):
     # Both NULL by default, so nothing changes until a supporter picks one.
     app_theme = Column(String(24), nullable=True)
     avatar_frame = Column(String(24), nullable=True)
+    # Nov 23 2026: the supporter's number, in the order members first supported (#1 is the first).
+    # Given once when the row is made and never changed, so a badge's number stays put. NULL only
+    # until the startup migration numbers older rows.
+    number = Column(Integer, nullable=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

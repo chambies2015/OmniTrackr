@@ -9,7 +9,9 @@ shared shape into a magazine page without each router having to know about it:
 * the guide stylesheet, the serif used for reading and a small script go into <head>,
 * the byline gets a reading time worked out from the article's own text,
 * everything after the header goes into a body column, with a rail beside it that
-  repeats the page's contents links and says when the guide was last checked.
+  repeats the page's contents links and says when the guide was last checked,
+* the body ends with a short note on who writes the guides and how to chip in on Ko-fi
+  (Nov 23 2026), the only support ask a reader who never signs up will see.
 
 The header's own links stay where they are: they are the contents on phones, and
 the stylesheet hides them on wide screens where the rail shows the same list.
@@ -22,8 +24,8 @@ import re
 from html import escape, unescape
 from urllib.parse import urlsplit
 
-CSS_VERSION = "20261122-trust-1"
-JS_VERSION = "20261120-a11y-1"
+CSS_VERSION = "20261123-support-1"
+JS_VERSION = "20261123-support-1"
 SERIF_FONT = "/static/fonts/source-serif-4-latin-var-normal.woff2"
 MARKER = "data-guide-layout"
 WORDS_PER_MINUTE = 230
@@ -79,6 +81,26 @@ def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = ""
         '<p><a href="/content-quality">How we write guides</a></p>'
         '<p><a href="/corrections#send">Send a correction</a></p>'
         f'<p><a href="/corrections">Corrections log</a></p></div>{library}</div></aside>'
+    )
+
+
+def _support_note() -> str:
+    """The end-of-guide note. Plain HTML, the same for everyone, so it can be cached with the page."""
+    from . import supporters  # avoids loading the supporter code for every page that skips this layout
+    kofi = escape(supporters.KOFI_URL, quote=True)
+    founding = ('<p class="guide-support__founding"><span aria-hidden="true">★</span> Anyone who supports before 2027 '
+                'stays a founding supporter for good.</p>') if supporters.founding_open() else ""
+    return (
+        '<aside class="guide-support" aria-labelledby="guide-support-title">'
+        '<p class="guide-rail__label">Free to read</p>'
+        '<h2 id="guide-support-title">Liked this guide?</h2>'
+        '<p>One person writes and checks every guide on OmniTrackr, and nobody pays to be in them. If this one saved '
+        'you some digging, a $3 coffee on Ko-fi helps pay for the servers that keep the guides and the tracker free.</p>'
+        f'{founding}'
+        f'<p class="guide-support__actions"><a class="site-btn site-btn--primary site-btn--sm" href="{kofi}" '
+        'data-guide-kofi target="_blank" rel="noopener noreferrer">Buy a coffee on Ko-fi ↗</a>'
+        '<a href="/supporters?from=guide">What supporters get</a></p>'
+        '</aside>'
     )
 
 
@@ -174,7 +196,11 @@ def add_reading_layout(html: str) -> str:
         library = _library(html)
     except Exception:
         library = ""
-    layout = (f'{header}<div class="guide-columns" {MARKER}><div class="guide-body">{body}</div>'
+    try:
+        support = _support_note()
+    except Exception:
+        support = ""
+    layout = (f'{header}<div class="guide-columns" {MARKER}><div class="guide-body">{body}{support}</div>'
               f'{_rail(_contents(header), minutes, checked, library)}</div>')
     html = html[:inner_start] + layout + html[close_start:]
     return html.replace("</head>", _head_tags(html) + "</head>", 1)

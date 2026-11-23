@@ -139,9 +139,12 @@ def _supporter_html(view) -> str:
         return ""
     since = view.supporter.get("since")
     founding = bool(view.supporter.get("founding"))
+    number = view.supporter.get("number")
     who = "Founding supporter of OmniTrackr" if founding else "Supporting OmniTrackr"
-    title = f"{who} on Ko-fi since {since:%B} {since.year}" if since else "Supports OmniTrackr on Ko-fi"
-    label = supporters.level_label(founding, int(view.supporter.get("months") or 0))
+    if supporters.number_text(number):
+        who = f'{"Founding supporter" if founding else "Supporter"} {supporters.number_text(number)} of OmniTrackr'
+    title = f"{who} on Ko-fi since {since:%B} {since.year}" if since else f"{who} on Ko-fi"
+    label = supporters.level_label(founding, int(view.supporter.get("months") or 0), number)
     classes = "profile-supporter profile-supporter--founding" if founding else "profile-supporter"
     badge = (f'<a class="{classes}" href="/supporters" title="{_e(title)}">'
              f'<span aria-hidden="true">{"★" if founding else "♥"}</span> {_e(label)}</a>')
@@ -891,7 +894,7 @@ def render_card(view) -> bytes:
     draw.text((252, 248), since, font=sub, fill=(167, 160, 199))
     if supporter:
         founding = bool(supporter.get("founding"))
-        label = supporters.level_label(founding, int(supporter.get("months") or 0))
+        label = supporters.level_label(founding, int(supporter.get("months") or 0), supporter.get("number"))
         pill_font = _font(24, bold=True)
         pill_rgb = (234, 179, 8) if founding else glow_rgb
         text_width = draw.textlength(label, font=pill_font)

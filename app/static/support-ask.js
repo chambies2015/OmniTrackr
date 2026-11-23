@@ -53,6 +53,7 @@
       return;
     }
     card.classList.toggle('support-ask--ended', ask.moment === 'ended');
+    card.classList.toggle('support-ask--founding', ask.moment === 'founding');
     card.classList.remove('is-thanked');
     setText('supportAskEyebrow', ask.eyebrow);
     setText('supportAskTitle', ask.title);

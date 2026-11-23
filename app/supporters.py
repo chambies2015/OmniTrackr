@@ -40,6 +40,10 @@ Supporter levels are counted, never stored: anyone whose support started
 before ``FOUNDING_BEFORE`` is a founding supporter, and "months supported" is
 the number of perk payments linked to the member. Founding supporters and
 anyone past ``GOLD_MONTHS`` unlock the gold accent.
+
+Supporter numbers (Nov 23 2026) are the exception: each new supporter row gets
+the next number (#1, #2, ...) once, and it is stored so a late-linked payment
+with an earlier date can't renumber anyone. The number shows on the badge.
 """
 from __future__ import annotations
 
@@ -305,6 +309,41 @@ def is_founding(supporter: Optional[models.Supporter]) -> bool:
     return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE)
 
 
+def founding_open(now: Optional[datetime] = None) -> bool:
+    return (now or _now()) < FOUNDING_BEFORE
+
+
+def founding_days_left(now: Optional[datetime] = None) -> int:
+    """Calendar days left to become a founding supporter, counting today (1 on December 31, 0 after)."""
+    now = now or _now()
+    if not founding_open(now):
+        return 0
+    return (FOUNDING_BEFORE.date() - now.date()).days
+
+
+def founding_deadline(now: Optional[datetime] = None) -> Optional[str]:
+    """One plain sentence about when founding supporter closes, or None once it has."""
+    days = founding_days_left(now)
+    if days <= 0:
+        return None
+    last_day = f"{FOUNDING_BEFORE - timedelta(days=1):%B} {(FOUNDING_BEFORE - timedelta(days=1)).day}"
+    if days == 1:
+        return f"Today, {last_day}, is the last day to become a founding supporter."
+    if days <= 31:
+        return f"{days} days left to become a founding supporter. It closes on {last_day}."
+    return f"Founding supporter is open until {last_day}, {(FOUNDING_BEFORE - timedelta(days=1)).year}."
+
+
+def next_number(db: Session) -> int:
+    """The number the next new supporter will get. Rows the startup migration hasn't numbered yet still count."""
+    top, total = db.query(func.max(models.Supporter.number), func.count(models.Supporter.id)).one()
+    return max(int(top or 0), int(total or 0)) + 1
+
+
+def number_text(number) -> str:
+    return f"#{int(number)}" if isinstance(number, int) and number > 0 else ""
+
+
 def months_supported(db: Session, user_id: int) -> int:
     """How many perk payments (a month of membership or a one-time tip each) this member has made."""
     return int(db.query(func.count(models.KofiPayment.id))
@@ -318,9 +357,11 @@ def unlocked_accents(supporter: Optional[models.Supporter], months: int) -> tupl
     return BASE_ACCENTS
 
 
-def level_label(founding: bool, months: int) -> str:
-    """The badge text: "Founding supporter", or "Supporter" with the months once there are a few."""
+def level_label(founding: bool, months: int, number: Optional[int] = None) -> str:
+    """The badge text: "Founding supporter #1", or "Supporter #12" with the months once there are a few."""
     label = "Founding supporter" if founding else "Supporter"
+    if number_text(number):
+        label = f"{label} {number_text(number)}"
     return f"{label} · {months} months" if months >= 2 else label
 
 
@@ -342,6 +383,7 @@ def public_badge(db: Session, user_id: int, supporter=_UNREAD) -> Optional[dict]
     moving = bool(supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
             "banner": banner, "founding": is_founding(supporter), "months": months_supported(db, user_id),
+            "number": supporter.number,
             "tier": tier["name"] if tier else None,
             "motion": bool(banner and moving),
             "frame": frame, "frame_motion": bool(frame and moving)}
@@ -357,7 +399,7 @@ def public_badges(db: Session, user_ids) -> dict:
                     models.Supporter.show_badge.is_(True)).all())
     return {row.user_id: {"accent": row.accent if row.accent in ACCENTS else None,
                           "since": f"{row.since:%B} {row.since.year}" if row.since else None,
-                          "founding": is_founding(row)} for row in rows}
+                          "founding": is_founding(row), "number": row.number} for row in rows}
 
 
 def chip_html(badge: Optional[dict]) -> str:
@@ -365,8 +407,12 @@ def chip_html(badge: Optional[dict]) -> str:
     if not badge:
         return ""
     since = badge.get("since")
-    who = "Founding supporter of OmniTrackr" if badge.get("founding") else "Supporting OmniTrackr"
-    title = f"{who} on Ko-fi since {since}" if since else "Supports OmniTrackr on Ko-fi"
+    number = number_text(badge.get("number"))
+    if badge.get("founding"):
+        who = f"Founding supporter {number} of OmniTrackr" if number else "Founding supporter of OmniTrackr"
+    else:
+        who = f"Supporter {number} of OmniTrackr" if number else "Supporting OmniTrackr"
+    title = f"{who} on Ko-fi since {since}" if since else f"{who} on Ko-fi"
     accent = badge.get("accent")
     accent_class = f" supporter-chip--{accent}" if accent in ACCENTS else ""
     return (f'<a class="supporter-chip{accent_class}" href="/supporters" title="{html.escape(title)}">'
@@ -382,7 +428,8 @@ def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Sup
     start_at = now if now - paid_at > LATE_LINK else paid_at
     days = MONTHLY_DAYS if payment.monthly else DONATION_DAYS
     if supporter is None:
-        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=start_at, show_badge=True)
+        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=start_at, show_badge=True,
+                                     number=next_number(db))
         db.add(supporter)
     start = max(supporter.active_until or start_at, start_at)
     supporter.active_until = start + timedelta(days=days)
@@ -581,7 +628,8 @@ def status_payload(db: Session, user) -> dict:
         "active": active,
         "founding": founding,
         "months": months,
-        "level": level_label(founding, months) if supporter else None,
+        "level": level_label(founding, months, supporter.number) if supporter else None,
+        "number": supporter.number if supporter else None,
         "on_wall": bool(supporter and supporter.on_wall),
         "unlocked_accents": list(unlocked_accents(supporter, months)) if active else [],
         "gold_months": GOLD_MONTHS,
@@ -693,7 +741,7 @@ def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
         tier = member_tier(supporter, now)
         entries.append({
             "name": user.username, "path": paths.get(user.id), "active": active,
-            "founding": is_founding(supporter), "since": supporter.since,
+            "founding": is_founding(supporter), "since": supporter.since, "number": supporter.number,
             "accent": supporter.accent if active and supporter.accent in ACCENTS else None,
             "tier": tier["name"] if tier else None, "credits": bool(tier and tier["rank"] >= CREDITS_RANK),
         })
