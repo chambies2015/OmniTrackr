@@ -1504,6 +1504,26 @@ for route in gift_guide_router.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
 app.include_router(gift_guide_router.router)
 
+from .routers import gift_memberships as gift_memberships_router
+# Gift codes have about 59 bits each, so the limits are for politeness more than guessing. "Lost the email?"
+# sends mail to a typed address, so it gets the same limit as the Ko-fi claim form.
+GIFT_MEMBERSHIP_LIMITS = {
+    ("/gift", "GET"): "60/minute",
+    ("/gift", "POST"): "20/minute",
+    ("/gift/{code}", "GET"): "60/minute",
+    ("/gift/{code}/open", "POST"): "10/minute",
+    ("/api/gift/redeem", "POST"): "10/minute",
+    ("/supporters/gift/manage/{token}", "GET"): "60/minute",
+    ("/supporters/gift/manage/{token}", "POST"): "30/minute",
+    ("/api/gift/resend", "POST"): "6/hour",
+}
+for route in gift_memberships_router.router.routes:
+    for method in getattr(route, "methods", set()) or ():
+        limit = GIFT_MEMBERSHIP_LIMITS.get((getattr(route, "path", None), method))
+        if limit:
+            bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(gift_memberships_router.router)
+
 from .routers import advent_calendar as advent_calendar_router
 # The card loads with the dashboard; a door opens with one tap.
 ADVENT_LIMITS = {

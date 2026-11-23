@@ -216,6 +216,17 @@ def _count(query) -> int:
     return int(query.scalar() or 0)
 
 
+def _gifts(db: Session, start: datetime, days: int, now: datetime) -> dict:
+    """Supporter gifts (Nov 23 2026): bought, opened and still waiting, plus page counters."""
+    from .. import gift_memberships
+    table = models.SiteTrafficDaily
+    keys = ("gift_page_seen", "gift_link_opened", "gift_opened", "page_kofi_gift")
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "support", table.key.in_(keys), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
+    return {**gift_memberships.stats(db, start), **{key: int(counts.get(key) or 0) for key in keys}}
+
+
 def _growth(db: Session, days: int, now: datetime) -> dict:
     """Growth features: invite links, Ko-fi supporters, weekly email, release calendars, "ask a friend", notifications and shared reviews."""
     start = now - timedelta(days=days)
@@ -239,6 +250,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, ~supporters.is_test_payment())),
             # Ko-fi test pings and payments the owner set aside don't need linking.
             "unlinked_payments": supporters.waiting_count(db),
+            "gifts": _gifts(db, start, days, now),
         },
         "weekly_email": _weekly_email(db, days, now, start),
         "calendar": {

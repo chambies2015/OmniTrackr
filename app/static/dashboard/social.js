@@ -56,6 +56,8 @@ async function loadNotifications() {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Open the show</a>`;
         } else if (notif.type === 'service_arrival' && notif.link === '/#on-your-services') {
           actionButtons = '<a class="notification-action-btn" href="/#on-your-services">See what you can stream</a>';
+        } else if ((notif.type === 'gift_ready' || notif.type === 'gift_opened') && notif.link === '/supporters/gift#your-gifts') {
+          actionButtons = '<a class="notification-action-btn" href="/supporters/gift#your-gifts">See your gifts</a>';
         }
 
         return `

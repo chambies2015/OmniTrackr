@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import email as email_utils, models, public_profiles, support_asks, supporters
+from .. import email as email_utils, gift_memberships, models, public_profiles, support_asks, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -249,7 +249,14 @@ def page_sections(db: Session) -> dict:
             "<!--SUPPORTERS_COSTS-->": _costs_html(), "<!--SUPPORTERS_TRY-->": _try_controls_html(),
             "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db),
             "<!--SUPPORTERS_COFFEE-->": _coffee_html(), "<!--SUPPORTERS_RECENT-->": _recent_html(),
-            "<!--SUPPORTERS_FOUNDING-->": _founding_html(), "<!--SUPPORTERS_NUMBER-->": _number_perk_html(db)}
+            "<!--SUPPORTERS_FOUNDING-->": _founding_html(), "<!--SUPPORTERS_NUMBER-->": _number_perk_html(db),
+            "<!--SUPPORTERS_GIFT_FOUNDING-->": _gift_founding_html()}
+
+
+def _gift_founding_html() -> str:
+    if not supporters.founding_open():
+        return ""
+    return " Gifts bought before 2027 make a founding supporter, even if they're opened in January."
 
 
 def _no_store(response: Response) -> None:
@@ -258,7 +265,7 @@ def _no_store(response: Response) -> None:
 
 
 @router.post("/api/kofi/webhook", include_in_schema=False)
-async def kofi_webhook(request: Request, db: Session = Depends(get_db)):
+async def kofi_webhook(request: Request, background: BackgroundTasks, db: Session = Depends(get_db)):
     """Ko-fi posts form data with one field, ``data``, holding the payment as JSON."""
     try:
         form = await request.form()
@@ -269,6 +276,12 @@ async def kofi_webhook(request: Request, db: Session = Depends(get_db)):
         result = supporters.handle_webhook(db, supporters.parse_payload(raw if isinstance(raw, str) else None))
     except supporters.WebhookError as error:
         raise HTTPException(status_code=error.status, detail=error.detail)
+    gift_id, email = result.pop("_gift_id", None), result.pop("_email", None)
+    if gift_id and email and supporters.looks_like_email(email):
+        gift = db.get(models.GiftMembership, gift_id)
+        if gift is not None:
+            # The gift's links go to the address that paid, the only one Ko-fi tells us about.
+            background.add_task(gift_memberships.send_links, email, [gift_memberships.email_item(gift)])
     return result
 
 

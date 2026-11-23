@@ -1170,6 +1170,39 @@ class KofiPayment(Base):
     # A member who matched this payment's transaction id and asked for it; the owner confirms with one click.
     claimed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     claimed_at = Column(DateTime, nullable=True)
+    # Nov 23 2026: the payer wrote OT-GIFT in their message, so the payment bought perks for someone else
+    # (a GiftMembership) instead of switching on the payer's own. Off for every older payment.
+    gift = Column(Boolean, nullable=False, default=False)
+
+
+class GiftMembership(Base):
+    """Supporter perks bought on Ko-fi for somebody else, opened with a code (Nov 23 2026). A new table only.
+
+    The gift's code and the giver's private link are worked out from ``salt`` and the app's secret key,
+    so neither is stored. Only a keyed hash of the code is kept, for looking a typed code up. A gift
+    counts as opened once ``redeemed_at`` is set, even if the account that opened it is later removed.
+    """
+    __tablename__ = "gift_memberships"
+
+    id = Column(Integer, primary_key=True, index=True)
+    salt = Column(String(32), nullable=False)
+    code_hash = Column(String(64), nullable=False, unique=True, index=True)
+    months = Column(Integer, nullable=False)
+    # "kofi" for a paid gift, "owner" for one the site owner made by hand (a giveaway, a missed OT-GIFT).
+    source = Column(String(16), nullable=False, default="kofi")
+    payment_id = Column(Integer, ForeignKey("kofi_payments.id", ondelete="SET NULL"), nullable=True, unique=True)
+    giver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    paid_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # What the card says. All optional and written by the giver.
+    to_name = Column(String(40), nullable=True)
+    from_name = Column(String(40), nullable=True)
+    note = Column(String(280), nullable=True)
+    redeemed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    redeemed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    # Times someone other than the giver opened the gift's page.
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class YearlyGoal(Base):

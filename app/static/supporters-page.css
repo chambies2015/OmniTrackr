@@ -300,3 +300,27 @@ a.support-wall__name:hover { background: rgba(var(--wall-accent), .22); }
 .support-perk--number { border-color: rgba(234, 179, 8, .4); }
 .support-perk--number.support-perk--new::after { background: rgba(234, 179, 8, .14); border-color: rgba(234, 179, 8, .45); color: inherit; }
 .support-wall__number { color: var(--site-muted); font-size: .78rem; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Nov 23 2026: gifts. A small drawn card beside the copy; the real one is on /supporters/gift. */
+.support-gift { align-items: center; display: grid; gap: 28px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.support-gift__copy p { max-width: 620px; }
+.support-gift__copy code { background: var(--site-surface-2); border-radius: 6px; font-weight: 700; padding: 1px 6px; }
+.support-gift__copy .site-btn { margin: 4px 8px 4px 0; }
+.support-gift__card {
+  background: radial-gradient(circle at 16% 10%, rgba(255, 255, 255, .22), transparent 42%), linear-gradient(150deg, #2f1a7a 0%, #7f4ef0 50%, #e0569b 100%);
+  border-radius: 20px; box-shadow: 0 18px 40px rgba(40, 16, 110, .28); color: #fff; display: flex; flex-direction: column; gap: 6px;
+  min-height: 190px; overflow: hidden; padding: 24px; position: relative; transform: rotate(-2deg);
+}
+.support-gift__card > span:not(.support-gift__ribbon):not(.support-gift__bow) { max-width: 70%; position: relative; z-index: 1; }
+.support-gift__ribbon { background: linear-gradient(180deg, #f5c451, #e39b2d); bottom: 0; position: absolute; right: 13%; top: 0; width: 24px; }
+.support-gift__bow { height: 36px; position: absolute; right: calc(13% - 18px); top: 14px; width: 60px; }
+.support-gift__bow::before, .support-gift__bow::after { background: #f5c451; border-radius: 60% 60% 10% 60%; content: ""; height: 28px; position: absolute; top: 2px; width: 28px; }
+.support-gift__bow::before { left: 0; transform: rotate(-30deg); }
+.support-gift__bow::after { right: 0; transform: rotate(120deg) scaleX(-1); }
+.support-gift__brand { font-size: .72rem; font-weight: 800; letter-spacing: .16em; opacity: .85; text-transform: uppercase; }
+.support-gift__to { font-weight: 700; opacity: .92; }
+.support-gift__title { font-family: var(--site-display, inherit); font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+@media (max-width: 760px) {
+  .support-gift { grid-template-columns: 1fr; }
+  .support-gift__card { max-width: 360px; }
+}

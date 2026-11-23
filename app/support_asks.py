@@ -64,7 +64,8 @@ PAGE_PLACES = {
     "directors_cut": "Director's Cut tier", "how": "How it works", "sticky": "Phone bar at the bottom", "faq": "Questions",
 }
 # Ko-fi buttons on other pages that go straight to Ko-fi (Nov 23 2026: the note at the end of each written guide).
-KOFI_ELSEWHERE = {"guide": "End of a written guide"}
+# Nov 23 2026: the Ko-fi buttons on /supporters/gift, the page for buying someone a gift.
+KOFI_ELSEWHERE = {"guide": "End of a written guide", "gift": "Gift page"}
 SOURCE_RE = re.compile(r"^[a-z_]{1,16}$")
 
 

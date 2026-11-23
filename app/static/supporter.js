@@ -52,6 +52,12 @@
       const until = longDate(status.active_until);
       const who = status.founding ? 'Thank you for being a founding supporter of OmniTrackr' : 'Thank you for supporting OmniTrackr';
       const number = numberText(status.number);
+      // Perks that came only from a gift someone bought (no Ko-fi payment of the member's own).
+      if (status.gift && !status.months && !status.member) {
+        const from = typeof status.gift.from_name === 'string' && status.gift.from_name ? ` from ${status.gift.from_name}` : '';
+        const founding = status.founding ? ' It makes you a founding supporter for good.' : '';
+        return `Your supporter perks are a gift${from}${until ? `, on until ${until}` : ''}.${number ? ` You're supporter ${number}.` : ''}${founding}`;
+      }
       const head = `${who}${since ? ` since ${since}` : ''}!${number ? ` You're supporter ${number}.` : ''}`;
       if (status.member && status.tier_name) return `${head} You're a ${status.tier_name} member, so your perks renew with your Ko-fi membership.`;
       if (status.monthly) return `${head} Your perks renew with your Ko-fi membership.`;
