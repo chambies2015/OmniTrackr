@@ -266,3 +266,40 @@
 @media (prefers-reduced-motion: reduce) {
   .sn-meter__fill { transition: none; }
 }
+
+/* "With your people": Pick swap and Watch together on the holiday guides and the gift guide (app/friend_tools.py). */
+.ft-callout { margin-top: 56px; }
+.ft-callout__intro { color: var(--site-muted); margin: 8px 0 0; max-width: 62ch; }
+.ft-callout__grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 20px; }
+.ft-callout--one .ft-callout__grid { grid-template-columns: minmax(0, 1fr); }
+.ft-callout--one .ft-card { align-items: center; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); }
+.ft-card { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; display: grid; gap: 16px; padding: 16px; }
+.ft-card__copy { font-family: var(--site-font); min-width: 0; }
+.ft-card__kicker { color: var(--sn-accent); font-size: .74rem; font-weight: 800; letter-spacing: .08em; margin: 0; text-transform: uppercase; }
+.ft-card h3 { font-size: 1.15rem; margin: 4px 0 6px; }
+.ft-card__copy p { font-family: var(--site-font); font-size: .98rem; line-height: 1.55; margin: 0; }
+.ft-card__link { align-items: center; color: var(--sn-accent-soft); display: inline-flex; font-weight: 700; margin-top: 10px; min-height: 44px; text-underline-offset: 3px; }
+.ft-card__link::after { content: "\2192"; display: inline-block; margin-left: 6px; }
+.ft-art { align-items: end; background: radial-gradient(220px 120px at 80% 0%, var(--sn-glow), transparent 70%), rgba(0, 0, 0, .22); border: 1px solid var(--site-border); border-radius: 12px; display: flex; min-height: 128px; padding: 14px; }
+/* Three wrapped picks with name tags. */
+.ft-art--swap { gap: 10px; justify-content: center; }
+.ft-box { --box: var(--sn-accent); align-items: center; display: flex; flex-direction: column; gap: 6px; }
+.ft-box i { background: linear-gradient(90deg, transparent 42%, rgba(255, 255, 255, .55) 42% 58%, transparent 58%), var(--box); border-radius: 8px; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); display: block; height: 52px; position: relative; width: 56px; }
+.ft-box i::before { background: linear-gradient(transparent 42%, rgba(255, 255, 255, .55) 42% 58%, transparent 58%); border-radius: inherit; content: ""; inset: 0; position: absolute; }
+.ft-box i::after { border: 4px solid rgba(255, 255, 255, .7); border-bottom: 0; border-radius: 10px 10px 0 0; content: ""; height: 10px; left: 50%; position: absolute; top: -12px; transform: translateX(-50%); width: 22px; }
+.ft-box--2 { --box: var(--sn-berry, #f87171); }
+.ft-box--2 i { height: 64px; width: 64px; }
+.ft-box--3 { --box: var(--sn-pine, #22c55e); }
+.ft-box b { background: rgba(255, 255, 255, .08); border-radius: 999px; color: var(--site-text); font: 700 .72rem var(--site-font); padding: 2px 8px; white-space: nowrap; }
+/* A week's track with three people on it. */
+.ft-art--together { align-items: stretch; flex-direction: column; gap: 10px; justify-content: center; }
+.ft-track__label { color: var(--site-text); font: 700 .86rem var(--site-font); margin: 0; }
+.ft-track { height: 30px; position: relative; }
+.ft-track i { background: linear-gradient(90deg, var(--sn-accent) 0 60%, rgba(255, 255, 255, .12) 60%); border-radius: 99px; height: 6px; left: 0; position: absolute; right: 0; top: 12px; }
+.ft-track__face { align-items: center; background: #5b21b6; border: 2px solid #14112a; border-radius: 999px; color: #fff; display: flex; font: 700 .66rem var(--site-font); height: 26px; justify-content: center; left: 34%; min-width: 26px; padding: 0 6px; position: absolute; top: 2px; transform: translateX(-50%); }
+.ft-track__face--2 { background: #0f766e; left: 50%; }
+.ft-track__face--3 { background: var(--sn-accent); color: var(--sn-accent-ink); left: 64%; }
+.ft-track__note { color: var(--site-muted); font: 600 .78rem var(--site-font); margin: 0; }
+@media (max-width: 760px) {
+  .ft-callout__grid, .ft-callout--one .ft-card { grid-template-columns: minmax(0, 1fr); }
+}

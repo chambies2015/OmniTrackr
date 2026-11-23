@@ -125,7 +125,7 @@ def test_endpoint_needs_sign_in_and_is_private(client, authenticated_client):
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "private, no-store"
     data = response.json()
-    assert set(data) == {"since", "shows", "releases", "friends", "counts"}
+    assert set(data) == {"since", "shows", "releases", "friends", "idea", "counts"}
     assert authenticated_client.get("/api/home/today?since=not-a-date").status_code == 200
 
     authenticated_client.cookies.clear()

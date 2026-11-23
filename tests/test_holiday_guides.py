@@ -168,6 +168,8 @@ def test_guides_are_linked_from_the_hub_card_sitemap_and_loader(authenticated_cl
         assert f"https://omnitrackr.xyz{entry['path']}</loc>" in client.get("/sitemap.xml").text
         assert f'href="{entry["path"]}"' in client.get("/site-map").text
     monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
+    from app import friend_tools
+    monkeypatch.setattr(friend_tools, "swap_season", lambda today=None: False)  # Pick swap's chip: test_friend_tools.py
     paths = [link["path"] for link in authenticated_client.get("/api/seasonal/current").json()["links"]]
     assert paths == ["/holidays/gifts", "/holidays/black-friday", "/holidays/christmas", "/holidays/thanksgiving",
                      "/holidays/reading-and-listening"]

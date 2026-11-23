@@ -498,6 +498,13 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 hero_proof = ""  # The homepage never depends on this line.
             page = page.replace("<!--HERO_PROOF-->", hero_proof, 1)
+        if "<!--HERO_NEWS-->" in page:
+            try:
+                from . import friend_tools
+                hero_news = friend_tools.hero_line_html()
+            except Exception:
+                hero_news = ""  # The homepage never depends on this line.
+            page = page.replace("<!--HERO_NEWS-->", hero_news, 1)
         if "<!--HOME_PULSE-->" in page:
             try:
                 from . import landing_proof

@@ -1,12 +1,14 @@
 // "What's new" on the home screen: new episodes of the member's shows, releases they were
 // told about, and their friends' latest finishes and ratings, counted since this device last
 // showed the home screen. Data comes from GET /api/home/today (read only). Cheer and Save use
-// the friends feed endpoints. Every piece of server text is set with textContent.
+// the friends feed endpoints. Under the friends list sits one idea for doing something together
+// (Pick swap in December, Watch together otherwise). Every piece of server text is set with textContent.
 (function () {
   'use strict';
 
   const SEEN_KEY = 'omnitrackr_home_seen';
   const INVITE_HIDE_KEY = 'omnitrackr_home_invite_hidden';
+  const IDEA_HIDE_KEY = 'omnitrackr_home_idea_hidden';
   // A reload within this long keeps the same "since", so the counts don't vanish on refresh.
   const SAME_VISIT_MS = 30 * 60 * 1000;
   const STALE_MS = 5 * 60 * 1000;
@@ -335,6 +337,55 @@
     box.append(wrap);
   }
 
+  function ideaHidden(key) {
+    try {
+      const hidden = JSON.parse(localStorage.getItem(IDEA_HIDE_KEY) || '[]');
+      return Array.isArray(hidden) && hidden.includes(key);
+    } catch (error) { return false; }
+  }
+
+  function hideIdea(key) {
+    try {
+      const hidden = JSON.parse(localStorage.getItem(IDEA_HIDE_KEY) || '[]');
+      const keep = Array.isArray(hidden) ? hidden.filter(item => typeof item === 'string').slice(-9) : [];
+      if (!keep.includes(key)) keep.push(key);
+      localStorage.setItem(IDEA_HIDE_KEY, JSON.stringify(keep));
+    } catch (error) { /* storage off: it shows again next visit */ }
+  }
+
+  function ideaPath(path) {
+    return typeof path === 'string' && /^\/(swap|together)(#start)?$/.test(path) ? path : null;
+  }
+
+  // Pick swap or Watch together, one line under the friends list. Hidden per idea, so next December's
+  // swap line still shows after someone hid this year's.
+  function renderIdea(box, idea) {
+    box.querySelector('.home-news__idea')?.remove();
+    const href = idea && ideaPath(idea.path);
+    const key = idea && typeof idea.key === 'string' ? idea.key.slice(0, 40) : '';
+    if (!href || !key || ideaHidden(key)) return;
+    const wrap = el('div', 'home-news__idea');
+    wrap.dataset.tool = idea.tool === 'together' ? 'together' : 'swap';
+    const mark = el('span', 'home-news__idea-mark');
+    mark.setAttribute('aria-hidden', 'true');
+    const body = el('div', 'home-news__idea-body');
+    body.append(el('p', 'home-news__idea-title', idea.title), el('p', 'home-news__idea-text', idea.text));
+    const actions = el('div', 'home-news__actions');
+    const go = el('a', 'home-news__btn home-news__btn--primary', idea.label || 'Open');
+    go.href = href;
+    const hide = el('button', 'home-news__link', 'Not now');
+    hide.type = 'button';
+    hide.setAttribute('aria-label', `Hide ${idea.title || 'this idea'}`);
+    hide.addEventListener('click', () => {
+      hideIdea(key);
+      wrap.remove();
+    });
+    actions.append(go, hide);
+    body.append(actions);
+    wrap.append(mark, body);
+    box.append(wrap);
+  }
+
   function renderHeroLine(counts, since, now) {
     const line = $('homeHeroNews');
     if (!line) return;
@@ -385,6 +436,8 @@
       }
       if (friendFoot) friendFoot.hidden = !friendItems.length;
       friendBox.hidden = !(friendItems.length || !noFriends || !inviteHidden());
+      // One ask at a time: someone with no friends yet sees the taste test, not this.
+      renderIdea(friendBox, noFriends ? null : data.idea);
     }
 
     const since = state.since;
@@ -437,6 +490,7 @@
 
   window.OmniHomeToday = { refresh, reset, render };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { refresh, reset, render, readSince, dayLabel, sinceLabel, summaryParts, joinParts, friendLine, ago, state };
+    module.exports = { refresh, reset, render, readSince, dayLabel, sinceLabel, summaryParts, joinParts, friendLine, ago, state,
+      ideaPath };
   }
 })();

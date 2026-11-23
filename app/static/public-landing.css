@@ -641,6 +641,7 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-showcase__tabs::-webkit-scrollbar { display: none; }
   /* On a phone, show the phone screen: it is the one a visitor here would use. */
   .lp-shot__browser { display: none; }
+  .lp .lp-hero__news a { border-radius: 16px; font-size: .8rem; gap: 8px; }
   .lp-shot__media { padding: 0; }
   .lp-shot__phone { margin: 0 auto; max-width: 280px; position: static; width: 78%; }
   .lp-shot__copy { order: 0; }
@@ -788,3 +789,39 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-shelf__actions .lp-btn { flex: 1 1 100%; }
   .lp-savebar__mine { justify-content: center; }
 }
+
+/* Pick swap and Watch together (Nov 23 2026, app/friend_tools.py): a holiday line over the headline while
+   swaps are in season, and two more cards in "What your library can do", which now runs four across. */
+.lp-hero__news { margin: 0 0 16px; }
+.lp-hero__news a { align-items: center; background: rgba(255, 255, 255, .06); border: 1px solid var(--lp-border-strong); border-radius: 999px; color: var(--lp-soft); display: inline-flex; font-size: .86rem; font-weight: 600; gap: 10px; line-height: 1.35; max-width: 100%; min-height: 40px; padding: 6px 14px 6px 6px; text-decoration: none; }
+.lp-hero__news a:hover { border-color: rgba(196, 181, 253, .5); color: #fff; }
+.lp-hero__news-tag { background: linear-gradient(135deg, #f87171, #fbbf24); border-radius: 999px; color: #1f1300; flex: none; font-size: .7rem; font-weight: 800; letter-spacing: .08em; padding: 4px 9px; text-transform: uppercase; }
+.lp-hero__news .lp-icon { flex: none; }
+@media (min-width: 1101px) {
+  .lp-tour { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lp-tour .lp-feature { padding: 14px 14px 22px; }
+  .lp-tour .lp-feature h3 { font-size: 1.08rem; }
+  .lp-tour .lp-vignette { padding: 12px; }
+  .lp-tour .lp-vg-row { gap: 8px; }
+}
+.lp-vg-swap { align-items: end; display: grid; gap: 10px; grid-template-columns: repeat(3, auto); justify-content: center; }
+.lp-vg-gift { --g: var(--lp-violet); align-items: center; display: flex; flex-direction: column; gap: 6px; }
+.lp-vg-gift i { background: linear-gradient(90deg, transparent 42%, rgba(255, 255, 255, .55) 42% 58%, transparent 58%), var(--g); border-radius: 8px; box-shadow: 0 8px 18px rgba(0, 0, 0, .35); display: block; height: 50px; position: relative; width: 54px; }
+.lp-vg-gift i::before { background: linear-gradient(transparent 42%, rgba(255, 255, 255, .55) 42% 58%, transparent 58%); border-radius: inherit; content: ""; inset: 0; position: absolute; }
+.lp-vg-gift i::after { border: 4px solid rgba(255, 255, 255, .7); border-bottom: 0; border-radius: 10px 10px 0 0; content: ""; height: 10px; left: 50%; position: absolute; top: -12px; transform: translateX(-50%); width: 22px; }
+.lp-vg-gift.is-big { --g: #e11d48; }
+.lp-vg-gift.is-big i { height: 62px; width: 62px; }
+.lp-vg-gift.is-green { --g: #0f766e; }
+.lp-vg-gift b { background: rgba(255, 255, 255, .08); border-radius: 999px; color: var(--lp-soft); font-size: .7rem; font-weight: 700; padding: 2px 8px; white-space: nowrap; }
+.lp-vg-swap__day { color: var(--lp-muted); font-size: .76rem; font-weight: 600; grid-column: 1 / -1; text-align: center; }
+.lp-vg-together { gap: 8px; }
+.lp-vg-week { align-items: baseline; display: flex; font-size: .8rem; gap: 8px; justify-content: space-between; }
+.lp-vg-week span { color: var(--lp-text); font-weight: 700; }
+.lp-vg-week em { color: var(--lp-muted); font-style: normal; }
+.lp-vg-week__track { display: block; height: 28px; position: relative; }
+.lp-vg-week__track i { background: linear-gradient(90deg, var(--lp-teal) 0 60%, rgba(255, 255, 255, .1) 60%); border-radius: 99px; height: 6px; left: 0; position: absolute; right: 0; top: 11px; }
+.lp-vg-week__track b { align-items: center; background: #5b21b6; border: 2px solid #14112a; border-radius: 999px; color: #f5f3ff; display: flex; font-size: .62rem; font-weight: 700; height: 24px; justify-content: center; left: 40%; min-width: 24px; padding: 0 5px; position: absolute; top: 2px; transform: translateX(-50%); }
+.lp-vg-week__track b:nth-of-type(2) { background: #0f766e; left: 56%; }
+.lp-vg-week__track b:nth-of-type(3) { background: var(--lp-teal); color: #0b0a18; left: 72%; }
+.lp-vg-together .lp-vg-row { padding: 5px 10px; }
+.lp-vg-together .lp-vg-row em { white-space: nowrap; }
