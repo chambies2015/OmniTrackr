@@ -274,15 +274,19 @@ def enter_page(request: Request, user=Depends(get_optional_current_user)):
 
 
 @router.post("/gift", include_in_schema=False)
-def enter_code(request: Request, code: str = Form("", max_length=60), user=Depends(get_optional_current_user)):
+def enter_code(request: Request, code: str = Form("", max_length=60), user=Depends(get_optional_current_user),
+               db: Session = Depends(get_db)):
     normal = gifts.normalize(code)
-    if normal is None:
+    gift = gifts.by_code(db, normal) if normal else None
+    if gift is None or gift.cancelled_at is not None:
+        error = ("That doesn't look like a gift code. It has twelve letters and numbers." if normal is None else
+                 "That code doesn't open a gift. Check it against the card or the email.")
         response = _page("Open an OmniTrackr gift", "Type the code from an OmniTrackr gift card to open it.", "/gift",
-                         _enter_html("That doesn't look like a gift code. It has twelve letters and numbers."),
-                         member=user is not None)
-        response.status_code = 422
+                         _enter_html(error), member=user is not None)
+        response.status_code = 422 if normal is None else 404
         return _private(response)
-    return RedirectResponse(f"/gift/{gifts.pretty(normal)}", status_code=303)
+    # The address comes from the stored gift, never from what was typed.
+    return RedirectResponse(gifts.path_of(gift), status_code=303)
 
 
 # ---------------------------------------------------------------- /gift/<code>

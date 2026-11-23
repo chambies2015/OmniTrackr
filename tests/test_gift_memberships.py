@@ -255,6 +255,9 @@ def test_typed_codes_go_to_the_gift(client, db_session):
     assert response.status_code == 303 and response.headers["location"] == gifts.path_of(gift)
     assert client.get(f"/gift/{raw}", follow_redirects=False).headers["location"] == gifts.path_of(gift)
     assert client.post("/gift", data={"code": "nope"}).status_code == 422
+    wrong = client.post("/gift", data={"code": "ZZZZ-ZZZZ-ZZZZ"}, follow_redirects=False)
+    assert wrong.status_code == 404 and "location" not in wrong.headers
+    assert "open a gift. Check it against the card" in wrong.text
 
 
 def test_opening_needs_an_account(client, db_session):
