@@ -113,6 +113,20 @@ test('a write drops every answer not handed out yet; visit pings do not', async 
   assert.equal(page.sent.length, before + 4);
 });
 
+test('another tab signing out or in drops the answers; other storage changes do not', async () => {
+  const page = setup();
+  page.listeners.storage({ key: 'omnitrackr_home_prefetch_skip' });
+  assert.ok(page.window.OmniHomePrefetch.pending().length > 30);
+  page.listeners.storage({ key: 'omnitrackr_user' });
+  assert.equal(page.window.OmniHomePrefetch.pending().length, 0);
+  const before = page.sent.length;
+  await page.window.fetch(PICKS);
+  assert.equal(page.sent.length, before + 1);
+  const cleared = setup();
+  cleared.listeners.storage({ key: null });
+  assert.equal(cleared.window.OmniHomePrefetch.pending().length, 0);
+});
+
 test('answers older than 30 seconds are not handed out', async () => {
   const page = setup();
   const before = page.sent.length;
