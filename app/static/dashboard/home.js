@@ -797,6 +797,7 @@ function resetDailyDashboard() {
   window.OmniStreaming?.reset();
   window.OmniRankings?.reset();
   window.OmniTogether?.reset();
+  window.OmniBreak?.reset();
   window.OmniSwapHome?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
@@ -1839,6 +1840,8 @@ function runDashboardLayoutBatch() {
   window.OmniRankings?.refresh();
   // Watch together: plans shared with friends, where everyone is this week (at most every 20 seconds).
   window.OmniTogether?.refresh();
+  // Break planner: a holiday offer, or today's part of the member's plan (at most every 30 seconds).
+  window.OmniBreak?.refresh();
   // Pick swap: the next thing to do in each swap the member is in (at most every 30 seconds).
   window.OmniSwapHome?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.

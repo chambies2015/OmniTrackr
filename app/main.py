@@ -146,6 +146,10 @@ async def lifespan(application: FastAPI):
     together_task = None
     if together.emails_enabled():
         together_task = asyncio.create_task(together.together_loop(application))
+    from . import break_plan
+    break_task = None
+    if break_plan.emails_enabled():
+        break_task = asyncio.create_task(break_plan.break_plan_loop(application))
     from . import pick_swap
     swap_task = None
     if pick_swap.loop_enabled():
@@ -172,7 +176,7 @@ async def lifespan(application: FastAPI):
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
                      episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task,
-                     together_task, swap_task):
+                     together_task, swap_task, break_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -1086,6 +1090,40 @@ for route in pick_swap_router.router.routes:
         if (path, method) in PICK_SWAP_LIMITS:
             bind_rate_limited_endpoint(route, limiter.limit(PICK_SWAP_LIMITS[(path, method)])(route.endpoint))
 app.include_router(pick_swap_router.router)
+from .routers import break_plan as break_plan_router
+# Break planner: the home card and plan page read often; ticks and moves are a tap at a time. The guide's
+# sample plan and a shared plan's page and picture are opened without an account, so they are limited per address.
+BREAK_PLAN_LIMITS = {
+    ("/api/break", "GET"): "40/minute",
+    ("/api/break/home", "GET"): "40/minute",
+    ("/api/break/seen", "POST"): "20/minute",
+    ("/api/break/demo", "POST"): "20/minute",
+    ("/api/break", "POST"): "6/minute",
+    ("/api/break/{plan_id}", "PATCH"): "20/minute",
+    ("/api/break/{plan_id}", "DELETE"): "10/minute",
+    ("/api/break/{plan_id}/fill", "POST"): "10/minute",
+    ("/api/break/{plan_id}/shuffle", "POST"): "10/minute",
+    ("/api/break/{plan_id}/titles", "GET"): "20/minute",
+    ("/api/break/{plan_id}/items", "POST"): "20/minute",
+    ("/api/break/{plan_id}/items/{item_id}", "PATCH"): "40/minute",
+    ("/api/break/{plan_id}/items/{item_id}", "DELETE"): "30/minute",
+    ("/api/break/{plan_id}/items/{item_id}/done", "POST"): "60/minute",
+    ("/api/break/{plan_id}/items/{item_id}/undo", "POST"): "30/minute",
+    ("/api/break/{plan_id}/items/{item_id}/finish", "POST"): "20/minute",
+    ("/api/break/{plan_id}/items/{item_id}/rate", "POST"): "30/minute",
+    ("/api/break/{plan_id}/share", "POST"): "5/minute",
+    ("/api/break/{plan_id}/share", "DELETE"): "10/minute",
+    ("/api/break/{plan_id}/hide-wrap", "POST"): "10/minute",
+    ("/api/break/{plan_id}/calendar.ics", "GET"): "10/minute",
+    ("/break/s/{token}", "GET"): "60/minute",
+    ("/break/s/{token}/card.png", "GET"): "30/minute",
+}
+for route in break_plan_router.router.routes:
+    path = getattr(route, "path", None)
+    for method in getattr(route, "methods", None) or ():
+        if (path, method) in BREAK_PLAN_LIMITS:
+            bind_rate_limited_endpoint(route, limiter.limit(BREAK_PLAN_LIMITS[(path, method)])(route.endpoint))
+app.include_router(break_plan_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:

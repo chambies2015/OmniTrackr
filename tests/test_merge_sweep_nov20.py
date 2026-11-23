@@ -123,7 +123,8 @@ def test_looking_at_the_card_again_writes_nothing(db_session):
     assert grown["logged_days"] == 2 and len(sql.writes()) == 1
 
 
-def test_the_card_reads_its_days_and_titles_in_a_few_queries(client, db_session):
+def test_the_card_reads_its_days_and_titles_in_a_few_queries(client, db_session, monkeypatch):
+    monkeypatch.setattr(your_week, "_now", lambda: WEDNESDAY)  # the API reads "this week" from the clock
     user = member(db_session, titles=0)
     for index in range(6):
         db_session.add(models.Movie(title=f"Film {index}", year=2020, watched=False, user_id=user.id,

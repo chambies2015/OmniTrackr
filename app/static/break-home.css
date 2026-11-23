@@ -1,0 +1,153 @@
+/* "Break planner" home card (break-home.js): a holiday offer, the plan's first day, today's part with ticks,
+   or how the break went. The card surface comes from the board's one card look in dashboard-home.css;
+   this file styles what's inside it. The planner page itself uses break-plan.css. */
+
+body.app-shell .home-board #breakHome { --card-accent: #d97706; --bph-ink: #b45309; --bph-soft: rgba(217, 119, 6, .1); }
+body.app-shell.dark-mode .home-board #breakHome { --card-accent: #fcd34d; --bph-ink: #fcd34d; --bph-soft: rgba(252, 211, 77, .1); }
+
+.break-home__head { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+.break-home__intro { min-width: 0; }
+.break-home__eyebrow {
+  color: var(--bph-ink, #b45309);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+body.app-shell .home-board__main #breakHomeTitle {
+  align-items: center;
+  display: flex;
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  gap: 10px;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+  margin: 0;
+}
+body.app-shell .home-board__main #breakHomeTitle::before {
+  align-self: flex-start;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 60%, #fff), var(--card-accent));
+  border-radius: 999px;
+  content: "";
+  flex: none;
+  height: 18px;
+  margin-top: 3px;
+  width: 4px;
+}
+.break-home__summary { color: var(--fg-secondary); font-size: .9rem; line-height: 1.5; margin: 6px 0 0; }
+.break-home__more {
+  align-items: center;
+  background: var(--bph-soft);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 35%, var(--border));
+  border-radius: 999px;
+  color: var(--fg);
+  display: inline-flex;
+  flex: none;
+  font-size: .8rem;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+.break-home__more:hover { background: color-mix(in srgb, var(--card-accent) 18%, transparent); }
+.break-home__more[hidden] { display: none; }
+
+.break-home__list { display: grid; gap: 8px; list-style: none; margin: 14px 0 0; padding: 0; }
+.break-home__list:empty { display: none; }
+.break-home__item {
+  --bph-kind: var(--card-accent);
+  align-items: center;
+  background: var(--bph-soft);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 22%, var(--border));
+  border-left: 3px solid var(--bph-kind);
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 12px;
+}
+.break-home__item[data-category="movies"] { --bph-kind: #f472b6; }
+.break-home__item[data-category="tv-shows"] { --bph-kind: #60a5fa; }
+.break-home__item[data-category="anime"] { --bph-kind: #f87171; }
+.break-home__item[data-category="video-games"] { --bph-kind: #34d399; }
+.break-home__item[data-category="music"] { --bph-kind: #a78bfa; }
+.break-home__item[data-category="books"] { --bph-kind: #fbbf24; }
+.break-home__item[data-category="manga"] { --bph-kind: #fb923c; }
+.break-home__item[data-category="audiobooks"] { --bph-kind: #e879f9; }
+.break-home__item--done { opacity: .7; }
+.break-home__body { display: grid; gap: 1px; min-width: 0; }
+.break-home__kind { color: var(--fg-secondary); font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.break-home__name { color: var(--fg); font-size: .95rem; line-height: 1.3; overflow-wrap: anywhere; }
+.break-home__what { color: var(--fg-secondary); font-size: .82rem; }
+.break-home__note { color: var(--fg-secondary); font-size: .85rem; margin: 2px 0 0; }
+.break-home__cover {
+  background: var(--surface-hover);
+  border-radius: 6px;
+  color: var(--bph-kind);
+  display: grid;
+  flex: none;
+  font-weight: 800;
+  height: 60px;
+  overflow: hidden;
+  place-items: center;
+  width: 40px;
+}
+.break-home__cover img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.break-home__tick {
+  align-items: center;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, var(--card-accent) 55%, var(--border));
+  border-radius: 50%;
+  color: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: 1rem;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+.break-home__tick:hover { border-color: #14b8a6; color: rgba(20, 184, 166, .7); }
+.break-home__tick[aria-pressed="true"] { background: #14b8a6; border-color: #14b8a6; color: #fff; opacity: 1; }
+.break-home__tick:focus-visible, .break-home__btn:focus-visible, .break-home__quiet:focus-visible, .break-home__more:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--card-accent) 70%, #fff);
+  outline-offset: 2px;
+}
+.break-home__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.break-home__actions:empty { display: none; }
+.break-home__btn {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  display: inline-flex;
+  font-size: .88rem;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0 18px;
+  text-decoration: none;
+}
+.break-home__btn--primary {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: transparent;
+  color: #1a1433;
+}
+body.app-shell.dark-mode .break-home__btn--primary { background: linear-gradient(135deg, #fde68a, #fbbf24); }
+.break-home__quiet {
+  background: none;
+  border: 0;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .85rem;
+  min-height: 40px;
+  padding: 0 6px;
+}
+.break-home__quiet:hover { color: var(--fg); text-decoration: underline; }
+.break-home__status { color: var(--fg-secondary); font-size: .85rem; margin: 8px 0 0; min-height: 0; }
+.break-home__status:empty { display: none; }
