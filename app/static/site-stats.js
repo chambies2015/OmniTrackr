@@ -674,6 +674,7 @@
         { label: 'Notes switched off (now)', count: support.asks_off_now || 0 },
         ...(support.page_seen || []).filter(item => item.count).map(item => ({ label: `Supporters page from: ${item.place}`, count: item.count })),
         ...(support.page_kofi || []).filter(item => item.count).map(item => ({ label: `Supporters page Ko-fi button: ${item.place}`, count: item.count })),
+        ...(support.elsewhere_kofi || []).filter(item => item.count).map(item => ({ label: `Ko-fi button: ${item.place}`, count: item.count })),
         { label: 'Payments linked within 2 weeks of a Ko-fi press', count: support.converted_total || 0 },
         ...(support.converted || []).map(item => ({ label: `Paid after pressing: ${item.place}`, count: item.count })),
       ],

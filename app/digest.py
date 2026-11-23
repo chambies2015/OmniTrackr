@@ -907,7 +907,7 @@ def gather_extras(db: Session, user, now: datetime, today: date | None = None) -
         following = []  # Optional, like the ask above.
     try:
         from . import support_asks
-        support = support_asks.email_note() if support_asks.email_note_due(db, user, now) else None
+        support = support_asks.email_note(now) if support_asks.email_note_due(db, user, now) else None
     except Exception:
         db.rollback()
         support = None  # Optional, like the ask above.

@@ -164,7 +164,12 @@ def _wall_entry(entry: dict) -> str:
         title += f' · {entry["tier"]} member'
     if not entry["active"]:
         title += " (past)"
+    number = supporters.number_text(entry.get("number"))
+    if number:
+        title += f" · supporter {number}"
     name = f'<span class="support-wall__mark" aria-hidden="true">{mark}</span>{_e(entry["name"])}'
+    if number:
+        name += f' <small class="support-wall__number">{_e(number)}</small>'
     if entry["path"]:
         return f'<li><a class="{" ".join(classes)}" href="{_e(entry["path"])}" title="{_e(title)}">{name}</a></li>'
     return f'<li><span class="{" ".join(classes)}" title="{_e(title)}">{name}</span></li>'
@@ -189,9 +194,35 @@ def _wall_html(db: Session) -> str:
 
 def _count_html(db: Session) -> str:
     count = supporters.active_count(db)
-    if count < 3:  # a tiny number reads as a ghost town; the wall says thanks instead
+    following = supporters.next_number(db)
+    if following == 1:
+        # Nobody yet. Said plainly, it's an opening rather than a ghost town.
+        return ('<p class="support-hero__count">Nobody has supported OmniTrackr yet. Whoever goes first is '
+                '<strong>supporter #1</strong>, and the number stays on their badge.</p>')
+    if count < 3:  # a tiny count reads as a ghost town; the next number says the same thing better
+        return f'<p class="support-hero__count">The next supporter will be <strong>#{following}</strong>.</p>'
+    return (f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now. '
+            f'The next one will be #{following}.</p>')
+
+
+def _founding_html() -> str:
+    line = supporters.founding_deadline()
+    if not line:
         return ""
-    return f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now.</p>'
+    return f'<p class="support-hero__founding"><span aria-hidden="true">★</span> {_e(line)}</p>'
+
+
+def _number_perk_html(db: Session) -> str:
+    following = supporters.next_number(db)
+    mark, label = ("★", "Founding supporter") if supporters.founding_open() else ("♥", "Supporter")
+    gold = " support-sample--gold" if supporters.founding_open() else ""
+    open_now = "Nobody has it yet, so #1 is still open." if following == 1 else f"The next one is #{following}."
+    return ('<article class="support-perk support-perk--new support-perk--number">'
+            f'<p class="support-perk__preview"><span class="support-sample{gold}">{mark} {label} #{following}</span></p>'
+            '<h3>Your supporter number</h3>'
+            '<p>Supporters are numbered in the order they first supported, and the number goes on your badge, '
+            f'your profile card and the wall. It never changes, even if you take a break. {_e(open_now)}</p>'
+            '</article>')
 
 
 def _coffee_html() -> str:
@@ -217,7 +248,8 @@ def page_sections(db: Session) -> dict:
     return {"<!--SUPPORTERS_GOAL-->": _goal_html(db), "<!--SUPPORTERS_COUNT-->": _count_html(db),
             "<!--SUPPORTERS_COSTS-->": _costs_html(), "<!--SUPPORTERS_TRY-->": _try_controls_html(),
             "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db),
-            "<!--SUPPORTERS_COFFEE-->": _coffee_html(), "<!--SUPPORTERS_RECENT-->": _recent_html()}
+            "<!--SUPPORTERS_COFFEE-->": _coffee_html(), "<!--SUPPORTERS_RECENT-->": _recent_html(),
+            "<!--SUPPORTERS_FOUNDING-->": _founding_html(), "<!--SUPPORTERS_NUMBER-->": _number_perk_html(db)}
 
 
 def _no_store(response: Response) -> None:

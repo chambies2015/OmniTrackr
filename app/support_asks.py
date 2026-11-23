@@ -2,7 +2,7 @@
 
 A member sees at most one note every couple of months, only after something worth marking: a yearly
 goal reached, a library milestone, a run of visits, an anniversary, or supporter perks that just ran
-out. Nobody sees one in their first three weeks, active supporters never do, "Not now" waits four
+out. December 2026 adds one dated moment: the last month to become a founding supporter. Nobody sees one in their first three weeks, active supporters never do, "Not now" waits four
 months, and "Don't ask again" stops them for good (Settings → Supporter turns them back on).
 
 Counters go into ``site_traffic_daily`` under kind "support" through the same buffer as page views:
@@ -36,6 +36,9 @@ ANNIVERSARY_FRESH = timedelta(days=30)
 LAPSE_FRESH = timedelta(days=30)       # perks that ended in the last month
 CONVERSION_WINDOW = timedelta(days=14)
 
+# The founding supporter note can show from here until supporters.FOUNDING_BEFORE, once per member.
+FOUNDING_ASK_FROM = datetime(2026, 12, 1)
+
 TITLE_STEPS = (100, 250, 500, 1000, 2500, 5000)
 DAY_STEPS = (30, 100, 200, 365, 500, 1000)
 
@@ -43,6 +46,7 @@ DAY_STEPS = (30, 100, 200, 365, 500, 1000)
 MOMENTS = {
     "ended": "Supporter perks just ended",
     "goal": "Yearly goal reached",
+    "founding": "Last month to be a founding supporter",
     "titles": "Library milestone",
     "days": "Days opened milestone",
     "years": "Anniversary",
@@ -51,13 +55,16 @@ ANSWERS = {"kofi": "Ko-fi pressed", "perks": "Opened the supporters page", "late
 # Where a /supporters visit came from: ?from= on our own links, else same site or outside.
 PAGE_SOURCES = {
     "ask": "Dashboard note", "email": "Weekly email", "recap": "Year in Review", "settings": "Settings → Supporter",
-    "footer": "Site footer", "site": "Another OmniTrackr page", "outside": "Outside link or typed in",
+    "footer": "Site footer", "guide": "End of a written guide", "site": "Another OmniTrackr page",
+    "outside": "Outside link or typed in",
 }
 # Ko-fi buttons on /supporters.
 PAGE_PLACES = {
     "hero": "Top of the page", "coffee": "One-time coffee card", "popcorn": "Popcorn tier", "season_pass": "Season Pass tier",
     "directors_cut": "Director's Cut tier", "how": "How it works", "sticky": "Phone bar at the bottom", "faq": "Questions",
 }
+# Ko-fi buttons on other pages that go straight to Ko-fi (Nov 23 2026: the note at the end of each written guide).
+KOFI_ELSEWHERE = {"guide": "End of a written guide"}
 SOURCE_RE = re.compile(r"^[a-z_]{1,16}$")
 
 
@@ -182,6 +189,10 @@ def candidate(db: Session, user: models.User, row: Optional[models.SupportAsk], 
     goal = facts["goal"]
     if goal is not None and goal.id > done["goal"] and goal.reached_at and now - goal.reached_at <= GOAL_FRESH:
         return {"moment": "goal", "key": f"goal:{goal.id}", "facts": facts}
+    if supporter is None and FOUNDING_ASK_FROM <= now < supporters.FOUNDING_BEFORE:
+        key = founding_key()
+        if row is None or row.ask_key != key:
+            return {"moment": "founding", "key": key, "facts": facts}
     step = _highest(TITLE_STEPS, facts["titles"])
     if step > done["titles"]:
         return {"moment": "titles", "key": f"titles:{step}", "facts": facts}
@@ -194,7 +205,18 @@ def candidate(db: Session, user: models.User, row: Optional[models.SupportAsk], 
     return None
 
 
+def founding_key() -> str:
+    return f"founding:{supporters.FOUNDING_BEFORE.year - 1}"
+
+
 # ---------------------------------------------------------------- the words on the card
+
+def number_line(db: Session) -> str:
+    following = supporters.next_number(db)
+    if following == 1:
+        return "Nobody has supported yet, so the first one gets #1 on their badge."
+    return f"The next supporter gets #{following} on their badge."
+
 
 def _number(value: int) -> str:
     return f"{value:,}"
@@ -226,6 +248,16 @@ def copy_for(db: Session, user: models.User, moment: str, key: str, facts: Optio
         noun = singular if goal.target == 1 else plural
         return {"eyebrow": "Goal reached", "title": f"{_number(goal.target)} {noun} in {goal.year}. Nicely done.",
                 "body": f"Every one of them is in your library, counted as you went. {free} {coffee}", "action": "Buy a $3 coffee"}
+    if moment == "founding":
+        days = supporters.founding_days_left(now)
+        if days <= 0:
+            return None
+        title = ("Today is the last day to become a founding supporter" if days == 1
+                 else "Founding supporter closes on December 31")
+        return {"eyebrow": "Last day" if days == 1 else f"{days} days left", "title": title,
+                "body": "Anyone whose support starts before 2027 stays a founding supporter for good, with the ★ badge "
+                        f"and the gold color whenever they're supporting. {number_line(db)} {coffee}",
+                "action": "Buy a $3 coffee"}
     if moment == "titles":
         return {"eyebrow": f"{_number(facts['titles'])} titles tracked", "title": f"Your library passed {_number(value)}",
                 "body": f"That's a lot of watching, playing, reading and listening, all in one place. {free} {coffee}",
@@ -393,9 +425,12 @@ def email_note_due(db: Session, user: models.User, now: datetime) -> bool:
     return not supporters.is_active(supporters.get_supporter(db, user.id), now.replace(tzinfo=None))
 
 
-def email_note() -> dict:
+def email_note(now: Optional[datetime] = None) -> dict:
+    now = (now or _now()).replace(tzinfo=None)
+    last = (" Anyone who supports before 2027 stays a founding supporter for good."
+            if FOUNDING_ASK_FROM <= now < supporters.FOUNDING_BEFORE else " " + coffee_line())
     return {"text": "OmniTrackr is free and run by one person. Supporters on Ko-fi pay for the servers, "
-                    "this email included. " + coffee_line(),
+                    "this email included." + last,
             "path": "/supporters?from=email"}
 
 
@@ -446,6 +481,7 @@ def stats(db: Session, days: int, now: datetime) -> dict:
              **{reply: get(f"ask_{reply}_{key}") for reply in ANSWERS}} for key, label in MOMENTS.items()]
     converted = [{"place": MOMENTS.get(key, key), "count": get(f"converted_{key}")} for key in MOMENTS]
     converted += [{"place": f"Supporters page: {label}", "count": get(f"converted_page_{key}")} for key, label in PAGE_PLACES.items()]
+    converted += [{"place": label, "count": get(f"converted_page_{key}")} for key, label in KOFI_ELSEWHERE.items()]
     return {
         "asks": asks,
         "shown": sum(row["shown"] for row in asks),
@@ -456,6 +492,7 @@ def stats(db: Session, days: int, now: datetime) -> dict:
         "asks_off_now": int(db.query(func.count(models.SupportAsk.id)).filter(models.SupportAsk.stopped_at.isnot(None)).scalar() or 0),
         "page_seen": [{"place": label, "count": get(f"page_seen_{key}")} for key, label in PAGE_SOURCES.items()],
         "page_kofi": [{"place": label, "count": get(f"page_kofi_{key}")} for key, label in PAGE_PLACES.items()],
+        "elsewhere_kofi": [{"place": label, "count": get(f"page_kofi_{key}")} for key, label in KOFI_ELSEWHERE.items()],
         "converted": [row for row in converted if row["count"]],
         "converted_total": sum(row["count"] for row in converted),
     }

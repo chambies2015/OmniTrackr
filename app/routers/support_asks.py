@@ -90,9 +90,11 @@ class PageEvent(BaseModel):
 @router.post("/api/support/event", status_code=204, include_in_schema=False)
 def support_page_event(payload: PageEvent, request: Request, user: Optional[models.User] = Depends(get_optional_current_user),
                        db: Session = Depends(get_db)):
-    """/supporters reporting a visit (with where it came from) or a Ko-fi button press. Names outside the
-    lists are ignored, and nothing about the visitor is stored with the count."""
-    places = {"page_seen": support_asks.PAGE_SOURCES, "page_kofi": support_asks.PAGE_PLACES}.get(payload.event)
+    """/supporters reporting a visit (with where it came from) or a Ko-fi button press, and the Ko-fi button at
+    the end of a written guide. Names outside the lists are ignored, and nothing about the visitor is stored
+    with the count."""
+    places = {"page_seen": support_asks.PAGE_SOURCES,
+              "page_kofi": {**support_asks.PAGE_PLACES, **support_asks.KOFI_ELSEWHERE}}.get(payload.event)
     if places is None or payload.place not in places:
         return Response(status_code=204)
     if BOT_PATTERN.search(request.headers.get("user-agent", "") or "x"):

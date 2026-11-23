@@ -828,6 +828,7 @@ def run_migrations():
     add_supporter_banner_column()
     add_membership_columns()
     add_supporter_style_columns()
+    add_supporter_number_column()
     add_public_diary_column()
     add_taste_match_link_column()
     add_profile_now_column()
@@ -1005,6 +1006,30 @@ def add_supporter_style_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (supporter styles): {e}")
+
+
+def add_supporter_number_column():
+    """Add supporter numbers (Nov 23 2026) and number any supporter who doesn't have one yet, oldest
+    support first, after the highest number already given. Numbers once given are never changed."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("supporters")}
+        with engine.connect() as conn:
+            if "number" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN number INTEGER"))
+                print("Added number column to supporters table")
+            rows = conn.execute(text("SELECT id FROM supporters WHERE number IS NULL ORDER BY since, id")).fetchall()
+            if rows:
+                top = int(conn.execute(text("SELECT COALESCE(MAX(number), 0) FROM supporters")).scalar() or 0)
+                for offset, (row_id,) in enumerate(rows, start=1):
+                    conn.execute(text("UPDATE supporters SET number = :number WHERE id = :id AND number IS NULL"),
+                                 {"number": top + offset, "id": row_id})
+                print(f"Numbered {len(rows)} supporter(s)")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (supporter numbers): {e}")
 
 
 def add_public_diary_column():

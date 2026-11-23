@@ -86,6 +86,9 @@
 .support-ask__status:empty { display: none; }
 .support-ask--ended { --support-warm: #a78bfa; --support-rose: #f472b6; }
 .support-ask--ended .support-ask__kofi { color: #fff; }
+/* Nov 23 2026: December's founding supporter note, in gold with a star. */
+.support-ask--founding { --support-warm: #eab308; --support-rose: #f59e0b; }
+.support-ask--founding .support-ask__eyebrow::before { content: "★"; color: var(--support-warm); }
 .support-ask-setting { margin: var(--space-4, 16px) 0; }
 @media (prefers-reduced-motion: no-preference) {
   .support-ask:not([hidden]) { animation: support-ask-in var(--dur, .24s) var(--ease, ease-out) both; }

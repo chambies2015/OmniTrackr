@@ -293,3 +293,10 @@ a.support-wall__name:hover { background: rgba(var(--wall-accent), .22); }
   .supporters-page.has-sticky .site-footer { padding-bottom: 72px; }
 }
 .supporters-page .support-members > p { max-width: 740px; }
+
+/* Nov 23 2026: supporter numbers and the founding supporter deadline. */
+.support-hero__founding { background: rgba(234, 179, 8, .1); border: 1px solid rgba(234, 179, 8, .4); border-radius: 12px; color: var(--site-text) !important; font-size: .95rem; font-weight: 600; line-height: 1.45; padding: 10px 14px; }
+.support-hero__founding span { color: rgb(202, 138, 4); margin-right: 4px; }
+.support-perk--number { border-color: rgba(234, 179, 8, .4); }
+.support-perk--number.support-perk--new::after { background: rgba(234, 179, 8, .14); border-color: rgba(234, 179, 8, .45); color: inherit; }
+.support-wall__number { color: var(--site-muted); font-size: .78rem; font-variant-numeric: tabular-nums; font-weight: 600; }

@@ -567,10 +567,12 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
                 "If this recap was worth a few minutes of your year, a one-off tip or a small monthly membership "
                 "helps keep it running next year.")
     code = _e(supporters.supporter_code(user.id))
+    founding = (' Anyone whose support starts before 2027 stays a founding supporter for good.'
+                if supporter is None and supporters.founding_open() else '')
     return (f'<section class="site-card recap-support" aria-labelledby="recap-support">'
             f'<h2 id="recap-support">{_e(heading)}</h2><p>{_e(lead)}</p>'
-            '<p>Every tracking feature stays free either way. Supporters get a badge beside their name on their profile '
-            'and reviews, and a profile accent color.</p>'
+            '<p>Every tracking feature stays free either way. Supporters get a numbered badge beside their name on their '
+            f'profile and reviews, color themes for the app, and a banner and frame for their profile.{founding}</p>'
             f'<p class="recap-support__code">Use the same email on Ko-fi as here, or paste your supporter code '
             f'<code>{code}</code> into the Ko-fi message, and the badge finds your account.</p>'
             f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{kofi}" target="_blank" '
