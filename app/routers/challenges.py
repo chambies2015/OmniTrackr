@@ -194,6 +194,12 @@ def _cta(month: str, current: bool) -> str:
             '<a class="challenge-cta__member" href="/#challenge">Already a member? Open it on your dashboard</a></p></section>')
 
 
+def _notes(notes) -> str:
+    """A challenge's own written sections, if it has any."""
+    return "".join(f'<section class="editorial challenge-note"><h2>{_e(note["heading"])}</h2>{_paragraphs(note["paragraphs"])}</section>'
+                   for note in notes or ())
+
+
 def _how_it_counts() -> str:
     return ('<section class="editorial"><h2>How progress counts</h2>'
             '<p>A title counts when you mark it finished in your library during the calendar month (UTC), whether you finish it on '
@@ -352,7 +358,7 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         + f'{_counts_line(challenges.public_counts(db, month))}</header>'
         f'<section class="editorial challenge-intro">{_paragraphs(challenge["intro"])}</section>'
         f'<div class="picks challenge-steps">{step_cards}</div>'
-        + edition + _how_it_counts() + reflection + _links_section(challenge.get("links"))
+        + edition + _notes(challenge.get("notes")) + _how_it_counts() + reflection + _links_section(challenge.get("links"))
         + _cta(month, current) + _archive(month) + _method(challenge["published"])
     )
     path = f"/challenges/{slug}"

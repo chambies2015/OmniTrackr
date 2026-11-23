@@ -9,6 +9,7 @@ instead, added up from the listed running time of each episode.
 
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
+DEEPENED = "2026-11-23"  # guides that gained a fourth section
 
 GUIDES = {
     "breaking-bad": {
@@ -121,7 +122,7 @@ GUIDES = {
         ],
     },
     "the-sopranos": {
-        "name": "The Sopranos", "kind": "tv", "reviewed": UPDATED,
+        "name": "The Sopranos", "kind": "tv", "reviewed": DEEPENED,
         "summary": "The Sopranos is 86 episodes over six seasons, about 79 hours. Season-by-season lengths and how long it takes at one or two episodes a night.",
         "titles": [{"kind": "tv", "title": "The Sopranos", "year": 1999}],
         "see_also": ["the-wire", "mad-men", "breaking-bad"],
@@ -161,6 +162,15 @@ GUIDES = {
                 "collection goes wrong. It was directed by Steve Buscemi, who joins the cast as Tony's cousin in season 5. It "
                 "sits a little apart from the main plot, but watch it in order like everything else.",
             ]),
+            ("companions", "Something to read or hear alongside it", [
+                "Two companions go through the series an episode at a time. Talking Sopranos is a podcast started in 2020 "
+                "by Michael Imperioli and Steve Schirripa, who play Christopher and Bobby, with guests from the cast and "
+                "crew. The Sopranos Sessions, a 2019 book by the TV critics Matt Zoller Seitz and Alan Sepinwall, has an "
+                "essay on every episode and long interviews with David Chase.",
+                "Both assume you have seen the episode they are discussing, so read or listen after watching, never "
+                "before. At the one-a-night pace above, that is a chapter or a podcast episode the next day, which helps "
+                "with a show that leaves this much unsaid.",
+            ]),
         ],
         "faq": [
             ("How many episodes of The Sopranos are there?",
@@ -173,7 +183,7 @@ GUIDES = {
         ],
     },
     "the-wire": {
-        "name": "The Wire", "kind": "tv", "reviewed": UPDATED,
+        "name": "The Wire", "kind": "tv", "reviewed": DEEPENED,
         "summary": "The Wire is 60 episodes over five seasons, about 59 hours. How long each season takes, and why it is best watched a season at a time.",
         "titles": [{"kind": "tv", "title": "The Wire", "year": 2002}],
         "see_also": ["the-sopranos", "breaking-bad", "succession"],
@@ -213,6 +223,17 @@ GUIDES = {
                 "The show was made in the squarer 4:3 picture of early-2000s television. In 2014 HBO released a "
                 "high-definition version reframed for widescreen, and Simon wrote at length about what was gained and lost. "
                 "Both versions run the same length, so the totals here hold for either.",
+            ]),
+            ("after", "If you want more after the finale", [
+                "David Simon and Ed Burns had told a Baltimore story before The Wire. The Corner, a six-part HBO "
+                "miniseries from 2000, follows one family around a West Baltimore drug corner and comes from the book the "
+                "two of them wrote. Two decades later, We Own This City (2022, six episodes) went back to the Baltimore "
+                "police for the real Gun Trace Task Force scandal. Each takes about six hours.",
+                "The longer ones move away from Baltimore. Treme (2010 to 2013, 36 episodes) is set in New Orleans in the "
+                "years after Hurricane Katrina and is mostly about its musicians and cooks. The Deuce (2017 to 2019, 25 "
+                "episodes) follows the sex trade around Times Square from the 1970s into the 1980s. Generation Kill "
+                "(2008, seven episodes), adapted by Simon and Burns from Evan Wright's book, rides with a Marine unit "
+                "through the first weeks of the 2003 invasion of Iraq. Every one of them shares actors with The Wire.",
             ]),
         ],
         "faq": [
@@ -282,7 +303,7 @@ GUIDES = {
         ],
     },
     "mad-men": {
-        "name": "Mad Men", "kind": "tv", "reviewed": UPDATED,
+        "name": "Mad Men", "kind": "tv", "reviewed": DEEPENED,
         "summary": "Mad Men is 92 episodes over seven seasons, about 72 hours without ads. Season lengths and a planner for finishing by a date you pick.",
         "titles": [{"kind": "tv", "title": "Mad Men", "year": 2007}],
         "see_also": ["the-sopranos", "succession", "better-call-saul"],
@@ -324,6 +345,17 @@ GUIDES = {
                 "with Don and Peggy and very little else. If you are deciding whether to keep going after the first few "
                 "seasons, that is the episode to judge it by.",
             ]),
+            ("history", "The real events in the background", [
+                "Each season is pinned to the news of its year, and some of the best episodes happen on days you already "
+                "know. The 1960 election runs through season 1, with Sterling Cooper working for the Nixon campaign. "
+                "Season 2 ends during the Cuban Missile Crisis, in \"Meditations in an Emergency\". The twelfth episode "
+                "of season 3, \"The Grown-Ups\", is the weekend of the Kennedy assassination.",
+                "The later seasons do the same with 1968 and 1969. \"The Flood\", the fifth episode of season 6, takes "
+                "place on the night Martin Luther King Jr. was killed, and \"Waterloo\", which closes the first half of "
+                "season 7, gathers the office around a television for the moon landing. Matthew Weiner, who created the "
+                "show, wrote the pilot in 2000. The script got him hired as a writer on The Sopranos, where he stayed for "
+                "its last two seasons, and Mad Men premiered in July 2007, a month after The Sopranos ended.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Mad Men are there?",
@@ -336,7 +368,7 @@ GUIDES = {
         ],
     },
     "lost": {
-        "name": "Lost", "kind": "tv", "reviewed": UPDATED,
+        "name": "Lost", "kind": "tv", "reviewed": DEEPENED,
         "summary": "Lost is 121 episodes over six seasons, about 87 hours without ads. Season lengths, where the short seasons fall, and a pace planner.",
         "titles": [{"kind": "tv", "title": "Lost", "year": 2004}],
         "see_also": ["supernatural", "stranger-things", "game-of-thrones"],
@@ -378,6 +410,15 @@ GUIDES = {
                 "Neither is a mistake in the episode order. Not counted here: the 13 short \"Missing Pieces\" clips made for "
                 "phones in 2007 and 2008, and \"The New Man in Charge\", a 12-minute epilogue on the season 6 and "
                 "complete-series discs.",
+            ]),
+            ("end-date", "Why the second half moves faster", [
+                "On May 7, 2007, near the end of season 3, ABC announced that Lost would finish in 2010, after 48 more "
+                "episodes. Until then nobody knew how long the network would keep it going, and the early seasons were "
+                "written to run indefinitely. With an end date fixed, Damon Lindelof and Carlton Cuse, who ran the show, "
+                "could build toward a last episode, and seasons 4 to 6 are shorter and much more tightly plotted.",
+                "The writers' strike that winter then cut season 4 to 14 episodes. So if you are stuck in the slow start "
+                "of season 3 and wondering whether to push on, this is the useful thing to know: everything after it was "
+                "written by people who knew where the story ended.",
             ]),
         ],
         "faq": [
@@ -568,7 +609,7 @@ GUIDES = {
         ],
     },
     "stranger-things": {
-        "name": "Stranger Things", "kind": "tv", "reviewed": UPDATED,
+        "name": "Stranger Things", "kind": "tv", "reviewed": DEEPENED,
         "summary": "Stranger Things is 42 episodes over five seasons, about 45 hours, and the episodes keep getting longer. Season totals and a planner.",
         "titles": [{"kind": "tv", "title": "Stranger Things", "year": 2016}],
         "see_also": ["lost", "game-of-thrones", "breaking-bad"],
@@ -607,6 +648,16 @@ GUIDES = {
                 "and the finale on New Year's Eve, when it also played in cinemas in the US and Canada. Watching now there is "
                 "nothing to wait for, but the three batches still make sensible stopping points.",
             ]),
+            ("setting", "When each season is set", [
+                "The seasons follow the calendar in Hawkins, Indiana, and each is tied to a time of year. Season 1 opens "
+                "on November 6, 1983, the night Will Byers disappears. Season 2 builds to Halloween 1984, season 3 is the "
+                "summer of 1985 and ends on the Fourth of July, season 4 begins in March 1986, and season 5 is set in the "
+                "autumn of 1987.",
+                "Off screen the gaps were longer. Seasons 3 and 4 came out nearly three years apart, July 2019 and May "
+                "2022, but only about eight months pass in the story, so the cast looks suddenly older when you watch "
+                "them back to back. If you like to match the season, season 2 is the October one, and season 1 leads up "
+                "to Christmas, which is where its last episode ends.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Stranger Things are there?",
@@ -618,7 +669,7 @@ GUIDES = {
         ],
     },
     "succession": {
-        "name": "Succession", "kind": "tv", "reviewed": UPDATED,
+        "name": "Succession", "kind": "tv", "reviewed": DEEPENED,
         "summary": "Succession is 39 episodes over four seasons, about 41 hours. Season lengths, the 88-minute finale, and a plan for finishing it in a month.",
         "titles": [{"kind": "tv", "title": "Succession", "year": 2018}],
         "see_also": ["mad-men", "the-sopranos", "better-call-saul"],
@@ -654,6 +705,18 @@ GUIDES = {
                 "video thumbnails and search suggestions do, so be careful what you look up until you are past it.",
                 "The show was created by Jesse Armstrong, who co-created Peep Show, and he led the writers' room for all four "
                 "seasons. It ended because he decided the story was finished. HBO had not cancelled it.",
+            ]),
+            ("who", "Who's who in the first episode", [
+                "The first episode, \"Celebration\", is Logan Roy's 80th birthday, and it brings in the whole family "
+                "inside an hour. Logan (Brian Cox) built Waystar Royco, a media and entertainment company that also runs "
+                "cruise lines and theme parks. Kendall (Jeremy Strong) is the son lined up to take over. Roman (Kieran "
+                "Culkin) is the youngest and the family joker. Shiv (Sarah Snook) works in politics, away from the "
+                "company. Connor (Alan Ruck), the eldest, is from Logan's first marriage and lives on a ranch in New "
+                "Mexico.",
+                "Around them are Tom Wambsgans (Matthew Macfadyen), Shiv's fiancé, who runs the parks and cruises "
+                "division; Greg Hirsch (Nicholas Braun), a cousin who turns up at the party needing a job; Marcia (Hiam "
+                "Abbass), Logan's third wife; and Gerri Kellman (J. Smith-Cameron), the company's general counsel. That "
+                "is ten names in the first hour. Once they stick, the rest of season 1 is much easier to follow.",
             ]),
         ],
         "faq": [

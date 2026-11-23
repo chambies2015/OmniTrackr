@@ -48,7 +48,9 @@ def test_log_entries_are_dated_known_kinds_and_point_at_real_guides():
     guides |= {switch_guides.path(slug) for slug in switch_guides.GUIDES}
     for change in corrections_log.guide_changes():
         date.fromisoformat(change.date)
-        assert change.date <= corrections_log.STARTED
+        # Entries dated before the log started were mined from the November history; later ones are logged
+        # on the day of the change, so none can be in the future.
+        assert "2026-11-01" <= change.date <= date.today().isoformat()
         assert change.kind in corrections_log.KINDS
         assert change.pages and change.summary
         for page, line in change.pages:
@@ -103,12 +105,12 @@ def test_binge_guide_note_names_its_own_new_section(client):
 
 
 def test_guides_without_a_first_published_line_get_one(client):
-    for path in ("/discover/monthly/november-2026", "/awards/grammys-2027"):
+    for path in ("/discover/monthly/november-2026", "/awards/grammys-2027", "/awards/oscars-2027"):
         html = client.get(path).text
         note = html[html.index('<div class="guide-changes"'):]
         note = note[:note.index("</div>")]
         assert 'First published <time datetime="' in note, path
-    awards = client.get("/awards/oscars-2027").text  # nothing logged, so dates only
+    awards = client.get("/awards/the-game-awards-2026").text  # nothing logged, so dates only
     note = awards[awards.index('<div class="guide-changes"'):]
     assert "<h3>About this guide</h3>" in note[:note.index("</div>")]
 

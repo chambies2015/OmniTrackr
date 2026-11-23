@@ -87,6 +87,51 @@ def _binge_sections() -> Change:
     )
 
 
+def _binge_fourth_sections() -> Change:
+    from . import binge_calculator
+    from .binge_guides import GUIDES
+    pages = tuple(
+        (binge_calculator.path(slug), f"Added the section “{guide['sections'][3][1]}”.")
+        for slug, guide in GUIDES.items() if len(guide["sections"]) > 3
+    )
+    return Change(
+        "2026-11-23", "added", f"{len(pages)} “How long it takes” guides", binge_calculator.BASE_PATH,
+        "The nine guides with the least writing of their own each gained a fourth section: who's who in the first "
+        "episode of Succession, the crew's own sessions in Cowboy Bebop, what Death Note's makers did next, David "
+        "Simon's other series after The Wire, the real events behind Mad Men, when each Stranger Things season is set, "
+        "where to pause Attack on Titan, a podcast and a book to go with The Sopranos, and why Lost speeds up after "
+        "season 3.",
+        pages,
+    )
+
+
+def _awards_depth() -> tuple[Change, Change]:
+    added = Change(
+        "2026-11-23", "added", "Awards season pages", "/awards",
+        "The Golden Globes and Oscars pages gained sections on how their voting works, written for the weeks before "
+        "nominations: who votes for the Globes since 2023, how their categories split and what they say about the "
+        "Oscars; and which films can compete for an Oscar, how the votes are counted and what the December shortlists "
+        "mean. The Globes page now lists last year's main winners, and the calendar page has notes on picking well at "
+        "each show.",
+        (("/awards", "Added the section “Picking well at each show”."),
+         ("/awards/golden-globes-2027",
+          "Added “Who the voters are now”, “How the categories split” and “What the Globes say about the Oscars”, "
+          "and listed last year's winners in the main film and TV categories, not just the podcast award."),
+         ("/awards/oscars-2027",
+          "Added “Which films can compete”, “How the votes are counted” and “What the December shortlists tell "
+          "you”. The rules section now says the casting award can go to up to three people on a film."),),
+    )
+    fixed = Change(
+        "2026-11-23", "correction", "Awards season calendar", "/awards",
+        "The answer to “When can I fill in a ballot?” kept saying the Game Awards nominees “are revealed on "
+        "November 17” after that day had passed. The answer now follows where each show actually is.",
+        (("/awards", "The answer to “When can I fill in a ballot?” kept saying the Game Awards nominees “are "
+                     "revealed on November 17” after that day had passed. It now follows where each show actually "
+                     "is, and changes by itself as nominations come out."),),
+    )
+    return added, fixed
+
+
 def _if_you_liked_decks() -> Change:
     from . import if_you_liked
     from .if_you_liked_guides import GUIDES
@@ -233,8 +278,9 @@ def _switch_fixes() -> Change:
 
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [_switch_fixes(), _switch_sections(), _in_order_dates(), _binge_sections(), _if_you_liked_decks(),
-               _best_of_decks(), _hubs(), *_grammys(), _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
+    changes = [*_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
+               _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(), *_grammys(),
+               _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))
 
 

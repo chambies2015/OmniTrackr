@@ -146,6 +146,55 @@ PENDING_WORDS = {
 }
 
 
+def _join(parts: list[str]) -> str:
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def ballot_window_answer(now: Optional[datetime] = None) -> str:
+    """The calendar page's "When can I fill in a ballot?" answer, from where each show stands today."""
+    now = now or _now()
+    first = dict(awards_data.SEASON["faq"])[awards_data.BALLOT_WINDOW_QUESTION]
+    open_, pending, coming, closed = [], [], [], []
+    for _, show in ordered():
+        if is_locked(show, now):
+            if has_nominees(show):
+                closed.append(show)
+        elif has_nominees(show):
+            open_.append(show)
+        elif nominees_pending(show, now):
+            pending.append(show)
+        else:
+            coming.append(show)
+
+    def ballots(shows: list[dict]) -> str:
+        return _join([show["ballot_name"] for show in shows]) + (" ballot" if len(shows) == 1 else " ballots")
+
+    sentences = [first]
+    if open_:
+        sentences.append(f"The {ballots(open_)} {'is' if len(open_) == 1 else 'are'} open now.")
+    if pending:
+        names = _join([show["nominations_name"] for show in pending])
+        sentences.append(f"{names} nominees are out, and that ballot opens once the list is checked against the "
+                         "official one." if len(pending) == 1 else
+                         f"{names} nominees are out, and those ballots open once the lists are checked against the "
+                         "official ones.")
+    if coming:
+        sentences.append("Still to come: " + _join([f"{show['nominations_name']} nominations on {show['nominees_label']}"
+                                                    for show in coming]) + ".")
+    if closed:
+        sentences.append(f"The {ballots(closed)} closed when the ceremony began, and the results are on the show's "
+                         "page." if len(closed) == 1 else
+                         f"The {ballots(closed)} closed when their ceremonies began, and the results are on each "
+                         "show's page.")
+    return " ".join(sentences)
+
+
+def season_faq(now: Optional[datetime] = None) -> tuple:
+    """The calendar page's questions, with the ballot-window answer brought up to date."""
+    return tuple((question, ballot_window_answer(now) if question == awards_data.BALLOT_WINDOW_QUESTION else answer)
+                 for question, answer in awards_data.SEASON["faq"])
+
+
 def show_words(slug: str, show: dict, now: Optional[datetime] = None) -> dict:
     """The show's lead and description for right now."""
     pending = PENDING_WORDS.get(slug) if nominees_pending(show, now) else None
