@@ -312,8 +312,13 @@
 }
 .bp-titles button[aria-pressed="true"] { border-color: var(--site-violet-soft); box-shadow: inset 0 0 0 1px var(--site-violet-soft); }
 .bp-titles small { color: var(--site-muted); flex: 0 0 auto; font-size: .78rem; }
-.bp-share-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.bp-share-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; }
 .bp-share-url { color: var(--site-soft); font-size: .88rem; margin: 8px 0 0; overflow-wrap: anywhere; }
+.bp-share__layout { align-items: start; display: grid; gap: 18px 24px; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); }
+.bp-share__note { font-size: .88rem; line-height: 1.5; margin: 6px 0 0; }
+.bp-share__preview { margin: 0; }
+.bp-share__preview img { aspect-ratio: 1200 / 630; border: 1px solid var(--site-border-strong); border-radius: 12px; display: block; height: auto; width: 100%; }
+.bp-share__preview figcaption { color: var(--site-muted); font-size: .8rem; margin-top: 6px; }
 
 .bp-wrap {
   background: radial-gradient(120% 140% at 0% 0%, rgba(252, 211, 77, .16), transparent 55%), rgba(255, 255, 255, .035);
@@ -335,6 +340,48 @@
 .bp-step { border: 0; margin: 0; min-width: 0; padding: 0; }
 .bp-step legend { color: #fff; font-size: 1.15rem; font-weight: 800; margin: 0 0 4px; padding: 0; }
 .bp-step__hint { color: var(--site-muted); font-size: .9rem; margin: 0 0 10px; }
+
+/* Started from someone's shared plan: its titles, ticked ones going in first. */
+.bp-from {
+  background: radial-gradient(120% 140% at 0% 0%, rgba(252, 211, 77, .12), transparent 60%), rgba(255, 255, 255, .03);
+  border: 1px solid rgba(252, 211, 77, .38);
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+.bp-from legend { float: left; margin-bottom: 4px; width: 100%; }
+.bp-from legend + * { clear: both; }
+.bp-from__list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.bp-from__item { --bp-kind: var(--site-violet-soft); min-width: 0; }
+.bp-from__item[data-category="movies"] { --bp-kind: var(--fmt-movie); }
+.bp-from__item[data-category="tv-shows"] { --bp-kind: var(--fmt-tv); }
+.bp-from__item[data-category="anime"] { --bp-kind: var(--fmt-anime); }
+.bp-from__item[data-category="video-games"] { --bp-kind: var(--fmt-game); }
+.bp-from__item[data-category="music"] { --bp-kind: var(--fmt-album); }
+.bp-from__item[data-category="books"] { --bp-kind: var(--fmt-book); }
+.bp-from__item[data-category="manga"] { --bp-kind: var(--fmt-manga); }
+.bp-from__item[data-category="audiobooks"] { --bp-kind: var(--fmt-audiobook); }
+.bp-from__pick {
+  align-items: center;
+  background: rgba(11, 10, 24, .55);
+  border: 1px solid var(--site-border);
+  border-left: 3px solid var(--bp-kind);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 64px;
+  padding: 8px 12px 8px 10px;
+}
+.bp-from__pick:has(input:checked) { background: rgba(252, 211, 77, .08); border-color: rgba(252, 211, 77, .45); border-left-color: var(--bp-kind); }
+.bp-from__pick:has(input:disabled) { cursor: default; opacity: .6; }
+.bp-from__pick input { accent-color: var(--bp-gold); flex: 0 0 auto; height: 20px; margin: 0; width: 20px; }
+.bp-from__pick:has(input:focus-visible) { outline: 3px solid var(--site-violet-soft); outline-offset: 2px; }
+.bp-from__body { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.bp-from__body strong { color: #fff; font-size: .95rem; line-height: 1.3; overflow-wrap: anywhere; }
+.bp-from__meta { color: var(--site-muted); font-size: .8rem; }
+.bp-from__tag { border: 1px solid var(--site-border-strong); border-radius: 999px; color: var(--site-muted); flex: 0 0 auto; font-size: .72rem; font-weight: 700; padding: 2px 8px; }
+.bp-from__tag--mine { border-color: rgba(45, 212, 191, .45); color: var(--site-teal-soft); }
+.bp-from__row { align-items: center; display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
 .bp-presets { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .bp-preset {
   background: rgba(11, 10, 24, .55);
@@ -442,6 +489,9 @@
   .bp-tools .bp-pill { flex: 1 1 auto; }
   .bp-presets { grid-template-columns: 1fr; }
   .bp-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bp-share__layout { grid-template-columns: 1fr; }
+  .bp-from { padding: 14px; }
+  .bp-from__list { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

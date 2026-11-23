@@ -241,6 +241,12 @@ GUEST = (
     ("break_home_offer_clicked", "Break planner: \"Plan it\" pressed on the home card"),
     ("break_email_sent", "Break planner: email sent (the morning it starts, the day after it ends)"),
     ("break_back_from_email", "Break planner: plan opened from one of its emails"),
+    ("break_from_link_started", "Break planner: a member opened the planner from someone's shared plan"),
+    ("break_from_link_created", "Break planner: a plan made from someone's shared plan"),
+    ("break_link_shared", "Break planner: a share link copied or sent by its owner"),
+    ("break_story_saved", "Break planner: a shared plan's story picture saved or shared"),
+    ("break_title_saved", "Break planner: a title saved from someone's shared plan"),
+    ("break_same_days_clicked", "Break planner: a member pressed \"Plan the same days\" on someone's shared plan"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -313,7 +319,8 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM} | {"signup_inbox_opened", "sign
                  "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
                  "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
                  "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked",
-                 "break_signup_clicked", "break_home_offer_clicked"}
+                 "break_signup_clicked", "break_home_offer_clicked", "break_link_shared", "break_story_saved",
+                 "break_title_saved", "break_same_days_clicked"}
 
 
 def record(event: str, request=None) -> bool:
