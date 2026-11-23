@@ -98,7 +98,7 @@ def test_directors_cut_unlocks_gold_and_the_credits(client, db_session):
     db_session.commit()
     assert client.put("/api/supporter", headers=headers_for(user), json={"accent": "gold", "on_wall": True}).status_code == 200
     page = client.get("/supporters").text
-    assert "support-credits" in page and ">auteur</span>" in page
+    assert "support-credits" in page and ">auteur <small class=\"support-wall__number\">#1</small></span>" in page
 
 
 def test_supporters_page_lists_the_tiers(client):
