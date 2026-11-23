@@ -57,7 +57,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import and_, func, not_, or_
+from sqlalchemy import and_, func, not_, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -98,6 +98,9 @@ MOTION_RANK = 2  # moving banners
 CREDITS_RANK = 3  # gold right away and the credits on the wall
 GOLD_MONTHS = 6
 FOUNDING_BEFORE = datetime(2027, 1, 1)
+# December 31 ends in UTC-12 at noon UTC on January 1. Support that starts before then still counts as
+# founding, so someone in the Americas paying on the evening of December 31 gets what the page promised.
+FOUNDING_GRACE = timedelta(hours=12)
 WALL_LIMIT = 150
 # Hyphens, spaces or dashes between the parts: people retype the code as often as they paste it.
 CODE_RE = re.compile(r"\bOT[\s\-\u2010-\u2015_]*(\d{1,10})[\s\-\u2010-\u2015_]+([0-9a-f]{6})\b", re.IGNORECASE)
@@ -306,11 +309,12 @@ def is_ad_free(db: Session, user) -> bool:
 
 
 def is_founding(supporter: Optional[models.Supporter]) -> bool:
-    return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE)
+    return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE + FOUNDING_GRACE)
 
 
 def founding_open(now: Optional[datetime] = None) -> bool:
-    return (now or _now()) < FOUNDING_BEFORE
+    """Whether new support still makes a founding supporter: until December 31 is over everywhere."""
+    return (now or _now()) < FOUNDING_BEFORE + FOUNDING_GRACE
 
 
 def founding_days_left(now: Optional[datetime] = None) -> int:
@@ -328,16 +332,41 @@ def founding_deadline(now: Optional[datetime] = None) -> Optional[str]:
         return None
     last_day = f"{FOUNDING_BEFORE - timedelta(days=1):%B} {(FOUNDING_BEFORE - timedelta(days=1)).day}"
     if days == 1:
-        return f"Today, {last_day}, is the last day to become a founding supporter."
+        # Not "today": the page can't tell where the reader is, and it's still December 30 in the Americas.
+        return f"{last_day} is the last day to become a founding supporter."
     if days <= 31:
         return f"{days} days left to become a founding supporter. It closes on {last_day}."
     return f"Founding supporter is open until {last_day}, {(FOUNDING_BEFORE - timedelta(days=1)).year}."
 
 
 def next_number(db: Session) -> int:
-    """The number the next new supporter will get. Rows the startup migration hasn't numbered yet still count."""
+    """The number the next new supporter will get. Rows the startup migration hasn't numbered yet still count,
+    and so do rows this session has added but not saved yet."""
     top, total = db.query(func.max(models.Supporter.number), func.count(models.Supporter.id)).one()
-    return max(int(top or 0), int(total or 0)) + 1
+    pending = [row.number or 0 for row in db.new if isinstance(row, models.Supporter)]
+    return max(int(top or 0), int(total or 0) + len(pending), *pending) + 1
+
+
+# pg_advisory_xact_lock key for making supporter rows. Held until the transaction ends.
+GRANT_LOCK_KEY = 0x4F54_5355_5050
+
+
+def _lock_grants(db: Session) -> None:
+    """Make supporter rows one transaction at a time on Postgres. Without it, two payments landing together
+    read the same top number (two members both #1), or both make a row for one member and the second
+    payment fails on the unique user_id. SQLite already lets only one writer through at a time."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": GRANT_LOCK_KEY})
+
+
+def _supporter_for_grant(db: Session, user_id: int) -> Optional[models.Supporter]:
+    # The session doesn't flush before queries, so a row made for an earlier payment in this same
+    # transaction (two waiting payments linked at once) isn't in the database yet. Look for it first.
+    for row in db.new:
+        if isinstance(row, models.Supporter) and row.user_id == user_id:
+            return row
+    _lock_grants(db)
+    return get_supporter(db, user_id)
 
 
 def number_text(number) -> str:
@@ -420,7 +449,7 @@ def chip_html(badge: Optional[dict]) -> str:
 
 
 def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Supporter:
-    supporter = get_supporter(db, user_id)
+    supporter = _supporter_for_grant(db, user_id)
     paid_at = payment.received_at or _now()
     # A payment linked late (unmatched email, claimed later) still gets its full days, counted from
     # now, while the supporter date goes back to when they paid.
