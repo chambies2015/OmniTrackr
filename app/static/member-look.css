@@ -79,7 +79,7 @@ body.app-shell .app-explore__group p { color: var(--teal); letter-spacing: .12em
    768px down the search drops to a second row, and phones have the bottom bar, so
    the bar only sticks while it is one row. */
 @media (min-width: 769px) {
-  html:has(> body.app-shell) { scroll-padding-top: 112px; }
+  html { scroll-padding-top: 112px; } /* Only the app shell links this file. */
   body.app-shell .account-toolbar { z-index: 45; }
   body.app-shell .header {
     -webkit-backdrop-filter: blur(18px) saturate(160%);
@@ -301,16 +301,9 @@ body.app-shell .app-footer__lib:hover {
   background: color-mix(in srgb, var(--kind, var(--accent-solid)) 10%, var(--card-bg));
   border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 55%, transparent);
 }
-/* A library the member hid from the tab row is hidden here too. */
-body.app-shell:has(.tabs .tab[data-switch-tab="movies"][style*="none"]) .app-footer__lib[data-switch-tab="movies"],
-body.app-shell:has(.tabs .tab[data-switch-tab="tv-shows"][style*="none"]) .app-footer__lib[data-switch-tab="tv-shows"],
-body.app-shell:has(.tabs .tab[data-switch-tab="anime"][style*="none"]) .app-footer__lib[data-switch-tab="anime"],
-body.app-shell:has(.tabs .tab[data-switch-tab="video-games"][style*="none"]) .app-footer__lib[data-switch-tab="video-games"],
-body.app-shell:has(.tabs .tab[data-switch-tab="music"][style*="none"]) .app-footer__lib[data-switch-tab="music"],
-body.app-shell:has(.tabs .tab[data-switch-tab="books"][style*="none"]) .app-footer__lib[data-switch-tab="books"],
-body.app-shell:has(.tabs .tab[data-switch-tab="manga"][style*="none"]) .app-footer__lib[data-switch-tab="manga"],
-body.app-shell:has(.tabs .tab[data-switch-tab="podcasts"][style*="none"]) .app-footer__lib[data-switch-tab="podcasts"],
-body.app-shell:has(.tabs .tab[data-switch-tab="audiobooks"][style*="none"]) .app-footer__lib[data-switch-tab="audiobooks"] { display: none; }
+/* A library the member hid from the tab row is hidden here too (updateTabVisibilityUI in account.js
+   sets [hidden]; a body:has() rule used to, and it made every change on the page restyle all of it). */
+body.app-shell .app-footer__lib[hidden] { display: none; }
 body.app-shell .app-footer__grid {
   background: linear-gradient(var(--border), var(--border)) center top / 100% 1px no-repeat;
   grid-template-columns: repeat(4, minmax(0, 1fr));

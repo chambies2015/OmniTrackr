@@ -5,6 +5,7 @@ library tables and existing reviews are untouched. Public pages show a flagged
 review behind a "Show review" toggle, and teaser surfaces (homepage, weekly email,
 chart quotes, search snippets) skip it.
 """
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from . import models
@@ -19,11 +20,11 @@ def flagged(db: Session, keys) -> dict:
     for category, item_id in keys:
         by_category.setdefault(category, set()).add(item_id)
     table = models.ReviewSpoiler
-    found = {}
-    for category, ids in by_category.items():
-        rows = db.query(table.item_id, table.user_id).filter(table.category == category, table.item_id.in_(sorted(ids))).all()
-        found.update({(category, item_id): user_id for item_id, user_id in rows})
-    return found
+    # One query for every format at once (the home page asks for several).
+    match = or_(*(and_(table.category == category, table.item_id.in_(sorted(ids)))
+                  for category, ids in sorted(by_category.items())))
+    rows = db.query(table.category, table.item_id, table.user_id).filter(match).all()
+    return {(category, item_id): user_id for category, item_id, user_id in rows}
 
 
 def attach(db: Session, reviews: list) -> list:

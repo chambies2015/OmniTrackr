@@ -325,7 +325,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   }
   body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr td.library-cell[data-card-field="actions"] { box-shadow: none; }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions { flex: 1 1 auto; gap: 6px; }
-  body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > * { flex: 1 1 0; }
+  body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > :is(button, details) { flex: 1 1 0; }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > button.action-btn,
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) .row-menu > summary {
     font-size: .76rem;
