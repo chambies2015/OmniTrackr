@@ -1,6 +1,7 @@
 """Best-of-the-year lists (/best-of): hand-written picks of each year's best new titles (Oct 2026; nine formats and the
 year-end hub since Nov 2026)."""
 import re
+from datetime import date
 
 import pytest
 
@@ -16,7 +17,8 @@ def fresh_index():
 
 
 def words(entry):
-    texts = entry["lead"] + entry["start"] + entry["coming"] + [title + " " + text for title, text in entry["also"]]
+    texts = entry["lead"] + entry["start"] + [note["text"] for note in entry["coming"]]
+    texts += [title + " " + text for title, text in entry["also"]]
     texts += [item["why"] + " " + item["note"] + " " + item["caveat"] for item in entry["picks"]]
     return sum(len(text.split()) for text in texts)
 
@@ -64,7 +66,8 @@ def test_every_pick_can_be_saved():
     assert heron["source_url"] == "/best-of/2026/movies#pick-blue-heron"
 
 
-def test_list_page_reads_completely_without_an_account(client):
+def test_list_page_reads_completely_without_an_account(client, monkeypatch):
+    monkeypatch.setattr(best_of, "_today", lambda: date(2026, 11, 24))
     response = client.get("/best-of/2026/movies")
     assert response.status_code == 200
     html = response.text
@@ -86,6 +89,54 @@ def test_list_page_reads_completely_without_an_account(client):
         assert f'href="/best-of/2026/{other}"' in html
     assert 'href="/best-of"' in html and 'href="/if-you-liked/interstellar"' in html
     assert "Cookie" in response.headers["vary"]
+
+
+def test_still_to_come_notes_are_dated_and_name_their_date():
+    for slug, entry in GUIDES.items():
+        for note in entry["coming"]:
+            assert set(note) == {"until", "text"}, slug
+            until = date.fromisoformat(note["until"])
+            assert until.year == entry["year"] and note["text"].strip()
+            # The date is the last one the note talks about, so its month is in the note.
+            assert f"{until:%B}" in note["text"], (slug, note["until"])
+    for paragraph in YEARS[2026]["intro"]:
+        assert isinstance(paragraph, str) or date.fromisoformat(paragraph["until"]).year == 2026
+
+
+def test_a_note_shows_through_its_date_and_then_drops_out():
+    notes = ["Always here.", {"until": "2026-12-18", "text": "Opens December 18."}]
+    assert best_of.current(notes, date(2026, 12, 18)) == ["Always here.", "Opens December 18."]
+    assert best_of.current(notes, date(2026, 12, 19)) == ["Always here."]
+    assert best_of.still_to_come("2026-movies", date(2026, 11, 24))
+    assert best_of.still_to_come("2026-movies", date(2026, 12, 19)) == []
+    # Every 2026 note has gone by New Year's Day, so no list tells readers about a date that has passed.
+    assert all(best_of.still_to_come(slug, date(2027, 1, 1)) == [] for slug in best_of.for_year(2026))
+
+
+def test_still_to_come_leaves_the_page_once_its_dates_pass(client, monkeypatch):
+    monkeypatch.setattr(best_of, "_today", lambda: date(2026, 12, 10))
+    html = client.get("/best-of/2026/movies").text
+    assert 'id="coming"' in html and "December 18" in html
+    manga = client.get("/best-of/2026/manga").text
+    assert 'id="coming"' not in manga and 'href="#coming"' not in manga and "one more first volume" not in manga
+    hub = client.get("/best-of").text
+    assert "Avengers: Doomsday on December 18" in hub
+    monkeypatch.setattr(best_of, "_today", lambda: date(2026, 12, 19))
+    html = client.get("/best-of/2026/movies").text
+    assert 'id="coming"' not in html and 'href="#coming"' not in html and "Still to come in 2026" not in html
+    hub = client.get("/best-of").text
+    assert "Avengers: Doomsday on December 18" not in hub and "The lists are updated until the year is over" in hub
+
+
+def test_member_copy_stops_counting_down_once_the_year_is_over(authenticated_client, monkeypatch):
+    monkeypatch.setattr(best_of, "_today", lambda: date(2026, 12, 1))
+    assert "the year still has a few weeks left" in authenticated_client.get("/best-of").text
+    assert "before the year is out" in authenticated_client.get("/best-of/2026/games").text
+    monkeypatch.setattr(best_of, "_today", lambda: date(2027, 1, 4))
+    hub = authenticated_client.get("/best-of").text
+    assert "few weeks left" not in hub and "Every list below has an Add button." in hub
+    games = authenticated_client.get("/best-of/2026/games").text
+    assert "before the year is out" not in games and "Add the ones you want to get to next." in games
 
 
 def test_lists_without_extras_skip_those_sections(client):

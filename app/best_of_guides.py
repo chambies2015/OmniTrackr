@@ -8,9 +8,11 @@ public reviews and listings its facts were checked against.
 
 Guide fields: format (URL segment), kind (title_pages.KINDS key), year, name,
 search_title, summary, reviewed, lead (paragraphs), picks, also (shorter
-mentions: (title, sentence)), coming (paragraphs about dated releases still to
-come, may be empty), start (paragraphs), related ((label, path) to other guides),
-sources ((label, url)).
+mentions: (title, sentence)), coming (releases still to come, may be empty: each
+{"until": "YYYY-MM-DD", "text": paragraph}, where "until" is the last date the
+paragraph talks about; the page stops showing it the day after, so move anything
+that came out into the list or "also" when the guide is next checked), start
+(paragraphs), related ((label, path) to other guides), sources ((label, url)).
 
 Pick fields: kind, title, year (the release year OmniTrackr files it under),
 creator (director or author; None for TV, anime and games), released (where and
@@ -24,7 +26,7 @@ GUIDES = {
         "name": "The best movies of 2026",
         "search_title": "Best movies of 2026: 9 films worth your evening",
         "summary": "Project Hail Mary and The Odyssey lead nine 2026 films to plan an evening around, from big releases to Blue Heron and Wildwood, with where each came out.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
             "2026 has been a year of very big films and very small ones, and the gap between them made both look better. Spider-Man: Brand New Day had the biggest domestic opening ever recorded. A horror film made for about $750,000 became Focus Features' biggest hit. A first feature from a Canadian director topped Metacritic's midyear list. And a big-budget adaptation of a science-fiction novel became the crowd-pleaser of the spring, the kind of film people went back to see with family.",
             "This list covers films released in US theaters or on streaming between January and early November 2026. We picked nine that hold up beyond their opening weekend, across genres, and said what kind of viewer each one suits. It is in no strict order, though if you only see one, see the first. We will update it as the last big releases of the year arrive.",
@@ -79,10 +81,12 @@ GUIDES = {
         "also": [
             ("Spider-Man: Brand New Day", "Destin Daniel Cretton's darker, more grounded Spider-Man had the biggest domestic opening ever ($360 million). Critics praised Tom Holland and Sadie Sink and complained about an overstuffed final act."),
             ("Godzilla Minus Zero", "Takashi Yamazaki's follow-up to his Oscar-winning Godzilla Minus One opened at No. 1 in the US on November 6 and holds a 92 percent Rotten Tomatoes score. Empire's John Nugent found it less coherent than Minus One. See it on a big screen while you can."),
+            ("The Hunger Games: Sunrise on the Reaping", "Francis Lawrence's prequel, with Joseph Zada as the young Haymitch, opened at No. 1 in the US on November 20 with more than $120 million. Reviews were mixed, and its 69 percent on Rotten Tomatoes after the first 62 reviews was the second lowest in the series. The Hollywood Reporter's David Rooney praised Zada's tenacity and heartrending vulnerability, while Variety's Owen Gleiberman found it meandering and thin. At 2 hours 38 minutes, it is one for readers of the book."),
             ("Coyote vs. Acme", "The Looney Tunes courtroom comedy that Warner Bros. shelved in 2023 finally came out in late summer through Ketchup Entertainment. Will Forte plays Wile E. Coyote's lawyer and John Cena plays Acme's. Most reviews were warm, and Little White Lies called it a funny bit of cartoon anarchy."),
         ],
         "coming": [
-            "The Hunger Games: Sunrise on the Reaping opens on November 20. Then two of the year's biggest films are scheduled for the same day, December 18: Denis Villeneuve's Dune: Part Three and Marvel's Avengers: Doomsday. We will add them here if they earn a place once they are out. If you want to catch up on Dune first, our guide to the Dune films and books in order covers it.",
+            {"until": "2026-12-18",
+             "text": "Two of the year's biggest films open on the same day, December 18: Denis Villeneuve's Dune: Part Three, adapted from Frank Herbert's Dune Messiah, and Marvel's Avengers: Doomsday, directed by Anthony and Joe Russo, with Robert Downey Jr. as Doctor Doom. We will add them here if they earn a place once they are out. If you want to catch up on Dune first, our guide to the Dune films and books in order covers it."},
         ],
         "start": [
             "If you want a crowd-pleaser tonight, start with Project Hail Mary. If you want the year's big-screen event, see The Odyssey. For something you will still be thinking about the next day, find Blue Heron on the Criterion Channel. Horror fans should pick Send Help for laughs and Obsession for the creeps.",
@@ -97,6 +101,10 @@ GUIDES = {
             ("Rotten Tomatoes: best new movies of 2026", "https://editorial.rottentomatoes.com/guide/best-new-movies/"),
             ("Variety: the best movies of 2026 so far", "https://variety.com/lists/best-movies-of-2026-so-far/"),
             ("Wikipedia: Is God Is (film)", "https://en.wikipedia.org/wiki/Is_God_Is_(film)"),
+            ("The Hollywood Reporter: Sunrise on the Reaping wins the box office with $120M+", "https://www.hollywoodreporter.com/movies/movie-news/hunger-games-sunrise-on-the-reaping-box-office-opening-win-2-1236760511/"),
+            ("Forbes: Sunrise on the Reaping's Rotten Tomatoes reviews", "https://www.forbes.com/sites/timlammers/2026/11/17/hunger-games-sunrise-on-the-reaping-rotten-tomatoes-reviews-slightly-favor-prequel/"),
+            ("Wikipedia: Dune: Part Three", "https://en.wikipedia.org/wiki/Dune:_Part_Three"),
+            ("Wikipedia: Avengers: Doomsday", "https://en.wikipedia.org/wiki/Avengers:_Doomsday"),
             ("Wikipedia: Blue Heron (film)", "https://en.wikipedia.org/wiki/Blue_Heron_(film)"),
             ("/Film: Send Help review", "https://slashfilm.com/2085042/send-help-2026-movie-review"),
             ("Fangoria: how Obsession became the surprise hit of 2026", "https://www.fangoria.com/curry-barker-obsession-box-office-numbers/"),
@@ -256,9 +264,9 @@ GUIDES = {
         "name": "The best video games of 2026",
         "search_title": "Best games of 2026: 9 to play, from Mina the Hollower to Forza Horizon 6",
         "summary": "Nine 2026 games, from Mina the Hollower and Forza Horizon 6 to Pokémon Pokopia and Mewgenics. Each comes with its platforms, its length and one caveat.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
-            "It has been an unusually good year for games, and it is not finished: Grand Theft Auto VI is still dated for November. Before that, 2026 gave us the best-reviewed Pokémon game ever, the best-reviewed Resident Evil since 2005, a racing game set in Japan that topped Metacritic's midyear chart, and a small studio's \"make or break\" project that turned out to be one of the most acclaimed games of the year.",
+            "It has been an unusually good year for games, and the biggest launch came last: Grand Theft Auto VI arrived on November 19. Before that, 2026 gave us the best-reviewed Pokémon game ever, the best-reviewed Resident Evil since 2005, a racing game set in Japan that topped Metacritic's midyear chart, and a small studio's \"make or break\" project that turned out to be one of the most acclaimed games of the year.",
             "This list covers games released between January and October 2026 and picks nine across genres and budgets. Each one notes the platforms it launched on, roughly what kind of commitment it asks for, and what might put you off. Review scores are from Metacritic and OpenCritic at the time of release.",
         ],
         "picks": [
@@ -308,10 +316,10 @@ GUIDES = {
              "note": "Team Ninja replaced the old mission menu with large, linked areas to explore, and added the instant style switching, which reviewers loved. GameSpot gave it a 9 and called it the best game in the series. If Elden Ring left you wanting harder and faster combat, this is it.",
              "caveat": "It is grueling and sometimes overwhelming, the story is forgettable, and at launch some players hit crashes and bugs."},
         ],
-        "also": [],
-        "coming": [
-            "Grand Theft Auto VI is scheduled for November 19 on PS5 and Xbox Series X|S, and Take-Two has said repeatedly that the date will hold. A PC version is not expected until 2027. If it arrives as planned, we will review it for this list in December.",
+        "also": [
+            ("Grand Theft Auto VI", "Rockstar's return to Vice City came out on November 19 on PS5 and Xbox Series X|S, with Jason Duval and Lucia Caminos as its two leads, and it holds a Metacritic score of 99 from more than 150 critics. Game Informer called it a monumental achievement. ScreenHub's Alice Clarke, who gave it four stars, still found large sections boring and too limited. There is no PC version yet. It came out after the games on this list, which were released by October, so it sits here for now."),
         ],
+        "coming": [],
         "start": [
             "For something to play with anyone in the house, Forza Horizon 6 or Pokémon Pokopia. For the best-crafted game of the year, Mina the Hollower. If you have a lot of evenings free and like stories, Trails in the Sky, starting from the first chapter.",
         ],
@@ -328,7 +336,8 @@ GUIDES = {
             ("OpenCritic: Mewgenics", "https://opencritic.com/game/20055/view"),
             ("VGC: Saros review", "https://www.videogameschronicle.com/review/saros-review/"),
             ("GamingBolt: Pokémon Pokopia review round-up", "https://gamingbolt.com/pokemon-pokopia-review-round-up-nintendos-first-must-have-switch-2-game-of-2026"),
-            ("Shacknews: GTA 6 still on track for November 2026", "https://www.shacknews.com/article/147710/gta-6-release-date-not-delayed"),
+            ("Metacritic: Grand Theft Auto VI", "https://www.metacritic.com/game/grand-theft-auto-vi/"),
+            ("ABC News: Grand Theft Auto VI launches to rave reviews", "https://www.abc.net.au/news/2026-11-19/gta-vi-smashes-expectations-after-overnight-launch/107401924"),
         ],
     },
     "2026-books": {
@@ -336,7 +345,7 @@ GUIDES = {
         "name": "The best books of 2026",
         "search_title": "Best books of 2026: 8 novels and true stories worth reading",
         "summary": "Eight new books from 2026, among them Kin, John of John, London Falling and the latest Murderbot, with who each one suits and what to expect.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
             "The books people talked about most in 2026 were mostly about family: two motherless girls growing up in Louisiana, a gay art student hiding from his deacon father in the Hebrides, parents trying to understand why their son died in a fall from a London balcony. Alongside them came a sharp satire of tradwife influencers, a sweeping love story set in Hollywood, and the eighth Murderbot book, which is as funny as the first.",
             "This list covers books first published in the US between January and October 2026. It mixes literary fiction, genre fiction and nonfiction, and each pick says what kind of reader it suits. It is not a ranking, and we will add to it before the year is out.",
@@ -350,7 +359,7 @@ GUIDES = {
             {"kind": "book", "title": "John of John", "year": 2026, "creator": "Douglas Stuart",
              "released": "Grove Press (US), Picador (UK) · spring 2026",
              "why": "Cal, a 22-year-old art school graduate, comes home to his family's croft on the Isle of Harris in the late 1990s, hiding that he is gay from his father John, a deacon and weaver who has secrets of his own.",
-             "note": "Douglas Stuart won the Booker Prize for Shuggie Bain, and his third novel is on the 2026 Booker shortlist. The Boston Globe called it his finest novel yet. The father-and-son deceptions drive the plot, but the book's warmth comes from the island community around them, and the grandmother is the character readers love most. Kirkus, Library Journal and Publishers Weekly all gave it starred reviews.",
+             "note": "Douglas Stuart won the Booker Prize for Shuggie Bain, and his third novel was shortlisted for the 2026 prize. The Boston Globe called it his finest novel yet. The father-and-son deceptions drive the plot, but the book's warmth comes from the island community around them, and the grandmother is the character readers love most. Kirkus, Library Journal and Publishers Weekly all gave it starred reviews.",
              "caveat": "The Wall Street Journal's critic found the grown men's childish behavior hard to engage with. The Scottish island setting and dialect take a few chapters to settle into."},
             {"kind": "book", "title": "London Falling", "year": 2026, "creator": "Patrick Radden Keefe",
              "released": "April 7 · 384 pages · nonfiction",
@@ -383,10 +392,10 @@ GUIDES = {
              "note": "Whatever you think of Dunham, Famesick is unusually candid, and it was written without a ghostwriter. The Irish Times read it as the story of a talented young woman caught in the Hollywood machine, and Harper's Bazaar praised how readable it is. Much of it is about her health, written with the specificity of someone who was not believed for years.",
              "caveat": "Reviews were mixed. The Washington Examiner found the prose clunky in places, and Midbrow felt it stays on the surface of a celebrity story."},
         ],
-        "also": [],
-        "coming": [
-            "John of John made the shortlist for the 2026 Booker Prize, alongside Marlon James's The Disappearers, Elizabeth Strout's The Things We Never Say, M. John Harrison's The End of Everything, Luke Kennard's Black Bag and Rebecca Perry's May We Feed the King. The winner was due to be named in London on November 9, and we will add the result when we next check this list in December, along with any late novel that earns a place.",
+        "also": [
+            ("The End of Everything by M. John Harrison", "The winner of the 2026 Booker Prize, named in London on November 9, ahead of a shortlist that included John of John. Harrison is 81, the oldest winner in the prize's history, and the Booker's chief executive called him the first winner to come from the science fiction world. It is a dystopian satire about a beachcomber and his pistol-carrying elderly aunt on a near-future English coast after an invasion by shapeshifting beings. Mary Beard, who chaired the judges, called it the politics of now seen through the lens of the future. Serpent's Tail publishes it in the UK."),
         ],
+        "coming": [],
         "start": [
             "If you read one novel from this list, make it Kin or John of John. For a true story you will finish in a weekend, London Falling. For pure fun, Platform Decay, or Yesteryear if you like your fun sharp.",
         ],
@@ -412,7 +421,7 @@ GUIDES = {
         "name": "The best albums of 2026",
         "search_title": "Best albums of 2026: 8 records worth a full listen",
         "summary": "Olivia Rodrigo, Mitski and the return of Boards of Canada: eight albums from 2026 to hear from start to finish, with what each sounds like.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
             "The albums that stuck in 2026 mostly came from artists who had been away a while. Boards of Canada put out their first record in 13 years. Robyn came back after eight with a 29-minute dance album. Kacey Musgraves made her most country record in years, and Olivia Rodrigo had the biggest sales week of her career with an album whose title tells you most of what it is about. The year's most talked-about debuts were singles and clips. The records people kept playing were from familiar names doing something a little different.",
             "This list covers albums released between January and early November 2026. We chose eight that reward a front-to-back listen, across pop, country, R&B, electronic, folk and rock, and we say what each one sounds like so you can skip the ones that aren't for you. Scores come from Metacritic, chart positions from Billboard and the UK Official Charts. Saving an album here adds it to the music shelf of your library, where you can mark it listened and rate it.",
@@ -465,9 +474,7 @@ GUIDES = {
             ("Ca$ino by Baby Keem", "The rapper's second album reached No. 4 on the Billboard 200, with Kendrick Lamar on \"Good Flirts\". Reviews split: Pitchfork gave it 5.5, while Complex ranked it among the year's best."),
             ("The Fall-Off by J. Cole", "Released in February, and possibly his final album according to Complex, which ranked it third on its list of the year's best."),
         ],
-        "coming": [
-            "U2's Carnaval de Luz is due on November 13, the same day as Snoh Aalegra's Legendary Love. We will listen and update this list in December if either earns a place.",
-        ],
+        "coming": [],
         "start": [
             "If you want one album everyone in the car will like, play Middle of Nowhere. For something to dance to, Sexistential. For a late night with headphones, Inferno. And if you are the kind of listener who reads lyric sheets, start with Mitski and then go to Aldous Harding.",
         ],
@@ -577,7 +584,7 @@ GUIDES = {
         "name": "The best new manga of 2026",
         "search_title": "Best new manga of 2026: 8 series that started in English this year",
         "summary": "Eight manga published in English for the first time in 2026, such as Ichi the Witch and Shūzō Oshimi's Sound of a Blink, with publisher and age rating.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
             "\"New manga\" means two things in English, and this list uses the more useful one: series whose first official English volume came out in 2026. Some of them have been running in Japan for years, which is good news for you, because more volumes are already on the way. A few are finished stories you can read in one or two books.",
             "The year's English debuts leaned toward grown-up stories. The best-reviewed new manga of 2026 are about race, grief, war, a brother's brain tumor and a town where people die alone in the snow. There is a big shonen fantasy for anyone who wants one, and a ghost Shiba Inu for anyone who needs cheering up. Each pick names the English publisher and the age rating the publisher gives, and it says which ones are finished. Saving a series here adds it to the manga shelf of your library, where you can track volumes and chapters.",
@@ -611,7 +618,7 @@ GUIDES = {
             {"kind": "manga", "title": "Taika's Reason", "year": 2025, "creator": "Paru Itagaki",
              "released": "VIZ Media · vol. 1 July 21 · rated Teen Plus",
              "why": "Pets have started turning into half-human \"dogpeople\". When a girl's father is found mauled with her pit bull standing over him, she has to decide what her dog is now.",
-             "note": "This is the new series from Paru Itagaki, whose Beastars made her one of the most original voices in manga. Taika's Reason takes the same questions about animal nature and turns them into a psychological suspense story. VIZ moved quickly: volume 1 came out in July, volume 2 in September, and volume 3 is due November 17, so you can read three books before the year ends.",
+             "note": "This is the new series from Paru Itagaki, whose Beastars made her one of the most original voices in manga. Taika's Reason takes the same questions about animal nature and turns them into a psychological suspense story. VIZ moved quickly: volume 1 came out in July, volume 2 in September and volume 3 on November 17, so three books are already out.",
              "caveat": "The opening is violent and grim, and Itagaki's interest in bodies and instincts can make readers uncomfortable. It is early in the story, with six volumes out in Japan."},
             {"kind": "manga", "title": "Kuro: The Complete Edition", "year": 2011, "creator": "Somato",
              "released": "Yen Press · one 392-page volume, May 26",
@@ -631,7 +638,8 @@ GUIDES = {
             ("Witching Hour", "Paru Itagaki's other new series ended in Japan in May, and VIZ released the first English volume in October, rated Mature."),
         ],
         "coming": [
-            "VIZ has three first volumes due before the end of the year: Albus Changes the World on November 10, The Ichinose Family's Deadly Sins (digital) on November 24 and Yakuza vs. Cat on December 8. Taika's Reason volume 3 is due November 17.",
+            {"until": "2026-12-08",
+             "text": "VIZ has one more first volume due this year: Yakuza vs. Cat by Yori Katakura, on December 8. Two of the series it started in November are out now: Albus Changes the World began on November 10, and all six volumes of The Ichinose Family's Deadly Sins came out digitally on November 24."},
         ],
         "start": [
             "If you read one, read Cocoon: it is complete in a single book and you will not forget it. For something long to follow, Ichi the Witch. For grown-up drama, Half Is More or Sound of a Blink. For a lighter evening, Shiba Inu Rooms, and for a younger reader who likes spooky things, Kuro.",
@@ -645,6 +653,7 @@ GUIDES = {
             ("Anime News Network: Lonely Deaths Lie Thick as Snow review", "https://www.animenewsnetwork.com/seasonal/2026/spring/lonely-deaths-lie-thick-as-snow/.234192"),
             ("VIZ Media: summer 2026 publishing announcements", "https://www.viz.com/blog/posts/viz-summer-2026-publishing-announcements"),
             ("VIZ Media: November 2026 release calendar", "https://www.viz.com/calendar/2026/11"),
+            ("VIZ Media: December 2026 release calendar", "https://www.viz.com/calendar/2026/12"),
             ("Tokyo Weekender: Half Is More tops Kono Manga ga Sugoi! 2026", "https://www.tokyoweekender.com/entertainment/anime-and-manga/half-is-more-best-manga-2026/"),
             ("Aftermath: Half Is More review", "https://aftermath.site/half-is-more-yoiko-fujimi-josei-manga-haafu-racism-review/"),
             ("The Outerhaven: Ichi the Witch vol. 1 review", "https://www.theouterhaven.net/manga-review-ichi-the-witch-vol-1/"),
@@ -661,7 +670,7 @@ GUIDES = {
         "name": "The best audiobooks of 2026",
         "search_title": "Best audiobooks of 2026: 8 listens where the narration makes the book",
         "summary": "Eight 2026 audiobooks chosen for the performance, like George Saunders's full-cast Vigil and Alfred Molina reading Louise Penny, with running times.",
-        "reviewed": "2026-11-09",
+        "reviewed": "2026-11-24",
         "lead": [
             "A great book can be a dull audiobook, and a good narrator can carry a book you would never have finished in print. So this list is chosen for the listen. Every pick names who reads it and how long it runs, and the reason it made the list is usually about the performance: a cast that turns a novel into something close to radio drama, an actor who changes how you hear a familiar detective, an author who is the only possible reader of her own story.",
             "We started from the year's editors' picks at Audible, Kirkus's monthly audiobook lists and the audio reviews quoted by Barnes & Noble, then chose eight across literary fiction, mystery, memoir, romance and fantasy. None of them repeat our list of the year's best books. Saving one here adds it to the audiobook shelf of your library, with the narrator and length filled in so you can track your hours.",
@@ -720,9 +729,12 @@ GUIDES = {
             ("A Hymn to Life by Gisèle Pelicot", "Read by Emma Thompson, who, Audible's editors said, keeps Pelicot's elegance even in rage. A hard listen about the French trial that made Pelicot a public figure."),
             ("The Land and Its People by David Sedaris", "Recorded live in front of audiences, which is how Sedaris is funniest. Expect laughter on the tape."),
             ("Sublimation by Isabel J. Kim", "A science-fiction novel whose two narrators, Michelle H. Lee and Major Curda, Audible's editors called masterful."),
+            ("Exoplanet by Benjamin Percy", "An Audible original audio drama, out November 5 and executive produced by Andy Weir. Anthony Mackie, Ariana DeBose and John Leguizamo lead a full cast, and at just over four hours it is one evening's listening. Audible's editors picked it for November."),
+            ("Monsters of Ohio by John Scalzi", "Scalzi's new novel, published on November 3 and read by Wil Wheaton: a man laid off from the US Department of Agriculture goes home to Richland, Ohio, just as people there start turning into monsters. Another of Audible's November picks."),
         ],
         "coming": [
-            "Audible's November picks include Exoplanet by Benjamin Percy, a full-cast production with Anthony Mackie and John Leguizamo, and John Scalzi's Monsters of Ohio, read by Wil Wheaton. AudioFile magazine usually publishes its best audiobooks of the year in December, and we will check this list against it then.",
+            {"until": "2026-12-31",
+             "text": "AudioFile magazine usually names its best audiobooks of the year in December, and we will check this list against it when it does."},
         ],
         "start": [
             "For one drive, Vigil. For a week of commutes, Exit Party or Miss Wolcott's Ghost. If you only listen to memoirs, Strangers, and if you want a listen the whole family will agree on, the full-cast Deathly Hallows.",
@@ -734,6 +746,8 @@ GUIDES = {
         "sources": [
             ("Audible: the best audiobooks of 2026 so far", "https://www.audible.com/blog/best-of-the-year-editorial-2026"),
             ("Audible: Editors Select, November 2026", "https://www.audible.com/blog/editors-select-monthly-picks"),
+            ("Audible: Exoplanet", "https://www.audible.com/pd/Exoplanet-Audiobook/B0HDFGKSTL"),
+            ("Wikipedia: Monsters of Ohio", "https://en.wikipedia.org/wiki/Monsters_of_Ohio"),
             ("Barnes & Noble: the best audiobooks of 2026 so far", "https://www.barnesandnoble.com/blog/the-best-audiobooks-of-2026-so-far"),
             ("Kirkus: 10 best audiobooks for October listening", "https://www.kirkusreviews.com/audiobook-lists/10-best-audiobooks-october-listening/"),
             ("Kirkus: 10 best audiobooks for July listening", "https://www.kirkusreviews.com/audiobook-lists/10-best-audiobooks-july-listening-2026/"),
@@ -753,7 +767,10 @@ YEARS = {
         "deck": "Movies, TV, anime, games, books, albums, manga, podcasts and audiobooks: our picks of the year, each with a reason, a caveat and where to find it.",
         "intro": [
             "Most year-end lists stick to one kind of thing. We track nine, so we made nine lists, and this page is the front door to all of them. Each list is short on purpose, between eight and ten picks, and every pick says where and when it came out, why it made the list and what might put you off. Each list ends with the reviews, charts and listings we checked the facts against.",
-            "The lists are updated until the year is over. Some December releases, like Dune: Part Three and Avengers: Doomsday, are still to come, and each list says what it is waiting on. The date at the top of a list tells you when we last went through it.",
+            "The lists are updated until the year is over, and the date at the top of each list tells you when we last went through it.",
+            # Dated, like a guide's "Still to come": it drops out once the films are out.
+            {"until": "2026-12-18",
+             "text": "Some December releases are still to come, like Dune: Part Three and Avengers: Doomsday on December 18, and each list says what it is waiting on."},
         ],
         "nine_heading": "If you only get to one from each",
         "nine_intro": [

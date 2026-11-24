@@ -190,7 +190,9 @@ def _member_strip(entry: dict, states: Optional[dict]) -> str:
                 text += f", and {tracked} more {'is' if tracked == 1 else 'are'} in your library"
             text += "."
     else:
-        text = f"None of these {len(ids)} are in your library yet. Add the ones you want to get to before the year is out."
+        text = f"None of these {len(ids)} are in your library yet."
+        text += (" Add the ones you want to get to next." if best_of.year_over(entry["year"]) else
+                 " Add the ones you want to get to before the year is out.")
     width = round(100 * done / len(ids)) if ids else 0
     return (f'<p class="bo-mine"><span class="bo-mine__bar" aria-hidden="true"><span style="width:{width}%"></span></span>'
             f'<span>{_e(text)}</span></p>')
@@ -200,10 +202,12 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, states
     reviewed = entry["reviewed"]
     year = entry["year"]
     fmt = entry["format"]
+    # Only the releases whose dates haven't passed; the section goes once nothing is left to come.
+    coming = best_of.still_to_come(slug)
     jump = ['<a href="#picks">The list</a>']
     if entry["also"]:
         jump.append('<a href="#also">Also worth a look</a>')
-    if entry["coming"]:
+    if coming:
         jump.append('<a href="#coming">Still to come</a>')
     jump += ['<a href="#where-to-start">Where to start</a>', '<a href="#method">How we chose</a>']
     shop = fmt in SHOP_FORMATS and affiliate.affiliate_enabled()
@@ -234,12 +238,12 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, states
         for title, text in entry["also"]:
             parts.append(f'<li><strong>{_e(title)}</strong> {_e(text)}</li>')
         parts.append('</ul></section>')
-    if entry["coming"]:
+    if coming:
         radar = ('<p>Want to know what is out this week? <a href="/release-radar">Release Radar</a> lists new movies, '
                  'TV premieres, the anime season and upcoming games, and our <a href="/new-releases">release guides</a> '
                  'pick the ones worth planning around.</p>') if fmt in {"movies", "tv", "anime", "games", "books"} else ""
         parts.append(f'<section id="coming" class="editorial bo-coming" aria-labelledby="coming-heading">'
-                     f'<h2 id="coming-heading">Still to come in {year}</h2>{_paragraphs(entry["coming"])}{radar}</section>')
+                     f'<h2 id="coming-heading">Still to come in {year}</h2>{_paragraphs(coming)}{radar}</section>')
     parts.extend([
         '<section id="where-to-start" class="editorial yl-start"><h2>Where to start</h2>', _paragraphs(entry["start"]),
         f'<p>Members who track what they finish get their own year in review each December, with the titles they rated '
@@ -380,8 +384,8 @@ def _scorecard(year: int, states: Optional[dict], signed_in: bool) -> str:
                           f'<span class="bo-score__bar" aria-hidden="true"><span style="width:{width}%"></span></span>'
                           f'<span class="bo-score__n">{got}/{len(ids)}</span></li>')
     if done == 0 and tracked == 0:
-        lead = (f"None of our {total} picks are in your library yet. Every list below has an Add button, "
-                "and the year still has a few weeks left.")
+        lead = f"None of our {total} picks are in your library yet. Every list below has an Add button"
+        lead += "." if best_of.year_over(year) else ", and the year still has a few weeks left."
     else:
         lead = f"You have finished {done} of our {total} picks"
         lead += f", and {tracked} more {'is' if tracked == 1 else 'are'} waiting in your library." if tracked else "."
@@ -413,7 +417,7 @@ def hub_content(details: dict, signed_in: bool, states: Optional[dict] = None) -
         '<nav class="guide-jump" aria-label="On this page"><a href="#the-year-in-nine">The year in nine</a>'
         f'<a href="#bo-{latest}">Every list</a><a href="#how-these-lists-work">How these lists work</a></nav></header>'
     )
-    intro = f'<div class="guide-intro bo-hub-intro">{_paragraphs(notes["intro"])}</div>' if notes else ""
+    intro = f'<div class="guide-intro bo-hub-intro">{_paragraphs(best_of.current(notes["intro"]))}</div>' if notes else ""
     nine = _nine_html(latest, notes, details) if notes else ""
     return (
         '<article class="trail-guide bo-hub">' + hero + intro + _scorecard(latest, states, signed_in) + nine
