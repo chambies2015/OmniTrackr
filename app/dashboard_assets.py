@@ -23,6 +23,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from . import minify
+
 DASHBOARD_DIR = Path(__file__).resolve().parent / "static" / "dashboard"
 LAZY_BASE_URL = "/static/dashboard/lazy/"
 
@@ -95,6 +97,8 @@ def bundle() -> tuple[str, str]:
     digest = hashlib.sha256()
     for relative in ("lazy-loader.js", *EAGER_MODULES, *(f"lazy/{name}" for name in lazy_files)):
         digest.update(relative.encode("utf-8") + b"\0" + _read(relative).encode("utf-8") + b"\0")
+    # Served minified (app/minify.py): switching that off, or changing the minifier, changes the URL.
+    digest.update(minify.version_tag().encode("utf-8"))
     version = digest.hexdigest()[:16]
     config = {
         "version": version,
@@ -178,7 +182,8 @@ def stylesheet_bundle() -> tuple[str, str, tuple[str, ...]]:
         css = _stylesheet_file(href).read_text(encoding="utf-8")
         parts.append(f"/* {_served_path(href)} */\n{_absolute_urls(css, _served_path(href))}\n")
     css = "".join(parts)
-    return css, hashlib.sha256(css.encode("utf-8")).hexdigest()[:16], hrefs
+    version = hashlib.sha256((css + minify.version_tag()).encode("utf-8")).hexdigest()[:16]  # See bundle().
+    return css, version, hrefs
 
 
 def bundle_stylesheets(html: str) -> str:

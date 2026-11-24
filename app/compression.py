@@ -216,6 +216,40 @@ def _without_range(scope):
     return {**scope, "headers": headers}
 
 
+def minified_etag(etag: str) -> str:
+    """The ETag of a file's minified copy: the file's own, marked with the minifier's version."""
+    if etag.endswith('"') and not etag.endswith(minify.ETAG_MARK + '"'):
+        return etag[:-1] + minify.ETAG_MARK + '"'
+    return etag
+
+
+def _conditional_for_minified(scope):
+    """If-None-Match as StaticFiles can compare it, for a path served minified.
+
+    The minified copy goes out under the file's ETag plus minify.ETAG_MARK. A browser
+    sends that back; StaticFiles only knows the file's own ETag, so the mark comes off
+    here and the answer is 304 exactly when the browser holds the copy this server sends
+    now. If-Modified-Since is dropped: a date can't tell the minified copy from the file.
+    Returns the request and whether a marked ETag came in (the 304 then carries it again).
+    """
+    marked = False
+    headers = []
+    for name, value in scope["headers"]:
+        if name == b"if-modified-since":
+            continue
+        if name == b"if-none-match":
+            tags = []
+            for tag in value.decode("latin-1").split(","):
+                tag = tag.strip()
+                if tag.endswith(minify.ETAG_MARK + '"'):
+                    tag = tag[:-len(minify.ETAG_MARK) - 1] + '"'
+                    marked = True
+                tags.append(tag)
+            value = ", ".join(tags).encode("latin-1")
+        headers.append((name, value))
+    return {**scope, "headers": headers}, marked
+
+
 class CompressionMiddleware:
     def __init__(self, app, minimum_size: int = MINIMUM_SIZE, compresslevel: int = DYNAMIC_LEVEL):
         self.app = app
@@ -227,10 +261,11 @@ class CompressionMiddleware:
             path = scope["path"]
             encodings = accepted_encodings(Headers(scope=scope).get("accept-encoding", ""))
             minifying = minify.enabled() and path.endswith((".js", ".css")) and path not in minify.SKIP_PATHS
+            marked = False
             if minifying:
-                scope = _without_range(scope)
+                scope, marked = _conditional_for_minified(_without_range(scope))
             if minifying or "gzip" in encodings:
-                await AssetResponder(self.app, self.minimum_size, encodings, minifying)(scope, receive, send)
+                await AssetResponder(self.app, self.minimum_size, encodings, minifying, marked)(scope, receive, send)
                 return
         await self.dynamic(scope, receive, send)
 
@@ -243,11 +278,13 @@ class AssetResponder:
     would have through GZipMiddleware (which skips the same media types).
     """
 
-    def __init__(self, app, minimum_size: int, encodings: set[str] | None = None, minifying: bool = False):
+    def __init__(self, app, minimum_size: int, encodings: set[str] | None = None, minifying: bool = False,
+                 marked: bool = False):
         self.app = app
         self.minimum_size = minimum_size
         self.encodings = {"gzip"} if encodings is None else encodings
         self.minifying = minifying
+        self.marked = marked  # The browser's If-None-Match named the minified copy.
         self.kind = None
         self.path = ""
         self.send = None
@@ -271,6 +308,14 @@ class AssetResponder:
             media_type = headers.get("content-type", "").partition(";")[0].strip().lower()
             if self.minifying:
                 self.kind = minify.kind_for(self.path, media_type)
+                if message["status"] == 304:
+                    # Not modified: the browser keeps its copy, so the answer names that copy
+                    # and, like the 200 it answers for, says it depends on Accept-Encoding.
+                    not_modified = MutableHeaders(raw=list(message.get("headers", [])))
+                    if self.marked and "etag" in not_modified:
+                        not_modified["ETag"] = minified_etag(not_modified["etag"])
+                    not_modified.add_vary_header("Accept-Encoding")
+                    message = {**message, "headers": not_modified.raw}
             if (
                 message["status"] != 200
                 or "content-encoding" in headers
@@ -318,6 +363,8 @@ class AssetResponder:
                 headers["Content-Length"] = str(len(body))
                 if "accept-ranges" in headers:
                     del headers["accept-ranges"]  # Ranges of the file on disk wouldn't match.
+                if "etag" in headers:
+                    headers["ETag"] = minified_etag(headers["etag"])
         if len(body) >= self.minimum_size:
             headers.add_vary_header("Accept-Encoding")
             encoded, coding = None, None

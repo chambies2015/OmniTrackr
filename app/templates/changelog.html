@@ -63,6 +63,15 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov24-signup-2026-heading">
+        <h2 id="security-nov24-signup-2026-heading">November 24, 2026: Checking the smaller downloads and the sign-up code step</h2>
+        <p>We went through the two updates from November 23 the night they came out. On the sign-up side we looked at who can ask for a waiting sign-up's address, whether one person could use another person's code, the rate limits, and what the new sign-up counts store. Nothing needed changing there. Two things needed fixing in how scripts and stylesheets are sent.</p>
+        <ul>
+          <li>We can switch the smaller versions of our scripts off if one ever breaks a page. Browsers that had already downloaded a smaller file kept using it after the switch, because the file's label (its ETag) stayed the same. The smaller copy now has its own label, and the app's two biggest files get a new address when the switch changes, so browsers download the right copy again.</li>
+          <li>A style rule that sets a custom property to a single space (a common CSS trick) lost that space, and older browsers ignore the rule without it. The space now stays. None of our stylesheets used this yet.</li>
+        </ul>
+      </section>
+
       <section class="privacy-section" aria-labelledby="signup-comeback-nov23-2026-heading">
         <h2 id="signup-comeback-nov23-2026-heading">November 23, 2026: Signing up with email, without losing your place</h2>
         <p>We signed up with email on a phone and on a laptop, step by step, and fixed the places where people could get lost between pressing Create and opening their library.</p>
