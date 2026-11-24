@@ -301,7 +301,7 @@ Scripts and stylesheets:
 
 | Variable | Purpose |
 | --- | --- |
-| `MINIFY_ASSETS` | On by default: scripts and stylesheets are served without comments and spare whitespace (`app/minify.py`). Set to `off` to serve them exactly as they are on disk. The test suite runs with it off. |
+| `MINIFY_ASSETS` | On by default: scripts and stylesheets are served without comments and spare whitespace (`app/minify.py`). Set to `off` to serve them exactly as they are on disk. The test suite runs with it off. Browsers pick the change up too: unversioned files are rechecked daily and their ETag says which copy they hold, and `/app.js` and `/dashboard.css` get new `?v=` URLs. Other `?v=` files are kept for a year, so a browser holding a minified copy keeps it until that file's tag is bumped. |
 | `BROTLI_ASSETS` | On by default when the `brotli` package is installed: browsers that accept Brotli get it for scripts and stylesheets. Set to `off` for gzip only. |
 
 ## Testing

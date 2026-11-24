@@ -43,8 +43,35 @@ class MinifyError(ValueError):
     """The file has something the minifier doesn't expect; serve it as written."""
 
 
+# Added to a file's ETag when the minified copy is sent (app/compression.py). A browser that
+# rechecks its copy then only gets "not modified" while that same copy is still what the
+# server sends: with MINIFY_ASSETS=off, or after this file changes, the old ETag no longer
+# matches and the browser downloads the file again. Without it, switching minifying off
+# left a broken minified copy in every browser that had one, because the file's own ETag
+# (its size and date on disk) stays the same (Nov 24 2026 sweep).
+def _own_version() -> str:
+    try:
+        with open(__file__, "rb") as source:
+            return hashlib.blake2b(source.read(), digest_size=4).hexdigest()
+    except OSError:  # pragma: no cover
+        return "0"
+
+
+ETAG_MARK = "-m" + _own_version()
+
+
 def enabled() -> bool:
     return os.getenv("MINIFY_ASSETS", "on").strip().lower() not in {"0", "off", "false", "no"}
+
+
+def version_tag() -> str:
+    """Mixed into the dashboard bundles' ?v= versions (app/dashboard_assets.py).
+
+    Browsers keep a versioned file for a year without asking again, so an ETag can't
+    reach them. Turning minifying off, or a change to this file, gives the two bundles
+    new URLs instead, and every browser fetches them again.
+    """
+    return ETAG_MARK if enabled() else ""
 
 
 # --------------------------------------------------------------------- scripts
@@ -292,6 +319,10 @@ def minify_css(source: str) -> str:
         before = out[-1][-1] if out else ""
         if pending_space:
             if before and before not in _CSS_TIGHT and text[0] not in _CSS_TIGHT:
+                out.append(" ")
+            elif before == ":" and text[0] in ";}":
+                # "--flag: ;" sets a custom property to a space (the space toggle trick).
+                # "--flag:;" is an empty value, which older browsers throw away.
                 out.append(" ")
         elif comment_between and before and _CSS_WORDISH.match(before) and _CSS_WORDISH.match(text[0]):
             out.append("/**/")  # 1px/**/2px are two values; 1px2px would be one.
