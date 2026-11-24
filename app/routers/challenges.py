@@ -247,10 +247,11 @@ def _new_year_feature() -> str:
     if year is None or year not in GUIDES or not new_year_challenge.is_open(year):
         return ""
     guide = GUIDES[year]
+    days = new_year_challenge.days_until_start(year)
     when = ("UNDERWAY" if new_year_challenge.has_started(year)
-            else f"STARTS JANUARY 1 · {new_year_challenge.days_until_start(year)} DAYS TO GO")
+            else f"STARTS JANUARY 1 · {days} DAY{'' if days == 1 else 'S'} TO GO")
     return (f'<section class="monthly-feature"><div><p class="eyebrow">THE YEAR AHEAD · {_e(when)}</p>'
-            f'<h2>{_e(guide["title"])}</h2><p>{_e(guide["lead"])}</p></div>'
+            f'<h2>{_e(guide["title"])}</h2><p>{_e(new_year_challenge.lead(year))}</p></div>'
             f'<a class="button" href="{_e(new_year_challenge.path(year))}">Make your pledge →</a></section>')
 
 

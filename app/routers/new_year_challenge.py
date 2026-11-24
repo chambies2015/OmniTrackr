@@ -174,7 +174,10 @@ def _row_hint(key: str, member: Optional[dict]) -> str:
     last = member["suggestions"]["year"]
     if suggestion:
         if member["suggestions"]["projected"] and suggestion["projected"] > suggestion["done"]:
-            return f"{suggestion['done']} in {last} so far, about {suggestion['projected']} at that pace"
+            if member["suggestions"]["partial"]:
+                return f"{suggestion['done']} in {last} so far, about {suggestion['projected']} at that pace"
+            # The year is over; the count is scaled up only because the member joined partway through it.
+            return f"{suggestion['done']} in {last} since you joined, about {suggestion['projected']} over a full year"
         return f"{suggestion['done']} in {last}"
     if key == goals.ALL:
         return "One overall number: every format counts toward it"
@@ -333,7 +336,7 @@ def guide_content(db: Session, year: int, member: Optional[dict], today: Optiona
                   + _form(year, member)
                   + ('' if member else '<p class="nyc-member">Already a member? <a href="/?next='
                      + _e(quote(f"{nyc.path(year)}#pledge", safe="")) + '#landing-auth" rel="nofollow">Sign in</a> '
-                     'and your 2026 numbers show up here.</p>')
+                     f'and your {year - 1} numbers show up here.</p>')
                   + '</section>')
     jump = ('<nav class="guide-jump" aria-label="On this page"><a href="#pledge">Pledge</a><a href="#how">How it works</a>'
             '<a href="#picking">Picking a number</a><a href="#cost">What it costs</a><a href="#faq">Questions</a></nav>')
@@ -345,7 +348,7 @@ def guide_content(db: Session, year: int, member: Optional[dict], today: Optiona
                '</ul></section>')
     return (
         f'<header class="hero hero--guide nyc-hero"><a href="/challenges">← Challenges</a>'
-        f'<p class="eyebrow">{_e(eyebrow)}</p><h1>{_e(guide["title"])}</h1><p>{_e(guide["lead"])}</p>{jump}</header>'
+        f'<p class="eyebrow">{_e(eyebrow)}</p><h1>{_e(guide["title"])}</h1><p>{_e(nyc.lead(year, today))}</p>{jump}</header>'
         + _counts_section(nyc.public_counts(db, year), year)
         + pledge
         + f'<section id="how" class="editorial nyc-prose" aria-labelledby="nyc-how"><h2 id="nyc-how">How it works</h2>{_paragraphs(guide["how"])}</section>'

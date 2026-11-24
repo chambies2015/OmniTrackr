@@ -434,6 +434,9 @@
     }
     const text = statusText(status);
     if (text) $('supporterStatus').textContent = text;
+    // The founding offer ends with 2026; the settings line about it goes once the server says so.
+    const foundingLine = $('supporterFoundingLine');
+    if (foundingLine) foundingLine.hidden = status.founding_open === false;
     const form = $('supporterForm');
     form.hidden = !status.since;
     $('supporterShowBadge').checked = status.show_badge !== false;

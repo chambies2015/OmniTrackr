@@ -664,6 +664,7 @@ def status_payload(db: Session, user) -> dict:
     return {
         "active": active,
         "founding": founding,
+        "founding_open": founding_open(),
         "months": months,
         "level": level_label(founding, months, supporter.number) if supporter else None,
         "number": supporter.number if supporter else None,

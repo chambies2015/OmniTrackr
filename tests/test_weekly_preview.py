@@ -329,3 +329,11 @@ def test_preview_script_never_writes_html():
     script = (ROOT / "app" / "static" / "weekly-preview.js").read_text(encoding="utf-8")
     assert "innerHTML" not in script and "insertAdjacentHTML" not in script
     assert "source: 'preview'" in script and "/api/weekly-email/copy" in script
+
+
+def test_the_monthly_challenge_is_not_called_the_new_year_challenge(authenticated_client, quiet, mail_on, monkeypatch):
+    line = {"joined": False, "name": "Close the year kindly", "tagline": "Finish a few things.", "month_name": "December",
+            "days_left": 20, "total_steps": 3}
+    monkeypatch.setattr(digest, "challenge_line", lambda db, user_id, today: line)
+    also = authenticated_client.get("/api/weekly-email/preview").json()["also"]
+    assert "this month's challenge" in also and not any("New Year" in entry for entry in also)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 from html import escape
+from typing import Optional
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -21,6 +22,7 @@ from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
 from ..seasonal_guides import SEASONS
+from .deals_guide import CYBER_MONDAY
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
@@ -30,12 +32,16 @@ GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 SITE = "https://omnitrackr.xyz"
 MAX_ADD = 30
 # Pages that sit beside a hub, shown on its dashboard card and in its "More for the season" cards.
+# ``until`` is the last day a page is about (Cyber Monday, the Sunday after Thanksgiving): after it the
+# dashboard card drops the page and the guides' cards list it last.
 EXTRA_LINKS = {
     "holidays": [{"path": "/holidays/gifts", "name": "Gift guide",
                   "tagline": "Gift ideas for every kind of fan, and a gift list you can send the family."},
                  {"path": "/holidays/black-friday", "name": "Black Friday guide",
-                  "tagline": "What tends to get cheaper on Black Friday, what rarely does, and what to check first."}]
-    + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"]}
+                  "tagline": "What tends to get cheaper on Black Friday, what rarely does, and what to check first.",
+                  "until": CYBER_MONDAY}]
+    + [{"path": entry["path"], "name": entry["name"], "tagline": entry["card"],
+        **({"until": entry["until"]} if entry.get("until") else {})}
        for _, entry in seasonal.companions_of("holidays")],
     "valentines": [{"path": "/discover/one-evening-well-spent", "name": "One evening, well spent",
                     "tagline": "Four things to finish in a single night, from Before Sunset to Florence, a short game about a first love."},
@@ -44,8 +50,18 @@ EXTRA_LINKS = {
 }
 
 
-def extra_links(slug: str) -> list[dict]:
-    """EXTRA_LINKS for a hub, with the advent calendar first while it is open (December on)."""
+def _today() -> date:
+    return date.today()
+
+
+def _over(link: dict, today: date) -> bool:
+    return bool(link.get("until")) and today.isoformat() > link["until"]
+
+
+def extra_links(slug: str, today: Optional[date] = None) -> list[dict]:
+    """EXTRA_LINKS for a hub, with the advent calendar first while it is open (December on) and the
+    pages whose day has passed (the Black Friday and Thanksgiving guides in December) moved to the end."""
+    today = today or _today()
     links = list(EXTRA_LINKS.get(slug, []))
     if slug == "holidays":
         from .. import advent_calendar
@@ -53,15 +69,17 @@ def extra_links(slug: str) -> list[dict]:
         if year is not None:
             links.insert(0, {"path": advent_calendar.BASE_PATH, "name": "Advent calendar",
                              "tagline": advent_calendar.edition(year)["card"]})
-    return links
+    return [link for link in links if not _over(link, today)] + [link for link in links if _over(link, today)]
 
 
-def _card_links(slug: str) -> list[dict]:
-    """The dashboard card's links: EXTRA_LINKS, with Pick swap right after the gift guide while swaps are in season."""
-    links = extra_links(slug)
+def _card_links(slug: str, today: Optional[date] = None) -> list[dict]:
+    """The dashboard card's links: EXTRA_LINKS without the pages whose day has passed, and Pick swap right
+    after the gift guide while swaps are in season."""
+    today = today or _today()
+    links = [link for link in extra_links(slug, today) if not _over(link, today)]
     at = next((index + 1 for index, link in enumerate(links) if link["path"] == "/holidays/gifts"), len(links))
-    links[at:at] = friend_tools.season_card_links(slug)
-    return links
+    links[at:at] = friend_tools.season_card_links(slug, today)
+    return [{key: value for key, value in link.items() if key != "until"} for link in links]
 
 
 FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music",
@@ -196,17 +214,19 @@ def _related(slug: str, entry: dict, today: date) -> str:
     links = []
     public = challenges.public_months(today)
     year = seasonal.season_year(entry, today)
-    for number in entry["related_months"]:
+    # This month's edition and challenge first, then the season's other months.
+    months = sorted(entry["related_months"], key=lambda number: (year, int(number)) != (today.year, today.month))
+    for number in months:
         name = date(year, int(number), 1).strftime("%B").lower()
         edition = f"{name}-{year}"
         if edition in editions:
-            note = entry["edition_notes"].get(number) or "This month's Discover edition: six picks around one idea, across formats."
+            note = entry["edition_notes"].get(number) or _edition_note(year, number, today)
             links.append((f"/discover/monthly/{edition}", editions[edition]["name"], note))
         month = f"{year}-{number}"
         if month in public:
             links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
                           challenges.CHALLENGES[month]["tagline"]))
-    links[:0] = [(extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(slug)]
+    links[:0] = [(extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(slug, today)]
     links.extend((other["path"], f"{other['name']} picks", other["card"])
                  for other_slug, other in SEASONS.items() if other_slug != slug)
     links.extend([
@@ -278,22 +298,33 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     return "".join(parts)
 
 
+def _edition_note(year: int, number: str, today: date) -> str:
+    """The line under a monthly Discover edition card: "This month's" only while it is this month."""
+    if (year, int(number)) == (today.year, today.month):
+        return "This month's Discover edition: six picks around one idea, across formats."
+    return f"The {date(year, int(number), 1):%B} Discover edition: six picks around one idea, across formats."
+
+
 def _companion_related(slug: str, entry: dict, today: date) -> str:
     """Cards under a guide beside a hub: the hub, its other guides, then this month's edition and challenge."""
     from ..discover_catalog import published_editions
     parent_slug = entry["parent"]
     parent = SEASONS[parent_slug]
     links = [(parent["path"], f"{parent['name']} picks", parent["card"])]
-    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(parent_slug)
+    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in extra_links(parent_slug, today)
                  if extra["path"] != entry["path"])
     editions = published_editions(today)
     public = challenges.public_months(today)
     year = seasonal.season_year(parent, today)
-    number = f"{today.month:02d}" if f"{today.month:02d}" in parent["related_months"] else parent["related_months"][0]
+    # This month's while the season runs. Once it is over (January for the holidays): the month the guide is
+    # about when it says (Thanksgiving, November), otherwise the season's last month.
+    months = parent["related_months"]
+    number = f"{today.month:02d}"
+    if number not in months:
+        number = entry["until"][5:7] if entry.get("until") and entry["until"][5:7] in months else months[-1]
     edition = f'{date(year, int(number), 1).strftime("%B").lower()}-{year}'
     if edition in editions:
-        links.append((f"/discover/monthly/{edition}", editions[edition]["name"],
-                      "This month's Discover edition: six picks around one idea, across formats."))
+        links.append((f"/discover/monthly/{edition}", editions[edition]["name"], _edition_note(year, number, today)))
     month = f"{year}-{number}"
     if month in public:
         links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
@@ -489,7 +520,7 @@ def seasonal_current(request: Request, response: Response, user=Depends(get_curr
         "year": date.today().year, "card": entry["card"], "cta": entry["card_cta"], "days_left": seasonal.days_left(entry),
         "shelves": [{"key": shelf["key"], "name": shelf["name"], "tagline": shelf["tagline"]} for shelf in entry["shelves"]],
         "total": progress["total"], "tracked": progress["tracked"], "done": progress["done"],
-        "links": _card_links(slug),
+        "links": _card_links(slug, _today()),
     }
 
 

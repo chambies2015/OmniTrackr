@@ -124,10 +124,11 @@ TIER_EXTRAS = {
 
 def _coffee_card() -> str:
     """The one-time option, beside the memberships, so a first-time supporter sees the small step too."""
+    founding = "<li>Founding supporter for good if it's before 2027</li>" if supporters.founding_open() else ""
     return ('<article class="support-tier support-tier--coffee">'
             '<p class="support-tier__price"><strong>$3</strong> once</p>'
             '<h3>A coffee</h3>'
-            '<ul><li>Every supporter perk for 30 days</li><li>Founding supporter for good if it\'s before 2027</li>'
+            f'<ul><li>Every supporter perk for 30 days</li>{founding}'
             '<li>Give more if you like, and send another whenever you want</li></ul>'
             f'<a class="site-btn site-btn--ghost" data-kofi data-kofi-place="coffee" href="{_e(supporters.KOFI_URL)}" '
             'target="_blank" rel="noopener noreferrer">Buy a coffee ↗</a>'
@@ -178,8 +179,9 @@ def _wall_entry(entry: dict) -> str:
 def _wall_html(db: Session) -> str:
     entries = supporters.wall(db)
     if not entries:
+        founding = ", and the first few will be founding supporters" if supporters.founding_open() else ""
         return ('<p class="support-wall__empty">No names here yet. Supporters can add theirs from '
-                '<a href="/#supporter">Account → Supporter</a>, and the first few will be founding supporters.</p>')
+                f'<a href="/#supporter">Account → Supporter</a>{founding}.</p>')
     credits = [entry for entry in entries if entry.get("credits")]
     rest = [entry for entry in entries if not entry.get("credits")]
     html = ""

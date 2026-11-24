@@ -186,10 +186,10 @@ def door_html(year: int, item: dict, details: dict, signed_in: bool, heading: st
 def _related(today: date, year: Optional[int] = None) -> str:
     from .. import new_year_challenge, seasonal
     from ..discover_catalog import published_editions
-    from .seasonal import EXTRA_LINKS
+    from .seasonal import extra_links
     hub = seasonal.season("holidays")
     links = [(hub["path"], "Holiday picks", hub["card"])]
-    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in EXTRA_LINKS.get("holidays", [])
+    links.extend((extra["path"], extra["name"], extra["tagline"]) for extra in extra_links("holidays", today)
                  if extra["path"] != advent.BASE_PATH)
     # The calendar's own December, which keeps its edition linked once January comes.
     edition = f"december-{year or today.year}"
@@ -219,16 +219,21 @@ def page_content(year: int, days: list[int], details: dict, signed_in: bool, pre
                   for question, answer in data["faq"])
     left = advent.DOORS - len(days)
     status = (f"{len(days)} of {advent.DOORS} doors open" if left else f"All {advent.DOORS} doors are open")
+    # Once the last door has opened everywhere there are no more mornings to be reminded about.
+    over = not preview and advent.latest_today() > advent.door_date(year, advent.DOORS)
+    remind = ('<div class="ad-remind"><button type="button" class="button button--ghost" data-advent-remind aria-pressed="false">'
+              'Remind me each morning</button><p class="ad-remind__note" data-advent-remind-note role="status" aria-live="polite"></p></div>'
+              if not over else "")
+    guest_gets = ("keep them and earn the Door Opener badge" if over
+                  else "keep them, earn the Door Opener badge and get a reminder each morning")
     member = ('<section class="sn-progress ad-progress" data-advent-progress aria-labelledby="ad-progress-title" hidden>'
               '<p class="eyebrow">YOUR CALENDAR</p><h2 id="ad-progress-title" data-advent-progress-title>Your calendar</h2>'
               f'<div class="sn-meter" role="progressbar" aria-valuemin="0" aria-valuemax="{advent.DOORS}" aria-valuenow="0" '
               'aria-labelledby="ad-progress-title" data-advent-meter><span class="sn-meter__fill" data-advent-meter-fill></span></div>'
               '<p class="sn-progress__text" data-advent-progress-text></p>'
-              + ('<div class="ad-remind"><button type="button" class="button button--ghost" data-advent-remind aria-pressed="false">'
-                 'Remind me each morning</button><p class="ad-remind__note" data-advent-remind-note role="status" aria-live="polite"></p></div>'
-                 if signed_in else
+              + (remind if signed_in else
                  f'<p class="ad-progress__guest">Your opened doors are kept in this browser. <a href="/?next={SIGNUP_NEXT}#signup" '
-                 'data-advent-signup>Sign up free</a> to keep them, earn the Door Opener badge and get a reminder each morning.</p>')
+                 f'data-advent-signup>Sign up free</a> to {guest_gets}.</p>')
               + '</section>')
     notice = ('<p class="ad-preview" role="note">Preview for site admins: every door is open and the page is hidden from '
               f'search until {_e(_long_date(advent.opens(year)))}.</p>') if preview else ""
@@ -249,7 +254,8 @@ def page_content(year: int, days: list[int], details: dict, signed_in: bool, pre
         f'<div class="guide-intro">{_paragraphs(data["intro"])}</div>',
         '<section id="calendar" class="ad-board" aria-labelledby="calendar-heading">',
         '<h2 id="calendar-heading" class="ad-board__title">The calendar</h2>',
-        '<p class="ad-board__lede">Tap a door to open it. Locked doors show what is coming.</p>',
+        '<p class="ad-board__lede">' + ("Every door is open now. Tap one to see what is behind it." if over
+                                         else "Tap a door to open it. Locked doors show what is coming.") + '</p>',
         _grid(year, days), '</section>',
     ]
     if not signed_in:
@@ -354,8 +360,13 @@ def door_page(year: int, day: int, request: Request, user=Depends(get_optional_c
         funnel.record("advent_door_link_opened", request)
     when = advent.door_date(year, day)
     days = _unlocked(year, user)
+    if len(days) >= advent.DOORS:
+        opened = f"All {advent.DOORS} doors are open, one pick for each day from December 1 to Christmas Eve."
+    else:
+        opened = (f"{len(days)} of {advent.DOORS} doors {'is' if len(days) == 1 else 'are'} open so far, "
+                  "a new pick every morning until Christmas Eve.")
     cta = ('<section class="ad-door-cta"><div><h2>Open the rest of the calendar</h2>'
-           f'<p>{len(days)} of {advent.DOORS} doors are open so far, a new pick every morning until Christmas Eve. '
+           f'<p>{opened} '
            'Every format is in there: films, TV, anime, games, books, albums, manga, podcasts and audiobooks.</p></div>'
            f'<a class="button" href="{advent.BASE_PATH}#{advent.door_anchor(day)}">See the calendar →</a></section>')
     content = (

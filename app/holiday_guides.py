@@ -22,6 +22,10 @@ Optional, used by the Christmas guide (/holidays/christmas):
              items: [{date, title, format, where, note}]}), shown after the shelf named in `after`
     sources  ((label, url), ...) listed under "How we chose"
 
+Optional on any of them:
+    until    the last day the guide is about (ISO date); after it the home holiday card leaves the
+             guide out and the other guides list it last in their cards
+
 Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py).
 Manga, podcast and audiobook picks are saved straight to the matching tracker
 (seasonal.extra_entry), since Pick for me only suggests the first six formats.
@@ -599,6 +603,8 @@ GUIDES = {
         "theme": "holiday",
         "published": "2026-11-06",
         "reviewed": "2026-11-06",
+        # The Sunday after Thanksgiving 2026: from the next day the home holiday card stops offering this guide.
+        "until": "2026-11-29",
         "search_title": "Thanksgiving weekend guide: what to watch, play and listen to with family, Wednesday to Sunday",
         "headline": "Thanksgiving weekend, Wednesday to Sunday",
         "deck": ("Twenty picks for the four days of the long weekend, from the drive there to the drive home: "

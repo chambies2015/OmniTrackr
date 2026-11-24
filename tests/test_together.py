@@ -470,7 +470,7 @@ def test_the_home_list_has_a_line_and_a_next_button(client, db_session, pair):
     card = data["running"][0]
     assert card["with"] == "with sam" and card["next_label"] == "Watched episode 1"
     assert card["waiting"] == 1 and card["this_week"] == "Episodes 1–2"
-    assert card["headline"] == "sam is done with this week. You're on 0 of 2."
+    assert card["headline"] == "sam is done with this week. You haven't started yet."
 
 
 def test_the_home_card_moves_you_on_without_marking_notes_read(client, db_session, pair):

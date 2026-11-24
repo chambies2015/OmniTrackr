@@ -9,6 +9,8 @@ GUIDES = {
                         "you want to finish in 2027. Free, private, and filled in from what you already track."),
         "lead": ("Pick how many books, films, games, albums and shows you want to finish next year. Your progress "
                  "fills in from what you already track, starting January 1."),
+        "lead_underway": ("Pick how many books, films, games, albums and shows you want to finish in 2027. Your "
+                          "progress fills in from what you already track, counting every finish since January 1."),
         "how": [
             ("Set a number for any of the nine formats, or one number for everything you finish. One goal is "
              "enough, and nine is fine too. Each number becomes a yearly goal on your dashboard, so it sits next to "
