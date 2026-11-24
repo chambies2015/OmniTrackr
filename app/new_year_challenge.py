@@ -130,6 +130,15 @@ def days_until_start(year: int, today: Optional[date] = None) -> int:
     return max(0, (date(year, 1, 1) - (today or _today())).days)
 
 
+def lead(year: int, today: Optional[date] = None) -> str:
+    """The guide's opening line: written for December ("next year"), with its own wording once the year starts."""
+    from .new_year_challenge_guide import GUIDES
+    guide = GUIDES[year]
+    if has_started(year, today) and guide.get("lead_underway"):
+        return guide["lead_underway"]
+    return guide["lead"]
+
+
 # ---------------------------------------------------------------- hours
 
 def weekly_hours(targets: dict) -> float:

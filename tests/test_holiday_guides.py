@@ -168,13 +168,50 @@ def test_guides_are_linked_from_the_hub_card_sitemap_and_loader(authenticated_cl
         assert f"https://omnitrackr.xyz{entry['path']}</loc>" in client.get("/sitemap.xml").text
         assert f'href="{entry["path"]}"' in client.get("/site-map").text
     monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
-    from app import friend_tools
+    from datetime import datetime
+    from app import advent_calendar, friend_tools
+    from app.routers import seasonal as seasonal_router
     monkeypatch.setattr(friend_tools, "swap_season", lambda today=None: False)  # Pick swap's chip: test_friend_tools.py
+    monkeypatch.delenv("ADVENT_CALENDAR_OPENS", raising=False)
+    monkeypatch.setattr(advent_calendar, "_now", lambda: datetime(2026, 11, 20, 12))  # before the calendar opens
+    monkeypatch.setattr(seasonal_router, "_today", lambda: date(2026, 11, 20))
     paths = [link["path"] for link in authenticated_client.get("/api/seasonal/current").json()["links"]]
     assert paths == ["/holidays/gifts", "/holidays/black-friday", "/holidays/christmas", "/holidays/thanksgiving",
                      "/holidays/reading-and-listening"]
     loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
     assert "christmas|thanksgiving|reading-and-listening" in loader
+
+
+def test_the_home_card_drops_black_friday_and_thanksgiving_once_they_are_over(monkeypatch):
+    from datetime import datetime
+    from app import advent_calendar
+    from app.routers.seasonal import _card_links, extra_links
+    monkeypatch.delenv("ADVENT_CALENDAR_OPENS", raising=False)
+    monkeypatch.setattr(advent_calendar, "_now", lambda: datetime(2026, 12, 5, 12))
+    november = [link["path"] for link in _card_links("holidays", date(2026, 11, 29))]
+    assert "/holidays/black-friday" in november and "/holidays/thanksgiving" in november
+    assert "/holidays/thanksgiving" not in [link["path"] for link in _card_links("holidays", date(2026, 11, 30))]
+    december = _card_links("holidays", date(2026, 12, 5))
+    paths = [link["path"] for link in december]
+    assert "/holidays/black-friday" not in paths and "/holidays/thanksgiving" not in paths
+    assert paths[0] == "/holidays/advent-calendar" and "/holidays/christmas" in paths
+    assert all("until" not in link for link in december)
+    # The guides' own cards keep both, after the ones still to come.
+    cards = [link["path"] for link in extra_links("holidays", date(2026, 12, 5))]
+    assert cards[-2:] == ["/holidays/black-friday", "/holidays/thanksgiving"]
+    assert THANKSGIVING["until"] == "2026-11-29" and date.fromisoformat(THANKSGIVING["until"]).weekday() == 6
+
+
+def test_edition_cards_say_this_month_only_for_this_month():
+    from app.routers.seasonal import _companion_related, _related
+    from html import unescape
+    hub = unescape(_related("holidays", HUB, date(2026, 12, 10)))
+    assert hub.index("december-2026") < hub.index("november-2026")
+    assert "The November Discover edition" in hub and hub.count("This month's Discover edition") == 1
+    # In January the guides beside the hub point to December, the season's last month, not November.
+    january = unescape(_companion_related("christmas", CHRISTMAS, date(2027, 1, 15)))
+    assert 'href="/discover/monthly/december-2026"' in january and "november-2026" not in january
+    assert "The December Discover edition" in january and "This month's" not in january
 
 
 def test_related_cards_link_back_and_follow_the_month():

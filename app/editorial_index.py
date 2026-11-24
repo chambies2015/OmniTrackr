@@ -162,11 +162,29 @@ def entries() -> list[dict]:
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 
+def _advent_first(by_section: dict[str, list[dict]]) -> None:
+    """While the advent calendar's doors are still opening somewhere, it leads the seasonal section.
+
+    The New Year challenge opens the same day (December 1) and is listed before it, so without
+    this the calendar left the homepage the morning its first door opened.
+    """
+    from . import advent_calendar
+    year = advent_calendar.current_year()
+    if year is None or advent_calendar.latest_today() > advent_calendar.door_date(year, advent_calendar.DOORS):
+        return
+    pieces = by_section.get("seasonal", [])
+    for index, piece in enumerate(pieces):
+        if piece["href"] == advent_calendar.BASE_PATH:
+            pieces.insert(0, pieces.pop(index))
+            return
+
+
 def latest(limit: int = 6) -> list[dict]:
     """The newest guides, taking turns between sections so one catalog cannot fill the list."""
     by_section: dict[str, list[dict]] = {}
     for piece in entries():
         by_section.setdefault(piece["section"], []).append(piece)
+    _advent_first(by_section)
     # Sections with the most recent piece go first.
     ordered = sorted(by_section.values(), key=lambda pieces: pieces[0]["updated"], reverse=True)
     mixed = [piece for row in zip_longest(*ordered) for piece in row if piece]

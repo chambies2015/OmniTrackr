@@ -146,7 +146,7 @@ def _content(db: Session, user, now: datetime, client=None, today: date | None =
     if extras["goals"]:
         also.append(f"your {extras['goals_year']} goals")
     if extras["challenge"]:
-        also.append("your New Year's challenge")
+        also.append("this month's challenge")
     if extras["badge"]:
         also.append("a badge you're close to")
     if extras["ask"]:

@@ -154,6 +154,13 @@ def part_label(plan, part: int) -> str:
     return f"{plan.unit.capitalize()} {part}"
 
 
+def where_you_are(plan, position: int) -> str:
+    """"You're on episode 4." or, before the first one, "You haven't started yet." (not "You're on before you start")."""
+    if position <= 0:
+        return "You haven't started yet."
+    return f"You're on {part_label(plan, position).lower()}."
+
+
 def span_label(plan, first: int, last: int, capital: bool = True) -> str:
     one, many = unit_words(plan)
     word = (many if first != last else one)
@@ -406,7 +413,7 @@ def _apply_move(db: Session, plan, member, user, new: int, today: date, now: dat
                 if (other.position or 0) < last:
                     _notify(db, person.id, "together_ahead",
                             f"{user.username} is done with this week's {stretch} of {plan.title}. "
-                            f"You're on {part_label(plan, other.position or 0).lower()}.", link, once_unread=True)
+                            f"{where_you_are(plan, other.position or 0)}", link, once_unread=True)
     opened = 0
     if new > old:
         opened = (db.query(func.count(models.TogetherNote.id))
@@ -719,7 +726,7 @@ def add_note(db: Session, plan, member, user, part: int, body: str, now: Optiona
     if not isinstance(part, int) or isinstance(part, bool) or not 0 <= part <= plan.total:
         raise TogetherError(f"Pick a {plan.unit} between 0 and {plan.total}.", 422)
     if part > (member.position or 0):
-        raise TogetherError(f"Leave notes where you are or earlier. You're on {part_label(plan, member.position or 0).lower()}.", 422)
+        raise TogetherError(f"Leave notes where you are or earlier. {where_you_are(plan, member.position or 0)}", 422)
     text = clean_body(body)
     mine = db.query(func.count(models.TogetherNote.id)).filter_by(plan_id=plan.id, user_id=user.id).scalar() or 0
     if mine >= NOTES_PER_MEMBER:
@@ -769,6 +776,8 @@ def headline(plan, me, people, today: date) -> str:
         return f"Starts {when}. {pace_label(plan).capitalize()}."
     first, last = week_span(plan, min(index, weeks_total(plan) - 1))
     if index >= weeks_total(plan):
+        if position <= 0:
+            return "The last week is over, and you haven't started yet."
         return f"The last week is over. You're on {part_label(plan, position).lower()} of {plan.total}."
     done_others = [person.username for member, person in others if (member.position or 0) >= last]
     if position >= last:
@@ -777,11 +786,13 @@ def headline(plan, me, people, today: date) -> str:
             return f"You're done for this week. Next up: {span_label(plan, *nxt, capital=False)}."
         return "You're done for this week, and that was the last stretch."
     if position < first - 1:
-        return (f"You're on {part_label(plan, position).lower()}. "
+        return (f"{where_you_are(plan, position)} "
                 f"This week ends at {plan.unit} {last}, so there's some catching up to do.")
     if done_others:
-        return f"{_names(done_others)} {'is' if len(done_others) == 1 else 'are'} done with this week. You're on {position} of {last}."
-    return f"This week: {span_label(plan, first, last, capital=False)}. You're on {position}."
+        where = f"You're on {position} of {last}." if position > 0 else where_you_are(plan, position)
+        return f"{_names(done_others)} {'is' if len(done_others) == 1 else 'are'} done with this week. {where}"
+    where = f"You're on {position}." if position > 0 else where_you_are(plan, position)
+    return f"This week: {span_label(plan, first, last, capital=False)}. {where}"
 
 
 def _visible(note, me) -> bool:
@@ -1066,8 +1077,7 @@ def build_email(plan, user, people, reason: dict, unsubscribe_url: str) -> tuple
         lines.append(f"{authors} left {'a note' if count_notes == 1 else f'{count_notes} notes'} between where you are "
                      f"and the end of this week. They open when you get there.")
     if reason["ahead"]:
-        lines.append(f"This week is {span_label(plan, first, last, capital=False)}. You're on "
-                     f"{part_label(plan, position).lower()}.")
+        lines.append(f"This week is {span_label(plan, first, last, capital=False)}. {where_you_are(plan, position)}")
     paragraph = "".join(f'<p style="color:#1f1640;font-size:15px;line-height:1.6;margin:12px 0">{escape(line)}</p>'
                         for line in lines)
     company = _names([person.username for _, person in people if person.id != user.id])
