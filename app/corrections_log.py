@@ -163,6 +163,40 @@ def _best_of_decks() -> Change:
     )
 
 
+def _best_of_still_to_come() -> Change:
+    from . import best_of
+    pages = (
+        (best_of.path("2026-movies"),
+         "The Hunger Games: Sunrise on the Reaping came out on November 20 and moved from Still to come to Also worth "
+         "a look, with its opening weekend and reviews. Still to come now covers Dune: Part Three and Avengers: "
+         "Doomsday, both still dated December 18."),
+        (best_of.path("2026-games"),
+         "Grand Theft Auto VI came out on November 19 and moved from Still to come to Also worth a look, with its "
+         "Metacritic score. The opening no longer says it is still dated for November."),
+        (best_of.path("2026-books"),
+         "Added the Booker Prize result: M. John Harrison won on November 9 with The End of Everything, now under "
+         "Also worth a look. The John of John pick now says it was shortlisted, and the note waiting for the "
+         "announcement is gone."),
+        (best_of.path("2026-music"),
+         "Removed the Still to come note on U2's Carnaval de Luz and Snoh Aalegra's Legendary Love. Both came out on "
+         "November 13, and neither has been added to the list."),
+        (best_of.path("2026-manga"),
+         "Still to come now names Yakuza vs. Cat, due December 8, and says Albus Changes the World and The Ichinose "
+         "Family's Deadly Sins are out. The Taika's Reason pick says volume 3 came out on November 17."),
+        (best_of.path("2026-audiobooks"),
+         "Exoplanet (November 5) and Monsters of Ohio (November 3) moved from Still to come to Also worth a look. "
+         "Still to come now only says we will check the list against AudioFile's best of the year in December."),
+    )
+    return Change(
+        "2026-11-24", "update", f"{len(pages)} Best of 2026 lists", best_of.BASE_PATH,
+        "The Still to come notes on six lists gave dates that had already passed. Grand Theft Auto VI, Sunrise on the "
+        "Reaping, the Booker Prize winner and two Audible releases moved into Also worth a look with their reviews, and "
+        "the other notes were updated or removed. A note about a release now leaves the page by itself once its date "
+        "has passed. No picks changed.",
+        pages,
+    )
+
+
 def _hubs() -> Change:
     pages = (
         ("/if-you-liked", "Added “How a guide is put together” and a table of what each guide's picks follow."),
@@ -278,7 +312,7 @@ def _switch_fixes() -> Change:
 
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [*_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
+    changes = [_best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
                _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(), *_grammys(),
                _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))

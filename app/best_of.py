@@ -10,6 +10,7 @@ guide's picks do (seasonal.extra_entry).
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -20,6 +21,32 @@ from .best_of_guides import GUIDES
 BASE_PATH = "/best-of"
 FORMAT_ORDER = ("movies", "tv", "anime", "games", "books", "music", "manga", "podcasts", "audiobooks")
 EXTRA_KINDS = ("manga", "podcast", "audiobook")  # saved through extra_entry, never part of Pick for me
+
+
+def _today() -> date:
+    """The day the pages are built for (tests replace it)."""
+    return date.today()
+
+
+def current(paragraphs, today: Optional[date] = None) -> list[str]:
+    """The paragraphs a page should show today.
+
+    A paragraph is either plain text, always shown, or {"until": "YYYY-MM-DD", "text": ...} for writing about a
+    release still to come. A dated paragraph shows up to and including its `until` day (the last date it talks
+    about) and then drops out, so a "Still to come" note never tells readers a date that has already passed.
+    """
+    today = today or _today()
+    return [item if isinstance(item, str) else item["text"] for item in paragraphs
+            if isinstance(item, str) or date.fromisoformat(item["until"]) >= today]
+
+
+def still_to_come(slug: str, today: Optional[date] = None) -> list[str]:
+    """A guide's "Still to come" paragraphs that haven't passed yet; empty once they all have."""
+    return current(GUIDES[slug]["coming"], today)
+
+
+def year_over(year: int, today: Optional[date] = None) -> bool:
+    return (today or _today()).year > year
 
 
 def path(slug: str) -> str:
