@@ -687,6 +687,9 @@ for route in auth.router.routes:
             # Ten wrong codes stop an account's code for good (routers/auth.py); this keeps
             # one visitor from trying many accounts quickly.
             bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+        elif route.path == "/auth/pending-signup" and 'GET' in route.methods:
+            # Asked once per homepage load, and only by a browser that left a sign-up waiting.
+            bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:

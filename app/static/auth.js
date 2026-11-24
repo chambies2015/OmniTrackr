@@ -262,6 +262,7 @@ function saveAuthData(token, user) {
     try { localStorage.removeItem(TOKEN_KEY); } catch (_) { needsFallback = true; }
     try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { needsFallback = true; }
     try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (_) { /* optional */ }
+    clearSignupWaiting();
     if (!needsFallback) delete getUser.current;
     try {
         if (needsFallback) sessionStorage.setItem('omnitrackr_session_user', JSON.stringify(user));
@@ -467,7 +468,9 @@ function authErrorMessage(body, fallback) {
 // guest who opens sign-up on three pages is still one person starting to sign up.
 const reportedFunnelEvents = new Set();
 const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup',
-    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed', 'signup_inbox_opened']);
+    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed', 'signup_inbox_opened',
+    'signup_check_email', 'signup_check_password', 'signup_check_username', 'signup_request_failed',
+    'signup_waiting_resumed', 'signup_waiting_confirmed', 'signup_restart_clicked']);
 const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
 function funnelSentThisVisit(event) {
     if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
@@ -703,7 +706,7 @@ function updateUsernameLine() {
 // the box so the visitor can press the button again instead of inventing a name.
 function offerAnotherUsername(message) {
     const username = document.getElementById('registerUsername');
-    if (!username || !username.dataset || username.dataset.suggested !== 'true' || !/taken/i.test(message)) return message;
+    if (!username || !username.dataset || username.dataset.suggested !== 'true' || !/taken|reserved/i.test(message)) return message;
     const taken = username.value;
     const next = `${taken.slice(0, 28)}${10 + Math.floor(Math.random() * 90)}`;
     username.value = next;
@@ -755,13 +758,21 @@ async function register(email, username, password) {
     const payload = { email, username, password };
     if (invite) payload.invite = invite;
     if (weeklyBox && weeklyBox.checked) payload.weekly_email = true;
-    const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    let response;
+    try {
+        response = await fetch(`${AUTH_API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (_) {
+        // Nothing reached us, so the server can't count it: the browser says so instead.
+        reportFunnelEvent('signup_request_failed');
+        throw new Error("We couldn't reach OmniTrackr. Check your connection, then press Create free account again.");
+    }
 
     if (!response.ok) {
+        if (response.status >= 500) reportFunnelEvent('signup_request_failed');
         const error = await response.json().catch(() => ({}));
         // Signed up before and never confirmed: offer a code for that account, not a dead end.
         if (error && error.unverified === true && typeof error.email === 'string' && showInboxPanel('pending', error.email)) return;
@@ -772,8 +783,8 @@ async function register(email, username, password) {
     clearFriendInvite();
     document.getElementById('registerFormElement').reset();
     const headers = response.headers;
-    const emailFailed = Boolean(headers && typeof headers.get === 'function' && headers.get('X-Verification-Email') === 'failed');
-    showVerificationSent(email, { emailFailed });
+    const delivery = headers && typeof headers.get === 'function' ? headers.get('X-Verification-Email') : null;
+    showVerificationSent(email, { emailFailed: delivery === 'failed', emailSlow: delivery === 'sending' });
 }
 
 // Mail services we can open for the visitor, matched on the part after "@". The
@@ -838,7 +849,7 @@ const INBOX_PANEL_TEXT = {
     reset: { title: 'Check your inbox', context: 'Your reset link is on its way.',
         lead: ['If ', ' has an account, we sent it a link to choose a new password.'] },
 };
-function showInboxPanel(mode, email, { emailFailed = false } = {}) {
+function showInboxPanel(mode, email, { emailFailed = false, emailSlow = false } = {}) {
     const panel = document.getElementById('verifySentPanel');
     const lead = document.getElementById('verifySentLead');
     if (!panel || !lead) return false;
@@ -846,6 +857,11 @@ function showInboxPanel(mode, email, { emailFailed = false } = {}) {
     hideAuthPanels();
     inboxPanelState = { mode, email };
     const confirming = mode === 'verify' || mode === 'pending';
+    // Kept for a reload or a new tab, and for a sign-up button pressed again in this one.
+    if (confirming) {
+        signupWaiting = { mode, email };
+        markSignupWaiting();
+    }
     const text = INBOX_PANEL_TEXT[mode] || INBOX_PANEL_TEXT.reset;
     document.getElementById('authTitle').textContent = text.title;
     setAuthContext(text.context);
@@ -894,16 +910,104 @@ function showInboxPanel(mode, email, { emailFailed = false } = {}) {
         resend.textContent = mode === 'pending' ? 'Send me a new code' : 'Send the email again';
     }
     const status = document.getElementById('verifySentStatus');
-    if (status) status.textContent = emailFailed ? "We couldn't send the email just now. Press Send the email again in a minute." : '';
+    if (status) {
+        status.textContent = emailFailed ? "We couldn't send the email just now. Press Send the email again in a minute."
+            : emailSlow ? 'Our mail server is slow right now, so the email may take a minute or two.' : '';
+    }
     const login = document.getElementById('verifySentLogin');
     if (login) login.textContent = confirming ? 'Already confirmed? Log in' : 'Back to log in';
     const restart = document.getElementById('verifySentRestart');
     if (restart) restart.textContent = mode === 'verify' ? 'Wrong address? Start again' : 'Try a different email';
     panel.style.display = 'block';
-    // The button that led here is gone; put the cursor on the new heading so a
-    // screen reader announces the step.
-    const title = document.getElementById('authTitle');
-    if (title && typeof title.focus === 'function') title.focus();
+    // The button that led here is gone. With a mouse, the cursor goes in the code box,
+    // ready for a paste (the box reads the line above it to a screen reader). On a touch
+    // screen the heading takes it, so the keyboard doesn't cover the Open Gmail button.
+    const focusCode = confirming && codeField && finePointer();
+    const target = focusCode ? codeField : document.getElementById('authTitle');
+    if (target && typeof target.focus === 'function') target.focus();
+    return true;
+}
+
+function finePointer() {
+    try {
+        return typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    } catch (_) {
+        return false;
+    }
+}
+
+// A sign-up that waits for its code (Nov 23 2026). People leave the code step to read the
+// email; coming back, a phone often reloads the tab, or they open the site in a new one,
+// and the homepage used to look as if they had never signed up. localStorage keeps only
+// the time (never the address): the server says which address, from the HttpOnly
+// pending-signup cookie that only the browser that signed up has.
+let signupWaiting = null;
+const SIGNUP_WAITING_KEY = 'omnitrackr_signup_waiting';
+const SIGNUP_WAITING_MAX_MS = 48 * 3600 * 1000;  // Same as the code, the link and the cookie.
+const SIGNUP_WAITING_CLOSED_KEY = 'omnitrackr_signup_waiting_closed';
+
+function markSignupWaiting() {
+    try { localStorage.setItem(SIGNUP_WAITING_KEY, String(Date.now())); } catch (_) { /* optional */ }
+}
+
+function clearSignupWaiting() {
+    signupWaiting = null;
+    try { localStorage.removeItem(SIGNUP_WAITING_KEY); } catch (_) { /* optional */ }
+}
+
+function signupWaitingMarked() {
+    try {
+        const at = Number(localStorage.getItem(SIGNUP_WAITING_KEY));
+        if (!at) return false;
+        const age = Date.now() - at;
+        if (age >= 0 && age < SIGNUP_WAITING_MAX_MS) return true;
+        localStorage.removeItem(SIGNUP_WAITING_KEY);
+    } catch (_) { /* storage blocked */ }
+    return false;
+}
+
+// Closing the pop-up on the code step means "not now": later pages in this tab keep the
+// step ready under the sign-up buttons instead of opening it on their own.
+function signupWaitingClosedThisVisit() {
+    try { return sessionStorage.getItem(SIGNUP_WAITING_CLOSED_KEY) === '1'; } catch (_) { return false; }
+}
+
+function watchAuthDialogClose() {
+    const dialog = document.getElementById('authDialog');
+    if (!dialog || typeof dialog.addEventListener !== 'function') return;
+    dialog.addEventListener('close', () => {
+        if (!signupWaiting || !inboxPanelState || inboxPanelState.mode === 'reset') return;
+        try { sessionStorage.setItem(SIGNUP_WAITING_CLOSED_KEY, '1'); } catch (_) { /* optional */ }
+    });
+}
+
+// Back on the homepage with a sign-up waiting: open the code step again, or, when the
+// email was confirmed meanwhile in another browser, the log-in form with the address in.
+// Resolves false when there is nothing to pick up, so the page opens as usual.
+async function resumeWaitingSignup() {
+    let data = null;
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/auth/pending-signup`, { credentials: 'same-origin', cache: 'no-store' });
+        if (!response.ok) return false;  // Rate limited or offline: keep the mark and try next time.
+        data = await response.json().catch(() => null);
+    } catch (_) {
+        return false;
+    }
+    if (data && data.waiting === true && typeof data.email === 'string' && data.email) {
+        if (!showInboxPanel('pending', data.email)) return false;
+        reportFunnelEvent('signup_waiting_resumed');
+        if (!signupWaitingClosedThisVisit()) revealAuthCard();
+        return true;
+    }
+    clearSignupWaiting();
+    if (!data || data.confirmed !== true) return false;
+    reportFunnelEvent('signup_waiting_confirmed');
+    showLoginForm();
+    displayAuthSuccess('Your email is confirmed. Log in to open your library.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField && typeof data.login_hint === 'string') loginField.value = data.login_hint;
+    const passwordField = document.getElementById('loginPassword');
+    if (passwordField && typeof passwordField.focus === 'function') passwordField.focus();
     return true;
 }
 
@@ -945,8 +1049,13 @@ function setupInboxPanel() {
     if (restart && typeof restart.addEventListener === 'function') {
         restart.addEventListener('click', event => {
             event.preventDefault();
-            if (inboxPanelState && inboxPanelState.mode === 'reset') showForgotPasswordForm();
-            else showRegisterForm(true, { report: false });
+            if (inboxPanelState && inboxPanelState.mode === 'reset') {
+                showForgotPasswordForm();
+                return;
+            }
+            reportFunnelEvent('signup_restart_clicked');
+            clearSignupWaiting();
+            showRegisterForm(true, { report: false });
         });
     }
     const inbox = document.getElementById('verifySentInbox');
@@ -1004,6 +1113,7 @@ async function submitSignupCode() {
     if (!ok) return;
     const email = inboxPanelState.email;
     inboxPanelState = null;
+    clearSignupWaiting();
     if (data.signed_in && data.user) {
         // Same as the link opened in this browser: the server set the session cookie.
         saveAuthData(null, data.user);
@@ -1044,6 +1154,7 @@ function inboxPanelConfirmed() {
     const panel = document.getElementById('verifySentPanel');
     if (!panel || !inboxPanelState || inboxPanelState.mode === 'reset' || panel.style.display !== 'block') return;
     inboxPanelState = null;
+    signupWaiting = null;
     document.getElementById('authTitle').textContent = 'Your email is confirmed';
     setAuthContext('Your library is open in the other tab.');
     const lead = document.getElementById('verifySentLead');
@@ -1066,10 +1177,10 @@ function inboxPanelConfirmed() {
 
 // After sign-up: the "check your inbox" step. The log-in form keeps the email, so
 // "Already confirmed? Log in" only needs the password.
-function showVerificationSent(email, { emailFailed = false } = {}) {
+function showVerificationSent(email, { emailFailed = false, emailSlow = false } = {}) {
     const loginField = document.getElementById('loginUsername');
     if (loginField) loginField.value = email;
-    if (showInboxPanel('verify', email, { emailFailed })) return;
+    if (showInboxPanel('verify', email, { emailFailed, emailSlow })) return;
     // Pages without the inbox step: the log-in form with the message and resend button.
     showLoginForm(false);
     document.getElementById('authTitle').textContent = 'Check your inbox';
@@ -1359,6 +1470,13 @@ function reportEmailFormOpened() {
 }
 
 function showRegisterForm(scroll = true, { report = true } = {}) {
+    // A sign-up already waits for its code here (the pop-up was closed, or this is a
+    // "Start tracking" button pressed again): the code step, not an empty form. "Try a
+    // different email" clears the waiting sign-up first, so it still gets the form.
+    if (signupWaiting && showInboxPanel(signupWaiting.mode, signupWaiting.email)) {
+        if (scroll) revealAuthCard();
+        return;
+    }
     hideAuthPanels();
     if (report) reportEmailFormOpened();
     document.getElementById('loginForm').style.display = 'none';
@@ -1620,6 +1738,8 @@ function setupAuthHandlers() {
         const problem = signupFieldProblem(email, username, password, confirmPassword);
         if (problem) {
             reportFunnelEvent('signup_rejected_invalid');
+            const box = { registerEmail: 'email', registerUsername: 'username' }[problem.field] || 'password';
+            reportFunnelEvent(`signup_check_${box}`);
             if (!showFieldError(problem.field, problem.message)) displayAuthError(problem.message);
             return;
         }
@@ -1968,6 +2088,7 @@ function initAuth() {
     setupGoogleSignIn();
     setupTwoFactorHandlers();
     setupInboxPanel();
+    watchAuthDialogClose();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
@@ -2044,28 +2165,41 @@ function initAuth() {
             revealAuthCard();
             return;
         }
-        if (window.location.hash === '#signup') {
-            showRegisterForm();
-            return;
-        }
         // "I have an account" buttons: open the log-in form even on a browser that hasn't signed in before.
         if (window.location.hash === '#login') {
             showLoginForm();
             return;
         }
-        if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
-            && getDemoStartIntent() && !getDiscoverAuthReturn()) {
-            showRegisterForm();
+        if (signupWaitingMarked()) {
+            resumeWaitingSignup().then(resumed => { if (!resumed) openPublicAuthCard(urlParams); });
             return;
         }
-        // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
-        // Counted as "opened" only once they start filling it in.
-        // "Log in" links from other pages arrive as /#landing-auth (without a return path).
-        if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
-        if (!knownMember()) showRegisterForm(false, { report: false });
+        openPublicAuthCard(urlParams);
         return;
     }
+    return openSignedInPage();
+}
 
+// The homepage's sign-in card when nothing else (a link from an email, Google, a waiting
+// sign-up) decides what it shows.
+function openPublicAuthCard(urlParams) {
+    if (window.location.hash === '#signup') {
+        showRegisterForm();
+        return;
+    }
+    if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
+        && getDemoStartIntent() && !getDiscoverAuthReturn()) {
+        showRegisterForm();
+        return;
+    }
+    // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
+    // Counted as "opened" only once they start filling it in.
+    // "Log in" links from other pages arrive as /#landing-auth (without a return path).
+    if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
+    if (!knownMember()) showRegisterForm(false, { report: false });
+}
+
+function openSignedInPage() {
     if (!isAuthenticated()) {
         if (canRecoverCookieSession()) {
             return recoverCookieSession().then(recovered => {
@@ -2150,6 +2284,7 @@ async function handleEmailVerification(token) {
         
         if (response.ok) {
             window.history.replaceState({}, document.title, window.location.pathname);
+            clearSignupWaiting();
             if (data.signed_in && data.user) {
                 // Same browser that signed up: the server already set the session cookie.
                 saveAuthData(null, data.user);

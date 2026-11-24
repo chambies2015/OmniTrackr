@@ -1,9 +1,11 @@
 """
 Authentication endpoints for the OmniTrackr API.
 """
+import asyncio
 import hmac
 import os
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -86,18 +88,54 @@ async def register(
             db.rollback()
             print(f"Failed to turn on the weekly email at sign-up: {e}")
     
-    try:
-        email_sent = await email_utils.send_verification_email(user.email, user.username, verification_token)
-    except Exception:
-        email_sent = False
-        print("Failed to send verification email.")
-    if not email_sent:
-        funnel.record("signup_email_failed", request)
+    delivery = await _send_signup_email(user.email, user.username, verification_token, request)
 
     auth.set_pending_signup_cookie(response, db_user.id)
     # The "check your inbox" step says so when the email didn't go, instead of waiting for nothing.
-    response.headers["X-Verification-Email"] = "sent" if email_sent else "failed"
+    # "sending" means the mail server was slow and the email is still on its way.
+    response.headers["X-Verification-Email"] = delivery
     return db_user
+
+
+# How long Create waits for the mail server before the card moves on to the code step.
+# The send keeps going after that; it used to hold the button for up to 30 seconds.
+SIGNUP_EMAIL_WAIT_SECONDS = 8.0
+SIGNUP_EMAIL_QUICK_SECONDS = 3.0
+_unfinished_sends: set = set()  # Keeps a reference so a slow send isn't garbage collected.
+
+
+def _slow_send_finished(task: asyncio.Task) -> None:
+    _unfinished_sends.discard(task)
+    failed = task.cancelled() or task.exception() is not None or not task.result()
+    if failed:
+        print("Failed to send verification email.")
+        funnel.record("signup_email_failed")
+
+
+async def _send_signup_email(address: str, username: str, token: str, request: Request) -> str:
+    """Send the code email and say how it went: "sent", "failed" or "sending" (still going).
+
+    Each send is counted by how long the mail server took (Site stats, "Sending the
+    code email"), so a slow or failing mail setup shows up next to the sign-ups it costs.
+    """
+    started = time.monotonic()
+    send = asyncio.ensure_future(email_utils.send_verification_email(address, username, token))
+    try:
+        sent = await asyncio.wait_for(asyncio.shield(send), timeout=SIGNUP_EMAIL_WAIT_SECONDS)
+    except asyncio.TimeoutError:
+        funnel.record("signup_email_slow", request)
+        _unfinished_sends.add(send)
+        send.add_done_callback(_slow_send_finished)
+        return "sending"
+    except Exception:
+        print("Failed to send verification email.")
+        sent = False
+    if not sent:
+        funnel.record("signup_email_failed", request)
+        return "failed"
+    quick = time.monotonic() - started < SIGNUP_EMAIL_QUICK_SECONDS
+    funnel.record("signup_email_quick" if quick else "signup_email_wait", request)
+    return "sent"
 
 
 @router.post("/login", response_model=schemas.Token)
@@ -256,6 +294,8 @@ def _finish_login(user: models.User, request: Request, db: Session, now_utc: dat
         }
     )
     auth.set_auth_cookie(response, access_token)
+    if request is not None and auth.PENDING_SIGNUP_COOKIE in request.cookies:
+        auth.clear_pending_signup_cookie(response)  # Signed in: no sign-up waits here any more.
     if first_visit:
         start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
     return response
@@ -529,6 +569,32 @@ def verify_code(payload: schemas.SignupCode, request: Request, db: Session = Dep
         # Two-factor isn't reachable today (it needs a confirmed account), but never skip that step.
         return {"message": message, "signed_in": False, "login_hint": user.email}
     return _open_new_session(request, user, db, message)
+
+
+@router.get("/pending-signup")
+def pending_signup(request: Request, db: Session = Depends(get_db)):
+    """The sign-up this browser started and hasn't confirmed, so the card can ask for the code again.
+
+    People leave the "check your inbox" step to read the email. Coming back, a phone often
+    reloads the tab, or they open the site in a new one, and the code box was gone: the
+    homepage looked as if they had never signed up (Nov 23 2026). Only the browser holding
+    the pending-signup cookie gets an answer (it signed up, or typed the right password),
+    and the answer is the address that browser already used.
+    """
+    headers = {"Cache-Control": "no-store"}
+    user_id = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE))
+    user = db.get(models.User, user_id) if user_id else None
+    if user is not None and user.is_active and not user.is_verified:
+        waiting = _waiting_for_confirmation(db, user.email)
+        if waiting is not None and waiting.id == user.id:
+            return JSONResponse({"waiting": True, "email": user.email}, headers=headers)
+    if user is not None and user.is_active and user.is_verified:
+        # Confirmed since, usually with the link in the mail app's own browser: log in here.
+        answer = JSONResponse({"waiting": False, "confirmed": True, "login_hint": user.email}, headers=headers)
+    else:
+        answer = JSONResponse({"waiting": False}, headers=headers)
+    auth.clear_pending_signup_cookie(answer)
+    return answer
 
 
 @router.get("/verify-email")

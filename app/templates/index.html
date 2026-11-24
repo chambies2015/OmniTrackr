@@ -2702,12 +2702,12 @@
           <p class="auth-panel__lead" id="verifySentLead"><span id="verifySentBefore"></span><strong id="verifySentEmail"></strong><span id="verifySentAfter"></span></p>
           <form id="verifyCodeForm" class="auth-code" novalidate>
             <label class="auth-field__label" for="verifyCode">6-digit code</label>
-            <div class="auth-code__row"><input type="text" id="verifyCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="9" spellcheck="false" aria-describedby="verifyCodeError"><button type="submit" class="auth-submit auth-code__submit" id="verifyCodeSubmit">Confirm</button></div>
+            <div class="auth-code__row"><input type="text" id="verifyCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="9" spellcheck="false" aria-describedby="verifySentLead verifyCodeError"><button type="submit" class="auth-submit auth-code__submit" id="verifyCodeSubmit">Confirm</button></div>
             <p class="auth-field__error" id="verifyCodeError" hidden></p>
           </form>
           <a class="auth-ghost auth-inbox" id="verifySentInbox" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
           <p class="auth-panel__note" id="verifySentNote"></p>
-          <p class="auth-panel__note auth-quiz-tip" id="verifySentQuiz" hidden>While you wait, <a href="/taste-quiz">take the 1-minute taste quiz</a>. Your answers are added to your library when you log in.</p>
+          <p class="auth-panel__note auth-quiz-tip" id="verifySentQuiz" hidden>While you wait, <a href="/taste-quiz" target="_blank" rel="noopener">take the 1-minute taste quiz</a> (it opens in a new tab). Your answers are added to your library when you log in.</p>
           <button type="button" class="auth-ghost" id="verifySentResend">Send the email again</button>
           <p class="auth-panel__status" id="verifySentStatus" role="status"></p>
           <p class="auth-toggle"><a id="verifySentLogin" href="#login">Already confirmed? Log in</a></p>
@@ -2793,7 +2793,7 @@
   <!-- Starts the home cards' requests before the scripts below run (static/home-prefetch.js). -->
   <script src="/static/home-prefetch.js?v=20261123-prefetch-sweep-1"></script>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261123-gift-1"></script>
+  <script src="./auth.js?v=20261123-signup-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261116-stay-1"></script>
