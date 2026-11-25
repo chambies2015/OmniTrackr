@@ -45,7 +45,7 @@ def monthly_for(slug):
 NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"), ("/lists", "lists"),
                 ("/pick", "pick"), ("/tonight", "tonight"), ("/taste-quiz", "taste-quiz"), ("/tier-list", "tier-list"), ("/challenges", "challenges"), ("/new-year-challenge", "challenges"),
                 ("/best-of", "best-of"), ("/essentials", "essentials"), ("/new-releases", "new-releases"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""), ("/valentines-day", ""), ("/binge-calculator", ""), ("/awards", "awards"), ("/start", ""),
-                ("/ranked", ""), ("/on-my-services", ""), ("/together", "together"), ("/break", "break"), ("/swap", "swap"),
+                ("/ranked", ""), ("/on-my-services", ""), ("/together", "together"), ("/break", "break"), ("/swap", "swap"), ("/yearbook", "yearbook"),
                 ("/supporters", "supporters"), ("/gift", "supporters"))
 
 

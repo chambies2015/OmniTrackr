@@ -107,6 +107,7 @@
   <link rel="stylesheet" href="/static/together-home.css?v=20261122-together-1">
   <link rel="stylesheet" href="/static/break-home.css?v=20261123-break-1">
   <link rel="stylesheet" href="/static/pick-swap-home.css?v=20261123-swap-1">
+  <link rel="stylesheet" href="/static/yearbook-home.css?v=20261125-yearbook-1">
   <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
   <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
@@ -748,6 +749,21 @@
             <a class="swap-home__more" href="/swap">All swaps</a>
           </div>
           <ul id="swapHomeList" class="swap-home__list" aria-live="polite"></ul>
+        </section>
+        <!-- Yearbook: from late November until two weeks after signing closes. Start yours, notes waiting to be
+             let in, friends' yearbooks to sign, then the closed book in January (yearbook-home.js). -->
+        <section id="yearbookHome" class="yearbook-home" aria-labelledby="yearbookHomeTitle" hidden>
+          <div class="yearbook-home__head">
+            <div class="yearbook-home__intro">
+              <p class="yearbook-home__eyebrow">Yearbook</p>
+              <h2 id="yearbookHomeTitle" class="yearbook-home__title">Your yearbook</h2>
+            </div>
+            <span class="yearbook-home__badge" aria-hidden="true">Class<span>of '26</span></span>
+          </div>
+          <p id="yearbookHomeLine" class="yearbook-home__line"></p>
+          <ul id="yearbookHomeCounts" class="yearbook-home__counts" hidden></ul>
+          <div id="yearbookHomeActions" class="yearbook-home__actions"></div>
+          <div id="yearbookHomeFriends" class="yearbook-home__friends" hidden></div>
         </section>
         <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
              newest arrivals first. Asks which services once, then lists them (streaming.js). -->
@@ -2793,7 +2809,7 @@
   <!-- Starts the home cards' requests before the scripts below run (static/home-prefetch.js). -->
   <script src="/static/home-prefetch.js?v=20261123-prefetch-sweep-1"></script>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261123-signup-1"></script>
+  <script src="./auth.js?v=20261125-yearbook-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261116-stay-1"></script>
@@ -2805,7 +2821,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261123-friends-1"></script>
-  <script src="/static/home-layout.js?v=20261123-break-1"></script>
+  <script src="/static/home-layout.js?v=20261125-yearbook-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261122-streaming-1"></script>
@@ -2840,6 +2856,7 @@
   <script src="/static/together-home.js?v=20261122-together-1" defer></script>
   <script src="/static/break-home.js?v=20261123-break-share-1" defer></script>
   <script src="/static/pick-swap-home.js?v=20261123-swap-1" defer></script>
+  <script src="/static/yearbook-home.js?v=20261125-yearbook-1" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261120-speed-1" defer></script>
   <script src="/static/guest-list.js?v=20261122-shelf-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>

@@ -154,6 +154,10 @@ async def lifespan(application: FastAPI):
     swap_task = None
     if pick_swap.loop_enabled():
         swap_task = asyncio.create_task(pick_swap.swap_loop(application))
+    from . import yearbook
+    yearbook_task = None
+    if yearbook.loop_enabled():
+        yearbook_task = asyncio.create_task(yearbook.yearbook_loop(application))
     from . import streaming_services
     streaming_task = None
     if streaming_services.enabled_for_process():
@@ -176,7 +180,7 @@ async def lifespan(application: FastAPI):
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
                      episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task,
-                     together_task, swap_task, break_task):
+                     together_task, swap_task, break_task, yearbook_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -1129,6 +1133,30 @@ for route in break_plan_router.router.routes:
         if (path, method) in BREAK_PLAN_LIMITS:
             bind_rate_limited_endpoint(route, limiter.limit(BREAK_PLAN_LIMITS[(path, method)])(route.endpoint))
 app.include_router(break_plan_router.router)
+from .routers import yearbook as yearbook_router
+# Yearbook: the owner's page and the home card read often; signing is open to people without an account,
+# so the shared page, its picture and the sign endpoint are limited per address.
+YEARBOOK_LIMITS = {
+    ("/api/yearbook", "GET"): "30/minute",
+    ("/api/yearbook", "PUT"): "20/minute",
+    ("/api/yearbook/link", "POST"): "5/minute",
+    ("/api/yearbook/link", "DELETE"): "10/minute",
+    ("/api/yearbook/notes/{note_id}", "PATCH"): "60/minute",
+    ("/api/yearbook/notes/{note_id}", "DELETE"): "60/minute",
+    ("/api/yearbook/home", "GET"): "30/minute",
+    ("/api/yearbook/sign/{token}", "POST"): "6/minute",
+    ("/api/yearbook/sign/{token}", "DELETE"): "10/minute",
+    ("/yearbook/{token}", "GET"): "60/minute",
+    ("/yearbook/{token}/card.png", "GET"): "30/minute",
+    ("/yearbook/{token}/story.png", "GET"): "20/minute",
+    ("/yearbook/class/{year}", "GET"): "30/minute",
+}
+for route in yearbook_router.router.routes:
+    path = getattr(route, "path", None)
+    for method in getattr(route, "methods", None) or ():
+        if (path, method) in YEARBOOK_LIMITS:
+            bind_rate_limited_endpoint(route, limiter.limit(YEARBOOK_LIMITS[(path, method)])(route.endpoint))
+app.include_router(yearbook_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:
