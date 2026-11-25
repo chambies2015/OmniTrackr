@@ -10,10 +10,11 @@ instead, added up from the listed running time of each episode.
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
 DEEPENED = "2026-11-23"  # guides that gained a fourth section
+FILLED = "2026-11-25"  # five more TV guides that gained a fourth section
 
 GUIDES = {
     "breaking-bad": {
-        "name": "Breaking Bad", "kind": "tv", "reviewed": UPDATED,
+        "name": "Breaking Bad", "kind": "tv", "reviewed": FILLED,
         "summary": "Breaking Bad is 62 episodes over five seasons, about 49 hours without ads. Season lengths, a pace planner and what the total leaves out.",
         "titles": [{"kind": "tv", "title": "Breaking Bad", "year": 2008}],
         "see_also": ["better-call-saul", "the-sopranos", "the-wire"],
@@ -56,6 +57,15 @@ GUIDES = {
                 "Viewers at the time waited eleven months between the two halves of season 5, from September 2012 to August "
                 "2013. You don't have to.",
             ]),
+            ("season-one", "Season 1, and a puzzle in season 2", [
+                "If you are not sure the show is for you, season 1 is a small test: seven episodes, about five and a "
+                "half hours. It was meant to be nine, and the writers' strike stopped it at seven, so it ends on an "
+                "episode that sets up season 2 rather than one that closes much.",
+                "Season 2 hides a puzzle in its episode list. Four of its episodes open in black and white, and their"
+                " titles, \"Seven Thirty-Seven\", \"Down\", \"Over\" and \"ABQ\", read as one line when you put them "
+                "together. They are episodes 1, 4, 10 and 13, so the last piece arrives with the finale. Stay away "
+                "from the episode list if you would rather work it out as you go.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Breaking Bad are there?",
@@ -68,7 +78,7 @@ GUIDES = {
         ],
     },
     "better-call-saul": {
-        "name": "Better Call Saul", "kind": "tv", "reviewed": UPDATED,
+        "name": "Better Call Saul", "kind": "tv", "reviewed": FILLED,
         "summary": "Better Call Saul runs 63 episodes over six seasons, about 50 hours. See each season's length and plan the watch around Breaking Bad.",
         "titles": [{"kind": "tv", "title": "Better Call Saul", "year": 2015}],
         "see_also": ["breaking-bad", "mad-men", "succession"],
@@ -109,6 +119,16 @@ GUIDES = {
                 "August. The seventh, \"Plan and Execution\", was the mid-season break. If season 1 has not caught you by its "
                 "sixth episode, \"Five-O\", watch that one before deciding. It is mostly about Mike and works almost as a short "
                 "film on its own.",
+            ]),
+            ("faces", "Faces from Breaking Bad, and when they turn up", [
+                "Some Breaking Bad characters are there from the start. Mike Ehrmantraut is in the first episode, "
+                "working the parking booth at the courthouse, and Tuco Salamanca opens a front door at the end of it."
+                " Gus Fring first appears in season 3, in its second episode, \"Witness\". Walter White and Jesse "
+                "Pinkman don't turn up until season 6, in the eleventh episode, which is called \"Breaking Bad\".",
+                "The people who carry most of the story are new. Kim Wexler, Chuck McGill and Howard Hamlin never "
+                "appear in Breaking Bad and are never mentioned there, and the question of why Saul never speaks of "
+                "Kim hangs over all six seasons. That is the main reason to watch Breaking Bad first: Saul is written"
+                " for viewers who already know where Jimmy ends up.",
             ]),
         ],
         "faq": [
@@ -247,7 +267,7 @@ GUIDES = {
         ],
     },
     "game-of-thrones": {
-        "name": "Game of Thrones", "kind": "tv", "reviewed": UPDATED, "in_order": "game-of-thrones",
+        "name": "Game of Thrones", "kind": "tv", "reviewed": FILLED, "in_order": "game-of-thrones",
         "summary": "Game of Thrones is 73 episodes over eight seasons, about 71 hours. Season lengths, the long final episodes, and a finish-date planner.",
         "titles": [{"kind": "tv", "title": "Game of Thrones", "year": 2011}],
         "see_also": ["a-song-of-ice-and-fire", "the-sopranos", "succession"],
@@ -290,6 +310,15 @@ GUIDES = {
                 "petition asking HBO to remake it gathered well over a million signatures. It is still the only ending there "
                 "is. A Knight of the Seven Kingdoms, which began in January 2026, is another separate series, set about "
                 "ninety years before Game of Thrones, and it is not counted either.",
+            ]),
+            ("breaks", "Where to take a break", [
+                "By running time the halfway point is the end of season 4. The first four seasons come to about 37 of"
+                " the 71 hours, and the season 4 finale sends several characters away from the places they have been "
+                "for years, which makes it the best place to stop for a while.",
+                "Seasons 7 and 8 are better kept together. HBO announced them as the last 13 episodes, about 14 and a"
+                " half hours, and they are written as one run toward the ending. They aired nearly two years apart, "
+                "in July and August 2017 and then from April to May 2019. Watching them back to back over a week or "
+                "two is the easier way.",
             ]),
         ],
         "faq": [
@@ -490,7 +519,7 @@ GUIDES = {
         ],
     },
     "the-office": {
-        "name": "The Office (US)", "kind": "tv", "reviewed": UPDATED,
+        "name": "The Office (US)", "kind": "tv", "reviewed": FILLED,
         "summary": "The Office (US) is 201 episodes over nine seasons, about 74 hours. Season-by-season counts, the Superfan cuts, and a rewatch planner.",
         "titles": [{"kind": "tv", "title": "The Office", "year": 2005, "aka": ["The Office (US)"]}],
         "see_also": ["friends", "mad-men", "succession"], "skip_minutes": 1,
@@ -536,6 +565,14 @@ GUIDES = {
                 "four-episode guest run falls either side of it. The pilot is a close remake of the British pilot, nearly "
                 "line for line, which is one reason season 1 feels stiffer than what follows.",
             ]),
+            ("christmas", "The Christmas episodes", [
+                "Every season from 2 to 9 has a Christmas episode except season 4, seven in all: \"Christmas Party\", "
+                "\"A Benihana Christmas\", \"Moroccan Christmas\", \"Secret Santa\", \"Classy Christmas\", \"Christmas Wishes\""
+                " and \"Dwight Christmas\". Michael is in the first five; the last two come after he leaves.",
+                "\"A Benihana Christmas\" and \"Classy Christmas\" are hour-long episodes, which count as two each here, "
+                "so the seven take up nine of the 201 and come to a little over three hours. That is one December "
+                "evening, and a quick way to see how the office changes from season 2 to season 9.",
+            ]),
         ],
         "faq": [
             ("How many episodes of The Office are there?",
@@ -547,7 +584,7 @@ GUIDES = {
         ],
     },
     "supernatural": {
-        "name": "Supernatural", "kind": "tv", "reviewed": UPDATED,
+        "name": "Supernatural", "kind": "tv", "reviewed": FILLED,
         "summary": "Supernatural is 327 episodes over fifteen seasons, about 229 hours. Season counts, the original five-season story, and a long-haul planner.",
         "titles": [{"kind": "tv", "title": "Supernatural", "year": 2005}],
         "see_also": ["lost", "friends", "one-piece"],
@@ -597,6 +634,17 @@ GUIDES = {
                 "world where they are actors on a show called Supernatural.",
                 "\"Baby\" (season 11, episode 4) is filmed entirely from inside the brothers' car. None of the four needs the "
                 "episodes around it, and together they are under three hours.",
+            ]),
+            ("not-counted", "What the total leaves out", [
+                "The 327 episodes are Supernatural alone. The Winchesters, a prequel about Sam and Dean's parents "
+                "narrated by Jensen Ackles, ran for one season of 13 episodes on The CW from October 2022 to March "
+                "2023 before it was cancelled. It adds about nine hours. Supernatural: The Animation, made by the "
+                "Japanese studio Madhouse in 2011, is 22 episodes of about 24 minutes, close to nine hours more, and "
+                "retells stories from the first two seasons.",
+                "Two episodes in the count were trial runs for spin-offs: \"Bloodlines\" in season 9 and \"Wayward "
+                "Sisters\" in season 13. Neither spin-off was picked up. \"Bloodlines\" barely involves Sam and "
+                "Dean and is an easy one to skip if you are cutting the total down. \"Wayward Sisters\" ties into "
+                "that season's story, so keep it.",
             ]),
         ],
         "faq": [

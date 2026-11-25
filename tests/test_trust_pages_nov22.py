@@ -100,8 +100,11 @@ def test_binge_guide_note_names_its_own_new_section(client):
     html = client.get("/binge-calculator/breaking-bad").text
     heading = GUIDES["breaking-bad"]["sections"][2][1]
     assert f"Added the section “{heading}”" in html
-    two_sections = client.get("/binge-calculator/one-piece").text
-    assert "data-guide-changes" not in two_sections
+    # One Piece kept two sections on November 20 and gained its third on November 25: its note
+    # lists only that, not the November 20 change it wasn't part of.
+    one_piece = client.get("/binge-calculator/one-piece").text
+    assert f"Added the section “{GUIDES['one-piece']['sections'][2][1]}”" in one_piece
+    assert "now covers only what applies to this series" not in one_piece
 
 
 def test_guides_without_a_first_published_line_get_one(client):

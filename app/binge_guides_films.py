@@ -7,6 +7,7 @@ the guide's switch names (the extended editions of the Middle-earth films).
 
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
+FILLED = "2026-11-25"  # the Harry Potter films gained a fourth section
 
 
 def _film(name, year, minutes, **extra):
@@ -207,7 +208,7 @@ GUIDES = {
         ],
     },
     "harry-potter-films": {
-        "name": "the Harry Potter films", "kind": "film", "reviewed": UPDATED, "in_order": "harry-potter",
+        "name": "the Harry Potter films", "kind": "film", "reviewed": FILLED, "in_order": "harry-potter",
         "card": "Harry Potter: the films",
         "heading": "How long does it take to watch all the Harry Potter films?",
         "summary": "The eight Harry Potter films run 19 hours 38 minutes in total. Every running time, how to split a marathon, and a finish-date planner.",
@@ -255,6 +256,16 @@ GUIDES = {
                 "a few weekends.",
                 "The two parts of Deathly Hallows were shot together, and Yates's four films run 9 hours 27 minutes in all. "
                 "They work as one block, from Order of the Phoenix to the end.",
+            ]),
+            ("fantastic-beasts", "With Fantastic Beasts", [
+                "The three Fantastic Beasts films are set decades before Harry Potter, in 1926, 1927 and the early "
+                "1930s. They run 133, 134 and 142 minutes, so adding them makes eleven films and 26 hours 27 minutes."
+                " J.K. Rowling wrote the screenplays, the third with Steve Kloves, and the first is named after a "
+                "textbook Harry buys before his first year, written by its hero, Newt Scamander.",
+                "In story order they come first, but they were made for people who already know the wizarding world, "
+                "and the first came out in 2016, five years after the last Harry Potter film. They are easier to "
+                "follow after the eight. If you want both series over one holiday, the eight films and then the three "
+                "is about two long weekends.",
             ]),
         ],
         "faq": [
