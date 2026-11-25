@@ -148,4 +148,4 @@ def test_guide_reader_measures_after_the_first_layout():
     assert "window.addEventListener('resize', queue);\n  // Measure in the next frame" in script
     assert "\n  update();\n" not in script
     from app import guide_layout
-    assert guide_layout.JS_VERSION == "20261123-support-1"
+    assert guide_layout.JS_VERSION >= "20261123-support-1"

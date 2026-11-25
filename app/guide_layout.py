@@ -11,7 +11,10 @@ shared shape into a magazine page without each router having to know about it:
 * everything after the header goes into a body column, with a rail beside it that
   repeats the page's contents links and says when the guide was last checked,
 * the body ends with a short note on who writes the guides and how to chip in on Ko-fi
-  (Nov 23 2026), the only support ask a reader who never signs up will see.
+  (Nov 23 2026), the only support ask a reader who never signs up will see,
+* the first three covers from the guide's own picks are fanned out beside the title
+  on wide screens, and visitors get a small "keep a list" note in the rail when the
+  page has save buttons (Nov 25 2026).
 
 The header's own links stay where they are: they are the contents on phones, and
 the stylesheet hides them on wide screens where the rail shows the same list.
@@ -24,8 +27,8 @@ import re
 from html import escape, unescape
 from urllib.parse import urlsplit
 
-CSS_VERSION = "20261123-support-1"
-JS_VERSION = "20261123-support-1"
+CSS_VERSION = "20261125-look-1"
+JS_VERSION = "20261125-look-1"
 SERIF_FONT = "/static/fonts/source-serif-4-latin-var-normal.woff2"
 MARKER = "data-guide-layout"
 WORDS_PER_MINUTE = 230
@@ -43,6 +46,13 @@ _NONCE = re.compile(r'<script\b[^>]*\snonce="([A-Za-z0-9+/=_-]+)"')
 _WORD = re.compile(r"[A-Za-z0-9À-ɏ'’]+")
 _CANONICAL = re.compile(r'<link rel="canonical" href="(https://omnitrackr\.xyz[^"]*)"')
 _BACK_LINK = re.compile(r'\s*<a href="[^"]*">\s*←[^<]*</a>')
+# Covers on the picks themselves: the poster on an If you liked, Best of, release, seasonal or
+# In order pick (never the art on cards that point at other guides), and the drawn covers
+# Discover and the Essential 100 use (explore_art.cover).
+_PICK_ART = re.compile(r'<img class="(?:yl-pick|sn-pick|io-entry)__art"[^>]*>|<span class="x-art[ "][^>]*>')
+_SRC = re.compile(r'\ssrc="([^"]+)"')
+_SPAN_TAG = re.compile(r"<(/?)span\b[^>]*>", re.I)
+FAN_COVERS = 3
 
 
 def _matching_close(html: str, start: int, pattern: re.Pattern) -> int:
@@ -67,7 +77,73 @@ def _contents(header: str) -> list[tuple[str, str]]:
     return [(href, _TAGS.sub("", label).strip()) for href, label in _LINK.findall(jump.group(1)) if _TAGS.sub("", label).strip()]
 
 
-def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = "") -> str:
+_DRAWN_LABELS = {"movie": "Movie", "tv": "TV", "anime": "Anime", "game": "Game", "album": "Album", "book": "Book",
+                 "manga": "Manga", "podcast": "Podcast", "audiobook": "Audiobook"}
+
+
+def drawn_cover(prefix: str, title: str, kind: str) -> str:
+    """A stand-in poster for a pick whose art hasn't been found yet: the title set on the format's colour
+    (guide-reader.css .guide-drawn), so a list of picks keeps one column of covers."""
+    label = _DRAWN_LABELS.get(kind, "")
+    # Long words get smaller type so "Soundtracks" fits on one line instead of breaking.
+    longest = max((len(word) for word in (title or "").split()), default=0)
+    size = " guide-drawn--xlong" if longest > 12 else " guide-drawn--long" if longest > 8 else ""
+    return (f'<span class="{prefix}__art guide-drawn{size}" data-kind="{escape(kind or "", quote=True)}" aria-hidden="true">'
+            f'<small>{escape(label)}</small><b>{escape(title or "")}</b></span>')
+
+
+def _fan(body: str) -> str:
+    """The first three covers in the guide, fanned out beside the title. Wide screens only (guide-reader.css);
+    the copies load lazily, so a phone, where the fan is hidden, never fetches them."""
+    covers, seen = [], set()
+    for match in _PICK_ART.finditer(body):
+        if len(covers) == FAN_COVERS:
+            break
+        tag = match.group(0)
+        if tag.startswith("<img"):
+            src = _SRC.search(tag)
+            if not src or src.group(1) in seen:
+                continue
+            seen.add(src.group(1))
+            covers.append(f'<img src="{src.group(1)}" alt="" width="136" height="204" loading="lazy" decoding="async" '
+                          'referrerpolicy="no-referrer">')
+        else:
+            end = _matching_close(body, match.start(), _SPAN_TAG)
+            if end < 0:
+                continue
+            art = body[match.start():end]
+            name = re.search(r"<b>(.*?)</b>", art)
+            key = name.group(1) if name else art
+            if key in seen:
+                continue
+            seen.add(key)
+            covers.append(art)
+    if len(covers) < FAN_COVERS:
+        return ""
+    cards = "".join(f'<span class="guide-fan__card guide-fan__card--{n}">{cover}</span>' for n, cover in enumerate(covers, 1))
+    return f'<div class="guide-fan" aria-hidden="true">{cards}</div>'
+
+
+def _with_fan(header: str, fan: str) -> str:
+    # Seasonal guides keep their own corner art (the moon, the wreath of lights) in that spot.
+    if not fan or "sn-hero" in header:
+        return header
+    close = header.rfind("</header>")
+    return header if close < 0 else header[:close] + fan + header[close:]
+
+
+def _keep(body: str) -> str:
+    """A short note for visitors in the rail: the save buttons work without an account. Only on pages
+    that have guest save buttons; data-guest-only hides it from members (site-nav.js)."""
+    if "data-guest-kind=" not in body:
+        return ""
+    return ('<div class="guide-rail__keep" data-guest-only><p class="guide-rail__label">Keep a list</p>'
+            '<p>Save anything on this page as you read. No account needed, and a free one keeps the list '
+            'on every device.</p>'
+            '<a class="guide-rail__join" href="/#signup" data-guide-signup>Start a free library</a></div>')
+
+
+def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = "", keep: str = "") -> str:
     # The links are copied from finished HTML, so an href is already escaped once.
     items = "".join(f'<li><a href="{escape(unescape(href), quote=True)}">{label}</a></li>' for href, label in links)
     toc = (f'<nav class="guide-toc" aria-label="Contents"><p class="guide-rail__label">On this page</p>'
@@ -80,7 +156,7 @@ def _rail(links: list[tuple[str, str]], minutes: int, checked, library: str = ""
         f'<ul><li>{minutes} min read</li>{when}<li>Reviewed by the site owner</li></ul>'
         '<p><a href="/content-quality">How we write guides</a></p>'
         '<p><a href="/corrections#send">Send a correction</a></p>'
-        f'<p><a href="/corrections">Corrections log</a></p></div>{library}</div></aside>'
+        f'<p><a href="/corrections">Corrections log</a></p></div>{keep}{library}</div></aside>'
     )
 
 
@@ -201,7 +277,9 @@ def add_reading_layout(html: str) -> str:
         support = _support_note()
     except Exception:
         support = ""
+    links = _contents(header)
+    header = _with_fan(header, _fan(body))
     layout = (f'{header}<div class="guide-columns" {MARKER}><div class="guide-body">{body}{support}</div>'
-              f'{_rail(_contents(header), minutes, checked, library)}</div>')
+              f'{_rail(links, minutes, checked, library, _keep(body))}</div>')
     html = html[:inner_start] + layout + html[close_start:]
     return html.replace("</head>", _head_tags(html) + "</head>", 1)

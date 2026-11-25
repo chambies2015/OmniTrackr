@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from .. import binge_calculator as binge
-from .. import funnel, in_order, title_pages, title_search
+from .. import funnel, guide_layout, in_order, title_pages, title_search
 from ..binge_guides import GUIDES as BINGE_GUIDES
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
@@ -127,7 +127,7 @@ def _entry_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
     image = title_pages._safe_image(detail.get("image"))
     art = (f'<img class="io-entry__art" src="{_e(image)}" alt="" width="96" height="144" loading="lazy" '
            'decoding="async" referrerpolicy="no-referrer">' if image
-           else f'<span class="io-entry__art io-entry__initial" aria-hidden="true">{_e(item["title"][:1])}</span>')
+           else guide_layout.drawn_cover("io-entry", item["title"], item["kind"]))
     title_link = (f'<a class="io-entry__link" href="{_e(detail["url"])}">See the title page</a>' if detail.get("url") else "")
     where = " · ".join(f"{name}: #{position}" for name, position in in_order.positions(entry, item["id"]))
     optional = '<span class="io-tag">Optional</span>' if item.get("optional") else ""

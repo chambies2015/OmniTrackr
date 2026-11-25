@@ -29,7 +29,7 @@ router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261103-where-1"
 JS_VERSION = "20261121-text-limits-1"
-DETAIL_CSS_VERSION = "20261120-a11y-1"
+DETAIL_CSS_VERSION = "20261125-look-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
@@ -463,7 +463,7 @@ def _scorecard_cta(group, signed_in: bool) -> str:
         return ('<div class="title-scorecard__cta"><span>Your rating counts toward this score.</span>'
                 '<a class="site-btn site-btn--ghost site-btn--sm" href="#write-review">Rate and review it</a></div>')
     return ('<div class="title-scorecard__cta"><span>Rate it in a free library and your score counts here too.</span>'
-            '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-title-signup>Start your free library</a></div>')
+            '<a class="site-btn site-btn--ghost site-btn--sm" href="/#signup" data-title-signup>Start your free library</a></div>')
 
 
 def _scorecard_html(group, summary: dict, signed_in: bool) -> str:
@@ -1105,6 +1105,34 @@ def _in_order_html(group) -> str:
             f'{"".join(cards)}</section>')
 
 
+def _guides_html(group) -> str:
+    """The written guides that mention this title (guide_links.guides_for_title), other than the
+    "If you liked" and "In order" guides the two sections above already point at (Nov 25 2026)."""
+    from .. import editorial_index, guide_links, if_you_liked, in_order
+    try:
+        skip = set()
+        liked = if_you_liked.for_title(group.kind, group.title)
+        if liked:
+            skip.add(if_you_liked.path(liked))
+        skip.update(in_order.path(slug) for slug, _ in in_order.for_title(group.kind, group.title, getattr(group, "year", None))[:2])
+        found = guide_links.guides_for_title(group.kind, group.title, getattr(group, "year", None), skip=skip)
+    except Exception:
+        return ""
+    if not found:
+        return ""
+    cards = "".join(
+        f'<li class="title-guides__item"><p class="title-guides__section">'
+        f'{_e(editorial_index.SECTION_LABELS.get(entry["section"], "Guide"))}</p>'
+        f'<a class="title-guides__link" href="{_e(entry["href"])}">{_e(entry["name"])}</a>'
+        f'<p class="title-guides__summary">{_e(entry["summary"])}</p></li>'
+        for entry in found
+    )
+    return (f'<section class="title-section title-guides" aria-labelledby="guides-title">'
+            f'<h2 id="guides-title">{_e(group.title)} in our guides</h2>'
+            f'<p class="title-guides__intro">{_e(group.title)} also comes up in {"these guides" if len(found) > 1 else "this guide"}.</p>'
+            f'<ul class="title-guides__list">{cards}</ul></section>')
+
+
 def _links_html(metadata: dict) -> str:
     links = metadata.get("links") or []
     if not links:
@@ -1398,6 +1426,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         ("" if signed_in else _join_band_html(group, summary, image), "join-title", "Join"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
         (_in_order_html(group), "in-order-title", "Series order"),
+        (_guides_html(group), "guides-title", "In our guides"),
         (_collections_html(summary), "collections-title", "Collections"),
         (_related_html(summary), "related-title", "Members also track"),
         (_by_creator_html(group, summary), "creator-title", f"More from {summary.get('creator') or ''}".strip()),

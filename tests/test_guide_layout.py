@@ -94,3 +94,81 @@ def test_reader_assets_are_served(client):
     for path in ("/static/guide-reader.css", "/static/guide-reader.js", guide_layout.SERIF_FONT,
                  "/static/fonts/source-serif-4-latin-var-italic.woff2"):
         assert client.get(path).status_code == 200, path
+
+
+def _with_picks(*arts: str, saves: bool = False, header_class: str = "hero hero--guide") -> str:
+    picks = "".join(
+        f'<article class="pick yl-pick"><div class="yl-pick__head">{art}<div><h3>Pick {n}</h3></div></div>'
+        + ('<button type="button" class="button yl-save" data-guest-kind="movie" data-guest-slug="x">Save</button>' if saves else "")
+        + '</article>' for n, art in enumerate(arts))
+    return PAGE.replace('<header class="hero hero--guide">', f'<header class="{header_class}">').replace(
+        '<section id="picks"><article class="pick"><h3>One</h3></article><article class="pick"><h3>Two</h3></article></section>',
+        f'<section id="picks">{picks}</section>')
+
+
+def _img(name: str) -> str:
+    return f'<img class="yl-pick__art" src="https://image.tmdb.org/t/p/w185/{name}.jpg" alt="" width="96" height="144" loading="lazy">'
+
+
+def test_cover_fan_uses_the_first_three_pick_covers():
+    html = guide_layout.add_reading_layout(_with_picks(_img("a"), _img("b"), _img("a"), _img("c"), _img("d")))
+    header = html.split("</header>", 1)[0]
+    fan = re.search(r'<div class="guide-fan" aria-hidden="true">.*?</div>', header).group(0)
+    # In page order, a repeated cover counted once, and lazy so a phone (where it is hidden) never loads them.
+    assert re.findall(r'w185/(\w)\.jpg', fan) == ["a", "b", "c"]
+    assert fan.count('loading="lazy"') == 3 and 'alt=""' in fan
+    assert 'guide-fan__card--1' in fan and 'guide-fan__card--3' in fan
+
+
+def test_cover_fan_needs_three_covers_and_skips_seasonal_headers():
+    assert "guide-fan" not in guide_layout.add_reading_layout(_with_picks(_img("a"), _img("b")))
+    seasonal = _with_picks(_img("a"), _img("b"), _img("c"), header_class="hero hero--guide sn-hero")
+    assert "guide-fan" not in guide_layout.add_reading_layout(seasonal)
+    # Covers on cards that point at other guides don't count.
+    other = '<img class="io-card__art" src="https://image.tmdb.org/t/p/w185/z.jpg" alt="">'
+    assert "guide-fan" not in guide_layout.add_reading_layout(_with_picks(_img("a"), _img("b"), other))
+
+
+def test_cover_fan_copies_drawn_covers_whole():
+    drawn = ('<span class="x-art" data-kind="anime" aria-hidden="true"><span class="x-cover"><span class="x-cover__kind">Anime</span>'
+             '<b>{}</b></span></span>')
+    html = guide_layout.add_reading_layout(_with_picks(drawn.format("Kiki"), drawn.format("Mushishi"), drawn.format("Ping Pong")))
+    fan = html.split("</header>", 1)[0].split('<div class="guide-fan"', 1)[1]
+    assert fan.count('<span class="x-art"') == 3 and "<b>Ping Pong</b></span></span></span>" in fan
+    assert html.count("<span") == html.count("</span>")
+
+
+def test_keep_a_list_note_only_where_visitors_can_save():
+    with_saves = guide_layout.add_reading_layout(_with_picks(_img("a"), saves=True))
+    rail = re.search(r'<aside class="guide-rail".*?</aside>', with_saves).group(0)
+    assert '<div class="guide-rail__keep" data-guest-only>' in rail
+    assert '<a class="guide-rail__join" href="/#signup" data-guide-signup>Start a free library</a>' in rail
+    assert "guide-rail__keep" not in guide_layout.add_reading_layout(_with_picks(_img("a")))
+
+
+def test_drawn_cover_for_picks_without_art():
+    art = guide_layout.drawn_cover("yl-pick", "Apollo: Atmospheres & Soundtracks", "album")
+    assert art.startswith('<span class="yl-pick__art guide-drawn guide-drawn--long" data-kind="album" aria-hidden="true">')
+    assert "<small>Album</small><b>Apollo: Atmospheres &amp; Soundtracks</b>" in art
+    assert 'guide-drawn--' not in guide_layout.drawn_cover("io-entry", "Alien", "movie")
+
+
+def test_live_guides_draw_a_cover_when_a_pick_has_no_art(client):
+    html = client.get("/if-you-liked/interstellar").text
+    assert 'class="yl-pick__art guide-drawn' in html
+    html = client.get("/in-order/alien").text
+    assert 'class="io-entry__art guide-drawn' in html and "io-entry__initial" not in html
+
+
+def test_guides_for_title_matches_format_and_year():
+    from app import guide_links
+    hrefs = [entry["href"] for entry in guide_links.guides_for_title("movie", "Arrival", 2016)]
+    assert "/if-you-liked/interstellar" in hrefs
+    # Same name, other format or a remake decades apart: not the same title.
+    assert "/if-you-liked/interstellar" not in [e["href"] for e in guide_links.guides_for_title("book", "Arrival", 2016)]
+    assert "/if-you-liked/interstellar" not in [e["href"] for e in guide_links.guides_for_title("movie", "Arrival", 1970)]
+    assert guide_links.guides_for_title("movie", "Arrival", 2016, skip={"/if-you-liked/interstellar"}) == [
+        e for e in guide_links.guides_for_title("movie", "Arrival", 2016) if e["href"] != "/if-you-liked/interstellar"]
+    # Albums are "album" on title pages and "music" in the guides.
+    assert any(e["section"] == "essentials" for e in guide_links.guides_for_title("album", "Rumours", 1977))
+    assert guide_links.guides_for_title("movie", "", None) == []

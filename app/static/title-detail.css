@@ -171,6 +171,8 @@
 /* Each cell draws the line under it; the last row's line slips under the card's edge. */
 .title-detail .title-about--flat .title-facts { column-gap: 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); overflow: hidden; padding: 0 22px; }
 .title-detail .title-about--flat .title-facts div { border-bottom: 1px solid var(--site-border); border-top: 0; margin-bottom: -1px; padding: 14px 0; }
+/* One to three facts: the panel hugs them instead of stretching a lone "First released" across the page (Nov 25 2026). */
+.title-detail .title-about--flat .title-facts:not(:has(> div:nth-child(4))) { grid-template-columns: repeat(auto-fit, minmax(160px, max-content)); justify-content: start; max-width: 100%; width: fit-content; }
 
 /* Quick answers: a list that folds, the heading beside it on wide screens. */
 .title-detail .title-faq { align-items: start; column-gap: 48px; display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
@@ -199,6 +201,27 @@
 
 .title-detail .title-liked, .title-detail .title-in-order { background: var(--td-panel); border: 1px solid var(--site-border); border-radius: var(--radius-xl); padding: 24px 26px; }
 .title-detail .title-liked p, .title-detail .title-in-order p { color: var(--site-soft); line-height: 1.65; margin: 0 0 14px; }
+/* The guides that mention this title (routers/titles._guides_html, Nov 25 2026). */
+.title-detail .title-guides__intro { color: var(--site-muted); margin: -6px 0 18px; }
+.title-detail .title-guides__list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.title-detail .title-guides__list:has(> li:only-child) { max-width: 560px; }
+.title-detail .title-guides__item {
+  background: var(--td-panel); border: 1px solid var(--site-border); border-radius: var(--radius-lg); display: flex; flex-direction: column;
+  gap: 6px; padding: 18px 20px 18px; position: relative; transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.title-detail .title-guides__item::before { background: var(--kind, var(--site-violet)); border-radius: 0 3px 3px 0; content: ""; height: 26px; left: -1px; position: absolute; top: 18px; width: 3px; }
+.title-detail .title-guides__item:hover { border-color: var(--site-border-hover); transform: translateY(-2px); }
+.title-detail .title-guides__item:has(.title-guides__link:focus-visible) { box-shadow: var(--ring); }
+.title-detail .title-guides__section { color: color-mix(in srgb, var(--kind, var(--site-violet)) 45%, #fff); font-size: .72rem; font-weight: 800; letter-spacing: .1em; margin: 0; text-transform: uppercase; }
+.title-detail .title-guides__link { color: var(--site-text); font: 700 1.08rem/1.35 var(--site-display); text-decoration: none; }
+/* The whole card is the link's target. */
+.title-detail .title-guides__link::after { border-radius: inherit; content: ""; inset: 0; position: absolute; }
+.title-detail .title-guides__link:focus-visible { outline: none; }
+.title-detail .title-guides__item:hover .title-guides__link { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.title-detail .title-guides__summary {
+  -webkit-box-orient: vertical; color: var(--site-soft); display: -webkit-box; font-size: .92rem; -webkit-line-clamp: 3; line-height: 1.55; margin: 0; overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) { .title-detail .title-guides__item { transition: none; } .title-detail .title-guides__item:hover { transform: none; } }
 
 /* Poster rails: one row that scrolls sideways at every width, with arrows on wide screens (title-page.js). */
 .title-detail .title-rail { position: relative; }

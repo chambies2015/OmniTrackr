@@ -55,6 +55,11 @@ def _walk(value, found: dict) -> None:
             found["titles"].setdefault(_key(title), title)
             for other in value.get("aka") or ():
                 found["titles"].setdefault(_key(other), title)
+            # Format and year per name, so a title page can find the guides that mention it (guides_for_title).
+            year = value.get("year") if isinstance(value.get("year"), int) else None
+            for name in (title, *(value.get("aka") or ())):
+                if isinstance(name, str):
+                    found["places"].setdefault(_key(name), []).append((_kind(value), year))
             creator = value.get("creator")
             if isinstance(creator, str) and creator:
                 found["creators"].setdefault(_key(creator), creator)
@@ -135,10 +140,11 @@ def _index_for(_day: str) -> dict[str, dict]:
     index = {}
     for piece in editorial_index.entries():
         data = _source(piece["section"], piece["href"])
-        found = {"titles": {}, "creators": {}, "kinds": {}}
+        found = {"titles": {}, "creators": {}, "kinds": {}, "places": {}}
         _walk(data, found)
         found["titles"].pop("", None)
         found["creators"].pop("", None)
+        found["places"].pop("", None)
         index[piece["href"]] = {**piece, **found, "kind": _main_kind(piece["section"], data, found)}
     return index
 
@@ -196,6 +202,44 @@ def related(href: str, limit: int = MAX_LINKS) -> list[dict]:
                       | {"shared": [own["titles"][key] for key in shared],
                          "creators": [own["creators"][key] for key in creators],
                          "kind": own["kind"] if own["kind"] == other["kind"] else None})
+        if len(picked) >= limit:
+            break
+    return picked
+
+
+# Title pages call an album "album"; most guides call the format "music". Both sides are read as "music".
+_TITLE_PAGE_KINDS = {"album": "music"}
+
+
+def guides_for_title(kind: str, title: str, year=None, *, skip=(), limit: int = MAX_LINKS) -> list[dict]:
+    """Guides that mention this title, for its title page (Nov 25 2026), newest first, at most two per section.
+
+    A guide counts only when it names the title as the same format, and within a year of the
+    same release when both give one, so the 2021 Dune film doesn't pick up guides about the
+    1984 one or the novel. Each result is an editorial_index entry (section, href, name, summary, updated).
+    """
+    key = _key(title or "")
+    if not key:
+        return []
+    want = _TITLE_PAGE_KINDS.get(kind, kind)
+    matches = []
+    for href, entry in _index().items():
+        if href in skip:
+            continue
+        for place_kind, place_year in entry.get("places", {}).get(key, ()):
+            if _TITLE_PAGE_KINDS.get(place_kind or entry["kind"], place_kind or entry["kind"]) != want:
+                continue
+            if place_year and year and abs(place_year - int(year)) > 1:
+                continue
+            matches.append(entry)
+            break
+    matches.sort(key=lambda entry: entry["updated"], reverse=True)
+    picked, per_section = [], {}
+    for entry in matches:
+        if per_section.get(entry["section"], 0) >= MAX_PER_SECTION:
+            continue
+        per_section[entry["section"]] = per_section.get(entry["section"], 0) + 1
+        picked.append({field: entry[field] for field in ("section", "href", "name", "summary", "updated")})
         if len(picked) >= limit:
             break
     return picked

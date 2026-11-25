@@ -22,7 +22,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import affiliate, best_of, browse, funnel, title_pages, title_search
+from .. import affiliate, best_of, browse, funnel, guide_layout, title_pages, title_search
 from ..best_of_guides import GUIDES, YEARS
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..progress import lock_progress_owner
@@ -114,7 +114,8 @@ def _pick_html(index: int, fmt: str, item: dict, details: dict, signed_in: bool,
     detail = details.get(entry["id"], {}) if entry else {}
     image = title_pages._safe_image(detail.get("image"))
     art = (f'<img class="yl-pick__art" src="{_e(image)}" alt="" width="96" height="144" loading="lazy" '
-           'decoding="async" referrerpolicy="no-referrer">' if image else "")
+           'decoding="async" referrerpolicy="no-referrer">' if image
+           else guide_layout.drawn_cover("yl-pick", item["title"], item.get("kind", "")))
     title_link = (f'<a class="yl-pick__link" href="{_e(detail["url"])}">See the title page</a>'
                   if detail.get("url") else "")
     if entry and signed_in and states is not None:
