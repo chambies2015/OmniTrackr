@@ -65,6 +65,7 @@ CORE_SITEMAP_PATHS = (
     ("/together", "monthly", "0.6"),
     ("/break", "monthly", "0.6"),
     ("/swap", "monthly", "0.6"),
+    ("/yearbook", "monthly", "0.6"),
     ("/tier-list", "monthly", "0.7"),
     ("/binge-calculator", "monthly", "0.7"),
     ("/if-you-liked", "monthly", "0.75"),

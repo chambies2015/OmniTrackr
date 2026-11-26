@@ -600,6 +600,28 @@ def _next_year_box(db: Session, user: models.User, year: int) -> str:
             f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
 
 
+def _yearbook_box(db: Session, user: models.User, year: int) -> str:
+    """While that year's yearbook takes notes: a link to make it, or to see how it's going."""
+    from .. import yearbook
+    if year not in yearbook.EDITIONS or yearbook.state_of(year) != "open":
+        return ""
+    book = yearbook.get(db, user.id, year)
+    if book is None:
+        heading = f"Get your friends to sign your {year}"
+        lead = ("Make a yearbook page with your picks of the year and send the link. Friends sign it with a short note "
+                f"and a \"most likely to\" vote until the end of {yearbook.closes_label(year)}.")
+        label = "Make my yearbook"
+    else:
+        heading = f"Your {year} yearbook"
+        lead = (f"Signing is open until the end of {yearbook.closes_label(year)}. Send the link to anyone who shows up in "
+                "this recap.")
+        label = "Open my yearbook"
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-yearbook">'
+            f'<h2 id="recap-yearbook">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="/yearbook">{_e(label)}</a>'
+            '</p></section>')
+
+
 def _summary(recap: dict) -> str:
     bits = [f"{_plural(recap.get('finished_total', 0), 'title')} finished"]
     top = recap.get("top_category")
@@ -667,7 +689,9 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box + _next_year_box(db, user, year)
+        # An empty recap gets the pledge box (start next year fresh) but no yearbook or Ko-fi box.
+        body=_body(recap, private=True) + share_box
+        + ("" if recap.get("is_empty") else _yearbook_box(db, user, year)) + _next_year_box(db, user, year)
         + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),

@@ -240,7 +240,7 @@
     '#your-week': 'yourWeek', '#backlog-draw': 'backlogDraw', '#badges': 'badgeCase', '#challenge': 'monthlyChallenge',
     '#goals': 'yearGoals', '#on-this-day': 'onThisDay', '#release-calendar': 'comingUp', '#week-one': 'weekOne',
     '#homeNews': 'homeNews', '#advent': 'adventCard', '#on-your-services': 'onYourServices', '#together': 'togetherHome',
-    '#swap': 'swapHome', '#break': 'breakHome',
+    '#swap': 'swapHome', '#break': 'breakHome', '#yearbook': 'yearbookHome',
   };
   // Shown now and then under their own rules (first week only, a few times a year): never tucked.
   const ALWAYS = new Set(['weekOne', 'stayPosted', 'supportAsk']);
@@ -306,6 +306,8 @@
     if (id === 'swapHome') return true;
     // The break planner shows in the days before a holiday, during a planned break and just after it.
     if (id === 'breakHome') return true;
+    // Yearbook: a note came in or waits to be let in, or a friend's yearbook is waiting to be signed.
+    if (id === 'yearbookHome') return unit.dataset.status === 'new';
     // Something on the member's list just arrived on one of their streaming services.
     if (id === 'onYourServices') return unit.dataset.status === 'new';
     // Rankings: a title finished this week, one part-way placed, or one that just landed.

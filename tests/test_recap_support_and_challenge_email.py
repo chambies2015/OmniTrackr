@@ -54,7 +54,11 @@ def test_recap_thanks_lapsed_supporters_and_offers_a_renewal(authenticated_clien
 
 def test_empty_recap_has_no_ask(authenticated_client):
     page = authenticated_client.get(f"/year-in-review/{datetime.utcnow().year}").text
-    assert "Nothing was logged this year yet" in page and "recap-support" not in page
+    # The Ko-fi box and the yearbook box share the recap-support look with the New Year pledge box, which
+    # does show on an empty recap from December 1 (test_new_year_challenge), so look for the two by id.
+    assert "Nothing was logged this year yet" in page
+    assert 'aria-labelledby="recap-support"' not in page and "data-recap-kofi" not in page
+    assert 'aria-labelledby="recap-yearbook"' not in page
 
 
 def test_shared_recap_never_shows_the_owner_note(authenticated_client, client, db_session):

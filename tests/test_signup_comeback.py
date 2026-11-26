@@ -220,7 +220,7 @@ def test_both_cards_keep_the_code_step_open_for_the_quiz_and_read_the_line_above
     for html in (LANDING, INDEX):
         assert '<a href="/taste-quiz" target="_blank" rel="noopener">take the 1-minute taste quiz</a> (it opens in a new tab)' in html
         assert 'aria-describedby="verifySentLead verifyCodeError"' in html
-        assert "auth.js?v=20261123-signup-1" in html
+        assert "auth.js?v=20261125-yearbook-1" in html
 
 
 def test_the_card_asks_for_a_waiting_sign_up_without_storing_the_address():
