@@ -469,6 +469,42 @@
     ];
   }
 
+  // The main sign-up steps for phones next to every device (counted from Nov 26 2026).
+  function renderPhones(funnel) {
+    const box = $('phoneFunnel');
+    if (!box) return;
+    const rows = funnel.phones || [];
+    if (!funnel.phones_since) {
+      box.replaceChildren(el('p', 'stats-empty', 'Phones are counted from November 26, 2026.'));
+      return;
+    }
+    const people = funnel.people_devices || [];
+    const share = (part, whole) => (whole ? `${Math.round((part / whole) * 100)}%` : '');
+    const allPeople = people.reduce((sum, item) => sum + item.count, 0);
+    const phonePeople = (people.find(item => item.key === 'mobile') || {}).count || 0;
+    box.replaceChildren(table(['Step', 'All devices', 'Phones', 'Phone share'], [
+      ['People (any page)', number(allPeople), number(phonePeople), share(phonePeople, allPeople)],
+      ...rows.map(row => [row.label, number(row.count), number(row.phones), share(row.phones, row.count)]),
+    ]));
+    const note = $('phoneNote');
+    if (note) note.textContent = `The same steps for phones alone, next to every device (tablets count as not phones). Counted since ${funnel.phones_since}.`;
+  }
+
+  function appBrowserRows(funnel) {
+    const people = (funnel.app_browser_people || []).map(item => ({ label: `People reading inside ${item.key === 'this app' ? 'another app' : item.key}`, count: item.count }));
+    return [...(people.length ? people : [{ label: 'People reading inside an app', count: 0 }]), ...(funnel.app_browser || [])];
+  }
+
+  function phoneReport(funnel) {
+    if (!funnel || !funnel.phones_since) return [];
+    const people = funnel.people_devices || [];
+    return [
+      `People by device: ${people.map(item => `${item.key} ${number(item.count)}`).join(', ') || 'none yet'}`,
+      `Phones (all devices / phones): ${(funnel.phones || []).map(row => `${row.label} ${number(row.count)}/${number(row.phones)}`).join(' → ')}`,
+      `Inside other apps' browsers: ${appBrowserRows(funnel).map(item => `${item.label} ${number(item.count)}`).join('; ')}`,
+    ];
+  }
+
   function renderSignupFunnel(data) {
     const container = $('signupFunnel');
     if (!container || !data.funnel) return;
@@ -493,6 +529,8 @@
     if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
     if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
     renderSearchJourney(data.search_journey);
+    renderPhones(data.funnel);
+    if ($('appBrowsers')) fillList('appBrowsers', appBrowserRows(data.funnel));
     const retention = data.retention || {};
     fillList('guestList', [
       ...data.funnel.guest,
@@ -1594,6 +1632,7 @@
       data.funnel ? `Sign-up funnel: ${funnelSteps(data.funnel).map(step => `${step.label} ${number(step.count)}${step.detail ? ` (${step.detail})` : ''}`).join(' → ')}` : '',
       data.funnel && data.funnel.homepage ? `Homepage path: ${data.funnel.homepage.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       ...searchJourneyReport(data.search_journey),
+      ...phoneReport(data.funnel),
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',

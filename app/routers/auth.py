@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel, google_signin, passkeys, start_flow, two_factor, visits
+from .. import app_browsers, continue_page, funnel, google_signin, passkeys, start_flow, two_factor, visits
 from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -846,10 +846,19 @@ def _google_failure(code: str) -> RedirectResponse:
 
 
 @router.get("/google/start", include_in_schema=False)
-async def google_start(request: Request, invite: str | None = None):
+async def google_start(request: Request, invite: str | None = None, here: str | None = None):
     """Send the visitor to Google's account chooser (only when the owner configured it)."""
     if not google_signin.configured():
         return _google_failure("unavailable")
+    if app_browsers.app_name(request.headers.get("user-agent", "")):
+        # Google answers "403 disallowed_useragent" inside Instagram, TikTok and other apps'
+        # browsers. /continue explains and hands the sign-up to Safari or Chrome instead.
+        # "Try Google here anyway" (here=1) skips this in case the browser was misjudged.
+        if here != "1":
+            funnel.record("inapp_google_caught", request)
+            came_from = continue_page.referer_path(request.headers.get("referer"), request.headers.get("host"))
+            return _google_redirect(continue_page.url(google_signin.valid_invite(invite), came_from))
+        funnel.record("inapp_google_anyway", request)
     if request.headers.get("sec-fetch-user") == "?1":
         # Only a click in a browser sends this; link checkers and scanners that
         # follow the button's URL don't, and used to make up most of this count.

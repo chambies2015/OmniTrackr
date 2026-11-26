@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from . import search_journey
+from . import app_browsers, search_journey
 from .site_traffic import BOT_PATTERN, RECORDER
 
 # Ordered as the Site stats page shows them: (step, label). "signup_sent" and
@@ -331,10 +331,35 @@ EMAIL_RETURN = (
     ("signup_waiting_confirmed", "Came back after confirming in another browser: asked to log in"),
     ("signup_restart_clicked", "Wrong address? Start again pressed"),
 )
+# Browsers inside other apps (Nov 26 2026). Google refuses to sign anyone in inside Instagram,
+# Facebook, TikTok and the like, so Continue with Google there now opens /continue, which
+# explains and hands the sign-up (and any saved titles) to Safari or Chrome. See app/app_browsers.py.
+APP_BROWSER = (
+    ("inapp_google_caught", "Continue with Google pressed inside an app's browser (shown how to finish in Safari or Chrome)"),
+    ("inapp_chrome_opened", "Open in Chrome pressed (Android)"),
+    ("inapp_link_copied", "Copy link pressed"),
+    ("inapp_email_chosen", "Sign up with email pressed inside the app instead"),
+    ("inapp_google_anyway", "Tried Google inside the app anyway"),
+    ("carry_arrived", "Opened the sign-up link in Safari or Chrome"),
+    ("carry_titles_moved", "Saved titles came along to Safari or Chrome"),
+    ("continue_google", "Continue with Google pressed after switching browsers"),
+    ("continue_email", "Sign up with email pressed after switching browsers"),
+)
+# The main steps again, counted only for phones (Nov 26 2026). Every event is also counted
+# under kind "funnel_phone" when it comes from a phone, so any step can be split later.
+PHONE_STEPS = (
+    ("landing_seen", "Homepage seen by a person"),
+    ("signup_form_opened", "Started signing up"),
+    ("google_signin_started", "Pressed Continue with Google"),
+    ("signup_sent", "Sign-up sent"),
+    ("signup_created", "Account created"),
+    ("first_login", "First log-in"),
+)
+PHONE_KIND = "funnel_phone"
 SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM + EMAIL_CONFIRM
-                 + EMAIL_SNAGS + EMAIL_DELIVERY + EMAIL_RETURN} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+                 + EMAIL_SNAGS + EMAIL_DELIVERY + EMAIL_RETURN + APP_BROWSER} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN + APP_BROWSER} - {"inapp_google_caught", "inapp_google_anyway"} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
@@ -369,8 +394,11 @@ def record(event: str, request=None) -> bool:
             return False
         day = datetime.now(timezone.utc).date()
         journey = search_journey.step_key(event, request)
+        phone = request is not None and app_browsers.is_phone(request.headers.get("user-agent", ""))
         with RECORDER._lock:
             RECORDER._pending[(day, "funnel", event)] += 1
+            if phone:
+                RECORDER._pending[(day, PHONE_KIND, event)] += 1
             if journey:
                 RECORDER._pending[(day, search_journey.KIND, journey)] += 1
             RECORDER._events += 1
@@ -402,8 +430,19 @@ def _plural(count: int, one: str, many: str) -> str:
     return f"{count:,} {one if count == 1 else many}"
 
 
-def summary(counts: dict[str, int]) -> dict:
-    """Shape raw {event: count} for the Site stats page."""
+def phone_summary(counts: dict[str, int], phone_counts: dict[str, int]) -> list[dict]:
+    """The main sign-up steps for every device and for phones alone, for the Site stats table."""
+    def value(source: dict, name: str) -> int:
+        if name == "signup_sent":
+            return int(source.get("signup_submitted", 0)) + int(source.get("google_account_created", 0))
+        return int(source.get(name, 0))
+
+    return [{"event": name, "label": label, "count": value(counts, name), "phones": value(phone_counts, name)}
+            for name, label in PHONE_STEPS]
+
+
+def summary(counts: dict[str, int], phone_counts: dict[str, int] | None = None) -> dict:
+    """Shape raw {event: count} (and the same for phones only) for the Site stats page."""
     count = lambda name: int(counts.get(name, 0))  # noqa: E731
     google = count("google_account_created")
     email_created = max(count("signup_created") - google, 0)
@@ -435,4 +474,6 @@ def summary(counts: dict[str, int]) -> dict:
         "email_return": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_RETURN],
         "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
         "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
+        "app_browser": [{"event": name, "label": label, "count": count(name)} for name, label in APP_BROWSER],
+        "phones": phone_summary(counts, phone_counts or {}),
     }
