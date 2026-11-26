@@ -92,8 +92,16 @@ def events_for(obj, session: Optional[Session] = None) -> Optional[str]:
     return None
 
 
+# A save that ticks a title off without it being news sets this in ``session.info`` for its flush:
+# "Fill in your year" dating a finish to an earlier month, or to before the year (app/year_fill.py).
+# Friends would otherwise see "finished" cards today for things finished in March or years ago.
+QUIET_KEY = "friend_feed_quiet"
+
+
 @event.listens_for(Session, "before_flush")
 def _record(session: Session, flush_context, instances) -> None:
+    if session.info.get(QUIET_KEY):
+        return
     # A feed row must never stop a library save.
     try:
         for obj in list(session.dirty):

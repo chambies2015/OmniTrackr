@@ -4,6 +4,35 @@
 // Text from the server and from the library is only ever set as textContent.
 (function () {
   'use strict';
+
+  function plural(count, one, many) {
+    return `${Number(count).toLocaleString('en-US')} ${count === 1 ? one : (many || `${one}s`)}`;
+  }
+
+  // How many titles are still waiting in each list, from the server's last word (the page's own
+  // data attributes until the first answer). The page only ever shows the first few of them.
+  function waiting(kind, counts, shown) {
+    const left = counts ? Number(kind === 'open' ? counts.open_left : counts.undated_left) : NaN;
+    return Number.isInteger(left) && left >= 0 ? left : shown;
+  }
+
+  // "The rest were all before" and "None of these yet" answer every title waiting in that list, not
+  // only the cards on screen, so the question names them all.
+  function restQuestion(kind, count, year) {
+    return kind === 'undated'
+      ? `Mark the ${plural(count, 'title')} left as finished before ${year}? They stay ticked off, just out of this recap.`
+      : `Leave all ${plural(count, 'title')} on your list as not finished yet?`;
+  }
+
+  // A list whose cards have all been answered loads the next ones while the server says more are waiting.
+  function needsMore(shownUndated, shownOpen, counts) {
+    if (!counts) return false;
+    return (!shownUndated && Number(counts.undated_left) > 0) || (!shownOpen && Number(counts.open_left) > 0);
+  }
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = { waiting, restQuestion, needsMore };
+  if (typeof document === 'undefined') return;
+
   const root = document.querySelector('[data-yf]');
   if (!root) return;
   const year = Number(root.dataset.year);
@@ -22,10 +51,6 @@
     if (className) node.className = className;
     if (text !== undefined && text !== null) node.textContent = String(text);
     return node;
-  }
-
-  function plural(count, one, many) {
-    return `${Number(count).toLocaleString('en-US')} ${count === 1 ? one : (many || `${one}s`)}`;
   }
 
   async function call(path, body) {
@@ -149,7 +174,7 @@
       } else {
         showUndo(said(card, result, choice, month));
       }
-      if (!cards('undated').length && Number(result.undated_left) > 0) await loadMore();
+      if (needsMore(cards('undated').length, cards('open').length, result)) await loadMore();
       refreshSections();
       focusNext(kind);
     } catch (error) {
@@ -290,11 +315,7 @@
   }
 
   function rest(kind, button) {
-    const shown = cards(kind).length;
-    const waiting = kind === 'undated' && state.counts ? Number(state.counts.undated_left) || shown : shown;
-    const question = kind === 'undated'
-      ? `Mark the ${plural(waiting, 'title')} left as finished before ${year}? They stay ticked off, just out of this recap.`
-      : `Leave all ${plural(waiting, 'title')} on your list as not finished yet?`;
+    const question = restQuestion(kind, waiting(kind, state.counts, cards(kind).length), year);
     confirmInPlace(button, question, kind === 'undated' ? `Yes, all before ${year}` : 'Yes, none yet', async () => {
       const result = await call(`${api}/rest`, { kind });
       cards(kind).forEach(card => card.remove());
@@ -302,7 +323,7 @@
       const bar = $('[data-yf-undo]');
       if (bar) bar.hidden = true;
       setCounts(result);
-      if (kind === 'undated' && Number(result.undated_left) > 0) await loadMore();
+      if (needsMore(cards('undated').length, cards('open').length, result)) await loadMore();
       refreshSections();
     });
   }
@@ -335,6 +356,11 @@
     answer(card, choice, month);
   });
 
+  // The totals the server drew the page with, so the first "the rest" question counts every title.
+  const start = root.dataset;
+  state.counts = {
+    finished_total: Number(start.finishedTotal) || 0, filled: Number(start.filled) || 0,
+    undated_left: Number(start.undatedTotal) || 0, open_left: Number(start.openTotal) || 0,
+  };
   markCurrent();
-  state.counts = null;
 }());

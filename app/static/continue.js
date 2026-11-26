@@ -18,6 +18,13 @@
   const PATH = /^\/[A-Za-z0-9/_.-]{1,200}$/;
   const INVITE = /^[A-Za-z0-9_-]{16,32}$/;
   const IMAGE = /^https?:\/\/[^\s"'<>]{1,490}$/;
+  // A carried cover is kept only from the poster hosts the site's own pages use (the image proxy's
+  // list, IMAGE_HOSTS and HTTPS_IMAGE_HOSTS in app/tier_list.py; a test keeps the two the same).
+  // Anyone can write one of these links, and the homepage's "Your library" panel shows the covers.
+  const COVER_HOSTS = ['m.media-amazon.com', 'images-na.ssl-images-amazon.com', 'media.rawg.io', 'cdn.myanimelist.net',
+    's4.anilist.co', 'static.tvmaze.com', 'covers.openlibrary.org', 'archive.org', 'mzstatic.com', 'upload.wikimedia.org',
+    'commons.wikimedia.org', 'books.google.com', 'books.googleusercontent.com'];
+  const HTTPS_COVER_HOSTS = ['image.tmdb.org'];
   const RETURN_KEY = 'omnitrackr_guest_return';
   const INVITE_KEY = 'omnitrackr_friend_invite';
   const KIND_LABELS = { movie: 'Movie', tv: 'TV show', anime: 'Anime', game: 'Game', album: 'Album', book: 'Book',
@@ -52,10 +59,24 @@
     return new TextDecoder().decode(bytes);
   }
 
+  function coverAllowed(value) {
+    if (typeof value !== 'string' || !IMAGE.test(value)) return false;
+    let url;
+    try {
+      url = new URL(value);
+    } catch (error) {
+      return false;
+    }
+    if (url.username || url.password || (url.port && url.port !== '80' && url.port !== '443')) return false;
+    const host = url.hostname.toLowerCase().replace(/\.$/, '');
+    if (HTTPS_COVER_HOSTS.includes(host)) return url.protocol === 'https:';
+    return COVER_HOSTS.some(allowed => host === allowed || host.endsWith(`.${allowed}`));
+  }
+
   function cleanItem(item) {
     if (!item || !KINDS.has(item.k) || !SLUG.test(item.s || '') || typeof item.t !== 'string') return null;
     const clean = { kind: item.k, slug: item.s, title: item.t.slice(0, 200) };
-    if (typeof item.i === 'string' && IMAGE.test(item.i)) clean.image = item.i;
+    if (coverAllowed(item.i)) clean.image = item.i;
     return clean;
   }
 
@@ -217,10 +238,9 @@
     } catch (error) { /* no link back, that's all */ }
   }
 
-  function showList(list) {
+  function showItems(saved, headText) {
     const box = document.querySelector('[data-continue-list]');
-    if (!box || !list) return;
-    const saved = list.read();
+    if (!box) return;
     if (!saved.length) {
       box.hidden = true;
       return;
@@ -228,7 +248,7 @@
     const head = box.querySelector('[data-continue-list-head]');
     const titles = box.querySelector('[data-continue-titles]');
     const more = box.querySelector('[data-continue-more]');
-    if (head) head.textContent = saved.length === 1 ? 'On your list, waiting for your account' : `${saved.length} titles on your list, waiting for your account`;
+    if (head) head.textContent = headText;
     if (titles) {
       titles.replaceChildren(...saved.slice(-SHOWN).reverse().map(item => {
         const row = document.createElement('li');
@@ -248,6 +268,37 @@
       more.hidden = !hidden;
     }
     box.hidden = false;
+  }
+
+  function showList(list) {
+    if (!list) return;
+    const saved = list.read();
+    showItems(saved, saved.length === 1 ? 'On your list, waiting for your account' : `${saved.length} titles on your list, waiting for your account`);
+  }
+
+  // Signed in already: the titles that came with the link are shown, and only join this browser's list
+  // (which the library takes in on its next load) when the member presses Add. A link anyone can make
+  // must not put titles in someone's library unseen.
+  function setupMember() {
+    const list = guestList();
+    const carried = unpack(carriedText(window.location));
+    try { window.history.replaceState(null, '', '/continue'); } catch (error) { /* cosmetic */ }
+    const add = document.querySelector('[data-continue-add]');
+    if (!carried || !carried.items.length || !list || !add) return;
+    const count = carried.items.length;
+    showItems(carried.items, count === 1 ? 'This link carries 1 title' : `This link carries ${count} titles`);
+    const lead = document.querySelector('[data-continue-lead]');
+    if (lead) lead.textContent = 'They were saved in another browser before you signed in. Add them to your library, or open your library without them.';
+    const open = document.querySelector('[data-continue-open]');
+    if (open) open.className = String(open.className || '').replace('site-btn--primary', 'site-btn--ghost');
+    add.textContent = count === 1 ? 'Add it to your library' : `Add the ${count} titles to your library`;
+    add.hidden = false;
+    add.addEventListener('click', () => {
+      add.disabled = true;
+      mergeCarried(list, carried);
+      report('carry_titles_moved');
+      window.location.assign('/');
+    });
   }
 
   function showBack(back) {
@@ -287,15 +338,11 @@
     const mode = document.body && document.body.dataset ? document.body.dataset.continue : '';
     if (mode === 'app') setupApp();
     else if (mode === 'browser') setupBrowser();
-    else if (mode === 'member') {
-      const list = guestList();
-      const carried = unpack(carriedText(window.location));
-      if (carried && list) mergeCarried(list, carried);
-      try { window.history.replaceState(null, '', '/continue'); } catch (error) { /* cosmetic */ }
-    }
+    else if (mode === 'member') setupMember();
   }
 
-  const api = { pack, unpack, carriedText, carryLink, chromeLink, mergeCarried, cleanItem, titlesNote };
+  const api = { pack, unpack, carriedText, carryLink, chromeLink, mergeCarried, cleanItem, coverAllowed, titlesNote, init,
+    COVER_HOSTS, HTTPS_COVER_HOSTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

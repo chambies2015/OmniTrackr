@@ -15,7 +15,8 @@ a date too. This asks about those titles, one at a time, with a row of months:
 A finish dated to an earlier month counts where the year is counted (Year in
 Review, yearly goals, the New Year pledge presets, badges) and nowhere a month
 or a day is judged as it happens: monthly challenges, trending and streak days
-skip the "filled-in" source. Picking the current month is the same as ticking
+skip the "filled-in" source, and a title ticked off that way (or as finished
+before the year) puts no "finished" card on friends' feeds. Picking the current month is the same as ticking
 the title off today. Every answer can be undone straight away, and nothing in
 the library changes except the done tick on a "Still on your list" title.
 
@@ -49,7 +50,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import models
+from . import friend_feed, models
 from .digest import app_url, mail_configured
 
 FILLED_SOURCE = "filled-in"   # journal source of a finish dated here to an earlier month
@@ -358,27 +359,36 @@ def answer(db: Session, user: models.User, year: int, category: str, item_id: in
     record = models.YearFillAnswer(user_id=user.id, year=year, category=category, item_id=item_id, kind=kind,
                                    answer=choice, month=month, source=source if source in SOURCES else "page",
                                    created_at=now)
-    if choice == "month" or (choice == "before" and kind == "open"):
-        if kind == "open":
-            setattr(row, done_field, True)
-            record.ticked = True
-    if choice == "month":
-        moment = _fill_moment(year, month, now)
-        if moment is None:
-            entry = record_completion_activity(db, user.id, category, row)
-        else:
-            entry = models.ActivityEntry(user_id=user.id, category=category, item_id=row.id, title=row.title,
-                                         action="completed", rating=row.rating, source=FILLED_SOURCE,
-                                         occurred_at=moment, created_at=now)
-            db.add(entry)
-        db.flush()
-        record.entry_id = entry.id
-    db.add(record)
+    moment = _fill_moment(year, month, now) if choice == "month" else None
+    # Ticking a title off with an earlier month, or as finished before the year, isn't news for friends:
+    # only "this month" (a normal tick, dated now) puts a "finished" card on their feed.
+    quiet = kind == "open" and (choice == "before" or moment is not None)
+    if quiet:
+        db.info[friend_feed.QUIET_KEY] = True
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        return {"state": "already", "kind": kind, "month": None, "title": row.title}
+        if choice == "month" or (choice == "before" and kind == "open"):
+            if kind == "open":
+                setattr(row, done_field, True)
+                record.ticked = True
+        if choice == "month":
+            if moment is None:
+                entry = record_completion_activity(db, user.id, category, row)
+            else:
+                entry = models.ActivityEntry(user_id=user.id, category=category, item_id=row.id, title=row.title,
+                                             action="completed", rating=row.rating, source=FILLED_SOURCE,
+                                             occurred_at=moment, created_at=now)
+                db.add(entry)
+            db.flush()
+            record.entry_id = entry.id
+        db.add(record)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            return {"state": "already", "kind": kind, "month": None, "title": row.title}
+    finally:
+        if quiet:
+            db.info.pop(friend_feed.QUIET_KEY, None)
     return {"state": choice, "kind": kind, "month": month, "title": row.title}
 
 
