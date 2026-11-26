@@ -187,12 +187,25 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
 
 
 def _funnel(db: Session, days: int, today: date) -> dict:
-    """Sign-up funnel counters for the range (see app/funnel.py)."""
+    """Sign-up funnel counters for the range (see app/funnel.py), with phones counted on their own.
+
+    Phones, people by device and people inside other apps' browsers are counted from Nov 26 2026.
+    """
     table = models.SiteTrafficDaily
     start = today - timedelta(days=days - 1)
-    counts = dict(db.query(table.key, func.sum(table.count)).filter(
-        table.kind == "funnel", table.day >= start).group_by(table.key).all())
-    return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+    kinds = ("funnel", funnel.PHONE_KIND, "human_people_device", "human_app")
+    grouped: dict[str, dict[str, int]] = {kind: {} for kind in kinds}
+    for kind, key, value in db.query(table.kind, table.key, func.sum(table.count)).filter(
+            table.kind.in_(kinds), table.day >= start).group_by(table.kind, table.key).all():
+        grouped[kind][key] = int(value or 0)
+    result = funnel.summary(grouped["funnel"], grouped[funnel.PHONE_KIND])
+    ordered = lambda counts: [{"key": key, "count": count}  # noqa: E731
+                              for key, count in sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))]
+    result["people_devices"] = ordered(grouped["human_people_device"])
+    result["app_browser_people"] = ordered(grouped["human_app"])
+    since = db.query(func.min(table.day)).filter(table.kind == "human_people_device").scalar()
+    result["phones_since"] = since.isoformat() if since else None
+    return result
 
 
 def _search_journey(db: Session, days: int, today: date) -> dict:

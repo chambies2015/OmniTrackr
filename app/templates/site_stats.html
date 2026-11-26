@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/static/site.css?v=20261121-refresh-1">
   <script src="/static/site.js?v=20261121-refresh-1" defer></script>
   <link rel="stylesheet" href="/static/site-stats.css?v=20261118-search-journey-1">
-  <script src="/static/site-stats.js?v=20261123-signup-1" defer></script>
+  <script src="/static/site-stats.js?v=20261126-phones-1" defer></script>
   <script src="/static/site-stats-year-fill.js?v=20261126-fill-1" defer></script>
 </head>
 <body class="site stats-page">
@@ -104,6 +104,9 @@
         <p class="stats-note">People who arrived from Google, Bing or another search engine, followed for a day in the same browser. Guides and title pages are where search sends people, so this is their sign-up path; the homepage path above misses them.</p>
         <div class="stats-funnel" id="searchJourney"></div>
         <div id="searchJourneySections"></div>
+        <h3 class="stats-subhead stats-subhead--gap">Phones</h3>
+        <p class="stats-note" id="phoneNote">The same steps for phones alone, next to every device. Tablets count as not phones.</p>
+        <div id="phoneFunnel"></div>
         <h3 class="stats-subhead stats-subhead--gap">New members: the start page</h3>
         <div class="stats-funnel" id="startFunnel"></div>
         <div class="stats-grid stats-grid--inner">
@@ -116,6 +119,7 @@
           <div><h3 class="stats-subhead">Sending the code email</h3><dl class="stats-list" id="emailDelivery"></dl></div>
           <div><h3 class="stats-subhead">Coming back to finish signing up</h3><dl class="stats-list" id="emailReturn"></dl></div>
           <div><h3 class="stats-subhead">Start page: how they began</h3><dl class="stats-list" id="startPaths"></dl></div>
+          <div><h3 class="stats-subhead">Inside other apps' browsers (Instagram, TikTok...)</h3><dl class="stats-list" id="appBrowsers"></dl></div>
         </div>
       </section>
 

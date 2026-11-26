@@ -39,7 +39,7 @@ from urllib.parse import parse_qs, urlsplit
 from starlette.datastructures import Headers
 from starlette.requests import Request
 
-from . import search_journey
+from . import app_browsers, search_journey
 
 EXCLUDED_PREFIXES = (
     "/api/", "/static/", "/auth/", "/docs", "/redoc", "/openapi.json", "/site-stats",
@@ -280,17 +280,24 @@ class TrafficRecorder:
             digest = self._digest(request, user_agent, b"person|")
             state = self._people.get(digest)
             pending = self._pending
+            device = classify_device(user_agent)
             if state is None:
                 state = [0, "", 0.0, False]
                 if len(self._people) < MAX_SEEN_VISITORS:
                     self._people[digest] = state
                 pending[(day, "human_total", "visitors")] += 1
+                # People (not page views) by device, and those reading inside another app's
+                # browser, where Google sign-in can't work (app_browsers.py). Nov 26 2026.
+                pending[(day, "human_people_device", device)] += 1
+                in_app = app_browsers.app_name(user_agent)
+                if in_app:
+                    pending[(day, "human_app", in_app)] += 1
             elif state[0] >= HUMAN_MAX_VIEWS_PER_DAY or (state[1] == path and now - state[2] < HUMAN_REPEAT_SECONDS):
                 return False
             state[0], state[1], state[2] = state[0] + 1, path, now
             pending[(day, "human_total", "views")] += 1
             pending[(day, "human_page", path)] += 1
-            pending[(day, "human_device", classify_device(user_agent))] += 1
+            pending[(day, "human_device", device)] += 1
             pending[(day, "human_audience", "member" if member else "guest")] += 1
             if source:
                 pending[(day, "human_source", source)] += 1
@@ -299,6 +306,8 @@ class TrafficRecorder:
             if path == "/" and not member and not state[3]:
                 state[3] = True
                 pending[(day, "funnel", "landing_seen")] += 1  # one per person per day
+                if device == "mobile":
+                    pending[(day, "funnel_phone", "landing_seen")] += 1
             self._events += 1
         return True
 
