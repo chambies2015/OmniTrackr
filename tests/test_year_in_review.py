@@ -36,11 +36,13 @@ def test_dashboard_banner_skips_members_who_joined_after_the_year(authenticated_
     user = _user(db_session)
     user.created_at = datetime(2026, 6, 1)
     db_session.commit()
-    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": 2026, "url": "/year-in-review/2026"}
+    # "fill" is the "Fill in your year" summary (tests/test_year_fill.py); nothing to fill in here.
+    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": 2026, "url": "/year-in-review/2026",
+                                                                            "fill": None}
     # Signed up on New Year's Day: there is no 2026 to look back on.
     user.created_at = datetime(2027, 1, 1, 9, 0)
     db_session.commit()
-    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": None, "url": None}
+    assert authenticated_client.get("/api/year-in-review-season").json() == {"year": None, "url": None, "fill": None}
 
 
 def test_private_recap_counts_finishes_once(authenticated_client, db_session):

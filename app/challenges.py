@@ -31,6 +31,7 @@ from .discover_catalog import MONTHLY_EDITIONS, published_editions
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 # Aggregate counts appear on public pages only once they stop pointing at individuals.
 MIN_PUBLIC_COUNT = 3
+FILLED_SOURCE = "filled-in"  # year_fill.FILLED_SOURCE: a finish dated afterwards to an earlier month
 MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
                "August", "September", "October", "November", "December"]
 FORMAT_NOUNS = {
@@ -526,9 +527,12 @@ def _finishes(db: Session, user_id: int, month: str) -> list[dict]:
     """Titles finished in the month; each title counts once, however many times it was logged."""
     start, end = month_bounds(month)
     actions = diary.DIARY_ACTIONS if challenge_for(month).get("revisits_count") else ("completed",)
+    # Finishes dated afterwards on "Fill in your year" (source "filled-in") belong to the year, not to the
+    # month's challenge, which only counts what was logged as it happened.
     entries = db.query(models.ActivityEntry).filter(
         models.ActivityEntry.user_id == user_id,
         models.ActivityEntry.action.in_(actions),
+        models.ActivityEntry.source != FILLED_SOURCE,
         models.ActivityEntry.occurred_at >= start,
         models.ActivityEntry.occurred_at < end,
     ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).all()
@@ -638,6 +642,7 @@ def _revisit_count(db: Session, user_id: int, month: str) -> int:
         models.ActivityEntry.user_id == user_id,
         models.ActivityEntry.action.in_(diary.DIARY_ACTIONS),
         models.ActivityEntry.category.in_(tuple(FORMAT_NOUNS)),
+        models.ActivityEntry.source != FILLED_SOURCE,
         models.ActivityEntry.occurred_at >= start,
         models.ActivityEntry.occurred_at < end,
     ).all()

@@ -158,6 +158,10 @@ async def lifespan(application: FastAPI):
     yearbook_task = None
     if yearbook.loop_enabled():
         yearbook_task = asyncio.create_task(yearbook.yearbook_loop(application))
+    from . import year_fill
+    year_fill_task = None
+    if year_fill.enabled_for_process():
+        year_fill_task = asyncio.create_task(year_fill.year_fill_loop(application))
     from . import streaming_services
     streaming_task = None
     if streaming_services.enabled_for_process():
@@ -180,7 +184,7 @@ async def lifespan(application: FastAPI):
     finally:
         for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
                      episode_task, check_in_task, week_one_task, backlog_draw_task, your_week_task, streaming_task,
-                     together_task, swap_task, break_task, yearbook_task):
+                     together_task, swap_task, break_task, yearbook_task, year_fill_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -1157,6 +1161,24 @@ for route in yearbook_router.router.routes:
         if (path, method) in YEARBOOK_LIMITS:
             bind_rate_limited_endpoint(route, limiter.limit(YEARBOOK_LIMITS[(path, method)])(route.endpoint))
 app.include_router(yearbook_router.router)
+from .routers import year_fill as year_fill_router
+# Fill in your year: answers come one tap at a time; the emailed page works without signing in, so it is
+# limited per address like the check-in page.
+YEAR_FILL_LIMITS = {
+    ("/api/year-in-review/{year}/fill", "GET"): "30/minute",
+    ("/api/year-in-review/{year}/fill", "POST"): "120/minute",
+    ("/api/year-in-review/{year}/fill/undo", "POST"): "60/minute",
+    ("/api/year-in-review/{year}/fill/rest", "POST"): "10/minute",
+    ("/api/year-in-review/{year}/fill/bring-back", "POST"): "10/minute",
+    ("/fill-in/{token}", "GET"): "60/minute",
+    ("/fill-in/{token}", "POST"): "30/minute",
+}
+for route in year_fill_router.router.routes:
+    path = getattr(route, "path", None)
+    for method in getattr(route, "methods", None) or ():
+        if (path, method) in YEAR_FILL_LIMITS:
+            bind_rate_limited_endpoint(route, limiter.limit(YEAR_FILL_LIMITS[(path, method)])(route.endpoint))
+app.include_router(year_fill_router.router)
 from .routers import weekly_preview as weekly_preview_router
 # The weekly email preview builds the member's email (cached a few minutes); a copy sends real mail.
 for route in weekly_preview_router.router.routes:

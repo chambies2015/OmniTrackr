@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from .. import auth, funnel, models, supporters, year_in_review, year_so_far
+from .. import auth, funnel, models, supporters, year_fill, year_in_review, year_so_far
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -31,7 +31,7 @@ FIRST_TRACKED_NOTE = {
 }
 _CARDS = _CardCache(size=96)
 STORY_JS_VERSION = "20261019-story-1"
-CSS_VERSION = "20261031-recap-2"
+CSS_VERSION = "20261126-fill-1"
 CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast", "audiobooks": "audiobook"}
 SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
                "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
@@ -95,7 +95,7 @@ def recap_api(year: int, response: Response, user: models.User = Depends(get_cur
 
 
 @router.get("/api/year-in-review-season")
-def recap_season(response: Response, user: models.User = Depends(get_current_user)):
+def recap_season(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Which recap the dashboard should promote right now, if any (December and January).
 
     Nothing for a member who joined after that year ended: in January, someone who signed up
@@ -105,7 +105,19 @@ def recap_season(response: Response, user: models.User = Depends(get_current_use
     joined = getattr(user, "created_at", None)
     if year and joined is not None and joined.year > year:
         year = None
-    return {"year": year, "url": f"/year-in-review/{year}" if year else None}
+    return {"year": year, "url": f"/year-in-review/{year}" if year else None, "fill": _fill_summary(db, user, year)}
+
+
+def _fill_summary(db: Session, user: models.User, year: Optional[int]) -> Optional[dict]:
+    """Titles the recap is missing ("Fill in your year"), for the banner and the recap page. Never raises."""
+    if not year or not year_fill.is_fill_year(year):
+        return None
+    try:
+        found = year_fill.summary(db, user.id, year)
+    except Exception:
+        db.rollback()
+        return None
+    return found if (found["undated"] or found["open"] or found["filled"]) else None
 
 
 @router.get("/api/year-in-review-so-far")
@@ -622,6 +634,40 @@ def _yearbook_box(db: Session, user: models.User, year: int) -> str:
             '</p></section>')
 
 
+def _fill_box(db: Session, user: models.User, year: int) -> str:
+    """At the top of the owner's recap: the titles it's missing, and a link to date them."""
+    found = _fill_summary(db, user, year)
+    if not found:
+        return ""
+    waiting = found["undated"] + found["open"]
+    href = _e(found["url"])
+    if not waiting:
+        return (f'<section class="site-card recap-fill recap-fill--done" aria-labelledby="recap-fill">'
+                f'<h2 id="recap-fill">You filled in your {year}</h2>'
+                f'<p>{_plural(found["filled"], "title")} you dated by hand {"is" if found["filled"] == 1 else "are"} in '
+                'the numbers below. Change one any time.</p>'
+                f'<p class="recap-support__actions"><a class="site-btn site-btn--ghost" href="{href}">Change the dates</a></p></section>')
+    since = found.get("dated_from")
+    heading = f"Your recap starts in {since}" if since and not found["filled"] else f"{_plural(waiting, 'title')} still to date"
+    parts = []
+    if found["undated"]:
+        parts.append(f"{_plural(found['undated'], 'title')} in your library {'is' if found['undated'] == 1 else 'are'} "
+                     "ticked off with no date")
+    if found["open"]:
+        parts.append(f"{_plural(found['open'], 'title')} {'is' if found['open'] == 1 else 'are'} still on your list "
+                     "from before this month")
+    lead = " and ".join(parts) + "."
+    if since and not found["filled"]:
+        lead = (f"OmniTrackr started dating what you finish in {since}, so anything you ticked off before then isn't "
+                f"counted yet. {lead} Give each one a month and it joins your {year}.")
+    else:
+        lead += f" Give each one a month and it joins your {year}."
+    label = "Keep filling in" if found["filled"] else f"Fill in your {year}"
+    return (f'<section class="site-card recap-fill" aria-labelledby="recap-fill">'
+            f'<h2 id="recap-fill">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
+
+
 def _summary(recap: dict) -> str:
     bits = [f"{_plural(recap.get('finished_total', 0), 'title')} finished"]
     top = recap.get("top_category")
@@ -689,6 +735,7 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
+        extra=_fill_box(db, user, year),
         # An empty recap gets the pledge box (start next year fresh) but no yearbook or Ko-fi box.
         body=_body(recap, private=True) + share_box
         + ("" if recap.get("is_empty") else _yearbook_box(db, user, year)) + _next_year_box(db, user, year)
