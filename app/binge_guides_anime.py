@@ -9,11 +9,14 @@ many of a part's episodes fan filler lists mark as anime-only, for the guide's
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
 DEEPENED = "2026-11-23"  # guides that gained a fourth section
-ONE_PIECE_EPISODES = 1180  # aired by 2026-11-10; the anime was between batches that week
+FILLED = "2026-11-25"  # guides that gained a section on November 25
+# Episode 1180 aired on 2026-09-27 and closed the first part of Elbaf; the next episodes are due
+# in 2027 with no date yet, so the count holds until then.
+ONE_PIECE_EPISODES = 1180
 
 GUIDES = {
     "fullmetal-alchemist-brotherhood": {
-        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": UPDATED, "in_order": "fullmetal-alchemist",
+        "name": "Fullmetal Alchemist: Brotherhood", "kind": "anime", "reviewed": FILLED, "in_order": "fullmetal-alchemist",
         "summary": "Fullmetal Alchemist: Brotherhood is 64 episodes, about 26 hours. How long each part takes and how it differs from the 2003 series.",
         "titles": [{"kind": "anime", "title": "Fullmetal Alchemist: Brotherhood", "year": 2009,
                     "aka": ["Fullmetal Alchemist Brotherhood"]}],
@@ -55,6 +58,14 @@ GUIDES = {
                 "The anime and the manga finished within weeks of each other. Hiromu Arakawa's last chapter came out in June "
                 "2010 and the final episode aired on July 4, 2010, so the ending on screen is the one she wrote. The 2003 "
                 "series had to invent its own.",
+            ]),
+            ("after", "If you want more after episode 64", [
+                "The 2003 series is the natural next step, and a better one second than first. Its 51 episodes take "
+                "about 20 hours, and its own ending carries on into a 2005 film, Conqueror of Shamballa, so plan on "
+                "the film too. After Brotherhood you meet characters you know making different choices, which is "
+                "the main pleasure of it.",
+                "The manga that Brotherhood follows is 27 volumes, published from 2001 to 2010. The anime adapts it "
+                "so closely that reading it afterwards adds little new story.",
             ]),
         ],
         "faq": [
@@ -185,7 +196,7 @@ GUIDES = {
         ],
     },
     "hunter-x-hunter-2011": {
-        "name": "Hunter x Hunter (2011)", "kind": "anime", "reviewed": UPDATED,
+        "name": "Hunter x Hunter (2011)", "kind": "anime", "reviewed": FILLED,
         "summary": "Hunter x Hunter (2011) is 148 episodes, about 57 hours. Arc-by-arc lengths, including the 61-episode Chimera Ant arc, and a planner.",
         "titles": [{"kind": "anime", "title": "Hunter x Hunter", "year": 2011, "aka": ["Hunter x Hunter (2011)", "Hunter × Hunter"]}],
         "see_also": ["fullmetal-alchemist-brotherhood", "naruto-and-shippuden", "one-piece"],
@@ -227,6 +238,14 @@ GUIDES = {
                 "The Election arc that ends the series is twelve episodes, under five hours, and ties back to characters and "
                 "promises from the very first arc. Leave enough time to watch it soon after Chimera Ant.",
             ]),
+            ("reading-on", "Reading on after episode 148", [
+                "To carry on past episode 148 you have to read. The Dark Continent Expedition arc comes out in short "
+                "batches with long gaps, because of the back problems its author, Yoshihiro Togashi, has spoken "
+                "about, and it is still unfinished, so expect to catch up and then wait.",
+                "If you would rather go back than forward, the 1999 series covers the story into the Yorknew City "
+                "arc in its 62 TV episodes, about 24 hours, and three series released on video finish Yorknew and "
+                "carry it through Greed Island. It is slower than the 2011 version and darker in look.",
+            ]),
         ],
         "faq": [
             ("How many episodes of Hunter x Hunter are there?",
@@ -238,7 +257,7 @@ GUIDES = {
         ],
     },
     "dragon-ball-z": {
-        "name": "Dragon Ball Z", "kind": "anime", "reviewed": REVIEWED, "in_order": "dragon-ball",
+        "name": "Dragon Ball Z", "kind": "anime", "reviewed": FILLED, "in_order": "dragon-ball",
         "summary": "Dragon Ball Z is 291 episodes, about 116 hours. Saga-by-saga lengths, how much shorter Dragon Ball Z Kai is, and a pace planner.",
         "titles": [{"kind": "anime", "title": "Dragon Ball Z", "year": 1989}],
         "see_also": ["naruto-and-shippuden", "one-piece", "hunter-x-hunter-2011"],
@@ -277,6 +296,25 @@ GUIDES = {
                 "The Frieza fight is the famous slow patch: the planet has five minutes to live for about ten "
                 "episodes. It is fine to watch that stretch with one eye. The original Dragon Ball (153 episodes) "
                 "comes first in the story, and Dragon Ball Z's films and TV specials are not counted here.",
+            ]),
+            ("anime-only", "The anime-only stretches", [
+                "Most of what Kai trims is padding inside episodes, but two whole stories were made for the anime "
+                "alone. The Garlic Jr. saga, episodes 108 to 117, comes between Frieza and the arrival of Trunks. It "
+                "is ten episodes, about four hours, and it follows on from the 1989 film Dead Zone, where Garlic Jr. "
+                "first appears. The Other World Tournament, episodes 195 to 199, has Goku fighting in the afterlife "
+                "before the Great Saiyaman story starts.",
+                "If you want the uncut series but less of it, those fifteen episodes are the cleanest cut: about six "
+                "hours, and the main story never needs them. Without them the series comes to about 110 hours "
+                "instead of 116.",
+            ]),
+            ("breaks", "Where to take a break", [
+                "The series falls into three long stories, and the gaps between them are the places to stop. The "
+                "Frieza fight ends at episode 107, about 43 hours in. The Cell Games end at episode 194, about 78 hours "
+                "in, and the story then jumps forward seven years.",
+                "Akira Toriyama meant Gohan to take over as the hero after Cell, which is why the episodes that follow "
+                "start with him at high school. A long pause there costs you nothing. The Babidi and Majin Buu "
+                "stretch from episode 220 to the end is 72 episodes, about 29 hours, and works best watched without "
+                "a gap.",
             ]),
         ],
         "faq": [
@@ -413,7 +451,7 @@ GUIDES = {
         ],
     },
     "one-piece": {
-        "name": "One Piece", "kind": "anime", "reviewed": REVIEWED, "ongoing": True,
+        "name": "One Piece", "kind": "anime", "reviewed": FILLED, "ongoing": True,
         "summary": "One Piece has 1,180 episodes as of November 2026, about 472 hours. Saga-by-saga lengths and a planner for catching up from any point.",
         "titles": [{"kind": "anime", "title": "One Piece", "year": 1999}],
         "see_also": ["naruto-and-shippuden", "dragon-ball-z", "hunter-x-hunter-2011"],
@@ -457,10 +495,22 @@ GUIDES = {
                 "big block to cut. The films are side stories and are not counted, and neither is the Netflix "
                 "live-action series.",
             ]),
+            ("pauses", "Good places to pause", [
+                "Two years pass in the story between episodes 516 and 517, while the crew trains apart after the "
+                "Summit War. That is the biggest natural break in the series. By then 516 episodes, about 206 hours, "
+                "are behind you and 664 are left.",
+                "Earlier, the end of Water 7 at episode 325 is a good place to stop for a while: the crew has a new "
+                "ship and a new member, and the next saga starts somewhere new. After the time skip, Wano is the "
+                "longest saga at 196 episodes, about forty nights on its own at five a night.",
+                "The anime is on a long pause of its own. Episode 1180, on September 27, 2026, closed the first part "
+                "of Elbaf, and the next episodes are due in 2027 with no date set yet. Anyone starting now has until "
+                "then to gain ground without the total moving.",
+            ]),
         ],
         "faq": [
             ("How many episodes of One Piece are there?",
-             "1,180 had aired by November 10, 2026. The count goes up by about 26 a year on the current seasonal schedule."),
+             "1,180. The latest, episode 1180, aired on September 27, 2026, and new episodes are due in 2027. The "
+             "count goes up by about 26 a year on the current seasonal schedule."),
             ("How long would it take to watch all of One Piece?",
              "About 472 hours. That is 236 days at two hours a day, or just under 20 days with no breaks at all."),
             ("Where should I start One Piece?",

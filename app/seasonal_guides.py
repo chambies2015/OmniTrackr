@@ -54,8 +54,8 @@ SEASONS = {
             "the scariest thing available. Most of us aren't that person every year. Some Octobers you want a proper "
             "fright with the lights off. Others you want a ghost story you can watch with a nine-year-old, or something "
             "loud and silly for a room full of friends who will talk over it anyway.",
-            "So this hub is sorted by mood first. There are four shelves, and each has one pick in every format "
-            "OmniTrackr tracks: a film, a series, an anime, a game, a book and an album. Every pick has a fright level "
+            "So this hub is sorted by mood first. There are four shelves, and each has one pick in each of six "
+            "formats: a film, a series, an anime, a game, a book and an album. Every pick has a fright level "
             "from one to five, a note on how much time it takes, and a caveat that lists what is actually in it. "
             "Find the shelf that fits the night you're planning. Then pick a format.",
             "For the slower, stranger side of October, where nothing jumps out at you and the unease stays with you "
@@ -428,7 +428,7 @@ SEASONS = {
             "is full of very different evenings: a table of relatives who agree on nothing, a houseful of children with "
             "days off school, a quiet night when you have had enough tinsel for one year, a long trip home.",
             "So this hub is sorted by the kind of time you have. There are four shelves, "
-            "and each has one pick in every format OmniTrackr tracks: a film, a series, an anime, a game, a book and an "
+            "and each has one pick in each of six formats: a film, a series, an anime, a game, a book and an "
             "album. Every pick has a festive level from one to five, so you can tell at a glance whether it is wall-to-wall "
             "Christmas or simply cold outside, along with a note on how much time it takes and a caveat that lists what "
             "is actually in it.",

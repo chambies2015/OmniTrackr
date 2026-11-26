@@ -129,9 +129,9 @@ SHELVES = (
      "announced and checked against the official list.",
      (("/awards", "The awards calendar"),)),
     ("monthly", "Monthly editions and challenges",
-     "Each monthly edition picks six works, one from each of six formats, around a single idea "
-     "and adds a short essay on why they belong together. The monthly challenge sets a themed "
-     "goal that resets on the first of the month.",
+     "Each monthly edition picks works from different formats around a single idea, six in the "
+     "2026 editions and nine from January 2027, and adds a short essay on why they belong "
+     "together. The monthly challenge sets a themed goal that resets on the first of the month.",
      (("/discover", "Editions on Discover"), ("/challenges", "This month's challenge"))),
     ("browse", "Shelves to start with",
      "Where to start with manga, podcasts and audiobooks, the three formats people most often "

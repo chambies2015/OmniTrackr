@@ -68,6 +68,20 @@ def _in_order_dates() -> Change:
     )
 
 
+# Guides that kept two sections on November 20 and gained theirs on November 25.
+_NOV25_TWO_SECTIONS = ("dragon-ball-z", "one-piece")
+# The nine guides that gained a fourth section on November 23.
+_NOV23_FOURTH = ("succession", "cowboy-bebop", "death-note", "the-wire", "mad-men", "stranger-things",
+                 "attack-on-titan", "the-sopranos", "lost")
+# The guides that gained a section on November 25, with the sections they gained.
+_NOV25_ADDED = {
+    "dragon-ball-z": ("anime-only", "breaks"), "one-piece": ("pauses",), "breaking-bad": ("season-one",),
+    "better-call-saul": ("faces",), "game-of-thrones": ("breaks",), "the-office": ("christmas",),
+    "supernatural": ("not-counted",), "harry-potter-films": ("fantastic-beasts",),
+    "fullmetal-alchemist-brotherhood": ("after",), "hunter-x-hunter-2011": ("reading-on",),
+}
+
+
 def _binge_sections() -> Change:
     from . import binge_calculator
     from .binge_guides import GUIDES
@@ -76,7 +90,7 @@ def _binge_sections() -> Change:
         (binge_calculator.path(slug),
          f"Added the section “{guide['sections'][2][1]}”. The “How we counted” box now covers "
          "only what applies to this series and links to the full method on the calculator page.")
-        for slug, guide in GUIDES.items() if len(guide["sections"]) > 2
+        for slug, guide in GUIDES.items() if len(guide["sections"]) > 2 and slug not in _NOV25_TWO_SECTIONS
     )
     return Change(
         "2026-11-20", "added", f"{len(pages)} “How long it takes” guides", binge_calculator.BASE_PATH,
@@ -92,7 +106,7 @@ def _binge_fourth_sections() -> Change:
     from .binge_guides import GUIDES
     pages = tuple(
         (binge_calculator.path(slug), f"Added the section “{guide['sections'][3][1]}”.")
-        for slug, guide in GUIDES.items() if len(guide["sections"]) > 3
+        for slug, guide in GUIDES.items() if slug in _NOV23_FOURTH
     )
     return Change(
         "2026-11-23", "added", f"{len(pages)} “How long it takes” guides", binge_calculator.BASE_PATH,
@@ -102,6 +116,47 @@ def _binge_fourth_sections() -> Change:
         "where to pause Attack on Titan, a podcast and a book to go with The Sopranos, and why Lost speeds up after "
         "season 3.",
         pages,
+    )
+
+
+def _binge_nov25() -> Change:
+    from . import binge_calculator
+    from .binge_guides import GUIDES
+
+    def line(slug: str) -> str:
+        names = {section_id: heading for section_id, heading, _ in GUIDES[slug]["sections"]}
+        added = [f"“{names[section_id]}”" for section_id in _NOV25_ADDED[slug]]
+        text = (f"Added the sections {added[0]} and {added[1]}." if len(added) == 2
+                else f"Added the section {added[0]}.")
+        if slug == "one-piece":
+            text += (" The page now says that episode 1180, on September 27, 2026, was the last of the year and that "
+                     "new episodes are due in 2027.")
+        return text
+
+    pages = tuple((binge_calculator.path(slug), line(slug)) for slug in _NOV25_ADDED)
+    return Change(
+        "2026-11-25", "added", f"{len(pages)} “How long it takes” guides", binge_calculator.BASE_PATH,
+        "The guides with ads that had the least writing of their own each gained a section: the anime-only sagas "
+        "and where to pause in Dragon Ball Z, the natural breaks in One Piece, season 1 and the episode-title puzzle "
+        "in Breaking Bad, which Breaking Bad characters turn up in Better Call Saul and when, where to stop in Game "
+        "of Thrones, the Christmas episodes of The Office, the spin-offs Supernatural's total leaves out, the "
+        "Fantastic Beasts films beside Harry Potter, what to watch after Fullmetal Alchemist: Brotherhood, and "
+        "where Hunter x Hunter carries on after the anime. One Piece now says its count holds at 1,180 until 2027.",
+        pages,
+    )
+
+
+def _seasonal_formats() -> Change:
+    line = ("This page said each shelf has one pick in every format OmniTrackr tracks. It has one in each of six "
+            "formats: film, series, anime, game, book and album. It was written in October, before manga, podcasts "
+            "and audiobooks joined the tracker, and now says six.")
+    return Change(
+        "2026-11-25", "correction", "Halloween and holiday picks", "/holidays",
+        "Both pages said each shelf has one pick in every format OmniTrackr tracks. The shelves cover six formats, "
+        "written before manga, podcasts and audiobooks joined the tracker in late October, and the pages now say six.",
+        (("/halloween", line),
+         ("/holidays", line + " The December reading and listening guide beside it covers manga, podcasts and "
+                              "audiobooks.")),
     )
 
 
@@ -312,7 +367,7 @@ def _switch_fixes() -> Change:
 
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [_best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
+    changes = [_binge_nov25(), _seasonal_formats(), _best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
                _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(), *_grammys(),
                _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))
@@ -320,6 +375,12 @@ def guide_changes() -> tuple[Change, ...]:
 
 # Changes to the policy and standards pages, newest first. (date, page name, path, what changed)
 POLICY_CHANGES = (
+    ("2026-11-25", "About", "/about",
+     "Listed the seasonal guides, the awards pages, the break planner, Watch together and Pick swap, and brought the "
+     "history up to the end of November."),
+    ("2026-11-25", "Editorial standards", "/content-quality",
+     "Added how the December advent calendar is put together, and said that the monthly editions have nine picks "
+     "from January 2027."),
     ("2026-11-22", "Corrections and updates", "/corrections",
      "Started this log. A guide that has changed since it went up now lists the changes at the end of the page, and "
      "every guide shows when it was first published and last checked."),

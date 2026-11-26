@@ -45,6 +45,9 @@ LEADERS_PER_KIND = 3
 # Fewer named titles than this is a thin page: noindex, kept out of the sitemap.
 INDEX_MIN_OVERALL = 8
 INDEX_MIN_KIND = 5
+# A chart built from fewer members than this describes a handful of people, not the site, so it
+# stays out of search too (Nov 25 2026: the anime month chart was indexed with three members).
+INDEX_MIN_MEMBERS = 10
 CACHE_SECONDS = 600
 SCAN_LIMIT = 60000
 
@@ -276,14 +279,16 @@ def build_window(signals: list[dict], window: str, now: datetime) -> dict:
                           key=lambda e: (-e["finished"], -(e["average"] or 0), e["title"].casefold()))[:LIST_LIMIT]
         rated = sorted((e for e in own if e["average"] is not None),
                        key=lambda e: (-e["average"], -e["rated"], e["title"].casefold()))[:LIST_LIMIT]
-        kinds[kind] = {"chart": chart, "finished": finished, "rated": rated, "totals": _totals(groups, {kind}),
-                       "indexable": len(chart) >= INDEX_MIN_KIND}
+        totals = _totals(groups, {kind})
+        kinds[kind] = {"chart": chart, "finished": finished, "rated": rated, "totals": totals,
+                       "indexable": len(chart) >= INDEX_MIN_KIND and totals["members"] >= INDEX_MIN_MEMBERS}
     overall = _chart(groups, list(groups), OVERALL_LIMIT)
     every = [_entry(groups[key], _score(groups[key], "now", weights_now)) for key in named]
     finished = sorted((e for e in every if e["finished"] >= MIN_MEMBERS),
                       key=lambda e: (-e["finished"], -(e["average"] or 0), e["title"].casefold()))[:LIST_LIMIT]
     rated = sorted((e for e in every if e["average"] is not None),
                    key=lambda e: (-e["average"], -e["rated"], e["title"].casefold()))[:LIST_LIMIT]
+    totals = _totals(groups, set(title_pages.KINDS))
     return {
         "window": window,
         "built_at": now.replace(microsecond=0).isoformat() + "Z",
@@ -292,8 +297,8 @@ def build_window(signals: list[dict], window: str, now: datetime) -> dict:
         "rated": rated,
         "leaders": {kind: data["chart"][:LEADERS_PER_KIND] for kind, data in kinds.items() if data["chart"]},
         "kinds": kinds,
-        "totals": _totals(groups, set(title_pages.KINDS)),
-        "indexable": len(overall) >= INDEX_MIN_OVERALL,
+        "totals": totals,
+        "indexable": len(overall) >= INDEX_MIN_OVERALL and totals["members"] >= INDEX_MIN_MEMBERS,
     }
 
 
