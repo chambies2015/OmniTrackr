@@ -421,8 +421,9 @@ def save(db: Session, owner, year: int, *, cover_name, quote, picks, show_number
     except IntegrityError:
         db.rollback()
         raise YearbookError("Your yearbook was just made in another tab. Reload to see it.", 409)
-    if made:
-        _tell_friends(db, book, owner, now)
+    # Once per book, on the first save while signing is open. A site admin's preview book, made before
+    # opening day, tells friends the first time it's saved after that.
+    _tell_friends(db, book, owner, now)
     return book, made
 
 
@@ -556,15 +557,24 @@ def sign(db: Session, book, *, user=None, guest_name=None, note, superlative=Non
     if user is not None:
         if user.id == owner.id:
             raise YearbookError("This is your own yearbook. Send the link to friends so they can sign it.", 403)
+        from .crud.friends import are_friends
+        friend = are_friends(db, owner.id, user.id)
         existing = mine_in(db, book, user)
         if existing is not None:
+            changed = existing.note != text or (existing.superlative or None) != vote
             existing.note = text
             existing.superlative = vote
             existing.updated_at = now
+            # The owner let this note in as they read it. From someone who isn't their friend, new words
+            # wait for the owner again, or a note could be swapped for anything once it was let in.
+            if changed and existing.status == "shown" and not friend:
+                existing.status = "waiting"
+                _notify(db, owner.id, "yearbook_waiting",
+                        f"{user.username} changed their note in your yearbook. It shows again once you let it in.",
+                        "/yearbook#waiting", once_unread=True)
             db.flush()
             return existing, False
-        from .crud.friends import are_friends
-        status = "shown" if are_friends(db, owner.id, user.id) else "waiting"
+        status = "shown" if friend else "waiting"
         name = user.username
         mark = None
     else:
@@ -574,13 +584,14 @@ def sign(db: Session, book, *, user=None, guest_name=None, note, superlative=Non
         if has_contact(name):
             raise YearbookError("Your name can't have a link, an email address or a phone number.", 422)
         mark = _mark(address or "unknown", book)
+        status = "waiting"
+    # One book at a time, so two notes landing together can't both slip past the caps.
+    db.query(models.Yearbook).filter(models.Yearbook.id == book.id).with_for_update().first()
+    if mark is not None:
         left = db.query(func.count(models.YearbookSignature.id)).filter(
             models.YearbookSignature.yearbook_id == book.id, models.YearbookSignature.guest_mark == mark).scalar() or 0
         if left >= GUEST_PER_ADDRESS:
             raise YearbookError("You've already left a few notes here. Make a free account to sign again.", 429)
-        status = "waiting"
-    # One book at a time, so two notes landing together can't both slip past the caps.
-    db.query(models.Yearbook).filter(models.Yearbook.id == book.id).with_for_update().first()
     total = db.query(func.count(models.YearbookSignature.id)).filter(
         models.YearbookSignature.yearbook_id == book.id).scalar() or 0
     if total >= NOTES_MAX:
@@ -728,15 +739,19 @@ def view(db: Session, book, viewer, now: Optional[datetime] = None) -> dict:
     sigs, people = signatures(db, book)
     shown = [sig for sig in sigs if sig.status == "shown"]
     own = mine_in(db, book, viewer) if viewer is not None and viewer.id != book.user_id else None
+    recheck = False
+    if own is not None and own.status == "shown":
+        from .crud.friends import are_friends
+        recheck = not are_friends(db, book.user_id, viewer.id)
     return {
         "year": book.year, "cover_name": book.cover_name, "quote": book.quote or "",
         "picks": picks_of(db, book, owner),
         "numbers": numbers(db, owner, book.year) if book.show_numbers else None,
         "notes": [_note_out(sig, people) for sig in shown],
         "tally": tally(shown)[:TALLY_SHOWN],
-        "state": state_of(book.year, now), "closes": closes_label(book.year),
+        "state": state_of(book.year, now), "closes": closes_label(book.year), "opens": _day(opens_on(book.year)),
         "is_owner": viewer is not None and viewer.id == book.user_id,
-        "own": ({"note": own.note, "superlative": own.superlative or "", "status": own.status}
+        "own": ({"note": own.note, "superlative": own.superlative or "", "status": own.status, "recheck": recheck}
                 if own is not None else None),
         "count": len(shown),
     }
@@ -972,6 +987,9 @@ async def run_once(session_factory, now: Optional[datetime] = None, sender=_send
                         f"Your {book.year} yearbook is closed: {_plural(found[2]['notes'], 'note')} to keep.",
                         "/yearbook#notes")
                 book.closed_told_at = now
+                # Saved now: a later book's failed check rolls the session back, which would take this
+                # bell note with it while its email still went out.
+                db.commit()
                 result["closed_notes"] += 1
             due.append((book.id, *found))
         db.commit()
