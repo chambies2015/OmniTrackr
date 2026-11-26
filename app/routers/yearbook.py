@@ -334,6 +334,10 @@ def _sign_html(book, info: dict, user, path: str) -> str:
                 'are on your yearbook page.</p>'
                 '<p class="yb-row"><a class="button" href="/yearbook#waiting">Manage notes</a>'
                 '<a class="button button--ghost" href="/yearbook#share">Share the link</a></p></section>')
+    if info["state"] == "soon":
+        # Only a site admin's preview book has a link before opening day.
+        return (f'<section class="yb-sign yb-sign--closed" id="sign"><h2>Signing opens on {_e(info["opens"])}</h2>'
+                '<p>This yearbook is a preview. Come back on opening day to sign it.</p></section>')
     if info["state"] != "open":
         own = ""
         if info["own"]:
@@ -350,7 +354,10 @@ def _sign_html(book, info: dict, user, path: str) -> str:
         heading = "Change your note" if own else f"Sign {cover}'s yearbook"
         state_line = ""
         if own:
-            if own["status"] == "shown":
+            if own["status"] == "shown" and own.get("recheck"):
+                state_line = (f'<p class="yb-sign__state">Your note is in the yearbook. If you change it, {cover} '
+                              'reads it again before the new version shows.</p>')
+            elif own["status"] == "shown":
                 state_line = '<p class="yb-sign__state">Your note is in the yearbook.</p>'
             elif own["status"] == "waiting":
                 state_line = (f'<p class="yb-sign__state">Your note is waiting for {cover} to let it in. '
@@ -412,6 +419,9 @@ def book_page(token: str, request: Request, user=Depends(get_optional_current_us
     if info["state"] == "open":
         status = f'{_e(yearbook._plural(info["count"], "note"))} so far · Signing closes after {_e(info["closes"])}'
         go = '' if info["is_owner"] else '<a class="button yb-cover__go" href="#sign">Sign it</a>'
+    elif info["state"] == "soon":
+        status = f'Signing opens on {_e(info["opens"])}'
+        go = ''
     else:
         status = f'{_e(yearbook._plural(info["count"], "note"))} · Signing closed after New Year\'s Day'
         go = ''
@@ -420,7 +430,7 @@ def book_page(token: str, request: Request, user=Depends(get_optional_current_us
         wall = f'<ul class="yb-notes__wall">{notes}</ul>'
     else:
         wall = (f'<p class="yb-muted yb-notes__empty">No notes yet. Be the first to sign {cover}\'s yearbook.</p>'
-                if info["state"] == "open" else '<p class="yb-muted yb-notes__empty">Nobody signed this one.</p>')
+                if info["state"] in ("open", "soon") else '<p class="yb-muted yb-notes__empty">Nobody signed this one.</p>')
     own_cta = ""
     if not info["is_owner"]:
         back = quote("/yearbook", safe="")
