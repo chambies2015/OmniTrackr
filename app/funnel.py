@@ -248,6 +248,16 @@ GUEST = (
     ("break_story_saved", "Break planner: a shared plan's story picture saved or shared"),
     ("break_title_saved", "Break planner: a title saved from someone's shared plan"),
     ("break_same_days_clicked", "Break planner: a member pressed \"Plan the same days\" on someone's shared plan"),
+    ("yearbook_started", "Yearbook: a member made theirs"),
+    ("yearbook_shared", "Yearbook: a link copied or shared by its owner"),
+    ("yearbook_story_saved", "Yearbook: the story picture saved or shared by its owner"),
+    ("yearbook_link_opened", "Yearbook: a link opened by a visitor without an account"),
+    ("yearbook_signed", "Yearbook: a member signed someone's yearbook"),
+    ("yearbook_signed_guest", "Yearbook: someone without an account signed a yearbook"),
+    ("yearbook_let_in", "Yearbook: an owner let a waiting note in"),
+    ("yearbook_signup_clicked", "Yearbook: sign-up pressed on a yearbook or the guide"),
+    ("yearbook_email_sent", "Yearbook: email sent (new notes or signing closed)"),
+    ("yearbook_back_from_email", "Yearbook: the yearbook page opened from one of its emails"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -347,7 +357,7 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN} | 
                  "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
                  "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked",
                  "break_signup_clicked", "break_home_offer_clicked", "break_link_shared", "break_story_saved",
-                 "break_title_saved", "break_same_days_clicked"}
+                 "break_title_saved", "break_same_days_clicked", "yearbook_shared", "yearbook_story_saved", "yearbook_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:

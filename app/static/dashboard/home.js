@@ -799,6 +799,7 @@ function resetDailyDashboard() {
   window.OmniTogether?.reset();
   window.OmniBreak?.reset();
   window.OmniSwapHome?.reset();
+  window.OmniYearbookHome?.reset();
   for (const id of ['nextUpQueueItems', 'nextUpQueueFilters', 'nextUpQueueSuggestList', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
     document.getElementById(id)?.replaceChildren();
   }
@@ -1844,6 +1845,8 @@ function runDashboardLayoutBatch() {
   window.OmniBreak?.refresh();
   // Pick swap: the next thing to do in each swap the member is in (at most every 30 seconds).
   window.OmniSwapHome?.refresh();
+  // Yearbook: late November into January, new notes and friends' yearbooks to sign (at most every minute).
+  window.OmniYearbookHome?.refresh();
   // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
   const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
     window.refreshYearGoals?.(),

@@ -2824,3 +2824,63 @@ class BreakPlanItem(Base):
     plan = relationship("BreakPlan", back_populates="items")
 
     __table_args__ = (Index("ix_break_plan_items_plan_day", "plan_id", "day"),)
+
+
+class Yearbook(Base):
+    """A member's yearbook for one year (Nov 2026): /yearbook, shared at /yearbook/<token>.
+
+    New tables only. The owner writes a cover name and a quote, picks up to four titles of the
+    year, and sends the link. Friends and anyone with the link sign it with a short note and,
+    if they like, a "most likely to" vote (yearbook_signatures). Signing closes after New
+    Year's Day; the book stays readable while the link is on. ``token`` is None while the link
+    is off. ``picks`` is JSON: [{"category", "id"}] pointing at the owner's library rows.
+    ``seen_at`` is when the owner last looked at their notes, for the home card and email.
+    """
+    __tablename__ = "yearbooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    token = Column(String(32), nullable=True, unique=True, index=True)
+    cover_name = Column(String(40), nullable=False, default="")
+    quote = Column(String(140), nullable=True)
+    picks = Column(Text, nullable=True)
+    show_numbers = Column(Boolean, nullable=False, default=True)
+    listed = Column(Boolean, nullable=False, default=False)  # on the members-only class page
+    opened = Column(Integer, nullable=False, default=0)       # link opens by people other than the owner
+    seen_at = Column(DateTime, nullable=True)
+    friends_told_at = Column(DateTime, nullable=True)
+    closed_told_at = Column(DateTime, nullable=True)          # the bell note that signing closed
+    last_email_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    signatures = relationship("YearbookSignature", cascade="all, delete-orphan", back_populates="yearbook")
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_yearbook_user_year"),)
+
+
+class YearbookSignature(Base):
+    """One note in a yearbook. A member signs once per book (``signer_id``); someone without an
+    account signs with a name they type (``guest_name``). ``status`` is "shown", "waiting" (for
+    the owner to let it in: guests and members who aren't the owner's friends) or "hidden".
+    ``superlative`` is a key from yearbook.SUPERLATIVES. ``guest_mark`` is a keyed hash of the
+    guest's address and the book, only used to cap how many notes one address leaves in it.
+    """
+    __tablename__ = "yearbook_signatures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    yearbook_id = Column(Integer, ForeignKey("yearbooks.id", ondelete="CASCADE"), nullable=False, index=True)
+    signer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    guest_name = Column(String(40), nullable=True)
+    note = Column(String(300), nullable=False)
+    superlative = Column(String(24), nullable=True)
+    status = Column(String(10), nullable=False, default="waiting")
+    guest_mark = Column(String(32), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    yearbook = relationship("Yearbook", back_populates="signatures")
+
+    __table_args__ = (UniqueConstraint("yearbook_id", "signer_id", name="uq_yearbook_signer"),
+                      Index("ix_yearbook_signatures_book_status", "yearbook_id", "status"))

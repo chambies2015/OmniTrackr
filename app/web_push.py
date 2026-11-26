@@ -116,6 +116,10 @@ TITLES = {
     "swap_added": "Your pick went down well",
     "swap_thanks": "A reaction to your pick",
     "swap_off": "A swap was called off",
+    "yearbook_signed": "Someone signed your yearbook",
+    "yearbook_waiting": "A note is waiting in your yearbook",
+    "yearbook_friend": "Sign a friend's yearbook?",
+    "yearbook_closed": "Your yearbook is closed",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -138,6 +142,9 @@ TOPICS = (
      "swap or reacts to your pick, and a reminder if you haven't picked.", True,
      ("swap_invite", "swap_joined", "swap_short", "swap_drawn", "swap_wrapped", "swap_reminder", "swap_unwrap",
       "swap_late", "swap_added", "swap_thanks", "swap_off")),
+    ("yearbook", "Yearbook", "When someone signs your yearbook or leaves a note for you to let in, when a friend opens "
+     "theirs, and when signing closes.", True,
+     ("yearbook_signed", "yearbook_waiting", "yearbook_friend", "yearbook_closed")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
      ("friend_recommendation", "friend_recommendation_added", "recommendation_received",
       "recommendation_invitation", "take_received")),
