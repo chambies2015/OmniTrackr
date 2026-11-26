@@ -417,3 +417,221 @@
 .guide-support__founding span { color: rgb(234, 179, 8); margin-right: 2px; }
 .guide-support__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 14px 0 0 !important; }
 .guide-support__actions a:not(.site-btn) { font-weight: 600; }
+
+/* ---------- Nov 25 2026 look pass ---------- */
+
+/* Cover fan: the guide's first three covers beside the title, wide screens only (guide_layout._fan).
+   The fan sits in the same 236px column as the rail below it. */
+.guide-fan { display: none; }
+@media (min-width: 1180px) {
+  .trail-guide > .hero:has(> .guide-fan) { padding-right: 292px; position: relative; }
+  .guide-fan {
+    display: block;
+    height: 252px;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-44%);
+    width: 236px;
+  }
+  /* A soft pool of light under the covers so they sit on the page rather than float on it. */
+  .guide-fan::before {
+    background: radial-gradient(closest-side, rgba(139, 92, 246, .32), rgba(45, 212, 191, .08) 60%, transparent);
+    content: "";
+    inset: 8% -18% -14%;
+    position: absolute;
+  }
+  .guide-fan__card {
+    aspect-ratio: 2 / 3;
+    background: var(--site-bg-3);
+    border-radius: var(--poster-radius, 10px);
+    box-shadow: 0 22px 44px -12px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .1);
+    display: block;
+    overflow: hidden;
+    position: absolute;
+    top: 34px;
+    width: 116px;
+  }
+  .guide-fan__card img { display: block; height: 100%; object-fit: cover; width: 100%; }
+  .guide-fan__card > .x-art { border-radius: 0; box-shadow: none; height: 100%; width: 100%; }
+  /* The first pick stands in front, the next two lean out behind it. */
+  .guide-fan__card--1 { left: 50%; top: 0; transform: translateX(-50%); width: 140px; z-index: 2; }
+  .guide-fan__card--2 { filter: brightness(.72) saturate(.9); left: 0; transform: rotate(-9deg); }
+  .guide-fan__card--3 { filter: brightness(.72) saturate(.9); right: 0; transform: rotate(9deg); }
+}
+
+/* Picks lead with their cover: a poster column beside the words on anything wider than a phone. */
+@media (min-width: 761px) {
+  .guide-body :is(.io-entry, .yl-pick):has(> .io-entry__head > .io-entry__art, > .yl-pick__head > .yl-pick__art) {
+    min-height: 236px;
+    padding-left: 172px;
+    position: relative;
+  }
+  .guide-body .io-entry__head > .io-entry__art,
+  .guide-body .yl-pick__head > .yl-pick__art {
+    border-radius: var(--poster-radius, 10px);
+    box-shadow: 0 16px 32px -14px rgba(0, 0, 0, .85), 0 0 0 1px rgba(255, 255, 255, .08);
+    left: 30px;
+    position: absolute;
+    top: 28px;
+    width: 118px;
+  }
+  .guide-body .io-entry__head,
+  .guide-body .yl-pick__head { margin-bottom: 12px; }
+}
+.guide-body :is(.io-entry, .yl-pick) h3 { font-size: clamp(1.3rem, 1.15rem + .5vw, 1.55rem); line-height: 1.22; margin: 4px 0 6px; }
+
+/* A pick whose art hasn't been found yet gets a drawn cover in its format's colour (guide_layout.drawn_cover). */
+.guide-drawn {
+  --kind: var(--site-violet);
+  aspect-ratio: 2 / 3;
+  background:
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--kind) 58%, transparent), transparent 64%),
+    radial-gradient(90% 60% at 100% 100%, color-mix(in srgb, var(--kind) 26%, transparent), transparent 70%),
+    linear-gradient(165deg, #231d47, #110e24);
+  border-radius: var(--poster-radius, 10px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+  color: #fff;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 10px 9px 11px;
+}
+.guide-drawn small {
+  color: color-mix(in srgb, var(--kind) 50%, #fff);
+  font: 800 max(7px, 8cqi)/1 var(--site-font);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.guide-drawn b {
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  font: 800 clamp(8px, 15cqi, 18px)/1.1 var(--site-display);
+  margin-top: auto;
+  -webkit-line-clamp: 5;
+  hyphens: auto;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+.guide-drawn--long b { font-size: clamp(7px, 12cqi, 15px); }
+.guide-drawn--xlong b { font-size: clamp(7px, 10cqi, 13px); }
+.guide-drawn[data-kind="movie"] { --kind: var(--fmt-movie); }
+.guide-drawn[data-kind="tv"] { --kind: var(--fmt-tv); }
+.guide-drawn[data-kind="anime"] { --kind: var(--fmt-anime); }
+.guide-drawn[data-kind="game"] { --kind: var(--fmt-game); }
+.guide-drawn[data-kind="album"] { --kind: var(--fmt-album); }
+.guide-drawn[data-kind="book"] { --kind: var(--fmt-book); }
+.guide-drawn[data-kind="manga"] { --kind: var(--fmt-manga); }
+.guide-drawn[data-kind="podcast"] { --kind: var(--fmt-podcast); }
+.guide-drawn[data-kind="audiobook"] { --kind: var(--fmt-audiobook); }
+@media (max-width: 760px) {
+  .guide-drawn { padding: 6px 5px 7px; }
+  .guide-drawn small { display: none; }
+}
+
+/* Save buttons on picks: the same quiet outline the Discover and Essential 100 saves use, so a page of
+   picks isn't a column of loud purple buttons. The one filled button stays on the "save them all" panel. */
+.guide-body :is(.io-save, .yl-save, .sn-save) {
+  align-items: center;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--site-border-strong);
+  box-shadow: none;
+  color: var(--site-text) !important;
+  font-size: .9rem;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 0;
+  min-height: 42px;
+  padding: 0 18px 0 15px;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.guide-body :is(.io-save, .yl-save, .sn-save)::before {
+  background: currentColor;
+  content: "";
+  flex: none;
+  height: 15px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  width: 15px;
+}
+.guide-body :is(.io-save, .yl-save, .sn-save):hover {
+  background: rgba(255, 255, 255, .1);
+  border-color: var(--site-violet-soft);
+  color: #fff !important;
+  filter: none;
+  transform: none;
+}
+.guide-body :is(.io-save, .yl-save, .sn-save):focus-visible { box-shadow: var(--ring); outline: none; }
+.guide-body :is(.io-save, .yl-save)[aria-pressed="true"] {
+  background: rgba(45, 212, 191, .14);
+  border-color: rgba(45, 212, 191, .55);
+  color: var(--site-teal-soft) !important;
+}
+.guide-body .sn-save[aria-pressed="true"] { background: var(--sn-accent); border-color: transparent; color: var(--sn-accent-ink) !important; }
+.guide-body :is(.io-save, .yl-save, .sn-save)[aria-pressed="true"]::before { display: none; }
+.guide-body :is(.io-entry__link, .yl-pick__link) { color: var(--site-soft); font-weight: 600; text-decoration-color: rgba(212, 208, 236, .4); text-underline-offset: 3px; }
+.guide-body :is(.io-entry__link, .yl-pick__link):hover { color: #fff; text-decoration-color: currentColor; }
+.guide-body :is(.io-entry__actions, .yl-pick__actions) { margin-top: 20px; }
+
+/* Questions: one rule between each question and answer, answers in the reading face. */
+.guide-body :is(.io-faq, .bc-questions, .es-faq, .yl-faq) > h3 {
+  border-top: 1px solid var(--rule);
+  color: var(--site-text);
+  font-size: 1.08rem;
+  line-height: 1.4;
+  margin: 0;
+  max-width: var(--read-measure);
+  padding: 20px 0 0;
+}
+.guide-body :is(.io-faq, .bc-questions, .es-faq, .yl-faq) > h2 + h3 { margin-top: 22px; }
+.guide-body :is(.io-faq, .bc-questions, .es-faq, .yl-faq) > h3 + p {
+  color: var(--read-text);
+  font-family: var(--read-font);
+  font-size: 1.06rem;
+  line-height: 1.68;
+  margin: 8px 0 20px;
+  max-width: var(--read-measure);
+}
+.guide-body :is(.io-faq, .bc-questions, .es-faq, .yl-faq) > p + p { margin-top: -8px; }
+
+/* Essay headings get a little air before the paragraph under them. */
+.guide-body .guide-essay > h2 { margin-bottom: .55em; max-width: 24em; }
+
+/* Comparison tables get rounded corners like the cards around them. */
+.guide-body .guide-table { border-collapse: separate; border-radius: var(--radius-md); border-spacing: 0; overflow: hidden; }
+.guide-body .guide-table tbody tr:last-child > * { border-bottom: 0; }
+.guide-body .guide-table tbody th a { color: var(--site-text); font-weight: 700; text-decoration-color: rgba(196, 181, 253, .5); text-underline-offset: 3px; }
+
+/* Keep a list: a quiet note in the rail for visitors on pages with save buttons (guide_layout._keep). */
+.guide-rail__keep {
+  background: linear-gradient(160deg, rgba(139, 92, 246, .16), rgba(45, 212, 191, .06) 70%), var(--site-surface);
+  border: 1px solid rgba(196, 181, 253, .22);
+  border-radius: var(--radius-md);
+  padding: 16px 16px 15px;
+}
+.guide-rail__keep[hidden] { display: none; }
+.guide-rail__keep p:not(.guide-rail__label) { color: var(--site-soft); font-size: var(--text-md); line-height: 1.5; margin: 0 0 12px; }
+.guide-rail__join {
+  align-items: center;
+  border: 1px solid rgba(196, 181, 253, .45);
+  border-radius: var(--radius-pill);
+  color: var(--site-text);
+  display: inline-flex;
+  font-size: .88rem;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  text-decoration: none;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.guide-rail__join::after { content: "→"; content: "→" / ""; }
+.guide-rail__join:hover { background: rgba(139, 92, 246, .18); border-color: var(--site-violet-soft); color: #fff; }
+.guide-rail__join:focus-visible { box-shadow: var(--ring); outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-body :is(.io-save, .yl-save, .sn-save), .guide-rail__join { transition: none; }
+}

@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import new_releases, title_pages
+from .. import guide_layout, new_releases, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_db
 from ..release_guides import GUIDES
@@ -65,7 +65,8 @@ def _pick_html(item: dict, details: dict, signed_in: bool, today: date) -> str:
     detail = details.get(entry["id"], {}) if entry else {}
     image = title_pages._safe_image(detail.get("image"))
     art = (f'<img class="yl-pick__art" src="{_e(image)}" alt="" width="96" height="144" loading="lazy" '
-           'decoding="async" referrerpolicy="no-referrer">' if image else "")
+           'decoding="async" referrerpolicy="no-referrer">' if image
+           else guide_layout.drawn_cover("yl-pick", item["title"], item.get("kind", "")))
     title_link = (f'<a class="yl-pick__link" href="{_e(detail["url"])}">See the title page</a>'
                   if detail.get("url") else "")
     save = _save_button(entry, signed_in) if entry else ""

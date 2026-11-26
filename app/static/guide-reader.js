@@ -1,6 +1,6 @@
 // Guide pages: a thin reading-progress line under the header, the contents rail marks the
-// section you are reading, and the Ko-fi button in the closing note is counted. All extras;
-// the page works without them.
+// section you are reading, and the Ko-fi button in the closing note and the "Start a free
+// library" link in the rail are counted. All extras; the page works without them.
 (() => {
   const article = document.querySelector('.trail-guide');
   const body = article && article.querySelector('.guide-body');
@@ -34,6 +34,23 @@
       try {
         if (navigator.sendBeacon) {
           navigator.sendBeacon('/api/support/event', new Blob([JSON.stringify({ event: 'page_kofi', place: 'guide' })], { type: 'application/json' }));
+        }
+      } catch (error) { /* counting is optional */ }
+    });
+  });
+
+  // "Start a free library" in the rail's Keep a list note (visitors only): one count per visit.
+  article.querySelectorAll('[data-guide-signup]').forEach(link => {
+    link.addEventListener('click', () => {
+      if (typeof window.reportFunnelEvent === 'function') { window.reportFunnelEvent('guide_signup_clicked'); return; }
+      try {
+        const sent = JSON.parse(sessionStorage.getItem('omnitrackr_funnel_sent') || '[]');
+        if (Array.isArray(sent) && sent.includes('guide_signup_clicked')) return;
+        sessionStorage.setItem('omnitrackr_funnel_sent', JSON.stringify([...(Array.isArray(sent) ? sent : []), 'guide_signup_clicked'].slice(-20)));
+      } catch (error) { /* storage blocked: count it anyway */ }
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'guide_signup_clicked' })], { type: 'application/json' }));
         }
       } catch (error) { /* counting is optional */ }
     });
