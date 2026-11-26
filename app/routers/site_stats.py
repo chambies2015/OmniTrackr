@@ -497,6 +497,15 @@ def _check_in_status(db: Session, days: int, now: datetime) -> dict | None:
         return None
 
 
+def _year_fill_status(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import year_fill
+        return year_fill.status(db, now, days)
+    except Exception:
+        db.rollback()
+        return None
+
+
 # Other lookups share the title_metadata table under their own key prefixes. They used to be
 # counted as title pages, so a show that isn't airing, or AniList being busy for a release
 # calendar refresh, showed up as a title page "not found" or "error".
@@ -621,6 +630,7 @@ def site_stats_overview(
         "comeback": _comeback_status(db),
         "welcome": _welcome_status(db),
         "check_in": _check_in_status(db, days, now),
+        "year_fill": _year_fill_status(db, days, now),
     }
 
 
@@ -854,6 +864,66 @@ async def check_in_action(payload: CheckInAction, response: Response,
         return {**check_in.status(db), "message": f"Test sent to {current_user.email}."}
     check_in.set_status(db, "sending" if payload.action == "start" else "paused")
     return check_in.status(db)
+
+
+# ---------------------------------------------------------------- Year in Review fill-in email
+
+class YearFillAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/year-fill-preview", include_in_schema=False)
+def year_fill_preview(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The December Year in Review email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import year_fill
+    _require_admin(current_user)
+    now = datetime.utcnow()
+    built = year_fill.email_for(db, current_user, now)
+    if built is None:
+        response = HTMLResponse('<p style="font:15px Arial,sans-serif;padding:24px">Your library has nothing to fill in '
+                                'and nothing finished this year, so you would get no email. Tick a title off in the '
+                                'library to see a preview.</p>')
+    else:
+        subject, html, _text, _url = built
+        banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+                  f'Preview only, filled in from your own library. The month buttons work and date your own titles. '
+                  f'Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+        response = HTMLResponse(html.replace('<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.get("/api/site-stats/year-fill")
+def year_fill_card(response: Response, days: int = Query(30, ge=1, le=366),
+                   current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The card's own read, so its script (site-stats-year-fill.js) doesn't wait on the whole overview."""
+    from .. import year_fill
+    _require_admin(current_user)
+    _no_store(response)
+    return year_fill.status(db, datetime.utcnow(), days)
+
+
+@router.post("/api/site-stats/year-fill")
+async def year_fill_action(payload: YearFillAction, response: Response,
+                           current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import year_fill
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not year_fill.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            sent = await year_fill.send_test(db, current_user)
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        if not sent:
+            raise HTTPException(status_code=409, detail="Your library has nothing to fill in and nothing finished this year, "
+                                                        "so there's no email to send.")
+        return {**year_fill.status(db), "message": f"Test sent to {current_user.email}."}
+    year_fill.set_status(db, "sending" if payload.action == "start" else "paused")
+    return year_fill.status(db)
 
 
 # ---------------------------------------------------------------- remove an account

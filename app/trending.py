@@ -124,7 +124,8 @@ def scan(db: Session, now: Optional[datetime] = None) -> list[dict]:
     wanted: dict[str, set[int]] = defaultdict(set)
     journal = (db.query(entry.category, entry.item_id, entry.title, entry.user_id, entry.action, entry.rating, entry.occurred_at)
                .filter(entry.occurred_at >= since, entry.occurred_at <= now,
-                       entry.action.in_(ACTIVE_ACTIONS + FINISH_ACTIONS), entry.source != "import")
+                       entry.action.in_(ACTIVE_ACTIONS + FINISH_ACTIONS),
+                       entry.source.notin_(("import", "filled-in")))
                .order_by(entry.id).limit(SCAN_LIMIT).all())
     for category, item_id, title, user_id, action, rating, occurred_at in journal:
         kind = title_pages.LIBRARY_TO_KIND.get(category)

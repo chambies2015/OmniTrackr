@@ -33,6 +33,42 @@ test('December shows the banner for this year', async () => {
   assert.match(nodes.yearInReviewBannerTitle.textContent, /2026/);
 });
 
+test('December with undated titles sends the member to fill them in first', async () => {
+  const nodes = {
+    yearInReviewBanner: { hidden: true },
+    yearInReviewBannerLink: { href: '/year-in-review', textContent: 'Play your year' },
+    yearInReviewBannerTitle: { textContent: '' },
+    yearInReviewBannerText: { textContent: '' },
+  };
+  const RealDate = Date;
+  class FixedDate extends RealDate { constructor(...args) { super(...(args.length ? args : ['2026-12-03T12:00:00'])); } }
+  const season = { year: 2026, url: '/year-in-review/2026',
+    fill: { year: 2026, undated: 14, open: 2, filled: 0, url: '/year-in-review/2026/fill', dated_from: 'September' } };
+  vm.runInNewContext(source, {
+    Date: FixedDate,
+    document: { getElementById: id => nodes[id] || null },
+    fetch: async () => ({ ok: true, json: async () => season }),
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.yearInReviewBanner.hidden, false);
+  assert.equal(nodes.yearInReviewBannerLink.href, '/year-in-review/2026/fill');
+  assert.equal(nodes.yearInReviewBannerLink.textContent, 'Fill in your 2026');
+  assert.match(nodes.yearInReviewBannerText.textContent, /from September on\. 14 titles in your library are ticked off with no date/);
+  // A link that isn't the fill-in page is ignored.
+  season.fill.url = 'https://example.com/';
+  nodes.yearInReviewBannerLink = { href: '/year-in-review', textContent: 'Play your year' };
+  vm.runInNewContext(source, {
+    Date: FixedDate,
+    document: { getElementById: id => nodes[id] || null },
+    fetch: async () => ({ ok: true, json: async () => season }),
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(nodes.yearInReviewBannerLink.href, '/year-in-review/2026#story');
+  assert.equal(nodes.yearInReviewBannerLink.textContent, 'Play your year');
+});
+
 test('Outside December and January nothing is requested or shown', async () => {
   const { nodes, requests } = await run('2026-10-08T12:00:00', { year: null, url: null });
   assert.equal(requests.length, 0);

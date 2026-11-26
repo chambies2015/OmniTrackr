@@ -276,7 +276,9 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
         "is_empty": not (finished_total or entries or library_total),
     }
     recap["goals"] = _goals(db, user, year, finished, public)
-    days = {entry.occurred_at.date() for entry in entries} | {moment.date() for moment in moment_days if moment}
+    # A finish dated afterwards on "Fill in your year" says which month, not which day: it isn't an active day.
+    days = ({entry.occurred_at.date() for entry in entries if entry.source != "filled-in"}
+            | {moment.date() for moment in moment_days if moment})
     recap["active_days"] = len(days)
     recap["longest_streak"] = _longest_streak(days)
     recap["ratings"] = _rating_style(ordered)

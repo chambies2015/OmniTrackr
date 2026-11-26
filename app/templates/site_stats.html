@@ -13,6 +13,7 @@
   <script src="/static/site.js?v=20261121-refresh-1" defer></script>
   <link rel="stylesheet" href="/static/site-stats.css?v=20261118-search-journey-1">
   <script src="/static/site-stats.js?v=20261126-phones-1" defer></script>
+  <script src="/static/site-stats-year-fill.js?v=20261126-fill-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -246,6 +247,21 @@
         <dl class="stats-list" id="checkInList"></dl>
         <div class="stats-table-wrap" id="checkInPage"></div>
         <p class="stats-editor-status" id="checkInStatus" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="stats-card stats-card--wide" id="yearFillCard" hidden>
+        <div class="stats-card__head">
+          <div><h2>Year in Review email (December 1 to 14)</h2><p>One email per member in the first half of December: their recap is ready, and the titles it’s missing. Titles ticked off before September have no date, so the 2026 recap leaves them out; the email names up to six with a “Pick the month” button that works without signing in. Members with nothing to fill in get a plain “your year is ready” email instead, and members with an empty library get nothing. Nothing is sent until you press Start.</p></div>
+          <div class="stats-announce__actions">
+            <a class="site-btn site-btn--ghost site-btn--sm" href="/site-stats/year-fill-preview" target="_blank" rel="noopener">Preview</a>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-year-fill="test">Send a test to me</button>
+            <button type="button" class="site-btn site-btn--primary site-btn--sm" data-year-fill="start" id="yearFillStart">Start sending</button>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-year-fill="pause" id="yearFillPause" hidden>Pause</button>
+          </div>
+        </div>
+        <dl class="stats-list" id="yearFillList"></dl>
+        <div class="stats-table-wrap" id="yearFillPage"></div>
+        <p class="stats-editor-status" id="yearFillStatus" role="status" aria-live="polite"></p>
       </section>
 
       <section class="stats-card stats-card--wide" id="welcomeCard" hidden>

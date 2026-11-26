@@ -2884,3 +2884,30 @@ class YearbookSignature(Base):
 
     __table_args__ = (UniqueConstraint("yearbook_id", "signer_id", name="uq_yearbook_signer"),
                       Index("ix_yearbook_signatures_book_status", "yearbook_id", "status"))
+
+
+class YearFillAnswer(Base):
+    """One answer on the "Fill in your year" page (app/year_fill.py): when a member finished a title that had no
+    finish date (``kind`` "undated"), or whether they finished one still on their list that year ("open").
+
+    ``answer`` is "month" (``month`` 1-12; ``entry_id`` is the journal finish it made), "before" (finished before
+    ``year``) or "skip" (not sure / not yet). ``ticked`` means the answer ticked an "open" title off, so taking it
+    back unticks it. Library rows are referenced without a foreign key, like the journal does.
+    """
+    __tablename__ = "year_fill_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    category = Column(String(20), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    kind = Column(String(10), nullable=False, default="undated")
+    answer = Column(String(10), nullable=False)
+    month = Column(Integer, nullable=True)
+    entry_id = Column(Integer, nullable=True)
+    ticked = Column(Boolean, nullable=False, default=False)
+    source = Column(String(10), nullable=False, default="page")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "category", "item_id", name="uq_year_fill_answer"),
+                      Index("ix_year_fill_answers_user_year", "user_id", "year"))

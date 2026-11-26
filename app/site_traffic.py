@@ -122,9 +122,9 @@ def classify_device(user_agent: str) -> str:
 
 
 # Pages whose address is the key to something: a gift list anyone can mark, a shared list
-# anyone can join, a poll, a recap, a pledge card, a shared awards ballot, an emailed check-in. Site stats counts them under one row per kind of page,
+# anyone can join, a poll, a recap, a pledge card, a shared awards ballot, an emailed check-in or fill-in. Site stats counts them under one row per kind of page,
 # so the links themselves never sit in the database or on the stats page.
-PRIVATE_LINK = re.compile(r"^/(gifts|gift|supporters/gift/manage|lists/join|together/join|swap/join|collections/link|tonight|recap|goal|challenge|pledge|ballot|join|r|check-in|tier-list/s|ranked|on-my-services|break/s|yearbook)/[^/]+")
+PRIVATE_LINK = re.compile(r"^/(gifts|gift|supporters/gift/manage|lists/join|together/join|swap/join|collections/link|tonight|recap|goal|challenge|pledge|ballot|join|r|check-in|fill-in|tier-list/s|ranked|on-my-services|break/s|yearbook)/[^/]+")
 PRIVATE_LINK_LABEL = "(private link)"
 
 

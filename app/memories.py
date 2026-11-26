@@ -206,6 +206,8 @@ def collect(db: Session, user: models.User, today, to_utc: LocalToUtc, months: b
         models.ActivityEntry.user_id == user.id,
         models.ActivityEntry.category.in_(diary.CATEGORIES),
         models.ActivityEntry.action.in_(("completed", "revisited", "started", "noted")),
+        # "Fill in your year" dates a finish to a month, never a day, so it makes no "on this day" memory.
+        models.ActivityEntry.source != "filled-in",
         _windows(models.ActivityEntry.occurred_at, windows),
     ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).limit(400).all()
     items = diary.library_items(db, user.id, entries)

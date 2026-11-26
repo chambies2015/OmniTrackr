@@ -12,6 +12,26 @@
   const state = { request: 0, pending: null, loadedAt: 0 };
   const REUSE_MS = 20000;
 
+  // Titles ticked off with no date aren't in the recap yet: the banner sends the member to date them first.
+  function showFill(season, link) {
+    const fill = season.fill;
+    const undated = fill && Number.isInteger(fill.undated) ? fill.undated : 0;
+    const url = fill && typeof fill.url === 'string' && /^\/year-in-review\/\d{4}\/fill$/.test(fill.url) ? fill.url : null;
+    if (!undated || !url) return;
+    const text = $('yearInReviewBannerText');
+    const since = typeof fill.dated_from === 'string' && /^[A-Z][a-z]{2,8}$/.test(fill.dated_from) ? fill.dated_from : null;
+    const titles = undated === 1 ? '1 title in your library is' : `${undated.toLocaleString('en-US')} titles in your library are`;
+    if (text) {
+      text.textContent = since
+        ? `It counts what you finished from ${since} on. ${titles} ticked off with no date: give each one a month and it joins your ${season.year}.`
+        : `${titles} ticked off with no date: give each one a month and it joins your ${season.year}.`;
+    }
+    if (link) {
+      link.href = url;
+      link.textContent = `Fill in your ${season.year}`;
+    }
+  }
+
   function showRecapBanner() {
     const banner = $('yearInReviewBanner');
     if (!banner) return;
@@ -25,6 +45,7 @@
         const title = $('yearInReviewBannerTitle');
         if (link) link.href = `${season.url}#story`;
         if (title) title.textContent = `Your ${season.year} in media is ready`;
+        showFill(season, link);
         banner.hidden = false;
       })
       .catch(() => { /* the banner simply stays hidden */ });
