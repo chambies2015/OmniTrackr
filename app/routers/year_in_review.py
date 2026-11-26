@@ -689,7 +689,9 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box + _yearbook_box(db, user, year) + _next_year_box(db, user, year)
+        # An empty recap gets the pledge box (start next year fresh) but no yearbook or Ko-fi box.
+        body=_body(recap, private=True) + share_box
+        + ("" if recap.get("is_empty") else _yearbook_box(db, user, year)) + _next_year_box(db, user, year)
         + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),
