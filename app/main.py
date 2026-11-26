@@ -1229,6 +1229,12 @@ for route in pwa.router.routes:
         # Asked once a day per browser by pwa.js; a database read for signed-in members.
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(pwa.router)
+from .routers import continue_page as continue_page_router
+# /continue: Google sign-in from inside Instagram, TikTok and other apps' browsers lands here.
+for route in continue_page_router.router.routes:
+    if getattr(route, "path", None) == "/continue" and "GET" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("60/minute")(route.endpoint))
+app.include_router(continue_page_router.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:
     if getattr(route, "path", None) == "/api/kofi/webhook" and "POST" in getattr(route, "methods", set()):

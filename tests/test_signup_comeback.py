@@ -204,7 +204,7 @@ def test_site_stats_shows_the_new_steps():
                                ("emailDelivery", "email_delivery", "Sending the code email: "),
                                ("emailReturn", "email_return", "Coming back to finish signing up: ")):
         assert f'id="{list_id}"' in page and f"fillList('{list_id}', data.funnel.{key}" in script and line in script
-    assert "site-stats.js?v=20261123-signup-1" in page
+    assert "site-stats.js?v=20261126-phones-1" in page
 
 
 def test_the_browser_can_report_the_new_steps(client, recorder):
