@@ -17,7 +17,7 @@ from .discover import page
 
 router = APIRouter(tags=["year-fill"])
 CSS_VERSION = "20261126-fill-1"
-JS_VERSION = "20261126-fill-1"
+JS_VERSION = "20261126-fill-2"
 
 
 def _e(value) -> str:
@@ -190,7 +190,9 @@ def _member_content(db: Session, user: models.User, data: dict) -> str:
         f'<p class="yf-done__actions">{_next_steps(db, user, year)}</p>'
         f'<p class="yf-done__again" data-yf-bring-back-wrap>{bring_back}</p></section>')
     return (
-        f'<section class="yf" aria-labelledby="yfTitle" data-yf data-year="{year}">'
+        f'<section class="yf" aria-labelledby="yfTitle" data-yf data-year="{year}" '
+        f'data-undated-total="{data["undated_total"]}" data-open-total="{data["open_total"]}" '
+        f'data-finished-total="{data["finished_total"]}" data-filled="{data["filled"]}">'
         '<header class="yf-head">'
         f'<p class="eyebrow">YEAR IN REVIEW · {year}</p>'
         f'<h1 id="yfTitle">Fill in your {year}</h1>'

@@ -24,6 +24,9 @@
 
 .continue-wide, .continue-main { justify-content: center; width: 100%; }
 .continue-main { margin: 0 0 10px; }
+/* Signed in, with titles carried in the link: Add first, then Open your library. */
+.continue-add { margin: 0 0 12px; }
+.continue-add[hidden] { display: none; }
 .continue-hint { color: var(--site-muted); font-size: .9rem; line-height: 1.55; margin: 0 0 18px; }
 .continue-copy { margin: 0 0 6px; }
 .continue-copy .site-btn { justify-content: center; width: 100%; }

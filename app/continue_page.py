@@ -26,8 +26,8 @@ from urllib.parse import urlencode
 from . import app_browsers, google_signin
 
 PAGE_PATH = "/continue"
-CSS_VERSION = "20261126-continue-1"
-JS_VERSION = "20261126-continue-1"
+CSS_VERSION = "20261126-continue-2"
+JS_VERSION = "20261126-continue-2"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 # The page the visitor pressed the button on (from the Referer), so the new library can link back.
 _FROM_PATH = re.compile(r"/[A-Za-z0-9/_.-]{0,200}")
@@ -147,12 +147,18 @@ def _in_app_body(name: str, platform: str, invite: Optional[str]) -> str:
 
 def _browser_body(invite: Optional[str], via_app: bool, member: bool, google: bool) -> str:
     if member:
+        # Titles carried in the link are listed by continue.js and only added when the member presses Add.
         return (
             '<p class="site-eyebrow">Signed in</p>'
             '<h1 id="continueTitle">You\'re already signed in</h1>'
-            '<p class="continue-lead">Open your library and anything you saved before signing in moves into it.</p>'
-            '<p class="continue-carry" data-carry-note hidden></p>'
-            '<a class="site-btn site-btn--primary continue-wide" href="/">Open your library</a>'
+            '<p class="continue-lead" data-continue-lead>Open your library and anything you saved before signing in '
+            'moves into it.</p>'
+            '<div class="continue-list" data-continue-list hidden>'
+            '<p class="continue-list__head" data-continue-list-head></p><ul data-continue-titles></ul>'
+            '<p class="continue-list__more" data-continue-more hidden></p></div>'
+            '<button type="button" class="site-btn site-btn--primary continue-wide continue-add" data-continue-add hidden>'
+            'Add them to your library</button>'
+            '<a class="site-btn site-btn--primary continue-wide" href="/" data-continue-open>Open your library</a>'
         )
     heading = "Now finish with one tap" if via_app else "Make your free account"
     lead = ("You're out of the app. Make your free account here and you're in."
