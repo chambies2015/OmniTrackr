@@ -2911,3 +2911,30 @@ class YearFillAnswer(Base):
 
     __table_args__ = (UniqueConstraint("user_id", "year", "category", "item_id", name="uq_year_fill_answer"),
                       Index("ix_year_fill_answers_user_year", "user_id", "year"))
+
+
+class YearCatchupAnswer(Base):
+    """One answer on the "big ones" grid of "Fill in your year" (app/year_catchup.py): a member said they got to
+    one of the year's big releases (``answer`` "month", ``month`` 1-12), want to ("want") or not ("no").
+
+    ``entry_id`` is the title's id in app/year_catchup_data.py ("movie/toy-story-5-2026"). A "month" or "want"
+    answer saved the title to the library: ``category``/``item_id`` name that row, and ``created_row`` says this
+    answer made it (taking the answer back soon after removes it again). Library rows are referenced without a
+    foreign key, like the journal does.
+    """
+    __tablename__ = "year_catchup_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    entry_id = Column(String(160), nullable=False)
+    answer = Column(String(10), nullable=False)
+    month = Column(Integer, nullable=True)
+    category = Column(String(20), nullable=True)
+    item_id = Column(Integer, nullable=True)
+    created_row = Column(Boolean, nullable=False, default=False)
+    source = Column(String(10), nullable=False, default="page")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "entry_id", name="uq_year_catchup_answer"),
+                      Index("ix_year_catchup_answers_user_year", "user_id", "year"))

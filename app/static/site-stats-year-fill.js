@@ -42,6 +42,7 @@
       ['Sent in the last 45 days', number(info.sent_recent)],
       [`Came back within ${info.came_back_window_days} days of one`, number(info.came_back)],
       ['Sent all time', number(info.sent_all_time)],
+      ['Big ones emails, last 30 days', number((info.page || {}).sent_big)],
       ['Daily limit', `${number(info.daily_limit)} (shares the daily email budget, so sign-up and reset emails always go out)`],
     ];
     if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
@@ -70,6 +71,23 @@
     });
     table.append(thead, body);
     wrap.appendChild(table);
+    // The year's big ones: titles saved from the poster grid (app/year_catchup.py).
+    const bigSources = Array.isArray(pageStats.big_by_source) ? pageStats.big_by_source : [];
+    const bigTable = el('table', 'stats-table');
+    const bigHead = el('tr');
+    ['Big ones, last 30 days', 'Got to it', 'Want to', 'Not for me', 'Taken back']
+      .forEach((label, index) => bigHead.appendChild(el('th', index ? 'num' : '', label)));
+    const bigThead = el('thead');
+    bigThead.appendChild(bigHead);
+    const bigBody = el('tbody');
+    bigSources.forEach(row => {
+      const tr = el('tr');
+      [row.source, row.got, row.want, row.no, row.undone]
+        .forEach((value, index) => tr.appendChild(el('td', index ? 'num' : '', index ? number(value) : value)));
+      bigBody.appendChild(tr);
+    });
+    bigTable.append(bigThead, bigBody);
+    wrap.appendChild(bigTable);
     $('yearFillPage').replaceChildren(wrap);
     $('yearFillStart').hidden = info.status === 'sending';
     $('yearFillStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
@@ -89,10 +107,10 @@
 
   async function act(action) {
     const status = $('yearFillStatus');
-    if (action === 'start' && !window.confirm('Turn on the Year in Review email? From December 1 to 14, each member with a library gets one email about their recap and the titles it is missing, up to 30 a day. You can pause any time.')) return;
+    if (action === 'start' && !window.confirm('Turn on the Year in Review email? From December 1 to 14, each member gets one email: their recap and the titles it is missing, or, for an empty or thin recap, the year’s big releases to tap in. Up to 30 a day. You can pause any time.')) return;
     const buttons = card.querySelectorAll('[data-year-fill]');
     buttons.forEach(button => { button.disabled = true; });
-    status.textContent = action === 'test' ? 'Sending a test to your email…' : 'Saving…';
+    status.textContent = action.startsWith('test') ? 'Sending a test to your email…' : 'Saving…';
     try {
       const response = await fetch('/api/site-stats/year-fill', {
         method: 'POST', credentials: 'same-origin', headers: headers(true), body: JSON.stringify({ action }),

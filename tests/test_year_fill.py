@@ -296,13 +296,24 @@ def test_member_page_redirects(client, db_session):
     assert old.status_code == 302 and old.headers["location"] == "/year-in-review"
 
 
-def test_empty_page_says_it_is_all_filled_in(client, db_session):
+def test_empty_page_leads_with_the_big_ones(client, db_session):
     user = member(db_session)
     db_session.commit()
     html = client.get("/year-in-review/2026/fill", headers=headers_for(user)).text
     done = re.search(r'<section class="yf-done"[^>]*>', html).group(0)
-    assert "hidden" not in done and "Your 2026 is filled in" in html
+    # Nothing to date and nothing finished: the year's big releases are the page (app/year_catchup.py).
+    assert "hidden" in done and "yours is empty so far" in html and "2026’s big ones" in html
     assert re.search(r'<section class="yf-section yf-section--deck"[^>]*hidden', html)
+
+
+def test_filled_in_page_still_says_so(client, db_session, monkeypatch):
+    from app import year_catchup
+    monkeypatch.setattr(year_catchup, "available", lambda year, today=None: False)
+    user = member(db_session)
+    db_session.commit()
+    html = client.get("/year-in-review/2026/fill", headers=headers_for(user)).text
+    done = re.search(r'<section class="yf-done"[^>]*>', html).group(0)
+    assert "hidden" not in done and "Your 2026 is filled in" in html and "big ones" not in html
 
 
 def test_season_banner_and_recap_box(client, db_session, monkeypatch):
@@ -330,7 +341,8 @@ def test_token_round_trip_and_tampering(db_session):
     user = member(db_session)
     movie = save(db_session, user, watched=True)
     token = _token_for(db_session, user, [("movies", movie.id)])
-    assert year_fill.read_token(token) == {"user_id": user.id, "year": 2026, "items": [("movies", movie.id)]}
+    assert year_fill.read_token(token) == {"user_id": user.id, "year": 2026, "items": [("movies", movie.id)],
+                                           "catchup": False}
     assert year_fill.read_token(token[:-2] + ("aa" if not token.endswith("aa") else "bb")) is None
     assert year_fill.read_token("") is None and year_fill.read_token("x" * 600) is None
     from app import check_in
@@ -415,10 +427,11 @@ def test_who_gets_the_email(db_session):
     db_session.add(models.EmailCampaignSend(campaign_key="yearbook-1-notes-1", user_id=recent.id, status="sent",
                                             sent_at=NOW - timedelta(hours=20)))
     db_session.commit()
-    assert [user.username for user in year_fill.due_members(db_session, NOW)] == ["due"]
+    # An empty library gets the year's big ones (app/year_catchup.py), so it is due too.
+    assert [user.username for user in year_fill.due_members(db_session, NOW)] == ["due", "empty"]
     assert year_fill.due_members(db_session, datetime(2026, 12, 15, 0, 1)) == []
     assert year_fill.due_members(db_session, datetime(2026, 11, 30, 23, 0)) == []
-    assert empty and december and unverified
+    assert december and unverified
 
 
 def test_email_wording(db_session):
@@ -437,19 +450,23 @@ def test_email_wording(db_session):
     save(db_session, other, title="Piranesi", model=models.Book, added=datetime(2026, 5, 1))
     db_session.commit()
     assert year_fill.email_for(db_session, other, NOW)[0] == "Did you get to these in 2026?"
-    # Nothing to fill in, but finishes: the recap itself.
+    assert "Got to any of 2026's big releases" in text
+    # Nothing to fill in, and five finishes or more: the recap itself, with the big ones linked at the bottom.
     done = member(db_session, "done")
-    movie = save(db_session, done, title="Alien", watched=True)
-    db_session.add(models.ActivityEntry(user_id=done.id, category="movies", item_id=movie.id, title="Alien",
-                                        action="completed", source="automatic", occurred_at=datetime(2026, 10, 1)))
+    for n, title in enumerate(("Alien", "Aliens", "Heat", "Ronin", "Thief")):
+        movie = save(db_session, done, title=title, watched=True)
+        db_session.add(models.ActivityEntry(user_id=done.id, category="movies", item_id=movie.id, title=title,
+                                            action="completed", source="automatic",
+                                            occurred_at=datetime(2026, 10, 1 + n)))
     db_session.commit()
     subject, html, text, _ = year_fill.email_for(db_session, done, NOW)
-    assert subject == "Your 2026 in review is ready" and "/fill-in/" not in html and "Play your year" in html
-    assert "So far your recap has 1 finish, all from September on" in text
-    # Nothing at all: no email.
+    assert subject == "Your 2026 in review is ready" and "Play your year" in html
+    assert "So far your recap has 5 finishes, all from September on" in text
+    assert "#big-ones" in html and "Fill in your 2026" not in html
+    # Nothing at all: the big ones email (tests/test_year_catchup.py has the rest).
     nobody = member(db_session, "nobody")
     db_session.commit()
-    assert year_fill.email_for(db_session, nobody, NOW) is None
+    assert "which did you get to in 2026?" in year_fill.email_for(db_session, nobody, NOW)[0]
 
 
 def test_send_due_respects_the_switch_and_sends_once(db_session):
@@ -471,7 +488,9 @@ def test_send_due_respects_the_switch_and_sends_once(db_session):
     assert info["window"] == "December 1 to 14, 2026"
 
 
-def test_members_with_nothing_to_say_do_not_hold_up_the_rest(db_session):
+def test_members_with_nothing_to_say_do_not_hold_up_the_rest(db_session, monkeypatch):
+    from app import year_catchup
+    monkeypatch.setattr(year_catchup, "available", lambda year, today=None: False)   # no big ones to offer
     for n in range(12):
         quiet = member(db_session, f"quiet{n}")
         movie = save(db_session, quiet, title=f"Old film {n}", watched=True)
