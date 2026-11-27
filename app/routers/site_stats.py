@@ -869,25 +869,31 @@ async def check_in_action(payload: CheckInAction, response: Response,
 # ---------------------------------------------------------------- Year in Review fill-in email
 
 class YearFillAction(BaseModel):
-    action: str = Field(..., pattern="^(start|pause|test)$")
+    action: str = Field(..., pattern="^(start|pause|test|test_big)$")
 
 
 @router.get("/site-stats/year-fill-preview", include_in_schema=False)
-def year_fill_preview(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """The December Year in Review email as the owner would receive it (nothing is sent)."""
+def year_fill_preview(variant: str = Query("", max_length=10), current_user: models.User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    """The December Year in Review email as the owner would receive it (nothing is sent). ``variant=big`` shows the
+    "big ones" email that members with an empty or thin recap get, built from the owner's own library."""
     from fastapi.responses import HTMLResponse
     from .. import year_fill
     _require_admin(current_user)
     now = datetime.utcnow()
-    built = year_fill.email_for(db, current_user, now)
+    big = variant == "big"
+    built = year_fill.email_for(db, current_user, now, force_big=big)
     if built is None:
         response = HTMLResponse('<p style="font:15px Arial,sans-serif;padding:24px">Your library has nothing to fill in '
                                 'and nothing finished this year, so you would get no email. Tick a title off in the '
                                 'library to see a preview.</p>')
     else:
         subject, html, _text, _url = built
+        note = ("Preview only. Members with an empty or thin recap get this one; the posters skip anything already in "
+                "your library, and the buttons save to your own library." if big else
+                "Preview only, filled in from your own library. The month buttons work and date your own titles.")
         banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
-                  f'Preview only, filled in from your own library. The month buttons work and date your own titles. '
+                  f'{note} '
                   f'Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
         response = HTMLResponse(html.replace('<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
     response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
@@ -911,11 +917,11 @@ async def year_fill_action(payload: YearFillAction, response: Response,
     from .. import year_fill
     _require_admin(current_user)
     _no_store(response)
-    if payload.action == "test":
+    if payload.action in ("test", "test_big"):
         if not year_fill.mail_configured():
             raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
         try:
-            sent = await year_fill.send_test(db, current_user)
+            sent = await year_fill.send_test(db, current_user, force_big=payload.action == "test_big")
         except Exception as error:
             raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
         if not sent:

@@ -634,11 +634,40 @@ def _yearbook_box(db: Session, user: models.User, year: int) -> str:
             '</p></section>')
 
 
+def _big_finished(db: Session, user: models.User, year: int) -> Optional[int]:
+    """The recap's finish count when it's short enough to offer the year's big releases, else None."""
+    from .. import year_catchup
+    try:
+        if not year_catchup.available(year):
+            return None
+        finished = year_fill.finished_total(db, user.id, year)
+        if finished >= year_catchup.THIN_BELOW or not year_catchup.tally(db, user.id, year)["open"]:
+            return None
+    except Exception:
+        db.rollback()
+        return None
+    return finished
+
+
+def _big_box(db: Session, user: models.User, year: int) -> str:
+    """For an empty or short recap with nothing to date: the year's big releases to tap in (app/year_catchup.py)."""
+    finished = _big_finished(db, user, year)
+    if finished is None:
+        return ""
+    so_far = "Your recap is empty so far." if not finished else f"Your recap has {_plural(finished, 'finish', 'finishes')} so far."
+    lead = (f"{so_far} If you watched, played, read or listened to any of {year}’s biggest releases, tap them in and "
+            "pick the month. They go into your library and the numbers below.")
+    return (f'<section class="site-card recap-fill" aria-labelledby="recap-big">'
+            f'<h2 id="recap-big">Add {year}’s big ones</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" '
+            f'href="/year-in-review/{year}/fill#big-ones">See the big ones</a></p></section>')
+
+
 def _fill_box(db: Session, user: models.User, year: int) -> str:
     """At the top of the owner's recap: the titles it's missing, and a link to date them."""
     found = _fill_summary(db, user, year)
     if not found:
-        return ""
+        return _big_box(db, user, year)
     waiting = found["undated"] + found["open"]
     href = _e(found["url"])
     if not waiting:
@@ -646,7 +675,8 @@ def _fill_box(db: Session, user: models.User, year: int) -> str:
                 f'<h2 id="recap-fill">You filled in your {year}</h2>'
                 f'<p>{_plural(found["filled"], "title")} you dated by hand {"is" if found["filled"] == 1 else "are"} in '
                 'the numbers below. Change one any time.</p>'
-                f'<p class="recap-support__actions"><a class="site-btn site-btn--ghost" href="{href}">Change the dates</a></p></section>')
+                f'<p class="recap-support__actions"><a class="site-btn site-btn--ghost" href="{href}">Change the dates</a></p></section>'
+                + _big_box(db, user, year))
     since = found.get("dated_from")
     heading = f"Your recap starts in {since}" if since and not found["filled"] else f"{_plural(waiting, 'title')} still to date"
     parts = []
@@ -663,9 +693,13 @@ def _fill_box(db: Session, user: models.User, year: int) -> str:
     else:
         lead += f" Give each one a month and it joins your {year}."
     label = "Keep filling in" if found["filled"] else f"Fill in your {year}"
+    big = ""
+    if _big_finished(db, user, year) is not None:
+        big = (f' <a class="site-btn site-btn--ghost" href="/year-in-review/{year}/fill#big-ones">'
+               f'Add {year}’s big ones</a>')
     return (f'<section class="site-card recap-fill" aria-labelledby="recap-fill">'
             f'<h2 id="recap-fill">{_e(heading)}</h2><p>{_e(lead)}</p>'
-            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a>{big}</p></section>')
 
 
 def _summary(recap: dict) -> str:
