@@ -266,6 +266,231 @@ _GRAMMYS_2027 = [
      ]},
 ]
 
+
+def _nominee(name: str, detail: str, year=None, *aka: str) -> dict:
+    """A nominated game, with its studio or publisher as the second line."""
+    entry = {"name": name, "detail": detail, "kind": "game"}
+    if year:
+        entry["year"] = year
+    if aka:
+        entry["aka"] = aka
+    return entry
+
+
+def _for_game(name: str, game: str) -> dict:
+    """A performer, credited with the game they are nominated for."""
+    return {"name": name, "detail": game, "kind": "game", "title": game}
+
+
+_GTA6 = _nominee("Grand Theft Auto VI", "Rockstar Games", None, "GTA 6", "GTA VI", "Grand Theft Auto 6")
+_CONTROL = _nominee("Control Resonant", "Remedy Entertainment / Annapurna")
+_REQUIEM = _nominee("Resident Evil Requiem", "Capcom")
+_PHANTOM = _nominee("Phantom Blade Zero", "S-GAME")
+_ZELDA = _nominee("The Legend of Zelda: Ocarina of Time", "Nintendo")
+_BOND = _nominee("007 First Light", "IO Interactive", None, "007: First Light")
+_PRAGMATA = _nominee("Pragmata", "Capcom")
+_DAWNWALKER = _nominee("The Blood of Dawnwalker", "Rebel Wolves / Bandai Namco")
+_ACE = _nominee("Ace Combat 8: Wings of Theve", "Bandai Namco Aces / Bandai Namco")
+_MIXTAPE = _nominee("Mixtape", "Beethoven & Dinosaur / Annapurna")
+_RACER = _nominee("Star Wars: Galactic Racer", "Fuse Games / Secret Mode")
+_BIG_WALK = _nominee("Big Walk", "House House / Panic")
+_CAIRN = _nominee("Cairn", "The Game Bakers")
+_MEWGENICS = _nominee("Mewgenics", "Edmund McMillen and Tyler Glaiel")
+_ORBITALS = _nominee("Orbitals", "Shapefarm / Kepler")
+_GEARS = _nominee("Gears of War: E-Day", "The Coalition / Xbox Game Studios")
+_FORZA = _nominee("Forza Horizon 6", "Playground Games / Xbox Game Studios")
+_SPORTS_RESORT = _nominee("Nintendo Switch Sports Resort", "Nintendo")
+_POKOPIA = _nominee("Pokémon Pokopia", "Game Freak / Omega Force / Nintendo", None, "Pokemon Pokopia")
+_NO_MANS_SKY = _nominee("No Man's Sky", "Hello Games", 2016)
+_WITCHER_3 = _nominee("The Witcher 3: Wild Hunt", "CD Projekt Red", 2015)
+
+# The Game Awards 2026 ballot: all 30 categories announced on November 17, 2026 (Players' Voice has no nominee
+# list; fans vote on it in rounds before the show). thegameawards.com turns automated readers away, so the lists
+# were typed from MobileSyrup's and checked against Noisy Pixel's, with Push Square and Nintendo Everything for
+# most categories. Release years are only set for games that have been out for years.
+_GAME_AWARDS_2026 = [
+    {"name": "Game of the Year", "nominees": [_BOND, _CONTROL, _GTA6, _PHANTOM, _REQUIEM, _ZELDA]},
+    {"name": "Best Game Direction", "nominees": [_CONTROL, _GTA6, _PHANTOM, _PRAGMATA, _REQUIEM]},
+    {"name": "Best Narrative", "nominees": [_BOND, _CONTROL, _GTA6, _REQUIEM, _DAWNWALKER]},
+    {"name": "Best Art Direction", "nominees": [
+        _CONTROL, _GTA6, _nominee("Mouse: P.I. For Hire", "Fumi / PlaySide"), _PHANTOM, _ZELDA]},
+    {"name": "Best Score and Music", "nominees": [_ACE, _GTA6, _MIXTAPE, _PHANTOM, _ZELDA]},
+    {"name": "Best Audio Design", "nominees": [_ACE, _CONTROL, _GTA6, _REQUIEM, _RACER]},
+    {"name": "Best Performance", "nominees": [
+        _for_game("Angela Sant'Albano", "Resident Evil Requiem"),
+        _for_game("Liam McIntyre", "Marvel's Wolverine"),
+        _for_game("Manni L. Perez", "Grand Theft Auto VI"),
+        _for_game("Patrick Gibson", "007 First Light"),
+        _for_game("Rahul Kohli", "Saros"),
+    ]},
+    {"name": "Innovation in Accessibility",
+     "blurb": "For features that let more people play.",
+     "nominees": [
+         _nominee("Assassin's Creed Black Flag Resynced", "Ubisoft Singapore / Ubisoft", None,
+                  "Assassin's Creed: Black Flag Resynced"),
+         _FORZA, _GEARS,
+         _nominee("Marvel's Wolverine", "Insomniac / Sony Interactive"),
+         _nominee("Rhythm Heaven Groove", "Nintendo"),
+     ]},
+    {"name": "Games for Impact",
+     "blurb": "For a game with something to say about the world outside it.",
+     "nominees": [
+         _BIG_WALK, _CAIRN,
+         _nominee("Forever Ago", "Third Shift / Annapurna"),
+         _nominee("Life is Strange: Reunion", "Deck Nine / Square Enix"),
+         _nominee("lily's world XD", "SonderingEmily / Kwalee"),
+         _MIXTAPE,
+     ]},
+    {"name": "Best Ongoing Game",
+     "blurb": "For a game that is still getting new things to do, whenever it first came out.",
+     "nominees": [
+         _nominee("Arc Raiders", "Embark Studios", 2025),
+         _nominee("Final Fantasy XIV", "Square Enix", None, "Final Fantasy 14", "Final Fantasy XIV Online"),
+         _nominee("Fortnite", "Epic Games", 2017),
+         _NO_MANS_SKY, _WITCHER_3,
+     ]},
+    {"name": "Best Community Support", "nominees": [
+        _nominee("Crimson Desert", "Pearl Abyss"),
+        _nominee("Helldivers 2", "Arrowhead Game Studios / Sony Interactive", 2024),
+        _NO_MANS_SKY, _WITCHER_3,
+        _nominee("Warframe", "Digital Extremes", 2013),
+    ]},
+    {"name": "Best Independent Game", "nominees": [
+        _BIG_WALK, _CAIRN,
+        _nominee("Denshattack!", "Undercoders / Fireshine Games"),
+        _MEWGENICS,
+        _nominee("Mina the Hollower", "Yacht Club Games"),
+    ]},
+    {"name": "Best Debut Indie Game",
+     "blurb": "For a studio's first game.",
+     "nominees": [
+         _nominee("Dressmaker", "Cozy Lives / Free Lives"),
+         _nominee("Esoteric Ebb", "Christoffer Bodegård / Raw Fury"),
+         _ORBITALS,
+         _nominee("Replaced", "Sad Cat Studios / Thunderful"),
+         _nominee("Silver Pines", "Wych Elm / Team17"),
+     ]},
+    {"name": "Best Mobile Game", "nominees": [
+        _nominee("Arknights: Endfield", "Hypergryph / Gryphline"),
+        _nominee("Monster Hunter Outlanders", "TiMi Studio Group / Level Infinite"),
+        _nominee("Neverness to Everness", "Hotta Studio / Perfect World Games"),
+        _nominee("Pokémon Champions", "The Pokémon Works / The Pokémon Company", None, "Pokemon Champions"),
+        _nominee("Where Winds Meet", "Everstone Studio / NetEase Games"),
+    ]},
+    {"name": "Best VR/AR Game", "nominees": [
+        _nominee("Forefront", "Triangle Factory"),
+        _nominee("Into the Radius 2", "CM Immersive"),
+        _nominee("Little Nightmares VR: Altered Echoes", "ICONIK / Bandai Namco"),
+        _nominee("Teenage Mutant Ninja Turtles: Empire City", "Cortopia Studios / Beyond Frames"),
+        _nominee("Thief VR: Legacy of Shadow", "Maze Theory / Vertigo Games"),
+    ]},
+    {"name": "Best Action Game", "nominees": [
+        _ACE, _GEARS,
+        _nominee("Onimusha: Way of the Sword", "Capcom"),
+        _PHANTOM,
+        _nominee("Saros", "Housemarque / Sony Interactive"),
+    ]},
+    {"name": "Best Action/Adventure Game", "nominees": [_BOND, _CONTROL, _GTA6, _PRAGMATA, _REQUIEM, _ZELDA]},
+    {"name": "Best Role Playing Game", "nominees": [
+        _nominee("Final Fantasy Resonance", "Lancarse / Square Enix"),
+        _nominee("Fire Emblem: Fortune's Weave", "Intelligent Systems / Nintendo"),
+        _nominee("Monster Hunter Stories 3: Twisted Reflection", "Capcom"),
+        _DAWNWALKER,
+        _nominee("Trails in the Sky 2nd Chapter", "Nihon Falcom / GungHo"),
+    ]},
+    {"name": "Best Fighting Game", "nominees": [
+        _nominee("2XKO", "Riot Games"),
+        _nominee("Avatar Legends: The Fighting Game", "Gameplay Group / Paramount Games"),
+        _nominee("Invincible VS", "Quarter Up / Skybound Games"),
+        _nominee("Marvel Tōkon: Fighting Souls", "Arc System Works / Sony Interactive", None,
+                 "Marvel Tokon: Fighting Souls"),
+        _nominee("My Hero Academia: All's Justice", "Byking / Bandai Namco"),
+    ]},
+    {"name": "Best Family Game", "nominees": [
+        _BIG_WALK,
+        _nominee("Lego Batman: Legacy of the Dark Knight", "TT Games / Warner Bros. Games"),
+        _SPORTS_RESORT, _POKOPIA,
+        _nominee("Yoshi and the Mysterious Book", "Good-Feel / Nintendo"),
+    ]},
+    {"name": "Best Sim/Strategy Game", "nominees": [
+        _MEWGENICS,
+        _nominee("Planet Zoo 2", "Frontier Developments"),
+        _POKOPIA,
+        _nominee("Slay the Spire 2", "Mega Crit"),
+        _nominee("Star Wars Zero Company", "Bit Reactor / Electronic Arts", None, "Star Wars: Zero Company"),
+    ]},
+    {"name": "Best Sports/Racing Game", "nominees": [
+        _nominee("EA Sports FC 27", "EA Vancouver / EA Romania"),
+        _FORZA, _SPORTS_RESORT,
+        _nominee("Screamer", "Milestone"),
+        _RACER,
+    ]},
+    {"name": "Best Multiplayer Game", "nominees": [
+        _BIG_WALK,
+        _nominee("Call of Duty: Modern Warfare 4", "Infinity Ward / Activision"),
+        _GEARS,
+        _nominee("Marathon", "Bungie / Sony Interactive"),
+        _nominee("Meccha Chameleon", "Lemorion_1224"),
+        _ORBITALS,
+    ]},
+    {"name": "Best Adaptation",
+     "blurb": "For a film or series based on a game.",
+     "nominees": [
+         {"name": "Cyberpunk: Edgerunners 2", "detail": "Studio Trigger / CD Projekt Red / Netflix", "kind": "anime"},
+         {"name": "Fallout (Season 2)", "detail": "Kilter Films / Bethesda / Amazon MGM Studios", "kind": "tv",
+          "title": "Fallout", "year": 2024},
+         {"name": "Mortal Kombat II", "detail": "New Line Cinema / Atomic Monster / Warner Bros. Pictures",
+          "kind": "movie", "year": 2026},
+         {"name": "The Super Mario Galaxy Movie", "detail": "Illumination / Nintendo / Universal Pictures",
+          "kind": "movie", "year": 2026},
+         {"name": "Resident Evil", "detail": "Constantin / PlayStation Productions / Columbia Pictures",
+          "kind": "movie", "year": 2026},
+     ]},
+    {"name": "Most Anticipated Game",
+     "blurb": "For a game that isn't out yet.",
+     "nominees": [
+         _nominee("Fable", "Playground Games / Xbox Game Studios"),
+         _nominee("Final Fantasy VII Revelation", "Square Enix", None, "Final Fantasy 7 Revelation"),
+         _nominee("God of War Laufey", "Santa Monica Studio / Sony Interactive"),
+         _nominee("Resident Evil Veronica", "Capcom"),
+         _nominee("The Witcher IV", "CD Projekt Red"),
+     ]},
+    {"name": "Best User Creation",
+     "blurb": "For a mod or a player-made game built inside another game.",
+     "nominees": [
+         {"name": "A Dream of Silence: Revamped", "detail": "For Baldur's Gate 3, by lizardphunk"},
+         {"name": "Create Aeronautics", "detail": "For Minecraft, by Simulated Team"},
+         {"name": "Nopixel V", "detail": "For Grand Theft Auto Online, by Nopixel Studios"},
+         {"name": "Star Wars Droid Tycoon", "detail": "For Fortnite, by FOAD"},
+         {"name": "TTK Testing", "detail": "For Roblox, by Sable Digital"},
+     ]},
+    {"name": "Content Creator of the Year", "nominees": [
+        {"name": "CDawg"}, {"name": "Cellbit"}, {"name": "iShowSpeed"}, {"name": "LilSimsie"}, {"name": "OhnePixel"},
+    ]},
+    {"name": "Best Esports Game", "nominees": [
+        _nominee("Counter-Strike 2", "Valve", 2023),
+        _nominee("DOTA 2", "Valve", 2013),
+        _nominee("League of Legends", "Riot Games", 2009),
+        _nominee("Mobile Legends: Bang Bang", "Moonton"),
+        _nominee("Valorant", "Riot Games", 2020),
+    ]},
+    {"name": "Best Esports Athlete", "nominees": [
+        {"name": "Chovy", "detail": "Gen.G"},
+        {"name": "Donk", "detail": "Team Spirit"},
+        {"name": "Erde", "detail": "LOUD"},
+        {"name": "Yatoro", "detail": "Team Spirit"},
+        {"name": "ZywOo", "detail": "Team Vitality"},
+    ]},
+    {"name": "Best Esports Team", "nominees": [
+        {"name": "Gen.G", "detail": "League of Legends"},
+        {"name": "LOUD", "detail": "Valorant"},
+        {"name": "Team Falcons (Counter-Strike 2)"},
+        {"name": "Team Falcons (Rocket League)"},
+        {"name": "Team Spirit", "detail": "DOTA 2"},
+        {"name": "Team Vitality", "detail": "Counter-Strike 2"},
+    ]},
+]
+
 SHOWS = {
     "the-game-awards-2026": {
         "name": "The Game Awards 2026",
@@ -274,30 +499,45 @@ SHOWS = {
         "nominations_name": "Game Awards",  # "Game Awards nominations on ..."
         "format": "Video games",
         "title": "The Game Awards 2026: date, nominees and your ballot",
-        "search_title": "The Game Awards 2026: date, nominees, how to watch and a ballot",
-        "description": ("The Game Awards 2026 are on December 10 in Los Angeles. When the nominees are due, how the "
-                        "winners are chosen, where to watch, last year's results and a free ballot to pick the winners."),
+        "search_title": "The Game Awards 2026: nominees, date, how to watch and a ballot",
+        "description": ("The Game Awards 2026 are on December 10 in Los Angeles. Every nominee in all 30 categories, "
+                        "who leads, where to watch, last year's results and a free ballot to pick the winners."),
         "lead": ("The Game Awards 2026 are on Thursday, December 10 at the Peacock Theater in Los Angeles. The "
-                 "nominees are revealed on Tuesday, November 17. When they land, this page becomes a ballot: pick a winner in "
-                 "every category, save it, and see your score once the show is over."),
+                 "nominees came out on November 17, with Grand Theft Auto VI in front on eight. The ballot below "
+                 "is open: pick a winner in each of 30 categories, save it, and see your score once the show is over."),
         "published": "2026-11-12",
         "reviewed": "2026-11-17",
         "ceremony_day": "2026-12-10",
         "ceremony_at": "2026-12-11T00:30:00",
         "lock_label": "Thursday, December 10 at 4:30 p.m. Pacific",
-        "watch": "Free streams on YouTube, Twitch and other platforms",
+        "watch": "Free streams on YouTube, Twitch and Disney+",
         "nominees_day": "2026-11-17",
         "nominees_label": "November 17, 2026",
-        "nominees_note": ("Geoff Keighley reveals the nominees on Tuesday, November 17, 2026 at noon Eastern, "
-                          "9 a.m. Pacific and 5 p.m. in the UK."),
+        "nominees_note": "The nominees were revealed on Tuesday, November 17, 2026.",
         "dates": (
-            ("Nominees announced", "Tuesday, November 17, 2026, noon Eastern"),
-            ("Public vote", "Opens with the nominees on thegameawards.com"),
-            ("Ceremony", "Thursday, December 10, 2026"),
+            ("Nominees announced", "Tuesday, November 17, 2026"),
+            ("Public vote", "Open now on thegameawards.com"),
+            ("Ceremony", "Thursday, December 10, 2026, 7:30 p.m. Eastern"),
             ("Venue", "Peacock Theater, Los Angeles"),
             ("Ballots here lock", "December 10 at 4:30 p.m. Pacific"),
         ),
         "sections": (
+            ("nominees", "Who is nominated", (
+                "Grand Theft Auto VI has the most nominations with eight, including Game of the Year, Best Game "
+                "Direction, Best Narrative and a Best Performance nomination for Manni L. Perez. Control Resonant "
+                "and Resident Evil Requiem have six each, and Phantom Blade Zero has five.",
+                "The six Game of the Year nominees are 007 First Light, Control Resonant, Grand Theft Auto VI, "
+                "Phantom Blade Zero, Resident Evil Requiem and The Legend of Zelda: Ocarina of Time. Five of them "
+                "are also up for Best Action/Adventure Game, where Pragmata takes Phantom Blade Zero's place.",
+                "Nintendo is the most-nominated publisher with 12, by MobileSyrup's and Noisy Pixel's counts. Big "
+                "Walk is nominated four times: Games for Impact, Best Independent Game, Best Family Game and Best "
+                "Multiplayer Game.",
+                "No Man's Sky won Best Ongoing Game last year and is nominated for it again, and for Best "
+                "Community Support. The Witcher 3: Wild Hunt, an eleven-year-old game, is up for both as well.",
+                "In esports, Chovy and Team Vitality won Best Esports Athlete and Best Esports Team last year and "
+                "are both nominated again. Team Falcons are nominated twice in the team category, for "
+                "Counter-Strike 2 and for Rocket League.",
+            )),
             ("chosen", "How the winners are chosen", (
                 "A jury of media outlets casts 90% of the vote in most categories. The public vote, on the show's "
                 "website and social platforms, makes up the other 10%. The jury had 154 outlets in 2025.",
@@ -308,22 +548,25 @@ SHOWS = {
                 "was November 21. Expansions, DLC, remakes and remasters can be nominated alongside new games.",
             )),
             ("watch", "How to watch", (
-                "The show streams free. The official site says it will be live on all platforms without listing "
-                "them yet; GamingBible's guide names YouTube, Twitch, X, TikTok Live, Facebook, Instagram Live, "
-                "Kick and Steam.",
-                "The organizers had not posted a start time when this page was last checked. GamingBible lists "
-                "4:30 p.m. Pacific, which is 7:30 p.m. Eastern and 12:30 a.m. on Friday in the UK. Ballots here "
-                "lock at that time.",
+                "The show streams free on YouTube and Twitch, and this year on Disney+ as well. GGRecon reports "
+                "that Disney+ carries it live in North America and some other markets that Disney had not named. "
+                "GamingBible's guide also lists X, TikTok Live, Facebook, Instagram Live, Kick and Steam.",
+                "The opening act starts at 4:30 p.m. Pacific, which is 7:30 p.m. Eastern and 12:30 a.m. on Friday "
+                "in the UK. That is the time the show's own FAQ gives, as VGChartz quotes it. Ballots here lock then.",
             )),
-            ("categories", "What the ballot will cover", (
-                "Last year's show had 30 categories, from Game of the Year to Best Esports Team and Content Creator "
-                "of the Year. No changes had been announced for 2026 when this page was last checked, so the "
-                "ballot will follow the list the organizers publish with the nominees.",
-                "Six games were nominated for Game of the Year in 2025. If your pick for this year isn't in your "
-                "library yet, you will be able to add it from the ballot.",
+            ("categories", "What the ballot covers", (
+                "The ballot has all 30 categories announced with the nominees, from Game of the Year to Best "
+                "Esports Team. Best User Creation, for mods and player-made games, was not a category in 2025. "
+                "Players' Voice is not on the ballot, because fans decide it entirely in their own voting rounds "
+                "on thegameawards.com.",
+                "Nominated games you already track are marked, and the rest can be added to your library from "
+                "the ballot. That includes the five Most Anticipated nominees, none of which is out yet.",
+                "The names here were checked against the lists MobileSyrup and Noisy Pixel published on "
+                "November 17, then again on November 27 against Gematsu's and Game Informer's. Where they spelled a "
+                "name differently, the game's own spelling is used.",
             )),
         ),
-        "categories": [],
+        "categories": _GAME_AWARDS_2026,
         "last_year": {
             "heading": "Last year: The Game Awards 2025",
             "intro": (
@@ -370,9 +613,16 @@ SHOWS = {
             ("When are The Game Awards 2026?",
              Dated("Thursday, December 10, 2026, at the Peacock Theater in Los Angeles.",
                    ("2026-12-11", "They were on Thursday, December 10, 2026, at the Peacock Theater in Los Angeles."))),
-            ("When are the nominees announced?",
-             "Tuesday, November 17, 2026, at noon Eastern, 9 a.m. Pacific. The ballot here opens once the list "
-             "is checked against the official one."),
+            ("What time do The Game Awards start?",
+             Dated("The opening act starts at 4:30 p.m. Pacific, 7:30 p.m. Eastern, which is 12:30 a.m. on Friday, "
+                   "December 11 in the UK.",
+                   ("2026-12-11", "The opening act started at 4:30 p.m. Pacific, 7:30 p.m. Eastern, which was "
+                                  "12:30 a.m. on Friday, December 11 in the UK."))),
+            ("Which game has the most nominations?",
+             "Grand Theft Auto VI, with eight. Control Resonant and Resident Evil Requiem have six each."),
+            ("What is nominated for Game of the Year?",
+             "007 First Light, Control Resonant, Grand Theft Auto VI, Phantom Blade Zero, Resident Evil Requiem "
+             "and The Legend of Zelda: Ocarina of Time."),
             ("Does this ballot count toward the real vote?",
              "No. The public vote is on thegameawards.com and counts for 10% of the result. The ballot here is a "
              "prediction: you pick who you think will win and get a score after the show."),
@@ -387,6 +637,10 @@ SHOWS = {
             ("The Game Awards 2025 (Wikipedia)", "https://en.wikipedia.org/wiki/The_Game_Awards_2025"),
             ("The Game Awards (Wikipedia)", "https://en.wikipedia.org/wiki/The_Game_Awards"),
             ("GamingBible: date and start time", "https://www.gamingbible.com/news/the-game-awards-2026-date-time-tickets-378124-20261007"),
+            ("MobileSyrup: the nominees", "https://mobilesyrup.com/2026/11/17/the-game-awards-2026-nominees-full-list/"),
+            ("Noisy Pixel: the nominees", "https://noisypixel.net/the-game-awards-2026-nominees-full-list/"),
+            ("Push Square: the nominees", "https://www.pushsquare.com/news/2026/11/the-game-awards-2026-nominees-revealed-gta-6-up-for-8-awards"),
+            ("GGRecon: the Disney+ stream", "https://www.ggrecon.com/articles/the-game-awards-2026-disney-plus/"),
         ),
     },
     "golden-globes-2027": {
