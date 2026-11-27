@@ -80,6 +80,7 @@ TOKEN_MAX_AGE = 60 * 60 * 24 * 30
 TOKEN_MAX_LENGTH = 500
 TOKEN_MAX_ITEMS = 6
 UTM = "utm_source=email&utm_campaign=year-fill"
+BIG_ONES_LINE = "Got to any of {year}'s big releases that aren't in your library? Tap them in too."
 
 
 def _check_in():
@@ -489,14 +490,20 @@ def _serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(auth.SECRET_KEY, salt=TOKEN_SALT)
 
 
-def make_token(user_id: int, year: int, items: list[dict]) -> str:
-    """A signed link for one member, one year and the titles named in one email. It expires after 30 days."""
+def make_token(user_id: int, year: int, items: list[dict], catchup: bool = False) -> str:
+    """A signed link for one member, one year and the titles named in one email. It expires after 30 days.
+
+    ``catchup`` lets the link answer the year's big ones too (app/year_catchup.py): a fixed list, so the link
+    can only ever save those titles to this member's library."""
     refs = [[item["category"], int(item["id"])] for item in items[:TOKEN_MAX_ITEMS]]
-    return _serializer().dumps({"u": int(user_id), "y": int(year), "i": refs})
+    payload = {"u": int(user_id), "y": int(year), "i": refs}
+    if catchup:
+        payload["c"] = 1
+    return _serializer().dumps(payload)
 
 
 def read_token(token: str | None) -> Optional[dict]:
-    """{"user_id", "year", "items": [(category, id)]} for a fresh, untampered link, else None."""
+    """{"user_id", "year", "items": [(category, id)], "catchup": bool} for a fresh, untampered link, else None."""
     if not token or len(token) > TOKEN_MAX_LENGTH:
         return None
     try:
@@ -512,7 +519,8 @@ def read_token(token: str | None) -> Optional[dict]:
         return None
     if not isinstance(year, int) or isinstance(year, bool) or not FIRST_YEAR <= year <= 2200:
         return None
-    if not isinstance(refs, list) or not 0 < len(refs) <= TOKEN_MAX_ITEMS:
+    catchup = data.get("c") == 1
+    if not isinstance(refs, list) or not (0 if catchup else 1) <= len(refs) <= TOKEN_MAX_ITEMS:
         return None
     items = []
     for ref in refs:
@@ -520,7 +528,7 @@ def read_token(token: str | None) -> Optional[dict]:
                 or not isinstance(ref[1], int) or isinstance(ref[1], bool) or not 0 < ref[1] <= 2147483647):
             return None
         items.append((ref[0], ref[1]))
-    return {"user_id": user_id, "year": year, "items": items}
+    return {"user_id": user_id, "year": year, "items": items, "catchup": catchup}
 
 
 def link_for(token: str, index: Optional[int] = None) -> str:
@@ -528,6 +536,14 @@ def link_for(token: str, index: Optional[int] = None) -> str:
     if index is not None:
         path += f"#yf-{index}"
     return f"{app_url()}{path}"
+
+
+def catchup_link(token: str, entry: Optional[dict] = None) -> str:
+    """The emailed page at the big ones, or opened at one title (its month buttons showing)."""
+    from urllib.parse import quote
+    if entry is None:
+        return f"{app_url()}/fill-in/{token}?{UTM}#big-ones"
+    return f"{app_url()}/fill-in/{token}?{UTM}&pick={quote(entry['id'], safe='')}#{entry['anchor']}"
 
 
 def token_items(db: Session, user_id: int, year: int, refs: list[tuple[str, int]]) -> list[Optional[dict]]:
@@ -646,8 +662,13 @@ def due_members(db: Session, now: datetime, limit: int | None = None) -> list[mo
             if sent_at is not None:
                 last_email[user_id] = sent_at
     waiting = [user for user in members if not (user.id in last_email and last_email[user.id] > now - GAP)]
-    stocked = _with_library(db, [user.id for user in waiting]) if waiting else set()
-    due = [user for user in waiting if user.id in stocked]
+    from . import year_catchup
+    if year_catchup.available(year, now.date()):
+        # A member with an empty library gets the year's big ones to tap through (see email_for).
+        due = waiting
+    else:
+        stocked = _with_library(db, [user.id for user in waiting]) if waiting else set()
+        due = [user for user in waiting if user.id in stocked]
     return due[:limit] if limit is not None else due
 
 
@@ -659,7 +680,10 @@ def stats(db: Session, days: int, now: datetime) -> dict:
     get = lambda key: int(counts.get(key) or 0)  # noqa: E731
     by_source = [{"source": label, **{key: get(f"{key}_{source}") for key in COUNTER_KEYS}}
                  for source, label in SOURCES.items()]
-    return {"by_source": by_source, "sent": get("sent"),
+    from .year_catchup import COUNTER_KEYS as BIG_KEYS
+    big_by_source = [{"source": label, **{key: get(f"catchup_{key}_{source}") for key in BIG_KEYS}}
+                     for source, label in SOURCES.items()]
+    return {"by_source": by_source, "sent": get("sent"), "sent_big": get("sent_big"), "big_by_source": big_by_source,
             **{key: sum(row[key] for row in by_source) for key in COUNTER_KEYS}}
 
 
@@ -753,8 +777,8 @@ def _row_html(index: int, item: dict, token: str) -> str:
 
 def build_email(username: str, year: int, finished: int, undated_total: int, open_total: int,
                 items: list[dict], token: Optional[str], unsubscribe_url: str,
-                now: datetime) -> tuple[str, str, str]:
-    """(subject, html, text) for one member."""
+                now: datetime, big_ones: Optional[str] = None) -> tuple[str, str, str]:
+    """(subject, html, text) for one member. ``big_ones`` links the year's big releases on the emailed page."""
     since = dated_from(year)
     recap_link = _link(f"/year-in-review/{year}#story")
     if finished:
@@ -808,6 +832,9 @@ def build_email(username: str, year: int, finished: int, undated_total: int, ope
         f'{escape(main_label)}</a></p>'
         + (f'<p style="color:#5b5675;font-size:14px;margin:12px 0 0">Then <a href="{escape(recap_link, quote=True)}" '
            'style="color:#6d28d9;font-weight:700">play your year</a> and save the story image.</p>' if token else "")
+        + (f'<p style="color:#5b5675;font-size:14px;line-height:1.55;margin:18px 0 0">{escape(BIG_ONES_LINE.format(year=year))} '
+           f'<a href="{escape(big_ones, quote=True)}" style="color:#6d28d9;font-weight:700">See the big ones</a></p>'
+           if big_ones else "")
         + also_html +
         '<p style="color:#6f6a8a;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you have '
         f'an OmniTrackr account and your {year} recap just opened. It’s the only one of these you’ll get this year. '
@@ -823,6 +850,8 @@ def build_email(username: str, year: int, finished: int, undated_total: int, ope
         text += ["", f"Fill in your {year}: {link_for(token)}", f"Then play your year: {recap_link}", ""]
     else:
         text += [f"Play your year: {recap_link}", ""]
+    if big_ones:
+        text += [f"{BIG_ONES_LINE.format(year=year)} {big_ones}", ""]
     text += also_text
     text += [f"You're getting this because you have an OmniTrackr account and your {year} recap just opened. "
              "It's the only one of these you'll get this year.",
@@ -830,9 +859,103 @@ def build_email(username: str, year: int, finished: int, undated_total: int, ope
     return subject, html, "\n".join(text)
 
 
-def email_for(db: Session, user: models.User, now: Optional[datetime] = None,
-              year: Optional[int] = None) -> Optional[tuple[str, str, str, str]]:
-    """(subject, html, text, unsubscribe_url), or None when there's nothing to fill in and nothing finished."""
+def _poster_cell(item: dict, link: str) -> str:
+    """One poster in the big-ones email: the cover (or a plain tile with the title), the title and when it came out."""
+    image = item.get("image")
+    if image:
+        art = (f'<img src="{escape(image, quote=True)}" width="150" height="225" alt="{escape(item["title"], quote=True)}" '
+               'style="display:block;width:100%;max-width:150px;height:auto;aspect-ratio:2/3;object-fit:cover;'
+               'border-radius:10px;background:#e9e5f5">')
+    else:
+        art = ('<div style="width:100%;max-width:150px;height:200px;border-radius:10px;background:#2e1065;color:#fff;'
+               'font-weight:700;font-size:15px;line-height:1.3;display:table">'
+               f'<div style="display:table-cell;vertical-align:middle;text-align:center;padding:10px">'
+               f'{escape(item["title"])}</div></div>')
+    return (f'<td width="33%" style="padding:8px 6px;vertical-align:top;text-align:left">'
+            f'<a href="{escape(link, quote=True)}" style="text-decoration:none;color:#1f1640">{art}'
+            f'<div style="font-weight:700;font-size:14px;line-height:1.3;margin-top:8px">{escape(item["title"])}</div>'
+            f'<div style="color:#5b5675;font-size:12px;line-height:1.4">{escape(item["label"])} · {escape(item["when"])}</div>'
+            '<div style="color:#6d28d9;font-weight:700;font-size:13px;margin-top:4px">I got to it</div></a></td>')
+
+
+def build_catchup_email(username: str, year: int, finished: int, posters: list[dict], total: int, token: str,
+                        unsubscribe_url: str, now: datetime) -> tuple[str, str, str]:
+    """(subject, html, text) for a member whose recap has little or nothing in it: the year's big ones to tap."""
+    names = [item["title"] for item in posters[:3]]
+    subject = (f"{', '.join(names)}: which did you get to in {year}?" if len(names) == 3
+               else f"Which of {year}'s big ones did you get to?")
+    subject = " ".join(subject.split())[:150]
+    if finished:
+        intro = (f"Your {year} recap on OmniTrackr has {_plural(finished, 'finish', 'finishes')} so far. "
+                 "Here's a quick way to add the rest of your year.")
+    else:
+        intro = f"Your {year} recap on OmniTrackr is empty so far, so here's a shortcut."
+    ask = (f"These are some of {year}'s biggest releases. Tap one you watched, played, read or listened to, pick the "
+           "month, and it goes into your library and your recap. You don't need to sign in.")
+    cells = [_poster_cell(item, catchup_link(token, item)) for item in posters]
+    rows = "".join(f'<tr>{"".join(cells[start:start + 3])}</tr>' for start in range(0, len(cells), 3))
+    all_link = catchup_link(token)
+    recap_link = _link(f"/year-in-review/{year}#story")
+    also = _also_this_month(now)
+    also_html = ""
+    also_text: list[str] = []
+    if also:
+        also_html = ('<h2 style="font-size:16px;color:#1f1640;margin:26px 0 4px">Also on OmniTrackr this month</h2>'
+                     + "".join(f'<p style="color:#5b5675;font-size:14px;line-height:1.55;margin:6px 0">{escape(line)} '
+                               f'<a href="{escape(_link(path), quote=True)}" style="color:#6d28d9;font-weight:700">Open it</a></p>'
+                               for line, path in also))
+        also_text = ["Also on OmniTrackr this month:"] + [f"- {line} {_link(path)}" for line, path in also] + [""]
+    html = (
+        '<html><body style="margin:0;background:#f4f2fb;font-family:Arial,Helvetica,sans-serif">'
+        '<div style="max-width:560px;margin:0 auto;padding:24px">'
+        '<div style="background:#1a1433;border-radius:14px 14px 0 0;padding:22px 24px;color:#fff">'
+        f'<div style="font-size:12px;letter-spacing:2px;color:#99f6e4;text-transform:uppercase">Year in Review {year}</div>'
+        f'<div style="font-size:22px;font-weight:700;margin-top:6px">Hi {escape(username)}, how was your {year}?</div></div>'
+        '<div style="background:#fff;border-radius:0 0 14px 14px;padding:8px 24px 24px">'
+        f'<p style="color:#1f1640;font-size:15px;line-height:1.6">{escape(intro)}</p>'
+        f'<p style="color:#1f1640;font-size:15px;line-height:1.6">{escape(ask)}</p>'
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:6px -6px 0">{rows}</table>'
+        f'<p style="margin:22px 0 8px"><a href="{escape(all_link, quote=True)}" '
+        'style="background:#1a1433;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
+        f'See all {total}</a></p>'
+        f'<p style="color:#5b5675;font-size:14px;margin:12px 0 0">Then <a href="{escape(recap_link, quote=True)}" '
+        'style="color:#6d28d9;font-weight:700">play your year</a>: your busiest month, your top titles and a story '
+        'image to post.</p>'
+        + also_html +
+        '<p style="color:#6f6a8a;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you have '
+        f'an OmniTrackr account and your {year} recap just opened. It’s the only one of these you’ll get this year. '
+        f'The buttons only save the {year} titles on that page to your own library, and they expire in 30 days. '
+        f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe from product updates</a> '
+        'with one click.</p>'
+        '</div></div></body></html>'
+    )
+    text = [f"Hi {username},", "", intro, "", ask, ""]
+    text += [f"- {item['title']} ({item['label']}, {item['when']}): {catchup_link(token, item)}" for item in posters]
+    text += ["", f"See all {total}: {all_link}", f"Then play your year: {recap_link}", ""]
+    text += also_text
+    text += [f"You're getting this because you have an OmniTrackr account and your {year} recap just opened. "
+             "It's the only one of these you'll get this year.",
+             f"Unsubscribe from product updates: {unsubscribe_url}"]
+    return subject, html, "\n".join(text)
+
+
+def _catchup_posters(db: Session, user_id: int, year: int, today: date) -> list[dict]:
+    from . import year_catchup
+    if not year_catchup.available(year, today):
+        return []
+    return year_catchup.featured(db, user_id, year, today)
+
+
+def email_variant(db: Session, user: models.User, now: Optional[datetime] = None,
+                  year: Optional[int] = None) -> Optional[str]:
+    """ "fill" or "big" for the email this member would get, or None for none."""
+    built = _email_parts(db, user, now, year)
+    return built[4] if built else None
+
+
+def _email_parts(db: Session, user: models.User, now: Optional[datetime] = None, year: Optional[int] = None,
+                 force_big: bool = False) -> Optional[tuple[str, str, str, str, str]]:
+    from . import year_catchup
     from .announcements import unsubscribe_token
     now = now or _now()
     year = year or send_window(now) or now.year
@@ -840,14 +963,43 @@ def email_for(db: Session, user: models.User, now: Optional[datetime] = None,
     deck, undated_total = undated(db, user.id, year, limit=TOKEN_MAX_ITEMS)
     still, open_total = unfinished(db, user.id, year, limit=TOKEN_MAX_ITEMS, today=today)
     finished = finished_total(db, user.id, year)
+    unsubscribe_url = f"{app_url()}/email/updates/unsubscribe?token={unsubscribe_token(user.id)}"
+    big = year_catchup.available(year, today)
+    # Little or nothing in the recap and nothing to date: the year's big ones instead.
+    if big and (force_big or (not (undated_total or open_total) and finished < year_catchup.THIN_BELOW)):
+        posters = _catchup_posters(db, user.id, year, today)
+        if posters:
+            token = make_token(user.id, year, [], catchup=True)
+            total = len(year_catchup.shown(year, today))
+            subject, html, text = build_catchup_email(user.username, year, finished, posters, total, token,
+                                                      unsubscribe_url, now)
+            return subject, html, text, unsubscribe_url, "big"
     if not (undated_total or open_total or finished):
         return None
     items = (deck + still)[:TOKEN_MAX_ITEMS]
-    token = make_token(user.id, year, items) if items else None
-    unsubscribe_url = f"{app_url()}/email/updates/unsubscribe?token={unsubscribe_token(user.id)}"
+    big_link = None
+    if items:
+        token = make_token(user.id, year, items, catchup=big)
+        if big:
+            big_link = catchup_link(token)
+    else:
+        token = None
+        if big and _catchup_posters(db, user.id, year, today):
+            big_link = catchup_link(make_token(user.id, year, [], catchup=True))
     subject, html, text = build_email(user.username, year, finished, undated_total, open_total, items, token,
-                                      unsubscribe_url, now)
-    return subject, html, text, unsubscribe_url
+                                      unsubscribe_url, now, big_link)
+    return subject, html, text, unsubscribe_url, "fill"
+
+
+def email_for(db: Session, user: models.User, now: Optional[datetime] = None,
+              year: Optional[int] = None, force_big: bool = False) -> Optional[tuple[str, str, str, str]]:
+    """(subject, html, text, unsubscribe_url), or None when there's nothing to say.
+
+    A member with titles to date gets the fill-in email (with a link to the year's big ones at the bottom).
+    A member with nothing to date and fewer than year_catchup.THIN_BELOW finishes, an empty library included,
+    gets the big ones: six posters to tap. ``force_big`` shows that one (the owner's preview)."""
+    built = _email_parts(db, user, now, year, force_big)
+    return built[:4] if built else None
 
 
 # ---------------------------------------------------------------- sending
@@ -898,7 +1050,7 @@ async def send_due(session_factory, now: datetime | None = None, sender=_send) -
                 out["limited"] = True
                 break
             try:
-                built = email_for(db, user, now, year)
+                built = _email_parts(db, user, now, year)
             except Exception as error:
                 print(f"Year fill-in email for user {user.id} couldn't be built: {error}")
                 db.rollback()
@@ -914,11 +1066,13 @@ async def send_due(session_factory, now: datetime | None = None, sender=_send) -
             except Exception:
                 db.rollback()
                 continue
-            subject, html, _text, unsubscribe_url = built
+            subject, html, _text, unsubscribe_url, variant = built
             try:
                 await sender(user.email, subject, html, unsubscribe_url)
                 out["sent"] += 1
                 count("sent")
+                if variant == "big":
+                    count("sent_big")
             except Exception as error:  # One bad address must not stop the rest.
                 print(f"Year fill-in email to user {user.id} failed: {error}")
                 db.rollback()
@@ -930,9 +1084,10 @@ async def send_due(session_factory, now: datetime | None = None, sender=_send) -
         db.close()
 
 
-async def send_test(db: Session, user: models.User, sender=_send, now: Optional[datetime] = None) -> bool:
+async def send_test(db: Session, user: models.User, sender=_send, now: Optional[datetime] = None,
+                    force_big: bool = False) -> bool:
     """Send the email to the owner only (it doesn't count as their December email). False if there's nothing to say."""
-    built = email_for(db, user, now)
+    built = email_for(db, user, now, force_big=force_big)
     if built is None:
         return False
     subject, html, _text, unsubscribe_url = built
@@ -940,11 +1095,30 @@ async def send_test(db: Session, user: models.User, sender=_send, now: Optional[
     return True
 
 
+async def _warm_big_ones(app, session_factory) -> int:
+    """From November 20, look up covers for the year's big ones a few an hour, so the December email has them."""
+    from . import year_catchup
+    now = datetime.utcnow()
+    if not (now.month == 12 or (now.month == 11 and now.day >= 20) or now.month == 1):
+        return 0
+    client = getattr(getattr(app, "state", None), "external_api_client", None)
+    ran = 0
+    for year in fill_years(now.date()):
+        ran += await year_catchup.warm_covers(session_factory, client, year)
+    return ran
+
+
 async def year_fill_loop(app) -> None:
     """Background task started with the app; never raises."""
     from .database import SessionLocal
     await asyncio.sleep(FIRST_CHECK_DELAY_SECONDS)
     while True:
+        try:
+            await _warm_big_ones(app, SessionLocal)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            print(f"Big ones cover lookups failed: {error}")
         try:
             result = await send_due(SessionLocal)
             if result["sent"] or result["failed"]:

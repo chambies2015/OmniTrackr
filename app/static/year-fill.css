@@ -126,3 +126,80 @@
 @media (max-width: 380px) {
   .yf-card { grid-template-columns: 64px minmax(0, 1fr); }
 }
+
+/* The year's big ones (app/year_catchup.py): a poster grid. A tapped poster opens across its row with the
+   month buttons beside it; an answered one keeps its poster with a badge and a "Change" link. */
+.yc { scroll-margin-top: 90px; }
+.yc-group { margin: 0 0 20px; }
+.yc-group__title {
+  color: var(--site-muted); font-size: .78rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 8px;
+  text-transform: uppercase;
+}
+.yc-grid {
+  display: grid; gap: 14px 12px; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  list-style: none; margin: 0; padding: 0;
+}
+.yc-item { min-width: 0; position: relative; scroll-margin-top: 90px; }
+.yc-item:has(> .yc-pick[open]), .yc-item.is-open { grid-column: 1 / -1; }
+.yc-pick > summary { cursor: pointer; list-style: none; }
+.yc-pick > summary::-webkit-details-marker { display: none; }
+.yc-face { border-radius: 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.yc-poster {
+  aspect-ratio: 2 / 3; background: linear-gradient(150deg, #312e81, #0f172a); border-radius: 12px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset; display: block; overflow: hidden; position: relative;
+  transition: transform var(--dur, .16s) var(--ease, ease-out), box-shadow var(--dur, .16s) var(--ease, ease-out);
+}
+.yc-poster img { display: block; height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
+.yc-initial {
+  align-items: center; color: rgba(255, 255, 255, .92); display: flex; font-size: .92rem; font-weight: 800;
+  height: 100%; justify-content: center; line-height: 1.25; overflow-wrap: anywhere; padding: 10px; text-align: center;
+}
+summary.yc-face:hover .yc-poster { box-shadow: 0 10px 24px rgba(0, 0, 0, .35); transform: translateY(-3px); }
+.yc-name { font-size: .92rem; font-weight: 700; line-height: 1.25; margin-top: 6px; overflow-wrap: anywhere; }
+.yc-when { color: var(--site-muted); font-size: .78rem; line-height: 1.3; }
+.yc-tap { color: var(--site-violet-soft); font-size: .82rem; font-weight: 700; margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .yc-poster { transition: none; }
+  summary.yc-face:hover .yc-poster { transform: none; }
+}
+
+/* Open: poster on the left, the question and the months on the right. */
+.yc-pick[open] {
+  animation: yf-in var(--dur, .2s) var(--ease, ease-out);
+  background: rgba(11, 10, 24, .55); border: 1px solid rgba(167, 139, 250, .45); border-radius: 22px;
+  display: grid; gap: 18px; grid-template-columns: 110px minmax(0, 1fr); padding: 16px;
+}
+.yc-pick[open] > summary .yc-tap { display: none; }
+.yc-ask { min-width: 0; }
+.yc-q { color: var(--site-text); font-size: 1.05rem; font-weight: 700; line-height: 1.4; margin: 2px 0 12px; }
+@media (prefers-reduced-motion: reduce) { .yc-pick[open] { animation: none; } }
+
+/* Answered. */
+.yc-badge {
+  align-items: center; background: var(--site-teal); border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  color: #052e2b; display: flex; font-size: .95rem; font-weight: 900; height: 30px; justify-content: center;
+  position: absolute; right: 6px; top: 6px; width: 30px;
+}
+.yc-item.is-want .yc-badge, .yc-item.is-library_saved .yc-badge { background: #a78bfa; color: #1e1033; }
+.yc-item.is-no .yc-badge { background: rgba(255, 255, 255, .7); color: #1f1640; }
+.yc-item.is-month .yc-poster, .yc-item.is-library_done .yc-poster { box-shadow: 0 0 0 3px rgba(45, 212, 191, .75); }
+.yc-item.is-no .yc-poster img, .yc-item.is-no .yc-initial { filter: grayscale(1); opacity: .45; }
+.yc-said { color: var(--site-teal); font-size: .82rem; font-weight: 700; line-height: 1.3; }
+.yc-item.is-want .yc-said, .yc-item.is-library_saved .yc-said { color: var(--site-violet-soft); }
+.yc-item.is-no .yc-said { color: var(--site-muted); }
+.yc-change { margin: 0; }
+.yc-change .yf-link { font-size: .85rem; padding: 4px 0; }
+
+@media (max-width: 560px) {
+  .yc-grid { gap: 12px 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Stacked: the form sits inside the browser's details-content box, so it can't be placed in a grid
+     column of its own. */
+  .yc-pick[open] { display: block; padding: 12px; }
+  .yc-pick[open] > summary {
+    align-items: center; display: grid; gap: 2px 12px; grid-template-columns: 76px minmax(0, 1fr); margin-bottom: 12px;
+  }
+  .yc-pick[open] > summary .yc-poster { grid-row: span 2; }
+  .yc-pick[open] > summary .yc-name { align-self: end; margin: 0; }
+  .yc-pick[open] > summary .yc-when { align-self: start; }
+  .yc-name { font-size: .86rem; }
+}
