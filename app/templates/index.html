@@ -117,7 +117,7 @@
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
   <link rel="stylesheet" href="/static/library-view.css?v=20261120-sweep-1">
-  <link rel="stylesheet" href="/static/member-look.css?v=20261122-member-look-1">
+  <link rel="stylesheet" href="/static/member-look.css?v=20261127-home-refresh-1">
   <link rel="stylesheet" href="/static/member-phone.css?v=20261123-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261120-settle-1"></script>
@@ -628,6 +628,11 @@
          The rail turns into a swipeable row on phones (dashboard-home.css). -->
     <div class="home-board">
       <div class="home-board__main">
+        <!-- The main column runs in three groups, each under a small label: what the member is in the middle of,
+             what they share with friends, and everything else. home-layout.js lets each group show its first few
+             cards (the rest wait behind "Show more") and hides a label while none of its cards are on show.
+             A new card goes inside the group it belongs to; the labels are not cards (home refresh, Nov 27 2026). -->
+        <p class="home-board__group" data-home-group="going" hidden>Keep going</p>
         <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
         <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
           <div class="week-one__head">
@@ -662,21 +667,6 @@
           <div class="week-one__foot">
             <button type="button" id="weekOneHide" class="week-one__quiet">Hide this card</button>
           </div>
-        </section>
-        <!-- Break planner: before a holiday it offers to plan the days off; with a plan it shows today's part of
-             it with ticks, and after the break how it went (break-home.js, app/break_plan.py). -->
-        <section id="breakHome" class="break-home" aria-labelledby="breakHomeTitle" hidden>
-          <div class="break-home__head">
-            <div class="break-home__intro">
-              <p id="breakHomeEyebrow" class="break-home__eyebrow">Break planner</p>
-              <h2 id="breakHomeTitle" class="break-home__title">Plan your break</h2>
-              <p id="breakHomeSummary" class="break-home__summary"></p>
-            </div>
-            <a id="breakHomeMore" class="break-home__more" href="/break">Open the plan</a>
-          </div>
-          <ul id="breakHomeList" class="break-home__list" aria-live="polite"></ul>
-          <div id="breakHomeActions" class="break-home__actions"></div>
-          <p id="breakHomeStatus" class="break-home__status" role="status" aria-live="polite"></p>
         </section>
         <div class="daily-dashboard">
         <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
@@ -725,91 +715,20 @@
           </div>
         </section>
         </div>
-        <!-- Watch together: plans the member shares with friends, where everyone is this week, and a button
-             that moves them one episode or chapter on (together-home.js). Only shown with a plan running. -->
-        <section id="togetherHome" class="together-home" aria-labelledby="togetherHomeTitle" hidden>
-          <div class="together-home__head">
-            <div class="together-home__intro">
-              <p class="together-home__eyebrow">Watch together</p>
-              <h2 id="togetherHomeTitle" class="together-home__title">With friends this week</h2>
+        <!-- Break planner: before a holiday it offers to plan the days off; with a plan it shows today's part of
+             it with ticks, and after the break how it went (break-home.js, app/break_plan.py). -->
+        <section id="breakHome" class="break-home" aria-labelledby="breakHomeTitle" hidden>
+          <div class="break-home__head">
+            <div class="break-home__intro">
+              <p id="breakHomeEyebrow" class="break-home__eyebrow">Break planner</p>
+              <h2 id="breakHomeTitle" class="break-home__title">Plan your break</h2>
+              <p id="breakHomeSummary" class="break-home__summary"></p>
             </div>
-            <a class="together-home__more" href="/together">All plans</a>
+            <a id="breakHomeMore" class="break-home__more" href="/break">Open the plan</a>
           </div>
-          <ul id="togetherHomeList" class="together-home__list" aria-live="polite"></ul>
-          <p id="togetherHomeStatus" class="together-home__status" role="status" aria-live="polite"></p>
-        </section>
-        <!-- Pick swap: swaps the member is in, where each one stands and the next thing to do: invite people,
-             pick for the person they drew, unwrap (pick-swap-home.js). Only shown while they're in one. -->
-        <section id="swapHome" class="swap-home" aria-labelledby="swapHomeTitle" hidden>
-          <div class="swap-home__head">
-            <div class="swap-home__intro">
-              <p class="swap-home__eyebrow">Pick swap</p>
-              <h2 id="swapHomeTitle" class="swap-home__title">Your swaps</h2>
-            </div>
-            <a class="swap-home__more" href="/swap">All swaps</a>
-          </div>
-          <ul id="swapHomeList" class="swap-home__list" aria-live="polite"></ul>
-        </section>
-        <!-- Yearbook: from late November until two weeks after signing closes. Start yours, notes waiting to be
-             let in, friends' yearbooks to sign, then the closed book in January (yearbook-home.js). -->
-        <section id="yearbookHome" class="yearbook-home" aria-labelledby="yearbookHomeTitle" hidden>
-          <div class="yearbook-home__head">
-            <div class="yearbook-home__intro">
-              <p class="yearbook-home__eyebrow">Yearbook</p>
-              <h2 id="yearbookHomeTitle" class="yearbook-home__title">Your yearbook</h2>
-            </div>
-            <span class="yearbook-home__badge" aria-hidden="true">Class<span>of '26</span></span>
-          </div>
-          <p id="yearbookHomeLine" class="yearbook-home__line"></p>
-          <ul id="yearbookHomeCounts" class="yearbook-home__counts" hidden></ul>
-          <div id="yearbookHomeActions" class="yearbook-home__actions"></div>
-          <div id="yearbookHomeFriends" class="yearbook-home__friends" hidden></div>
-        </section>
-        <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
-             newest arrivals first. Asks which services once, then lists them (streaming.js). -->
-        <section id="onYourServices" class="on-services" aria-labelledby="onYourServicesTitle" hidden>
-          <div class="on-services__head">
-            <div class="on-services__intro">
-              <p id="onYourServicesEyebrow" class="on-services__eyebrow">Streaming tonight</p>
-              <h2 id="onYourServicesTitle" class="on-services__title">On your services</h2>
-              <p id="onYourServicesSummary" class="on-services__summary"></p>
-            </div>
-            <button type="button" id="onYourServicesEdit" class="on-services__edit" aria-expanded="false" aria-controls="onYourServicesPicker" hidden>Edit services</button>
-          </div>
-          <form id="onYourServicesPicker" class="on-services__picker" hidden>
-            <fieldset class="on-services__group">
-              <legend>Subscriptions</legend>
-              <div class="on-services__chips" data-services="paid"></div>
-            </fieldset>
-            <fieldset class="on-services__group">
-              <legend>Free with ads or a library card</legend>
-              <div class="on-services__chips" data-services="free"></div>
-            </fieldset>
-            <label class="on-services__alerts">
-              <input type="checkbox" id="onYourServicesAlerts" checked>
-              <span>Tell me when something on my list starts streaming on one of these</span>
-            </label>
-            <div class="on-services__actions">
-              <button type="submit" id="onYourServicesSave" class="on-services__btn on-services__btn--primary">Show what I can watch</button>
-              <button type="button" id="onYourServicesCancel" class="on-services__quiet" hidden>Cancel</button>
-            </div>
-            <p id="onYourServicesPrivacy" class="on-services__privacy">Only you can see which services you pick.</p>
-          </form>
-          <div id="onYourServicesFilters" class="on-services__filters" role="group" aria-label="Show titles on" hidden></div>
-          <ul id="onYourServicesList" class="on-services__list" hidden></ul>
-          <p id="onYourServicesEmpty" class="on-services__empty" hidden></p>
-          <button type="button" id="onYourServicesMore" class="on-services__more" aria-controls="onYourServicesList" aria-expanded="false" hidden></button>
-          <!-- Share link for this list, /on-my-services/<token> (streaming.js, app/service_shares.py) -->
-          <div id="onYourServicesShare" class="on-services__share" hidden></div>
-          <div class="on-services__foot">
-            <p id="onYourServicesCredit" class="on-services__credit"></p>
-            <div class="on-services__foot-actions">
-              <button type="button" id="onYourServicesLater" class="on-services__quiet" hidden>Not now</button>
-              <button type="button" id="onYourServicesStop" class="on-services__quiet" hidden>No thanks</button>
-              <button type="button" id="onYourServicesHide" class="on-services__quiet" hidden>Hide this card</button>
-            </div>
-          </div>
-          <p id="onYourServicesStatus" class="on-services__status" role="status" aria-live="polite"></p>
+          <ul id="breakHomeList" class="break-home__list" aria-live="polite"></ul>
+          <div id="breakHomeActions" class="break-home__actions"></div>
+          <p id="breakHomeStatus" class="break-home__status" role="status" aria-live="polite"></p>
         </section>
         <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
         <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
@@ -929,6 +848,94 @@
           </div>
           <div id="rankDuelBody" class="rank-card__body"></div>
           <p id="rankDuelStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <p class="home-board__group" data-home-group="friends" hidden>With friends</p>
+        <!-- Watch together: plans the member shares with friends, where everyone is this week, and a button
+             that moves them one episode or chapter on (together-home.js). Only shown with a plan running. -->
+        <section id="togetherHome" class="together-home" aria-labelledby="togetherHomeTitle" hidden>
+          <div class="together-home__head">
+            <div class="together-home__intro">
+              <p class="together-home__eyebrow">Watch together</p>
+              <h2 id="togetherHomeTitle" class="together-home__title">With friends this week</h2>
+            </div>
+            <a class="together-home__more" href="/together">All plans</a>
+          </div>
+          <ul id="togetherHomeList" class="together-home__list" aria-live="polite"></ul>
+          <p id="togetherHomeStatus" class="together-home__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Pick swap: swaps the member is in, where each one stands and the next thing to do: invite people,
+             pick for the person they drew, unwrap (pick-swap-home.js). Only shown while they're in one. -->
+        <section id="swapHome" class="swap-home" aria-labelledby="swapHomeTitle" hidden>
+          <div class="swap-home__head">
+            <div class="swap-home__intro">
+              <p class="swap-home__eyebrow">Pick swap</p>
+              <h2 id="swapHomeTitle" class="swap-home__title">Your swaps</h2>
+            </div>
+            <a class="swap-home__more" href="/swap">All swaps</a>
+          </div>
+          <ul id="swapHomeList" class="swap-home__list" aria-live="polite"></ul>
+        </section>
+        <!-- Yearbook: from late November until two weeks after signing closes. Start yours, notes waiting to be
+             let in, friends' yearbooks to sign, then the closed book in January (yearbook-home.js). -->
+        <section id="yearbookHome" class="yearbook-home" aria-labelledby="yearbookHomeTitle" hidden>
+          <div class="yearbook-home__head">
+            <div class="yearbook-home__intro">
+              <p class="yearbook-home__eyebrow">Yearbook</p>
+              <h2 id="yearbookHomeTitle" class="yearbook-home__title">Your yearbook</h2>
+            </div>
+            <span class="yearbook-home__badge" aria-hidden="true">Class<span>of '26</span></span>
+          </div>
+          <p id="yearbookHomeLine" class="yearbook-home__line"></p>
+          <ul id="yearbookHomeCounts" class="yearbook-home__counts" hidden></ul>
+          <div id="yearbookHomeActions" class="yearbook-home__actions"></div>
+          <div id="yearbookHomeFriends" class="yearbook-home__friends" hidden></div>
+        </section>
+        <p class="home-board__group" data-home-group="more" hidden>More for you</p>
+        <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
+             newest arrivals first. Asks which services once, then lists them (streaming.js). -->
+        <section id="onYourServices" class="on-services" aria-labelledby="onYourServicesTitle" hidden>
+          <div class="on-services__head">
+            <div class="on-services__intro">
+              <p id="onYourServicesEyebrow" class="on-services__eyebrow">Streaming tonight</p>
+              <h2 id="onYourServicesTitle" class="on-services__title">On your services</h2>
+              <p id="onYourServicesSummary" class="on-services__summary"></p>
+            </div>
+            <button type="button" id="onYourServicesEdit" class="on-services__edit" aria-expanded="false" aria-controls="onYourServicesPicker" hidden>Edit services</button>
+          </div>
+          <form id="onYourServicesPicker" class="on-services__picker" hidden>
+            <fieldset class="on-services__group">
+              <legend>Subscriptions</legend>
+              <div class="on-services__chips" data-services="paid"></div>
+            </fieldset>
+            <fieldset class="on-services__group">
+              <legend>Free with ads or a library card</legend>
+              <div class="on-services__chips" data-services="free"></div>
+            </fieldset>
+            <label class="on-services__alerts">
+              <input type="checkbox" id="onYourServicesAlerts" checked>
+              <span>Tell me when something on my list starts streaming on one of these</span>
+            </label>
+            <div class="on-services__actions">
+              <button type="submit" id="onYourServicesSave" class="on-services__btn on-services__btn--primary">Show what I can watch</button>
+              <button type="button" id="onYourServicesCancel" class="on-services__quiet" hidden>Cancel</button>
+            </div>
+            <p id="onYourServicesPrivacy" class="on-services__privacy">Only you can see which services you pick.</p>
+          </form>
+          <div id="onYourServicesFilters" class="on-services__filters" role="group" aria-label="Show titles on" hidden></div>
+          <ul id="onYourServicesList" class="on-services__list" hidden></ul>
+          <p id="onYourServicesEmpty" class="on-services__empty" hidden></p>
+          <button type="button" id="onYourServicesMore" class="on-services__more" aria-controls="onYourServicesList" aria-expanded="false" hidden></button>
+          <!-- Share link for this list, /on-my-services/<token> (streaming.js, app/service_shares.py) -->
+          <div id="onYourServicesShare" class="on-services__share" hidden></div>
+          <div class="on-services__foot">
+            <p id="onYourServicesCredit" class="on-services__credit"></p>
+            <div class="on-services__foot-actions">
+              <button type="button" id="onYourServicesLater" class="on-services__quiet" hidden>Not now</button>
+              <button type="button" id="onYourServicesStop" class="on-services__quiet" hidden>No thanks</button>
+              <button type="button" id="onYourServicesHide" class="on-services__quiet" hidden>Hide this card</button>
+            </div>
+          </div>
+          <p id="onYourServicesStatus" class="on-services__status" role="status" aria-live="polite"></p>
         </section>
         <!-- Offered once in a while to members with no weekly email, notifications or calendar yet (stay-posted.js) -->
         <section id="stayPosted" class="stay-posted" aria-labelledby="stayPostedTitle" hidden>
@@ -2821,7 +2828,7 @@
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
   <script src="/static/home-today.js?v=20261123-friends-1"></script>
-  <script src="/static/home-layout.js?v=20261125-yearbook-1"></script>
+  <script src="/static/home-layout.js?v=20261127-home-refresh-1"></script>
   <script src="/static/for-you.js?v=20261120-streamline-1"></script>
   <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
   <script src="/static/title-links.js?v=20261122-streaming-1"></script>
