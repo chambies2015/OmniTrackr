@@ -134,7 +134,7 @@ def test_the_draw_card_brings_itself_out_from_behind_show_more():
     layout = (STATIC / "home-layout.js").read_text(encoding="utf-8")
     assert "reveal: revealFor" in layout
     assert "/static/backlog-draw.js?v=20261121-sweep-f-1" in INDEX
-    assert "/static/home-layout.js?v=20261125-yearbook-1" in INDEX
+    assert "/static/home-layout.js?v=20261127-home-refresh-1" in INDEX
 
 
 # ---------------------------------------------------------------- #293 length limits (checked, unchanged)

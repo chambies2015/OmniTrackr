@@ -934,9 +934,22 @@ function pulseCover(item) {
   return cover;
 }
 
+// home-prefetch.js starts the Continue and Next Up requests early, so they can come back before
+// home-layout.js has loaded. Continue then drew every title and "Do this next" showed the top of Next Up
+// instead of the show the member was in the middle of. home-layout.js calls redrawLibraryPulse() once it's ready.
+let pulseDrawnWithoutFocus = null;
+function redrawLibraryPulse() {
+  if (typeof dailyDashboardState !== 'undefined' && dailyDashboardState.items.length) window.OmniHomeFocus?.queue?.(dailyDashboardState.items);
+  const pulse = pulseDrawnWithoutFocus;
+  pulseDrawnWithoutFocus = null;
+  if (pulse) renderLibraryPulse(pulse);
+}
+if (typeof window !== 'undefined') window.redrawLibraryPulse = redrawLibraryPulse;
+
 function renderLibraryPulse(pulse) {
   const pulseElement = document.getElementById('libraryPulse');
   if (!pulseElement) return;
+  pulseDrawnWithoutFocus = typeof window !== 'undefined' && !window.OmniHomeFocus ? pulse : null;
   if (returnDeckActive) {
     pulseElement.setAttribute('hidden', '');
     if (typeof window !== 'undefined') window.OmniHomeFocus?.claim?.([]);

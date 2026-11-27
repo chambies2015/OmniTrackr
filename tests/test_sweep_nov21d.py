@@ -67,4 +67,4 @@ def test_mark_watched_parks_focus_on_the_card_heading():
     assert "document.activeElement === button" in button
     assert park < button.index("openCompletionMoment(item.category, itemId)")
     # home-layout.js changed again in the Nov 21 afternoon sweep (OmniHomeLayout.reveal) and for "On your services".
-    assert "/static/home-layout.js?v=20261125-yearbook-1" in INDEX
+    assert "/static/home-layout.js?v=20261127-home-refresh-1" in INDEX
