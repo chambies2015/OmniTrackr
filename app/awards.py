@@ -28,7 +28,7 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import awards_data, models, title_pages
+from . import awards_data, dated_text, models, title_pages
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 BASE_PATH = "/awards"
@@ -191,8 +191,9 @@ def ballot_window_answer(now: Optional[datetime] = None) -> str:
 
 def season_faq(now: Optional[datetime] = None) -> tuple:
     """The calendar page's questions, with the ballot-window answer brought up to date."""
+    now = now or _now()
     return tuple((question, ballot_window_answer(now) if question == awards_data.BALLOT_WINDOW_QUESTION else answer)
-                 for question, answer in awards_data.SEASON["faq"])
+                 for question, answer in dated_text.resolve(awards_data.SEASON["faq"], now.date()))
 
 
 def show_words(slug: str, show: dict, now: Optional[datetime] = None) -> dict:

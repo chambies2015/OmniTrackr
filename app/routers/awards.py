@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import awards, awards_data, funnel, models, title_pages
+from .. import awards, awards_data, dated_text, funnel, models, title_pages
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db, get_optional_current_user
@@ -528,7 +528,7 @@ def show_content(db: Session, slug: str, user=None, now: Optional[datetime] = No
           f'<h2 id="aw-dates-heading">Key dates</h2><dl class="aw-dates">{dates}</dl></section>'
         + sections
         + _last_year(show, states, details, user is not None)
-        + _faq(show["faq"])
+        + _faq(dated_text.resolve(show["faq"], today))
         + _sources(show)
     )
 
@@ -540,7 +540,8 @@ def show_page(slug: str, user=Depends(get_optional_current_user), db: Session = 
     canonical = awards.SITE_URL + awards.path(slug)
     words = awards.show_words(slug, show)
     structured = {"@context": "https://schema.org",
-                  "@graph": [_article({**show, **words}, canonical), _faq_data(show["faq"])]}
+                  "@graph": [_article({**show, **words}, canonical),
+                             _faq_data(dated_text.resolve(show["faq"], awards._now().date()))]}
     # A show still waiting for its nominees is mostly a placeholder ballot, so it carries no ads until they're in.
     response = page(show["search_title"], words["description"], awards.path(slug), show_content(db, slug, user),
                     structured_data=structured, head=_head(user is not None, ads=awards.has_nominees(show)),

@@ -16,6 +16,7 @@ Orders: the first is the one the guide recommends. "ids" lists entry ids in that
 Optional "shelf" (screen, anime, games or books) places a guide on the hub when the format
 most of its entries are in is not where readers would look for it.
 """
+from .dated_text import Dated
 
 GUIDES = {
     "star-wars": {
@@ -331,19 +332,23 @@ GUIDES = {
              "note": "Denis Villeneuve's adaptation of the first half of the novel, released simply as Dune. It ends mid-story, on purpose."},
             {"id": "part-two", "kind": "movie", "title": "Dune: Part Two", "year": 2024, "creator": "Denis Villeneuve",
              "note": "The second half of the novel, with Paul among the Fremen. Changes Chani's role to make the book's warning about messiahs unmistakable."},
+            {"id": "part-three", "kind": "movie", "title": "Dune: Part Three", "year": 2026, "creator": "Denis Villeneuve",
+             "note": Dated("Villeneuve's version of Dune Messiah, in theaters and IMAX from December 18, 2026. Read Messiah first if you want to meet the book's Paul before the film's.",
+                           ("2026-12-18", "Villeneuve's version of Dune Messiah, released on December 18, 2026. Messiah is short enough to read before or after it.")),
+             "optional": True},
             {"id": "prophecy", "kind": "tv", "title": "Dune: Prophecy", "year": 2024, "creator": None,
              "note": "The founding of the Bene Gesserit sisterhood, ten thousand years before Paul. Loosely based on the later prequel novels.", "optional": True},
         ],
         "orders": [
             {"key": "recommended", "name": "Read, watch, keep reading",
-             "pitch": "The first book, Villeneuve's two films, then on through Herbert's sequels for as long as they hold you.",
-             "ids": ["dune-book", "part-one", "part-two", "messiah", "children", "god-emperor", "heretics", "chapterhouse", "lynch", "prophecy"]},
+             "pitch": "The first book and Villeneuve's first two films, then Messiah and his third, then on through Herbert's sequels for as long as they hold you.",
+             "ids": ["dune-book", "part-one", "part-two", "messiah", "part-three", "children", "god-emperor", "heretics", "chapterhouse", "lynch", "prophecy"]},
             {"key": "release", "name": "Release order",
              "pitch": "Every novel and screen version as it came out, with Lynch's film arriving between Heretics and Chapterhouse.",
-             "ids": ["dune-book", "messiah", "children", "god-emperor", "heretics", "lynch", "chapterhouse", "part-one", "part-two", "prophecy"]},
+             "ids": ["dune-book", "messiah", "children", "god-emperor", "heretics", "lynch", "chapterhouse", "part-one", "part-two", "prophecy", "part-three"]},
             {"key": "screen", "name": "Screen only, in story order",
-             "pitch": "For watchers: Dune: Prophecy, set ten thousand years before Paul, then the two Villeneuve films.",
-             "ids": ["prophecy", "part-one", "part-two"]},
+             "pitch": "For watchers: Dune: Prophecy, set ten thousand years before Paul, then Villeneuve's films in order.",
+             "ids": ["prophecy", "part-one", "part-two", "part-three"]},
         ],
         "start": [
             "Watch Dune: Part One if you want the fastest way in, then read the novel to fill in the inner lives the films leave out. If you read first, push through the first hundred pages; the book opens up once the family arrives on Arrakis.",
@@ -353,8 +358,10 @@ GUIDES = {
         "faq": [
             ("Do I need to read the books to follow the films?", "No. Villeneuve's films are complete on their own, though the novel explains the politics and religions in far more depth."),
             ("What about the Brian Herbert and Kevin J. Anderson books?", "They are prequels and sequels written from Frank Herbert's notes after his death, starting in 1999. Opinions vary widely; read Frank Herbert's six first."),
-            ("Which Dune film should I watch?", "Villeneuve's two films for the story. Lynch's 1984 film is worth seeing afterwards as a cult curiosity."),
-            ("Will there be a third Villeneuve film?", "Villeneuve's next Dune film adapts Dune Messiah. Read the novel first if you want to know where the story is going; it is the shortest book in the series."),
+            ("Which Dune film should I watch?", "Villeneuve's films for the story. Lynch's 1984 film is worth seeing afterwards as a cult curiosity."),
+            (Dated("Will there be a third Villeneuve film?", ("2026-12-18", "Is there a third Villeneuve film?")),
+             Dated("Yes. Dune: Part Three, his version of Dune Messiah, opens on December 18, 2026. Read the novel first if you want to know where the story is going; it is the shortest book in the series.",
+                   ("2026-12-18", "Yes. Dune: Part Three, his version of Dune Messiah, came out on December 18, 2026. Messiah is the shortest book in the series, so it is easy to read before or after the film."))),
         ],
     },
     "alien": {

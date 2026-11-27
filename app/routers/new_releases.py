@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import guide_layout, new_releases, title_pages
+from .. import dated_text, guide_layout, new_releases, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_db
 from ..release_guides import GUIDES
@@ -70,7 +70,8 @@ def _pick_html(item: dict, details: dict, signed_in: bool, today: date) -> str:
     title_link = (f'<a class="yl-pick__link" href="{_e(detail["url"])}">See the title page</a>'
                   if detail.get("url") else "")
     save = _save_button(entry, signed_in) if entry else ""
-    first = (f'<p class="nr-first"><strong>Before it arrives:</strong> {_e(item["first"])}'
+    first_label = "Before you start:" if new_releases.is_out(item, today) else "Before it arrives:"
+    first = (f'<p class="nr-first"><strong>{first_label}</strong> {_e(item["first"])}'
              + (f' <a href="{_e(item["first_link"])}">{_e(item["first_label"])}</a>' if item.get("first_link") else "")
              + '</p>') if item.get("first") else ""
     return (
@@ -133,6 +134,8 @@ def _count_line(entry: dict, total: int) -> str:
 
 
 def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
+    entry = dated_text.resolve(entry, today)
+    ended = entry["ends"] < today.isoformat()
     reviewed = entry["reviewed"]
     jump = [f'<a href="#{new_releases.section_id(section)}">{_e(new_releases.section_label(section))}</a>'
             for section in entry["sections"]]
@@ -150,7 +153,8 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today:
         f'<nav class="guide-jump" aria-label="On this page">{"".join(jump)}</nav></header>',
         f'<div class="guide-intro">{_paragraphs(entry["lead"])}</div>',
         f'<p class="nr-count">{_count_line(entry, total)} Each one says when and where it '
-        'comes out, why it is on our list, what to catch up on first, and one thing to know before you commit.'
+        f'{"came" if ended else "comes"} out, why it is on our list, what to catch up on first, and one thing to know '
+        'before you commit.'
         + ('' if signed_in else ' Save any of them to a list, no account needed, and we will keep it for you if you sign up.') + '</p>',
     ]
     for section in entry["sections"]:
@@ -344,7 +348,7 @@ def release_guide(slug: str, request: Request, db: Session = Depends(get_db)):
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     content = guide_content(slug, entry, _details(db), signed_in, today)
     response = page(entry["search_title"], entry["summary"], new_releases.path(slug), content,
-                    structured_data=_structured(slug, entry), head=_head(signed_in))
+                    structured_data=_structured(slug, dated_text.resolve(entry, today)), head=_head(signed_in))
     response.headers["Cache-Control"] = "private, no-cache"
     response.headers["Vary"] = "Cookie"
     return response

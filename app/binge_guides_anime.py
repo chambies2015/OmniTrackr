@@ -10,6 +10,7 @@ REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
 DEEPENED = "2026-11-23"  # guides that gained a fourth section
 FILLED = "2026-11-25"  # guides that gained a section on November 25
+WIDENED = "2026-11-27"  # Naruto gained a fourth section
 # Episode 1180 aired on 2026-09-27 and closed the first part of Elbaf; the next episodes are due
 # in 2027 with no date yet, so the count holds until then.
 ONE_PIECE_EPISODES = 1180
@@ -328,7 +329,7 @@ GUIDES = {
         ],
     },
     "naruto-and-shippuden": {
-        "name": "Naruto and Naruto Shippuden", "kind": "anime", "reviewed": UPDATED,
+        "name": "Naruto and Naruto Shippuden", "kind": "anime", "reviewed": WIDENED,
         "summary": "Naruto and Naruto Shippuden are 720 episodes, about 276 hours, or about 163 hours without filler. Plan either version at your own pace.",
         "titles": [{"kind": "anime", "title": "Naruto", "year": 2002},
                    {"kind": "anime", "title": "Naruto Shippuden", "year": 2007,
@@ -373,6 +374,17 @@ GUIDES = {
                 "watch the film before episode 494.",
                 "Boruto: Naruto Next Generations is another 293 episodes, from 2017 to 2023, about 112 hours more, and its "
                 "story carries on in the manga. Neither the film nor Boruto is in the totals above.",
+            ]),
+            ("arcs", "Where the big arcs fall", [
+                "Knowing where each story arc starts makes the filler easier to skip and the run easier to plan. In the "
+                "first series the mission to the Land of Waves is episodes 1 to 19, the Chunin Exams 20 to 67 with the "
+                "attack on the village straight after in 68 to 80, the search for Tsunade 81 to 100, and the mission to "
+                "bring Sasuke back 107 to 135. Those 135 episodes come to about 52 hours.",
+                "Shippuden opens with the rescue of the Kazekage, episodes 1 to 32, and the mission to the Tenchi Bridge, "
+                "33 to 53. Pain's assault on the village runs from 152 to 175, apart from a two-episode break at 170 and "
+                "171, and it is where much of what the first series set up pays off. The Five Kage Summit, from 197, "
+                "leads into the Fourth Great Ninja War, which fills most of the episodes after it, filler and flashbacks "
+                "included.",
             ]),
         ],
         "faq": [

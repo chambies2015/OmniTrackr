@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from .. import affiliate, gift_lists, title_pages
+from .. import affiliate, dated_text, gift_lists, title_pages
 from ..deal_guides import GUIDE, PICKS, SECTIONS
 from ..dependencies import get_db, get_optional_current_user
 from .discover import page
@@ -81,7 +81,7 @@ def countdown(today: date) -> str:
 # ---------------------------------------------------------------- page parts
 
 def _calendar(today: date) -> str:
-    entries = GUIDE["calendar"]
+    entries = dated_text.resolve(GUIDE["calendar"], today)
     # The day we're in: the last entry that has started (the first one covers Monday to Wednesday).
     now = None
     for index, entry in enumerate(entries):
@@ -100,7 +100,7 @@ def _calendar(today: date) -> str:
             f'<time datetime="{_e(entry["date"])}">{_e(entry["label"])}</time>{flag}</p>'
             f'<h3>{_e(entry["name"])}</h3><p>{_e(entry["text"])}</p></li>')
     return ('<section class="bf-week" id="dates" aria-labelledby="dates-heading"><p class="eyebrow">THE DATES</p>'
-            f'<h2 id="dates-heading">The week, day by day</h2><p class="bf-lead">{_e(GUIDE["calendar_intro"])}</p>'
+            f'<h2 id="dates-heading">The week, day by day</h2><p class="bf-lead">{_e(dated_text.resolve(GUIDE["calendar_intro"], today))}</p>'
             f'<ol class="bf-days">{"".join(days)}</ol></section>')
 
 
@@ -257,7 +257,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
     sections = ordered_sections(counts if signed_in else None)
     jump = "".join(f'<a href="#{_e(section["key"])}">{_e(section["name"])}</a>' for section in sections)
     faq = "".join(f'<details class="sn-faq__item"><summary>{_e(question)}</summary><p>{_e(answer)}</p></details>'
-                  for question, answer in GUIDE["faq"])
+                  for question, answer in dated_text.resolve(GUIDE["faq"], today))
     sorted_note = ""
     if signed_in and counts and any(counts.values()) and sections[0] is not SECTIONS[0]:
         sorted_note = (f'<p class="gg-sorted">Sorted for you: {_e(sections[0]["name"].lower())} comes first because '
@@ -275,7 +275,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
         affiliate.disclosure_html("gg-disclosure"),
         f'<nav class="guide-jump" aria-label="Sections"><a href="#dates">Dates</a><a href="#your-list">Your list</a>'
         f'<a href="#checks">Checks</a>{jump}<a href="#faq">Questions</a></nav></header>',
-        f'<div class="guide-intro">{_paragraphs(GUIDE["intro"])}</div>',
+        f'<div class="guide-intro">{_paragraphs(dated_text.resolve(GUIDE["intro"], today))}</div>',
         _calendar(today),
         member_panel(suggestions) if signed_in else guest_promo(),
         _checks(),
@@ -312,7 +312,7 @@ def _structured() -> dict:
         {
             "@type": "FAQPage", "url": url + "#faq", "mainEntity": [
                 {"@type": "Question", "name": question, "acceptedAnswer": {"@type": "Answer", "text": answer}}
-                for question, answer in GUIDE["faq"]
+                for question, answer in dated_text.resolve(GUIDE["faq"], _today())
             ],
         },
     ]}

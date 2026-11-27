@@ -8,6 +8,7 @@ the guide's switch names (the extended editions of the Middle-earth films).
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
 FILLED = "2026-11-25"  # the Harry Potter films gained a fourth section
+WIDENED = "2026-11-27"  # the Star Wars and Middle-earth films gained a fourth section
 
 
 def _film(name, year, minutes, **extra):
@@ -88,7 +89,7 @@ GUIDES = {
         ],
     },
     "star-wars-films": {
-        "name": "the Star Wars films", "kind": "film", "reviewed": UPDATED, "in_order": "star-wars",
+        "name": "the Star Wars films", "kind": "film", "reviewed": WIDENED, "in_order": "star-wars",
         "card": "Star Wars: the films",
         "heading": "How long does it take to watch all the Star Wars films?",
         "summary": "The nine Star Wars saga films run 20 hours 24 minutes, or just under 25 hours with Rogue One and Solo. Trilogy totals and a planner.",
@@ -138,6 +139,15 @@ GUIDES = {
                 "It keeps the twist in The Empire Strikes Back intact for a first-time viewer, which is the main reason "
                 "people use it, and it is one of the orders the Star Wars in order guide walks through.",
             ]),
+            ("children", "Watching with children", [
+                "The original trilogy and the first two prequels are rated PG. Revenge of the Sith was the first Star "
+                "Wars film rated PG-13, for its battles and for the end of Anakin's fall, which takes in the attack on "
+                "the Jedi Temple and the duel on Mustafar. Every film since, from The Force Awakens to Solo, is PG-13 "
+                "as well.",
+                "With younger children the original trilogy is the easiest start: a little over six hours, three "
+                "evenings. The Phantom Menace and Attack of the Clones make a gentler fourth and fifth night, and "
+                "Revenge of the Sith is worth watching yourself before you decide whether it is the sixth.",
+            ]),
         ],
         "faq": [
             ("How long are all nine Star Wars films?",
@@ -149,7 +159,7 @@ GUIDES = {
         ],
     },
     "middle-earth-films": {
-        "name": "The Lord of the Rings films", "kind": "film", "reviewed": UPDATED, "in_order": "lord-of-the-rings",
+        "name": "The Lord of the Rings films", "kind": "film", "reviewed": WIDENED, "in_order": "lord-of-the-rings",
         "card": "The Lord of the Rings films",
         "heading": "How long does it take to watch The Lord of the Rings films?",
         "summary": "The Lord of the Rings trilogy runs 9 hours 18 minutes in cinemas and 12 hours 6 minutes extended. Add The Hobbit and plan a marathon.",
@@ -196,6 +206,15 @@ GUIDES = {
                 "Rings.",
                 "Peter Jackson directed all six. The Hobbit was planned as two films and became three during production, "
                 "which is how one short book came to run nearly eight hours on screen.",
+            ]),
+            ("rohirrim", "Where The War of the Rohirrim fits", [
+                "The 2024 animated film is set 183 years before The Lord of the Rings and tells how Helm's Deep got its "
+                "name: Helm Hammerhand, King of Rohan, holds out there through a long winter siege. Kenji Kamiyama "
+                "directed it, Brian Cox voices Helm, and Miranda Otto, Éowyn in the live-action films, narrates. It runs "
+                "134 minutes.",
+                "It works best after The Two Towers, since that film's battle is fought at the same fortress, or as an "
+                "evening of its own once the six are done. Added to a marathon it puts another two and a quarter hours "
+                "on the day, so it is easier to watch on a separate night.",
             ]),
         ],
         "faq": [

@@ -29,6 +29,8 @@ admin on the show's page on the night.
 """
 from __future__ import annotations
 
+from .dated_text import Dated
+
 BALLOT_WINDOW_QUESTION = "When can I fill in a ballot?"
 
 SEASON = {
@@ -78,8 +80,14 @@ SEASON = {
     ),
     "faq": (
         ("When does awards season start?",
-         "The Game Awards open it on December 10, 2026. The Golden Globes follow on January 10, 2027, the Grammys on "
-         "February 7 and the Oscars close it on March 14."),
+         Dated("The Game Awards open it on December 10, 2026. The Golden Globes follow on January 10, 2027, the Grammys on "
+               "February 7 and the Oscars close it on March 14.",
+               ("2026-12-11",
+                "The Game Awards opened it on December 10, 2026. The Golden Globes follow on January 10, 2027, the "
+                "Grammys on February 7 and the Oscars close it on March 14."),
+               ("2027-01-11",
+                "The Game Awards opened it on December 10, 2026, and the Golden Globes followed on January 10, 2027. "
+                "The Grammys are on February 7 and the Oscars close it on March 14."))),
         # The answer after the first sentence is written from each show's state when the page is drawn
         # (awards.season_faq), so it never promises a date that has already gone by.
         (BALLOT_WINDOW_QUESTION, "From the day a show's nominees are announced until its ceremony starts."),
@@ -360,7 +368,8 @@ SHOWS = {
         },
         "faq": (
             ("When are The Game Awards 2026?",
-             "Thursday, December 10, 2026, at the Peacock Theater in Los Angeles."),
+             Dated("Thursday, December 10, 2026, at the Peacock Theater in Los Angeles.",
+                   ("2026-12-11", "They were on Thursday, December 10, 2026, at the Peacock Theater in Los Angeles."))),
             ("When are the nominees announced?",
              "Tuesday, November 17, 2026, at noon Eastern, 9 a.m. Pacific. The ballot here opens once the list "
              "is checked against the official one."),
@@ -368,7 +377,8 @@ SHOWS = {
              "No. The public vote is on thegameawards.com and counts for 10% of the result. The ballot here is a "
              "prediction: you pick who you think will win and get a score after the show."),
             ("Can I change my picks?",
-             "Yes, as often as you like until the show starts on December 10. After that the ballot locks."),
+             Dated("Yes, as often as you like until the show starts on December 10. After that the ballot locks.",
+                   ("2026-12-11", "Not any more. Ballots locked when the show started on December 10."))),
             ("How is the ballot scored?",
              "One point for every category you called. Categories you skipped don't count against you."),
         ),

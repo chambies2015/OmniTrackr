@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from .. import binge_calculator as binge
-from .. import funnel, guide_layout, in_order, title_pages, title_search
+from .. import dated_text, funnel, guide_layout, in_order, title_pages, title_search
 from ..binge_guides import GUIDES as BINGE_GUIDES
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
@@ -355,6 +355,7 @@ def in_order_guide(slug: str, request: Request, db: Session = Depends(get_db)):
     entry = in_order.guide(slug)
     if entry is None:
         raise HTTPException(404, "Guide not found")
+    entry = dated_text.resolve(entry, date.today())
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     content = guide_content(slug, entry, _details(db), signed_in)
     response = page(entry["search_title"], entry["summary"], in_order.path(slug), content,

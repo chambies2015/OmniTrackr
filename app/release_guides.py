@@ -28,7 +28,11 @@ the month is firm), released (where, in a few words), why (what it is; stands on
 its own, also shown by Pick for me), note (why it is on the list), first
 (optional: what to catch up on first, with optional first_link and
 first_label), caveat.
+
+A lead or section intro that reads wrong once its dates pass can be a dated_text.Dated value; the guide
+page resolves it for the day it is drawn.
 """
+from .dated_text import Dated
 
 GUIDES = {
     "november-2026": {
@@ -42,18 +46,35 @@ GUIDES = {
         "starts": "2026-11-01",
         "ends": "2026-11-30",
         "lead": [
-            "November is when the entertainment calendar stops pretending to be reasonable. Studios hold back their "
-            "family films for the Thanksgiving weekend, the streamers drop their prestige series before everyone "
-            "goes home for the holidays, and this year the single biggest video game in a decade lands on the 19th. "
-            "If you tried to keep up with all of it, you would spend the month doing nothing else.",
-            "So this guide is a filter. We went through the dated releases for the month and kept the ones we would "
-            "actually plan around: five films, five series, three games, four anime and four books. For each one we "
-            "say why it made the cut, who should wait for the reviews, and what to watch, play or read first if you "
-            "want to arrive ready. Most of them aren't out yet, so treat these as informed bets. We say "
-            "plainly where we are guessing.",
-            "A word on the anime section. The autumn anime season started in October, so the best November anime is "
-            "already airing. Those picks are shows you can catch up on now, five or six episodes in, when it is much "
-            "easier to tell which ones are worth the time.",
+            Dated("November is when the entertainment calendar stops pretending to be reasonable. Studios hold back their "
+                  "family films for the Thanksgiving weekend, the streamers drop their prestige series before everyone "
+                  "goes home for the holidays, and this year the single biggest video game in a decade lands on the 19th. "
+                  "If you tried to keep up with all of it, you would spend the month doing nothing else.",
+                  ("2026-12-01",
+                   "November is when the entertainment calendar stops pretending to be reasonable. Studios hold back "
+                   "their family films for the Thanksgiving weekend, the streamers drop their prestige series before "
+                   "everyone goes home for the holidays, and in 2026 the single biggest video game in a decade landed on "
+                   "the 19th. If you had tried to keep up with all of it, you would have spent the month doing nothing "
+                   "else.")),
+            Dated("So this guide is a filter. We went through the dated releases for the month and kept the ones we would "
+                  "actually plan around: five films, five series, three games, four anime and four books. For each one we "
+                  "say why it made the cut, who should wait for the reviews, and what to watch, play or read first if you "
+                  "want to arrive ready. Most of them aren't out yet, so treat these as informed bets. We say "
+                  "plainly where we are guessing.",
+                  ("2026-12-01",
+                   "So this guide is a filter. We went through the dated releases for the month and kept the ones we "
+                   "would actually plan around: five films, five series, three games, four anime and four books. For "
+                   "each one we say why it made the cut, who should wait for the reviews, and what to watch, play or "
+                   "read first. We wrote it on November 1, before most of them were out, so the write-ups are the bets "
+                   "we made then, and we said plainly where we were guessing. For what comes next, the winter guide "
+                   "covers December to February.")),
+            Dated("A word on the anime section. The autumn anime season started in October, so the best November anime is "
+                  "already airing. Those picks are shows you can catch up on now, five or six episodes in, when it is much "
+                  "easier to tell which ones are worth the time.",
+                  ("2026-12-01",
+                   "A word on the anime section. The autumn anime season started in October, so the best November anime "
+                   "was already airing when we wrote this. Those picks were five or six episodes in by then, which made "
+                   "it much easier to tell which ones were worth the time.")),
         ],
         "sections": [
             {
@@ -437,15 +458,21 @@ GUIDES = {
         "summary": ("The December to February releases we would plan around, from Dune: Part Three and the Harry "
                     "Potter series to Fable and Persona 4 Revival, with what to catch up on first."),
         "published": "2026-11-01",
-        "reviewed": "2026-11-01",
+        "reviewed": "2026-11-27",
         "starts": "2026-12-01",
         "ends": "2027-02-28",
         "lead": [
-            "Winter has an odd shape. December is packed, because everyone wants the Christmas holidays, and this "
-            "year two of the biggest films of the decade open on the same day. Then January goes quiet in theaters "
-            "and loud everywhere else: it is when publishers put out the games they didn't want buried under the "
-            "holiday rush, when the streaming services launch the series they are proudest of, and when the anime "
-            "season resets.",
+            Dated("Winter has an odd shape. December is packed, because everyone wants the Christmas holidays, and this "
+                  "year two of the biggest films of the decade open on the same day. Then January goes quiet in theaters "
+                  "and loud everywhere else: it is when publishers put out the games they didn't want buried under the "
+                  "holiday rush, when the streaming services launch the series they are proudest of, and when the anime "
+                  "season resets.",
+                  ("2026-12-18",
+                   "Winter has an odd shape. December is packed, because everyone wants the Christmas holidays, and this "
+                   "year two of the biggest films of the decade opened on the same day. Then January goes quiet in "
+                   "theaters and loud everywhere else: it is when publishers put out the games they didn't want buried "
+                   "under the holiday rush, when the streaming services launch the series they are proudest of, and "
+                   "when the anime season resets.")),
             "This guide covers December 1 to the end of February. We kept to releases with a firm date, which ruled "
             "out a few big names that are still listed only as 2027. For each pick we say why it's on our list and "
             "who should wait, and we suggest what to catch up on now, while the evenings are long and there's time. "
@@ -457,9 +484,15 @@ GUIDES = {
                 "format": "movies",
                 "heading": "Four films, two of them on the same Friday",
                 "intro": [
-                    "December 18 is the day people have been calling Dunesday: Dune: Part Three and Avengers: Doomsday "
-                    "open against each other, and Jumanji moved to Christmas Day to keep out of their way. After that, "
-                    "the best of the winter arrives in January and February, including the first Narnia film since 2010.",
+                    Dated("December 18 is the day people have been calling Dunesday: Dune: Part Three and Avengers: "
+                          "Doomsday open against each other, and Jumanji moved to Christmas Day to keep out of their way. "
+                          "After that, the best of the winter arrives in January and February, including the first Narnia "
+                          "film since 2010.",
+                          ("2026-12-18",
+                           "December 18 was the day people had been calling Dunesday: Dune: Part Three and Avengers: "
+                           "Doomsday opened against each other, and Jumanji moved to Christmas Day to keep out of their "
+                           "way. After that, the best of the winter arrives in January and February, including the "
+                           "first Narnia film since 2010.")),
                 ],
                 "picks": [
                     {"kind": "movie", "title": "Dune: Part Three", "year": 2026, "creator": "Denis Villeneuve",
@@ -504,7 +537,7 @@ GUIDES = {
                      "caveat": "Young-adult fantasy, with a love story the book's fans argue about. It will likely be the "
                                "first part of a series, so expect loose ends."},
                     {"kind": "movie", "title": "Narnia: The Magician's Nephew", "year": 2027, "creator": "Greta Gerwig",
-                     "date": "2027-02-12", "released": "In theaters for at least 45 days, then on Netflix",
+                     "date": "2027-02-12", "released": "In theaters, with IMAX previews from February 10, then on Netflix from April 2",
                      "why": "Greta Gerwig adapts the Narnia prequel, in which two London children, Digory and Polly, stumble "
                             "into other worlds and watch Narnia being sung into existence, with Carey Mulligan, Daniel "
                             "Craig, Emma Mackey and Meryl Streep among the cast.",
@@ -717,7 +750,7 @@ GUIDES = {
                      "caveat": "A slow-burn romance and a lot of footnoted folklore. The faeries are cruel in the old, "
                                "fairy-tale way, so there's some violence."},
                     {"kind": "book", "title": "The Moth Reborn", "year": 2027, "creator": "Samantha Shannon",
-                     "date": "2027-02-25", "released": "Hardcover and ebook · Bloomsbury",
+                     "date": "2027-02-23", "released": "Hardcover and ebook · Bloomsbury",
                      "why": "The second-to-last book in Samantha Shannon's Bone Season series, in which clairvoyant Paige "
                             "Mahoney fights an empire that hunts people like her, now as gods walk openly among humans.",
                      "note": "The Bone Season started in 2013 as a dystopian fantasy set in a future London and has grown "
@@ -740,7 +773,8 @@ GUIDES = {
             ("Emily in Paris, final season (December 24, Netflix).", "For people who have watched every episode and "
              "won't admit it."),
             ("Only Murders in the Building, season 6 (December 8, Hulu).", "Steve Martin, Martin Short and Selena Gomez, "
-             "and another body."),
+             "and another body. This season moves to London and goes by Only Murders in London: two episodes on "
+             "December 8, then one a week through December 29."),
             ("Dragon Quest Monsters: The Withered World (December 3).", "Monster-collecting from the Dragon Quest series, on "
              "every major platform, for anyone who wants a gentler alternative to Pokémon."),
             ("Rayman Legends Retold (December 3).", "A new version of one of the best 2D platformers ever made, ideal "
@@ -789,6 +823,10 @@ GUIDES = {
             ("Anime Corner: One-Punch Man season 3 cour 2 set for January 2027", "https://animecorner.me/one-punch-man-season-3-cour-2-visual-and-trailer-revealed-sets-january-2027-release/"),
             ("The Bookish Bulletin: most anticipated January 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-january-2027-books"),
             ("The Bookish Bulletin: most anticipated February 2027 books", "https://www.thebookishbulletin.com/blog/most-anticipated-february-2027-books"),
+            ("Netflix Tudum: Narnia: The Magician's Nephew release dates", "https://www.netflix.com/tudum/articles/narnia-release-date"),
+            ("Gematsu: Professor Layton and the New World of Steam pre-orders", "https://www.gematsu.com/2026/11/professor-layton-and-the-new-world-of-steam-digital-pre-orders-now-available-for-switch-2-and-switch-story-and-gameplay-detailed"),
+            ("Laughing Place: everything coming to Hulu in December 2026", "https://www.laughingplace.com/entertainment/everything-coming-to-hulu-december-2026/"),
+            ("NetGalley: The Moth Reborn, Bloomsbury USA", "https://www.netgalley.com/catalog/book/890066"),
         ],
     },
     "winter-2027-anime": {
