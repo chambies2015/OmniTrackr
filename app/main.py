@@ -1172,6 +1172,11 @@ YEAR_FILL_LIMITS = {
     ("/api/year-in-review/{year}/fill/bring-back", "POST"): "10/minute",
     ("/fill-in/{token}", "GET"): "60/minute",
     ("/fill-in/{token}", "POST"): "30/minute",
+    # The year's big ones (Nov 27 2026): one tap a poster; a cover lookup can reach Wikidata, so it is
+    # bounded too (the page asks for at most one per poster on the list).
+    ("/api/year-in-review/{year}/big-ones", "POST"): "120/minute",
+    ("/api/year-in-review/{year}/big-ones/undo", "POST"): "60/minute",
+    ("/api/year-in-review/{year}/big-ones/art/{kind}/{slug}", "GET"): "60/minute",
 }
 for route in year_fill_router.router.routes:
     path = getattr(route, "path", None)

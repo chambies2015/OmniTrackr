@@ -92,11 +92,26 @@ def _period(moment: datetime, now: datetime, days: int) -> Optional[str]:
     return None
 
 
+def _backdated_adds(db: Session, since: datetime) -> set[tuple[str, int]]:
+    """(category, row id) of titles saved from the year's big ones with a finish dated to an earlier month
+    (app/year_catchup.py). A film watched in August and put in the library in December isn't something
+    members are adding now, the same way its "filled-in" finish isn't counted below."""
+    answer = models.YearCatchupAnswer
+    found = set()
+    for category, item_id, year, month, created in db.query(
+            answer.category, answer.item_id, answer.year, answer.month, answer.created_at).filter(
+            answer.answer == "month", answer.created_row.is_(True), answer.created_at >= since):
+        if category and item_id and month and created and (year, month) != (created.year, created.month):
+            found.add((category, item_id))
+    return found
+
+
 def scan(db: Session, now: Optional[datetime] = None) -> list[dict]:
     """Every signal from the last 60 days: one dict per (kind, title, member, signal, moment)."""
     now = now or datetime.utcnow()
     since = now - timedelta(days=2 * max(WINDOWS.values()))
     members = _members(db)
+    backdated = _backdated_adds(db, since)
     shareable = {kind: {row[0] for row in title_pages._shareable_ids(db, kind)} & members for kind in title_pages.KINDS}
     signals: list[dict] = []
     titles: dict[tuple[str, int], tuple] = {}  # (kind, row id) -> (title, year, image, creator)
@@ -114,10 +129,13 @@ def scan(db: Session, now: Optional[datetime] = None) -> list[dict]:
         rows = (db.query(model).with_entities(*columns, model.added_at)
                 .filter(model.added_at >= since, model.added_at <= now)
                 .order_by(model.id).limit(SCAN_LIMIT).all())
+        category = title_pages.KINDS[kind][2]
         for row in rows:
             if row[1] not in shareable[kind]:
                 continue
             remember(kind, row[:6])
+            if (category, row[0]) in backdated:
+                continue
             signals.append({"kind": kind, "row": row[0], "user": row[1], "signal": "added", "at": row[6], "rating": None})
 
     entry = models.ActivityEntry

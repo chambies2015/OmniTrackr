@@ -637,6 +637,9 @@ body.app-shell .home-board .home-news__row {
 }
 body.app-shell .home-board .home-news__list > .home-news__row:first-child { border-top: 0; padding-top: 4px; }
 body.app-shell .home-board .home-news__idea { border-top-style: solid; border-top-color: var(--home-line); }
+/* "Open the friends feed" and the promo's "Not now" kept the light theme's #7c3aed in Night Mode: 3.2:1 on the
+   card. The same light violet as "View insights" on the Continue card (sweep, Nov 27 2026). */
+body.app-shell.dark-mode .home-board .home-news__link { color: #c4b5fd; }
 
 /* ---------- Setting up streaming services: denser chips ---------- */
 @media (min-width: 641px) {
