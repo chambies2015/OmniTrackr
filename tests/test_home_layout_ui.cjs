@@ -403,3 +403,91 @@ test('another card can bring a tucked card out before scrolling to it, without o
   assert.equal(root.querySelector('.home-board').classList.contains('home-board--more'), false);
   assert.equal(storage.has('omnitrackr_home_more'), false);
 });
+
+// Home refresh (Nov 27 2026): the main column runs in labelled groups, each with its own share of cards.
+function groupedBoard(root, groups, railIds = []) {
+  const wrap = Object.assign(new Node('div'), { className: 'home-board' });
+  const main = Object.assign(new Node('div'), { className: 'home-board__main' });
+  const rail = Object.assign(new Node('div'), { className: 'home-board__rail-cards' });
+  const labels = {};
+  groups.forEach(([key, ids]) => {
+    const label = Object.assign(new Node('p'), { className: 'home-board__group', hidden: true, _text: key });
+    label.dataset.homeGroup = key;
+    labels[key] = label;
+    main.append(label);
+    ids.forEach(id => {
+      if (id === 'daily') {
+        const daily = Object.assign(new Node('div'), { className: 'daily-dashboard' });
+        daily.append(section('libraryPulse'), section('todaysPick', { hidden: true }));
+        main.append(daily);
+      } else main.append(section(id));
+    });
+  });
+  railIds.forEach(id => rail.append(section(id)));
+  const more = Object.assign(new Node('div'), { id: 'homeMore', hidden: true });
+  more.append(Object.assign(new Node('button'), { id: 'homeMoreToggle' }), Object.assign(new Node('p'), { id: 'homeMoreNames', hidden: true }));
+  wrap.append(main, rail, more);
+  root.append(wrap);
+  return { wrap, main, rail, more, labels };
+}
+
+function busyHome(root) {
+  const parts = groupedBoard(root, [
+    ['going', ['daily', 'homeNews', 'nextUpQueue', 'yourWeek', 'backlogDraw']],
+    ['friends', ['togetherHome', 'yearbookHome']],
+    ['more', ['onYourServices', 'comingUp', 'onThisDay']],
+  ], ['monthlyChallenge']);
+  root.querySelector('#homeNews').append(section('homeNewsShows'));
+  const items = Object.assign(new Node('div'), { id: 'nextUpQueueItems' }); items.append(new Node('div'));
+  root.querySelector('#nextUpQueue').append(items);
+  return parts;
+}
+
+test('each group shows its own first few cards, so friends and extras are never pushed out by a long first group', () => {
+  const { root, api } = setup();
+  const { labels } = busyHome(root);
+  api.OmniHomeLayout.arrange();
+  // Wide screens: three in Keep going, two with friends (Watch together always shows), one more.
+  assert.deepEqual(tucked(root), ['yourWeek', 'backlogDraw', 'comingUp', 'onThisDay']);
+  assert.deepEqual(Object.values(labels).map(label => label.hidden), [false, false, false]);
+  assert.equal(root.querySelector('#homeMoreToggle').textContent, 'Show 4 more on your home');
+
+  const phone = setup();
+  busyHome(phone.root);
+  phone.window.matchMedia = () => ({ matches: true, addEventListener() {} });
+  phone.api.OmniHomeLayout.start();
+  // Phones: two, then one, then one.
+  assert.deepEqual(tucked(phone.root), ['nextUpQueue', 'yourWeek', 'backlogDraw', 'comingUp', 'onThisDay']);
+});
+
+test('a group label shows only while one of its cards is on the page, and comes back with Show more', () => {
+  const { root, api } = setup();
+  const { labels } = groupedBoard(root, [
+    ['going', ['daily']],
+    ['friends', ['yearbookHome']],
+    ['more', ['comingUp', 'badgeCase']],
+  ]);
+  root.querySelector('#yearbookHome').hidden = true;
+  root.querySelector('#comingUp').dataset.source = 'popular';
+  api.OmniHomeLayout.arrange();
+  // Nothing with friends right now, and popular picks and the trophy case wait behind Show more.
+  assert.deepEqual(tucked(root), ['comingUp', 'badgeCase']);
+  assert.equal(labels.going.hidden, false);
+  assert.equal(labels.friends.hidden, true);
+  assert.equal(labels.more.hidden, true);
+  api.OmniHomeLayout.expand(true, { announce: false });
+  assert.equal(labels.more.hidden, false);
+  assert.equal(labels.friends.hidden, true, 'a group with no cards at all stays unlabelled');
+  // Signing out hides every label until the next member's cards are in.
+  api.OmniHomeLayout.reset();
+  assert.deepEqual(Object.values(labels).map(label => label.hidden), [true, true, true]);
+});
+
+test('with the welcome-back deck open each group keeps to one card', () => {
+  const { root, api } = setup();
+  busyHome(root);
+  root.append(section('returnDeck'));
+  api.OmniHomeLayout.arrange();
+  // Watch together always shows, so the yearbook is the friends group's one card.
+  assert.deepEqual(tucked(root), ['homeNews', 'nextUpQueue', 'yourWeek', 'backlogDraw', 'comingUp', 'onThisDay']);
+});

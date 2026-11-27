@@ -5,7 +5,8 @@
 // same title isn't shown twice. Every button reuses the data-action / data-episode / data-progress
 // hooks the Continue rows already use, so the existing handlers do the work.
 //
-// OmniHomeLayout keeps the board short. Each column shows its first few cards in page order; cards with
+// OmniHomeLayout keeps the board short. The main column runs in three labelled groups (Keep going, With
+// friends, More for you) and each group shows its first few cards in page order; the rail does the same. Cards with
 // nothing of the member's own in them (an invite, popular picks, an empty queue) and anything past the
 // limit wait behind one "Show more" button. Nothing is removed and no card's own hide or "seen" logic
 // changes: a tucked card is display:none, so cards that count a view when they scroll into sight don't
@@ -245,6 +246,10 @@
   // Shown now and then under their own rules (first week only, a few times a year): never tucked.
   const ALWAYS = new Set(['weekOne', 'stayPosted', 'supportAsk']);
   const CAPS = { main: [3, 4], rail: [2, 3] };
+  // The main column runs in labelled groups (index.html). Each group shows its own first few cards
+  // [phones, wider screens], so a long "Keep going" group can't push friends and everything else out of
+  // sight. A column without labels is one group with the column's limit, as before.
+  const GROUP_CAPS = { going: [2, 3], friends: [1, 2], more: [1, 1] };
   const layout = {
     sticky: new Set(), stickyFrom: 0, settledAt: 0, frame: 0, expanded: false, observer: null, media: null, started: false,
     // The card a link asked for this visit (/#goals from an email, a notification or the goals page). Card
@@ -273,6 +278,17 @@
   function units(column) {
     if (!column) return [];
     return Array.from(column.children).filter(node => node.matches('section[id], .daily-dashboard'));
+  }
+
+  // The cards under each label, in page order. Cards before the first label form a group of their own.
+  function groupsOf(column) {
+    if (!column) return [];
+    const groups = [{ label: null, units: [] }];
+    Array.from(column.children).forEach(node => {
+      if (node.classList.contains('home-board__group')) groups.push({ label: node, units: [] });
+      else if (node.matches('section[id], .daily-dashboard')) groups[groups.length - 1].units.push(node);
+    });
+    return groups.filter(group => group.label || group.units.length);
   }
 
   function visible(unit) {
@@ -334,24 +350,40 @@
     }
   }
 
-  function arrangeColumn(column, cap) {
+  function arrangeColumn(column, cap, capFor) {
     const shown = [];
     const tucked = [];
-    let strong = 0;
-    const all = units(column).filter(visible);
-    all.forEach(unit => {
-      const id = unitId(unit);
-      let show;
-      if (engaged(unit) || layout.sticky.has(id)) show = true;
-      else if (quiet(unit)) show = false;
-      else show = strong < cap;
-      if (show && !engaged(unit) && !quiet(unit)) strong += 1;
-      (show ? shown : tucked).push(unit);
+    const groups = groupsOf(column);
+    groups.forEach(group => {
+      const limit = group.label && typeof capFor === 'function' ? capFor(group.label.dataset.homeGroup, cap) : cap;
+      let strong = 0;
+      group.units.filter(visible).forEach(unit => {
+        const id = unitId(unit);
+        let show;
+        if (engaged(unit) || layout.sticky.has(id)) show = true;
+        else if (quiet(unit)) show = false;
+        else show = strong < limit;
+        if (show && !engaged(unit) && !quiet(unit)) strong += 1;
+        (show ? shown : tucked).push(unit);
+      });
     });
     // A column never empties itself: with only quiet cards, the first one stays.
     if (!shown.length && tucked.length) shown.push(tucked.shift());
     units(column).forEach(unit => unit.classList.toggle('is-home-tucked', tucked.includes(unit)));
+    // A label shows while at least one of its cards is on the page.
+    groups.forEach(group => {
+      if (!group.label) return;
+      const empty = !group.units.some(unit => visible(unit) && (layout.expanded || !tucked.includes(unit)));
+      if (group.label.hidden !== empty) group.label.hidden = empty;
+    });
     return { shown, tucked };
+  }
+
+  function groupCap(key, cap, phone, returning) {
+    const pair = GROUP_CAPS[key];
+    if (!pair) return cap;
+    // Back after a while: the welcome-back deck is the thing to do, so each group keeps to one card.
+    return returning ? Math.min(1, pair[phone]) : pair[phone];
   }
 
   function cardName(unit) {
@@ -373,7 +405,7 @@
     // Back after a while: the welcome-back deck is the thing to do, so fewer cards sit under it.
     const returning = Boolean($('returnDeck') && !$('returnDeck').hidden);
     const mainCap = returning ? Math.min(2, CAPS.main[phone]) : CAPS.main[phone];
-    const main = arrangeColumn(board.querySelector('.home-board__main'), mainCap);
+    const main = arrangeColumn(board.querySelector('.home-board__main'), mainCap, (key, cap) => groupCap(key, cap, phone, returning));
     const rail = arrangeColumn(board.querySelector('.home-board__rail-cards'), CAPS.rail[phone]);
     const tucked = main.tucked.concat(rail.tucked);
     if (layout.settledAt && Date.now() >= layout.stickyFrom) {
@@ -491,17 +523,20 @@
     layout.settledAt = 0;
     layout.stickyFrom = 0;
     document.querySelectorAll('.is-home-tucked').forEach(node => node.classList.remove('is-home-tucked'));
+    document.querySelectorAll('.home-board__group').forEach(label => { label.hidden = true; });
     const more = $('homeMore');
     if (more) more.hidden = true;
     if (layout.started) watchSettle();
   }
 
   window.OmniHomeFocus = { claim, queue, reset: resetFocus, render: renderFocus };
+  // Continue may have been drawn before this file loaded; draw it again so its first title comes up here.
+  if (typeof window.redrawLibraryPulse === 'function') window.redrawLibraryPulse();
   // reveal: another card's button that scrolls to a card (the challenge's "Deal me in") brings it out first.
   window.OmniHomeLayout = { arrange, schedule, reset: resetLayout, start, expand: setExpanded, reveal: revealFor };
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { claim, queue, resetFocus, arrange, quiet, engaged, arrangeColumn, focus, layout, start, setExpanded, revealFor };
+    module.exports = { claim, queue, resetFocus, arrange, quiet, engaged, arrangeColumn, groupsOf, focus, layout, start, setExpanded, revealFor };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {

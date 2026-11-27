@@ -40,8 +40,10 @@ def test_welcome_back_deck_comes_first_above_the_board():
 
 def test_main_column_runs_in_priority_order():
     main = _between('<div class="home-board__main">', '<aside class="home-board__rail"')
-    order = _order(main, ("weekOne", "libraryPulse", "todaysPick", "onYourServices", "homeNews", "nextUpQueue", "yourWeek", "backlogDraw",
-                          "stayPosted", "comingUp", "picksTeaser", "reviewInbox", "onThisDay", "badgeCase"))
+    # Since the Nov 27 2026 home refresh the column runs in three groups (test_home_refresh_nov27.py):
+    # what the member is in the middle of, then friends, then everything else.
+    order = _order(main, ("weekOne", "libraryPulse", "todaysPick", "homeNews", "nextUpQueue", "yourWeek", "backlogDraw",
+                          "onYourServices", "stayPosted", "comingUp", "picksTeaser", "reviewInbox", "onThisDay", "badgeCase"))
     assert order == sorted(order)
 
 
