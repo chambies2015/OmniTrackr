@@ -35,8 +35,8 @@ let dashboardTabVisibilityReady = Promise.resolve();
 
 const LIBRARY_SEARCH_SOURCES = [
   { endpoint: '/movies/', tab: 'movies', label: 'Movie', input: 'movieSearch', status: item => item.watched ? 'Watched' : 'Not watched' },
-  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'In progress' },
-  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'Not finished' },
+  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'Not finished' },
   { endpoint: '/video-games/', tab: 'video-games', label: 'Game', input: 'videoGameSearch', status: item => item.played ? 'Played' : 'Not played' },
   { endpoint: '/music/', tab: 'music', label: 'Album', input: 'musicSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
   { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },
@@ -54,7 +54,7 @@ const libraryPages = new Map();
 const libraryFilters = new Map();
 let libraryBrowseEpoch = 0;
 const LIBRARY_PAGE_SIZE = 50;
-const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false };
+const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false, filter: '', suggestions: [], suggestionsKey: null, suggestionsRequest: 0 };
 
 function libraryPageConfig(category) {
   return {
@@ -69,6 +69,37 @@ function libraryPageConfig(category) {
   }[category];
 }
 
+// The sort a member picks for a shelf is kept in this browser and comes back next visit.
+const LIBRARY_SORT_KEY = 'omnitrackr_library_sort';
+function rememberedLibrarySorts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LIBRARY_SORT_KEY) || '{}');
+    return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+  } catch (_) {
+    return {};
+  }
+}
+function restoreLibrarySort(category) {
+  const config = libraryPageConfig(category);
+  const select = config && document.getElementById(config[1]);
+  const wanted = rememberedLibrarySorts()[category];
+  if (!select || typeof wanted !== 'string') return;
+  if (Array.from(select.options).some(option => option.value === wanted)) select.value = wanted;
+}
+function rememberLibrarySort(category) {
+  const config = libraryPageConfig(category);
+  const select = config && document.getElementById(config[1]);
+  if (!select) return;
+  const saved = rememberedLibrarySorts();
+  if (select.value) saved[category] = select.value; else delete saved[category];
+  try { localStorage.setItem(LIBRARY_SORT_KEY, JSON.stringify(saved)); } catch (_) { /* this visit still sorts */ }
+}
+LIBRARY_SEARCH_SOURCES.forEach(source => {
+  restoreLibrarySort(source.tab);
+  const select = document.getElementById(libraryPageConfig(source.tab)[1]);
+  select?.addEventListener('change', () => rememberLibrarySort(source.tab));
+});
+
 function getLibraryFilters(category) {
   return libraryFilters.get(category) || { completion: 'all', unrated: false, hasProgress: false };
 }
@@ -78,7 +109,8 @@ function libraryPageSignature(category) {
   const [, sortId] = libraryPageConfig(category);
   const filters = getLibraryFilters(category);
   return JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value,
-    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '', filters.recommendedBy || '']);
+    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '', filters.recommendedBy || '',
+    !!filters.onServices]);
 }
 
 function renderLibraryFilters(category) {
@@ -121,7 +153,7 @@ function renderLibraryFilters(category) {
     const reset = document.createElement('button');
     reset.type = 'button'; reset.className = 'library-filter-reset'; reset.textContent = 'Clear search & filters';
     reset.addEventListener('click', () => applyLibraryFilters(category,
-      { completion: 'all', unrated: false, hasProgress: false, tag: '', recommendedBy: '' }, { clearSearch: true }));
+      { completion: 'all', unrated: false, hasProgress: false, tag: '', recommendedBy: '', onServices: false }, { clearSearch: true }));
     host.appendChild(reset);
     const feedback = document.createElement('p');
     feedback.id = `${tableId}FilterStatus`; feedback.className = 'library-filter-status';
@@ -133,10 +165,36 @@ function renderLibraryFilters(category) {
   });
   host.querySelectorAll('[data-library-filter]').forEach(input => { input.checked = filters[input.dataset.libraryFilter]; });
   host.querySelector('.library-filter-reset').disabled = filters.completion === 'all' && !filters.unrated
-    && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !document.getElementById(source.input).value;
+    && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !filters.onServices && !document.getElementById(source.input).value;
   window.OmniLibraryTags?.renderFilters(category, host);
   window.OmniTitleOrigins?.renderFilters(category, host);
+  window.OmniStreaming?.renderFilters(category, host);
+  syncLibraryFilterCounts(category);
 }
+
+// The shelf summary (home-hero.js) leaves each library's totals on its panel. The
+// status chips show them ("Watched 11") while nothing else narrows the view, since
+// a search or another filter would make the numbers disagree with the list.
+function syncLibraryFilterCounts(category) {
+  const config = libraryPageConfig(category);
+  const host = config && document.getElementById(`${config[0]}Filters`);
+  const panel = host?.closest?.('.library-panel');
+  if (!host || !panel) return;
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const filters = getLibraryFilters(category);
+  const total = Number(panel.dataset.shelfTotal);
+  const finished = Number(panel.dataset.shelfFinished);
+  const narrowed = filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy || !!filters.onServices
+    || !!document.getElementById(source.input)?.value;
+  const known = !narrowed && panel.dataset.shelfTotal !== undefined && Number.isInteger(total) && Number.isInteger(finished)
+    && total > 0 && finished >= 0 && finished <= total;
+  const counts = { all: total, finished, unfinished: total - finished };
+  host.querySelectorAll('[data-completion]').forEach(button => {
+    if (known) button.dataset.count = counts[button.dataset.completion].toLocaleString();
+    else delete button.dataset.count;
+  });
+}
+window.syncLibraryFilterCounts = syncLibraryFilterCounts;
 
 function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   if (!libraryPageConfig(category)) return false;
@@ -153,6 +211,8 @@ function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   if (typeof next.tag !== 'string' || !next.tag) delete next.tag;
   // Likewise the "Recommended by" filter (title-origins.js).
   if (typeof next.recommendedBy !== 'string' || !next.recommendedBy) delete next.recommendedBy;
+  // "On my services" (streaming.js) is only for films, shows and anime, and only while it's ticked.
+  if (!['movies', 'tv-shows', 'anime'].includes(category) || !next.onServices) delete next.onServices;
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   if (clearSearch) document.getElementById(source.input).value = '';
   libraryFilters.set(category, next);
@@ -175,6 +235,7 @@ function resetLibraryBrowsing() {
     const [tableId, sortId] = libraryPageConfig(source.tab);
     const sort = document.getElementById(sortId);
     if (sort) sort.value = '';
+    restoreLibrarySort(source.tab);
     renderLibraryFilters(source.tab);
     const status = document.getElementById(`${tableId}FilterStatus`);
     if (status) status.textContent = '';
@@ -197,7 +258,9 @@ function renderLibraryPager(category, page, loading = false, error = '') {
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   const filters = getLibraryFilters(category);
   const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
-    || !!document.getElementById(source.input).value;
+    || !!filters.onServices || !!document.getElementById(source.input).value;
+  const panel = table.closest?.('.library-panel');
+  if (panel) panel.dataset.libraryFiltered = String(filtered);
   if (feedback) feedback.textContent = error || (loading ? 'Loading titles…' : page.total
     ? `${page.total} ${page.total === 1 ? 'title' : 'titles'}${filtered ? (page.total === 1 ? ' matches your view' : ' match your view') : ' in this library'}.`
     : filtered ? 'No titles match. Try another search or clear your filters.'
@@ -305,6 +368,7 @@ async function fetchLibraryPage(url) {
   parsed.searchParams.set('has_progress', String(filters.hasProgress));
   if (filters.tag) parsed.searchParams.set('tag', filters.tag);
   if (filters.recommendedBy) parsed.searchParams.set('recommended_by', filters.recommendedBy);
+  if (filters.onServices) parsed.searchParams.set('on_services', 'true');
   if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
   renderLibraryPager(category, page, true);
   try {
@@ -359,6 +423,66 @@ async function cachedProxyFetch(url, options) {
   return response;
 }
 const posterFetchQueue = new Map();
+
+// Rows without artwork ask OMDb, RAWG, Jikan, iTunes or Open Library for a cover each
+// time they are drawn. A found cover is saved to the row, but a title the services
+// don't know stayed coverless and was looked up again on every visit: up to 50
+// requests per library page, each spending the shared daily OMDb/RAWG quota.
+// A row tried on an earlier visit now waits a day before it is tried again. Within
+// one visit nothing changes (cachedProxyFetch already answers repeats from memory).
+const COVER_TRY_KEY = 'omnitrackr_cover_tries';
+const COVER_TRY_MS = 24 * 60 * 60 * 1000;
+const COVER_TRY_LIMIT = 3000;
+let coverTriesEarlier = null;
+const coverTriesNow = {};
+let coverTrySaveQueued = false;
+
+// `detail` is whatever else the lookup searches with (year, artist, author), so a
+// member who fixes a wrong year or author gets a fresh try straight away.
+function coverTryKey(kind, id, title, detail) {
+  const key = `${kind}:${id}:${String(title || '').slice(0, 80)}`;
+  const extra = String(detail ?? '').slice(0, 60);
+  return extra ? `${key}:${extra}` : key;
+}
+
+function earlierCoverTries() {
+  if (coverTriesEarlier) return coverTriesEarlier;
+  coverTriesEarlier = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(COVER_TRY_KEY) || '{}');
+    const now = Date.now();
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      Object.entries(saved).forEach(([key, at]) => {
+        if (typeof at === 'number' && now - at < COVER_TRY_MS) coverTriesEarlier[key] = at;
+      });
+    }
+  } catch (_) { /* storage blocked: every row is simply looked up, as before */ }
+  return coverTriesEarlier;
+}
+
+function saveCoverTries() {
+  coverTrySaveQueued = false;
+  const all = { ...earlierCoverTries(), ...coverTriesNow };
+  const keys = Object.keys(all);
+  if (keys.length > COVER_TRY_LIMIT) {
+    keys.sort((a, b) => all[a] - all[b]).slice(0, keys.length - COVER_TRY_LIMIT).forEach(key => { delete all[key]; });
+  }
+  try { localStorage.setItem(COVER_TRY_KEY, JSON.stringify(all)); } catch (_) { /* this visit still works */ }
+}
+
+// True when the row should look for a cover now; false when an earlier visit already tried today.
+function shouldLookUpCover(kind, id, title, detail) {
+  const key = coverTryKey(kind, id, title, detail);
+  if (earlierCoverTries()[key]) return false;
+  if (!coverTriesNow[key]) {
+    coverTriesNow[key] = Date.now();
+    if (!coverTrySaveQueued) {
+      coverTrySaveQueued = true;
+      setTimeout(saveCoverTries, 0);
+    }
+  }
+  return true;
+}
 
 function getPosterConcurrencyLimit() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -447,58 +571,249 @@ async function refreshLibrarySearchIndex() {
   return librarySearchIndexPromise;
 }
 
+// Ctrl+K: one box for the member's own library, titles other members track
+// (added in one tap through POST /api/titles/<kind>/<slug>/add), Add anything
+// for everything else, and the tabs and pages of the site. Recent searches are
+// kept in this browser only. Everything is drawn with textContent.
+const LIBRARY_RECENT_KEY = 'omnitrackr_recent_library_searches';
+const LIBRARY_RECENT_MAX = 5;
+const SEARCH_KIND_TABS = { movie: 'movies', tv: 'tv-shows', anime: 'anime', game: 'video-games', album: 'music',
+  book: 'books', manga: 'manga', podcast: 'podcasts', audiobook: 'audiobooks' };
+const LIBRARY_SEARCH_JUMP_EXTRAS = [
+  { label: 'Settings and profile', words: 'settings profile privacy account password email notifications theme', click: 'userDisplay', hint: 'Your account' },
+  { label: 'Friends', words: 'friends people invite', click: 'showFriendsSidebar', hint: 'Your friends list' },
+  { label: 'Import from another site', words: 'import letterboxd goodreads myanimelist steam trakt switch', href: '/switch', hint: 'Bring your lists over' },
+];
+let librarySearchSelected = -1;
+
+function libraryRecentSearches() {
+  try {
+    const list = JSON.parse(localStorage.getItem(LIBRARY_RECENT_KEY) || '[]');
+    return Array.isArray(list) ? list.filter(item => typeof item === 'string' && item.trim()).slice(0, LIBRARY_RECENT_MAX) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function rememberLibrarySearch(query) {
+  const text = String(query || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  if (text.length < 2) return;
+  const list = [text, ...libraryRecentSearches().filter(item => item.toLowerCase() !== text.toLowerCase())].slice(0, LIBRARY_RECENT_MAX);
+  try { localStorage.setItem(LIBRARY_RECENT_KEY, JSON.stringify(list)); } catch (error) { /* storage blocked */ }
+}
+
 function closeLibrarySearch() {
   ++librarySearchRequest;
   clearTimeout(librarySearchTimer);
   librarySearchController?.abort();
+  librarySearchSelected = -1;
   const input = document.getElementById('librarySearchInput');
   const results = document.getElementById('librarySearchResults');
   if (results) results.setAttribute('hidden', '');
   input?.setAttribute('aria-expanded', 'false');
+  input?.removeAttribute('aria-activedescendant');
 }
 
-function renderLibrarySearch(query, items) {
+function librarySearchWords(text) {
+  return normalizeLibrarySearchText(text).normalize('NFKD').replace(/[̀-ͯ]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+// Tabs and Explore pages are read from the page itself, so a new tab or menu entry shows up here on its own.
+function librarySearchJumps(query) {
+  const tokens = librarySearchWords(query);
+  if (!tokens.length) return [];
+  const jumps = [];
+  const seen = new Set();
+  document.querySelectorAll('.tabs [data-switch-tab]').forEach(button => {
+    if (button.style.display === 'none' || seen.has(button.dataset.switchTab)) return;
+    const label = (button.childNodes[0]?.textContent || button.textContent).trim();
+    if (!label) return;
+    seen.add(button.dataset.switchTab);
+    jumps.push({ label, words: label, tab: button.dataset.switchTab, hint: 'Go to this tab' });
+  });
+  LIBRARY_SEARCH_JUMP_EXTRAS.forEach(extra => jumps.push(extra));
+  document.querySelectorAll('.app-explore__panel a[href]').forEach(link => {
+    const label = link.textContent.trim();
+    const href = link.getAttribute('href');
+    if (label && href && !seen.has(href)) {
+      seen.add(href);
+      jumps.push({ label, words: label, href, hint: 'Explore OmniTrackr' });
+    }
+  });
+  return jumps.filter(jump => {
+    const words = librarySearchWords(`${jump.label} ${jump.words || ''}`);
+    return tokens.every(token => words.some(word => word.startsWith(token)));
+  }).slice(0, 3);
+}
+
+function librarySearchOptions() {
+  const results = document.getElementById('librarySearchResults');
+  return results ? Array.from(results.querySelectorAll('[role="option"]')) : [];
+}
+
+function selectLibrarySearchOption(index) {
+  const input = document.getElementById('librarySearchInput');
+  const options = librarySearchOptions();
+  options.forEach(option => option.setAttribute('aria-selected', 'false'));
+  if (!options.length) { librarySearchSelected = -1; return; }
+  librarySearchSelected = (index + options.length) % options.length;
+  const option = options[librarySearchSelected];
+  option.setAttribute('aria-selected', 'true');
+  option.scrollIntoView({ block: 'nearest' });
+  input?.setAttribute('aria-activedescendant', option.id);
+}
+
+function librarySearchArt(image, title, symbol) {
+  const art = document.createElement('span');
+  art.className = 'library-search__art';
+  if (image && safeHttpUrl(image)) {
+    const img = document.createElement('img');
+    img.src = safeHttpUrl(image);
+    img.alt = '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.dataset.hideOnError = 'true';
+    art.appendChild(img);
+  } else {
+    art.classList.add('library-search__art--mark');
+    art.textContent = symbol || String(title || '?').charAt(0).toUpperCase();
+  }
+  art.setAttribute('aria-hidden', 'true');
+  return art;
+}
+
+let librarySearchOptionCount = 0;
+function librarySearchOption({ title, meta, action, image, symbol, className, dataset = {} }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `library-search__result${className ? ` ${className}` : ''}`;
+  button.id = `library-search-option-${librarySearchOptionCount++}`;
+  button.dataset.action = action;
+  Object.entries(dataset).forEach(([key, value]) => { button.dataset[key] = String(value); });
+  button.setAttribute('role', 'option');
+  button.setAttribute('aria-selected', 'false');
+  const copy = document.createElement('span');
+  copy.className = 'library-search__result-copy';
+  const heading = document.createElement('strong');
+  heading.textContent = title;
+  copy.appendChild(heading);
+  if (meta) {
+    const detail = document.createElement('span');
+    detail.textContent = meta;
+    copy.appendChild(detail);
+  }
+  button.append(librarySearchArt(image, title, symbol), copy);
+  return button;
+}
+
+function librarySearchGroup(label, options, extra) {
+  const group = document.createElement('div');
+  group.className = 'library-search__group';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', label);
+  const head = document.createElement('div');
+  head.className = 'library-search__head';
+  const title = document.createElement('p');
+  title.className = 'library-search__label';
+  title.textContent = label;
+  head.appendChild(title);
+  if (extra) head.appendChild(extra);
+  group.append(head, ...options);
+  return group;
+}
+
+function librarySearchActionTag(text) {
+  const tag = document.createElement('span');
+  tag.className = 'library-search__result-action';
+  tag.textContent = text;
+  return tag;
+}
+
+function showLibrarySearchPanel(parts) {
   const input = document.getElementById('librarySearchInput');
   const results = document.getElementById('librarySearchResults');
   if (!input || !results) return;
+  results.replaceChildren(...parts.filter(Boolean));
+  librarySearchSelected = -1;
+  input.removeAttribute('aria-activedescendant');
+  results.removeAttribute('hidden');
+  input.setAttribute('aria-expanded', 'true');
+}
+
+// What an empty box shows: recent searches and what the box can do.
+function renderLibrarySearchHome() {
+  librarySearchOptionCount = 0;
+  const parts = [];
+  const recent = libraryRecentSearches();
+  if (recent.length) {
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'library-search__clear';
+    clear.dataset.action = 'clear-library-search-recent';
+    clear.textContent = 'Clear';
+    parts.push(librarySearchGroup('Recent searches', recent.map(query => librarySearchOption({
+      title: query, action: 'run-library-search-recent', symbol: '↺', dataset: { searchQuery: query },
+    })), clear));
+  }
+  const tips = document.createElement('p');
+  tips.className = 'library-search__tips';
+  tips.textContent = 'Search your library, add titles other members track in one tap, or jump to any tab or page.';
+  parts.push(tips);
+  showLibrarySearchPanel(parts);
+}
+
+function renderLibrarySearch(query, items, extras = {}) {
   const needle = normalizeLibrarySearchText(query);
-  results.replaceChildren();
   if (!needle) {
     closeLibrarySearch();
     return;
   }
-  const matches = items.map(item => ({ item }));
-  if (!matches.length) {
+  librarySearchOptionCount = 0;
+  const parts = [];
+  if (items.length) {
+    parts.push(librarySearchGroup('In your library', items.map(item => {
+      const option = librarySearchOption({
+        title: item.title, meta: `${item.label} · ${item.status}`, image: item.image, action: 'open-library-search-result',
+        dataset: { searchTab: item.tab, searchTitle: item.title, searchId: item.id },
+      });
+      option.appendChild(librarySearchActionTag('Open'));
+      return option;
+    })));
+  }
+  const owned = new Set(items.map(item => `${item.tab}|${normalizeLibrarySearchText(item.title)}`));
+  const addable = (extras.titles || []).filter(item => SEARCH_KIND_TABS[item.kind]
+    && !owned.has(`${SEARCH_KIND_TABS[item.kind]}|${normalizeLibrarySearchText(item.title)}`)).slice(0, 4);
+  if (addable.length) {
+    parts.push(librarySearchGroup('Add to your library', addable.map(item => {
+      const meta = [item.label, item.year, item.members ? `${item.members} members` : ''].filter(Boolean).join(' · ');
+      const option = librarySearchOption({
+        title: item.title, meta, image: item.image, action: 'add-library-search-title', className: 'library-search__result--add',
+        dataset: { searchKind: item.kind, searchSlug: item.slug, searchTitle: item.title },
+      });
+      option.appendChild(librarySearchActionTag('＋ Add'));
+      return option;
+    })));
+  }
+  const jumps = librarySearchJumps(query);
+  if (jumps.length) {
+    parts.push(librarySearchGroup('Go to', jumps.map(jump => librarySearchOption({
+      title: jump.label, meta: jump.hint, symbol: '→', action: 'open-library-search-jump',
+      dataset: jump.tab ? { searchJumpTab: jump.tab } : jump.click ? { searchJumpClick: jump.click } : { searchJumpHref: jump.href },
+    }))));
+  }
+  if (!items.length && !addable.length && !jumps.length) {
     const message = document.createElement('p');
     message.className = 'library-search__message';
-    message.textContent = 'No matches in your private library yet.';
-    results.appendChild(message);
-  } else {
-    matches.forEach(({ item }) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'library-search__result';
-      button.dataset.action = 'open-library-search-result';
-      button.dataset.searchTab = item.tab;
-      button.dataset.searchTitle = item.title;
-      button.dataset.searchId = String(item.id);
-      button.setAttribute('role', 'option');
-      const copy = document.createElement('span');
-      copy.className = 'library-search__result-copy';
-      const title = document.createElement('strong');
-      title.textContent = item.title;
-      const meta = document.createElement('span');
-      meta.textContent = `${item.label} · ${item.status}`;
-      copy.append(title, meta);
-      const action = document.createElement('span');
-      action.className = 'library-search__result-action';
-      action.textContent = 'Open →';
-      button.append(copy, action);
-      results.appendChild(button);
-    });
+    message.textContent = extras.pending ? 'Looking beyond your library…' : `Nothing in your library matches “${query.trim()}” yet.`;
+    parts.push(message);
   }
-  results.removeAttribute('hidden');
-  input.setAttribute('aria-expanded', 'true');
+  const everywhere = librarySearchOption({
+    title: `Search everywhere for “${query.trim()}”`, meta: 'Add anything looks it up across every format',
+    symbol: '＋', action: 'search-library-search-everywhere', className: 'library-search__result--everywhere',
+    dataset: { searchQuery: query.trim() },
+  });
+  parts.push(librarySearchGroup('Something new?', [everywhere]));
+  showLibrarySearchPanel(parts);
 }
 
 async function handleLibrarySearchInput() {
@@ -506,35 +821,97 @@ async function handleLibrarySearchInput() {
   clearTimeout(librarySearchTimer);
   librarySearchController?.abort();
   const input = document.getElementById('librarySearchInput');
-  if (!input || !input.value.trim()) {
-    closeLibrarySearch();
+  if (!input) return;
+  if (!input.value.trim()) {
+    renderLibrarySearchHome();
     return;
   }
   const query = input.value;
   const results = document.getElementById('librarySearchResults');
-  results.textContent = 'Searching your private library…';
-  results.removeAttribute('hidden');
-  input.setAttribute('aria-expanded', 'true');
+  if (results.hidden || !results.querySelector('.library-search__group')) {
+    results.textContent = 'Searching your library…';
+    results.removeAttribute('hidden');
+    input.setAttribute('aria-expanded', 'true');
+  }
   librarySearchTimer = setTimeout(async () => {
     librarySearchController = new AbortController();
+    const signal = librarySearchController.signal;
+    const current = () => request === librarySearchRequest && input.value === query;
+    // Titles other members track come from the public search; a slow or failed answer never holds up the library.
+    const wider = query.trim().replace(/[^\p{L}\p{N}]/gu, '').length >= 2
+      ? fetch(`/api/search?q=${encodeURIComponent(query.trim().slice(0, 80))}&limit=8`, { signal, headers: { Accept: 'application/json' } })
+        .then(response => (response.ok ? response.json() : {})).catch(() => ({}))
+      : Promise.resolve({});
     try {
-      const response = await authenticatedFetch(`${API_BASE}/library/search?q=${encodeURIComponent(query.trim())}`, { signal: librarySearchController.signal });
+      const response = await authenticatedFetch(`${API_BASE}/library/search?q=${encodeURIComponent(query.trim())}`, { signal });
       if (!response.ok) throw new Error('Search unavailable');
       const items = await response.json();
-      if (request === librarySearchRequest && input.value === query) renderLibrarySearch(query, items);
+      if (!current()) return;
+      renderLibrarySearch(query, items, { pending: true });
+      const extras = await wider;
+      if (current()) renderLibrarySearch(query, items, extras || {});
     } catch (error) {
-      if (request === librarySearchRequest && error.name !== 'AbortError') results.textContent = 'Search could not load. Please try again.';
+      if (current() && error.name !== 'AbortError') results.textContent = 'Search could not load. Please try again.';
     }
-  }, 250);
+  }, 220);
 }
 
 function openLibrarySearchResult(tab, title, id) {
   const source = LIBRARY_SEARCH_SOURCES.find(item => item.tab === tab);
   if (!source) return;
-  closeLibrarySearch();
   const globalInput = document.getElementById('librarySearchInput');
+  rememberLibrarySearch(globalInput?.value);
+  closeLibrarySearch();
   if (globalInput) globalInput.value = '';
   openLibraryItem({ category: tab, title, id });
+}
+
+async function addLibrarySearchTitle(button) {
+  if (!button || button.disabled) return;
+  const { searchKind: kind, searchSlug: slug, searchTitle: title } = button.dataset;
+  const tab = SEARCH_KIND_TABS[kind];
+  const tag = button.querySelector('.library-search__result-action');
+  button.disabled = true;
+  if (tag) tag.textContent = 'Adding…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/api/titles/${encodeURIComponent(kind)}/${encodeURIComponent(slug)}/add`, { method: 'POST' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not add it');
+    rememberLibrarySearch(document.getElementById('librarySearchInput')?.value);
+    invalidateLibrarySearchIndex();
+    button.classList.add('is-added');
+    if (tag) tag.textContent = data.state === 'existing' ? '✓ Already there' : '✓ Added';
+    button.dataset.action = 'open-library-search-result';
+    button.dataset.searchTab = tab;
+    button.dataset.searchTitle = data.title || title;
+    button.disabled = false;
+    const config = libraryPageConfig(tab);
+    if (config && currentTab === tab) config[2]();
+    if (typeof refreshForYou === 'function') refreshForYou();
+    showNotice(data.state === 'existing' ? `${data.title || title} is already in your library.` : `Added ${data.title || title} to your library. Pick it again to open it.`, 'success');
+    if (data.state !== 'existing') window.OmniStayPosted?.afterSave(tab, data.title || title);
+  } catch (error) {
+    button.disabled = false;
+    if (tag) tag.textContent = 'Try again';
+  }
+}
+
+function openLibrarySearchJump(button) {
+  const { searchJumpTab: tab, searchJumpClick: click, searchJumpHref: href } = button.dataset;
+  const input = document.getElementById('librarySearchInput');
+  closeLibrarySearch();
+  if (input) input.value = '';
+  if (tab) navigateLibraryTab(tab);
+  else if (click) document.getElementById(click)?.click();
+  else if (href && href.startsWith('/')) window.location.assign(href);
+}
+
+function searchLibraryEverywhere(query) {
+  rememberLibrarySearch(query);
+  const input = document.getElementById('librarySearchInput');
+  closeLibrarySearch();
+  if (input) input.value = '';
+  Promise.resolve(openQuickCaptureSearch(query)).catch(() => showNotice('Could not open Add anything. Tap ＋ to search.'));
 }
 
 function setupLibrarySearch() {
@@ -542,18 +919,41 @@ function setupLibrarySearch() {
   if (!input) return;
   input.addEventListener('input', handleLibrarySearchInput);
   input.addEventListener('focus', () => {
-    if (input.value.trim()) handleLibrarySearchInput();
+    handleLibrarySearchInput();
   });
   input.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
       input.value = '';
       closeLibrarySearch();
+      input.blur();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      selectLibrarySearchOption(librarySearchSelected + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter') {
+      const options = librarySearchOptions();
+      const target = options[librarySearchSelected] || (input.value.trim() ? options[0] : null);
+      if (target) {
+        event.preventDefault();
+        target.click();
+      }
     }
+  });
+  const results = document.getElementById('librarySearchResults');
+  results?.addEventListener('mousemove', event => {
+    const option = event.target.closest?.('[role="option"]');
+    if (!option) return;
+    const index = librarySearchOptions().indexOf(option);
+    if (index !== librarySearchSelected) selectLibrarySearchOption(index);
+  });
+  // Keep focus in the box while picking with the mouse, so the panel doesn't close mid-click.
+  results?.addEventListener('mousedown', event => {
+    if (event.target.closest?.('button')) event.preventDefault();
   });
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       input.focus();
+      input.select();
     }
     if (event.key === 'Escape' && document.activeElement !== input) closeLibrarySearch();
   });
@@ -583,7 +983,32 @@ let quickCaptureResults = [];
 let quickCaptureController = null;
 let quickCaptureReturnFocus = null;
 let quickCaptureSearch = null;
+const QUICK_CAPTURE_ADD_FORMS = {
+  movies: 'addMovieForm',
+  'tv-shows': 'addTVShowForm',
+  anime: 'addAnimeForm',
+  'video-games': 'addVideoGameForm',
+  music: 'addMusicForm',
+  books: 'addBookForm',
+  manga: 'addMangaForm',
+  podcasts: 'addPodcastForm',
+  audiobooks: 'addAudiobookForm',
+};
+// Set while Add anything is showing something shared from another app (see openSharedTitle).
+let quickCaptureShare = null;
 const QUICK_CAPTURE_TIMEOUT_MS = 15000;
+// "Shared from …" names for the apps /share recognises.
+const QUICK_CAPTURE_SHARE_SOURCES = {
+  imdb: 'IMDb', tmdb: 'TMDB', letterboxd: 'Letterboxd', trakt: 'Trakt', rottentomatoes: 'Rotten Tomatoes',
+  justwatch: 'JustWatch', netflix: 'Netflix', primevideo: 'Prime Video', disneyplus: 'Disney+', hulu: 'Hulu',
+  max: 'Max', appletv: 'Apple TV', myanimelist: 'MyAnimeList', anilist: 'AniList', crunchyroll: 'Crunchyroll',
+  kitsu: 'Kitsu', mangadex: 'MangaDex', steam: 'Steam', rawg: 'RAWG', backloggd: 'Backloggd', igdb: 'IGDB',
+  gog: 'GOG', epic: 'Epic Games Store', playstation: 'PlayStation Store', nintendo: 'Nintendo', xbox: 'Xbox',
+  spotify: 'Spotify', applemusic: 'Apple Music', applepodcasts: 'Apple Podcasts', applebooks: 'Apple Books',
+  youtubemusic: 'YouTube Music', youtube: 'YouTube', bandcamp: 'Bandcamp', deezer: 'Deezer', tidal: 'TIDAL',
+  soundcloud: 'SoundCloud', pocketcasts: 'Pocket Casts', overcast: 'Overcast', goodreads: 'Goodreads',
+  openlibrary: 'Open Library', storygraph: 'The StoryGraph', audible: 'Audible', amazon: 'Amazon', libby: 'Libby',
+};
 
 function resetQuickCaptureSearch() {
   quickCaptureController?.abort();
@@ -632,6 +1057,9 @@ const REVIEW_PREVIEW_LEN = 60;
 const PUBLIC_REVIEW_MIN_CHARS = 80;
 const SEARCH_READY_REVIEW_MIN_CHARS = 240;
 const SEARCH_READY_REVIEW_MIN_WORDS = 35;
+// Matches text_limits.REVIEW_MAX on the server. A review saved before the limit can be
+// edited and shortened, but not made longer.
+const REVIEW_MAX_CHARS = 20000;
 
 function getReviewCellContent(review, title, subtitle) {
   if (!review || !String(review).trim()) return '';
@@ -674,7 +1102,21 @@ function closeReviewModal() {
   }
 }
 
-function getReviewQualityMessage(reviewText) {
+// Shown in place of the quality hint once a review nears the length limit.
+function getReviewLengthMessage(reviewText, savedLength = 0) {
+  const length = String(reviewText || '').length;
+  if (length < REVIEW_MAX_CHARS * 0.9) return '';
+  const count = `${length.toLocaleString('en-US')} of ${REVIEW_MAX_CHARS.toLocaleString('en-US')} characters`;
+  if (length <= REVIEW_MAX_CHARS) return count;
+  if (savedLength > REVIEW_MAX_CHARS && length <= savedLength) {
+    return `${count} - this review was saved before the limit, so you can edit or shorten it but not add to it`;
+  }
+  return `${count} - shorten the review to save it`;
+}
+
+function getReviewQualityMessage(reviewText, savedLength = 0) {
+  const lengthMessage = getReviewLengthMessage(reviewText, savedLength);
+  if (lengthMessage) return lengthMessage;
   const text = String(reviewText || '').trim();
   const length = text.length;
   const wordCount = (text.match(/[\w'-]+/gu) || []).length;
@@ -701,12 +1143,16 @@ function reviewQualityHintHtml(inputId) {
 function setupReviewQualityCounter(textarea) {
   if (!textarea || !textarea.id || textarea.dataset.reviewCounterBound === 'true') return;
   textarea.dataset.reviewCounterBound = 'true';
+  // What the entry held when editing began; a longer review saved before the limit may stay that long.
+  const savedLength = textarea.value.length;
   const updateCounter = () => {
     const counter = document.querySelector(`[data-review-counter-for="${textarea.id}"]`);
     if (!counter) return;
     const length = textarea.value.trim().length;
-    counter.textContent = getReviewQualityMessage(textarea.value);
-    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS);
+    const over = textarea.value.length > Math.max(REVIEW_MAX_CHARS, savedLength);
+    counter.textContent = getReviewQualityMessage(textarea.value, savedLength);
+    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS && !over);
+    counter.classList.toggle('is-over', over);
   };
   textarea.addEventListener('input', updateCounter);
   // form.reset() does not fire "input"; refresh once the reset has cleared the value.
@@ -740,7 +1186,7 @@ function handleDelegatedClick(event) {
     event.stopPropagation();
   }
 
-  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-category-accordion], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
+  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
   if (!target) return;
 
   if (target.dataset.closeOnBackdrop && event.target === target) {
@@ -772,11 +1218,6 @@ function handleDelegatedClick(event) {
     return;
   }
 
-  if (target.dataset.toggleCategoryAccordion) {
-    toggleCategoryAccordion(target.dataset.toggleCategoryAccordion);
-    return;
-  }
-
   if (target.dataset.toggleAccordion) {
     toggleAccordion(target.dataset.toggleAccordion);
     return;
@@ -794,6 +1235,7 @@ function handleDelegatedClick(event) {
     'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
     'retry-quick-capture-source': () => retryQuickCaptureCategory(target.dataset.quickCategory),
     'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
+    'add-quick-capture-result': () => addQuickCaptureResult(Number(target.dataset.quickResultIndex)),
     'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
     'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
@@ -843,12 +1285,31 @@ function handleDelegatedClick(event) {
     'toggle-next-up': toggleNextUpQueue,
     'open-todays-pick': openTodaysPick,
     'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
+    'add-library-search-title': () => addLibrarySearchTitle(target),
+    'open-library-search-jump': () => openLibrarySearchJump(target),
+    'search-library-search-everywhere': () => searchLibraryEverywhere(target.dataset.searchQuery),
+    'run-library-search-recent': () => {
+      const input = document.getElementById('librarySearchInput');
+      if (!input) return;
+      input.value = target.dataset.searchQuery || '';
+      input.focus();
+      handleLibrarySearchInput();
+    },
+    'clear-library-search-recent': () => {
+      try { localStorage.removeItem(LIBRARY_RECENT_KEY); } catch (error) { /* storage blocked */ }
+      renderLibrarySearchHome();
+      document.getElementById('librarySearchInput')?.focus();
+    },
     'try-another-pick': tryAnotherPick,
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
     'finish-next-up': () => finishNextUp(Number(target.dataset.nextUpId)),
     'clear-finished-next-up': clearFinishedNextUp,
+    'start-next-up': () => startNextUp(Number(target.dataset.nextUpId)),
+    'unstart-next-up': () => unstartNextUp(Number(target.dataset.nextUpId)),
+    'filter-next-up': () => filterNextUp(target.dataset.nextUpFilter || ''),
+    'add-next-up-suggestion': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,
@@ -879,6 +1340,7 @@ function handleDelegatedClick(event) {
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
+    'collection-starter': () => applyCollectionStarter(target),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };

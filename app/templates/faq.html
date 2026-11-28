@@ -28,15 +28,15 @@
   <meta name="twitter:image:alt" content="OmniTrackr FAQ">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261120-a11y-1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "name": "OmniTrackr Frequently Asked Questions",
     "url": "https://omnitrackr.xyz/faq",
-    "dateModified": "2026-10-29",
+    "dateModified": "2026-11-17",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntity": [
@@ -47,7 +47,11 @@
       { "@type": "Question", "name": "Can I export my media library?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. OmniTrackr supports JSON export and import workflows so users can back up or move their library without relying on a single browser session." } },
       { "@type": "Question", "name": "What should I add first?", "acceptedAnswer": { "@type": "Answer", "text": "Start with a small set of favorites, unfinished items, and next-up choices. That gives enough data to test categories, statuses, ratings, and reviews before importing a full history." } },
       { "@type": "Question", "name": "Can I save where I stopped in a show or book?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Update progress saves the last watched episode for TV shows and anime, or the last read page or chapter for books. Checkpoints and their reminders stay private, are included in JSON backups, and do not change completion, ratings, or reviews." } },
-      { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "Ads can appear for signed-out visitors on a small set of public reading pages: the In order and If you liked guides, the media tracking hub, the import and backup guide, the review guidelines, the sample library, the binge calculator, the seasonal guides, Release Radar lists, title pages with substantial member reviews, and long standalone reviews. Signed-in members do not see ads, and private library pages never carry them." } },
+      { "@type": "Question", "name": "Is there a phone app?", "acceptedAnswer": { "@type": "Answer", "text": "There is no app-store app. OmniTrackr is a web app you can install from the browser (Install app or Add to Home screen on Android, Share then Add to Home Screen in Safari on iPhone). Installed, it opens full screen and can send phone notifications." } },
+      { "@type": "Question", "name": "Can it tell me when a new episode is out?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. New-episode alerts for TV shows and anime in your library appear in the bell and, with notifications on, on your phone or desktop. A private calendar feed and a weekly email are also available." } },
+      { "@type": "Question", "name": "How do I log a rewatch or reread?", "acceptedAnswer": { "@type": "Answer", "text": "Open the Journal, choose Add a moment, pick the title and choose Revisited. The diary numbers each visit, and logging a moment never changes the rating, status or review." } },
+      { "@type": "Question", "name": "How do I keep my account secure?", "acceptedAnswer": { "@type": "Answer", "text": "Use a unique password, turn on two-factor sign-in with an authenticator app in Settings, and consider adding a passkey so you can sign in with your device's fingerprint, face or PIN." } },
+      { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "Ads can appear for signed-out visitors on a small set of public reading pages: the In order, If you liked, best of the year and release guides, the media tracking hub, the import and backup guide, the review guidelines, the sample library, the binge calculator, the seasonal guides, Release Radar lists, title pages with substantial member reviews, and long standalone reviews. Signed-in members do not see ads, and private library pages never carry them." } },
       { "@type": "Question", "name": "Is OmniTrackr free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Every tracking feature is free. You can support the site on Ko-fi once or with a monthly membership, which adds cosmetic extras such as profile banners and a supporter badge but never unlocks tracking features." } }
     ]
   }
@@ -133,8 +137,38 @@
         <article class="faq-item">
           <h2>Can I export or import my library?</h2>
           <div class="faq-answer">
-            <p>Yes. OmniTrackr supports JSON export and restore workflows, plus preview-first migration from Letterboxd (the whole ZIP), IMDb, Goodreads, The StoryGraph, MyAnimeList and Kitsu XML, Trakt, AniList, and generic spreadsheets. The <a href="/switch">switching guide</a> shows where each service keeps its export. Migration matches are skipped instead of replacing richer records already in your library.</p>
+            <p>Yes. OmniTrackr supports JSON export and restore workflows, plus preview-first migration from Letterboxd (the whole ZIP), IMDb, Goodreads, The StoryGraph, MyAnimeList and Kitsu XML, Trakt, AniList, Steam, Spotify, podcast apps (OPML), Rate Your Music, Libib, and generic spreadsheets. The <a href="/switch">switching guide</a> shows where each service keeps its export. Migration matches are skipped instead of replacing richer records already in your library.</p>
             <p>The <a href="/export-import-guide">export and import guide</a> explains supported columns, optional field mapping, duplicate handling, templates, and safer backup habits.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Is there a phone app?</h2>
+          <div class="faq-answer">
+            <p>There is no app-store app. OmniTrackr is a web app you can install from the browser: in Chrome on Android choose <strong>Install app</strong> or <strong>Add to Home screen</strong> from the menu, and in Safari on an iPhone tap Share, then <strong>Add to Home Screen</strong>. Installed, it opens full screen like any other app.</p>
+            <p>Phone notifications work once it is installed (on an iPhone they need iOS 16.4 or later). On Android, the installed app also shows up in the share menu, so you can send a link from a streaming or store app straight into your library.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Can it tell me when a new episode is out?</h2>
+          <div class="faq-answer">
+            <p>Yes. For TV shows and anime in your library, new-episode alerts appear in the bell and, if you turn notifications on, on your phone or desktop. You hear about each episode once.</p>
+            <p>If you prefer your own calendar, the Coming up for you card on your home screen can give you a private calendar address for Google Calendar, Apple Calendar or Outlook that lists only releases connected to your library. <a href="/release-radar">Release Radar</a> has public calendar feeds too, and the weekly email is a once-a-week summary for people who don't want notifications.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>How do I log a rewatch or reread?</h2>
+          <div class="faq-answer">
+            <p>Open the Journal, choose <strong>Add a moment</strong>, pick the title and choose <strong>Revisited</strong>. The diary numbers each visit, so a film you have seen three times shows as a third watch. Logging a moment never changes the rating, status or review, so you can update the score only if your opinion moved. Letterboxd rewatches arrive this way when you import your diary.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>How do I keep my account secure?</h2>
+          <div class="faq-answer">
+            <p>Use a password you don't use anywhere else, then turn on <strong>Two-factor sign-in</strong> in Settings, which asks for a code from an authenticator app when you log in. You can also add a <strong>Passkey</strong>, which signs you in with your phone or computer's fingerprint, face or PIN instead of a password. If you signed up with Google, your Google account's own security settings apply as well.</p>
           </div>
         </article>
 
@@ -165,7 +199,7 @@
         <article class="faq-item">
           <h2>Where can ads appear?</h2>
           <div class="faq-answer">
-            <p>Ads can appear for signed-out visitors on a small set of public reading pages: the <a href="/in-order">In order</a> and <a href="/if-you-liked">If you liked</a> guides, the <a href="/media-tracking">media tracking hub</a>, the <a href="/export-import-guide">import and backup guide</a>, the <a href="/review-guidelines">review guidelines</a>, the <a href="/sample-library">sample library</a>, the <a href="/binge-calculator">binge calculator</a>, the seasonal guides, Release Radar lists, title pages with substantial member reviews, and long standalone reviews. A page being eligible does not mean ads are running on it.</p>
+            <p>Ads can appear for signed-out visitors on a small set of public reading pages: the <a href="/in-order">In order</a>, <a href="/if-you-liked">If you liked</a>, <a href="/best-of">best of the year</a> and <a href="/new-releases">release</a> guides, the <a href="/essentials">Essential 100</a> lists, the <a href="/media-tracking">media tracking hub</a>, the <a href="/export-import-guide">import and backup guide</a>, the <a href="/review-guidelines">review guidelines</a>, the <a href="/sample-library">sample library</a>, the <a href="/binge-calculator">binge calculator</a>, the seasonal guides, Release Radar lists, title pages with substantial member reviews, and long standalone reviews. A page being eligible does not mean ads are running on it.</p>
             <p>The interactive demo, review directory, comparisons, tracking templates, sign-in and recovery pages, and private tracking controls are ad-free. That includes progress updates, collection editing, import/export controls, friends, and account settings. The <a href="/advertising">Advertising Policy</a> explains this in more detail.</p>
           </div>
         </article>

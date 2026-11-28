@@ -1,4 +1,4 @@
-"""Seasonal hubs: hand-written picks for a time of year (/halloween, /holidays).
+"""Seasonal hubs: hand-written picks for a time of year (/halloween, /holidays, /valentines-day).
 
 Each season is one evergreen page at a fixed path, refreshed each year, so links
 and search results keep working. ``window`` is the stretch of the year (month-day,
@@ -6,16 +6,25 @@ inclusive, UTC) when members see the season's card on their dashboard and the
 public guides promote it; the page itself stays readable all year.
 
 Pick fields:
-    kind     movie | tv | anime | game | book | album
-    level    1 to 5 on the season's ``scale`` (named by ``scale_name``: fright, festive)
+    kind     movie | tv | anime | game | book | album, and for the Valentine's hub also
+             manga | podcast | audiobook (one pick in every format on each of its shelves)
+    level    1 to 5 on the season's ``scale`` (named by ``scale_name``: fright, festive, romance)
     time     what it asks of you, in plain words
     why      why it is on the shelf
     note     how to approach it
     caveat   what to know first (content, pace, availability)
 
-Every pick joins the Pick for me pool (pick.py), which is how saving works.
-A new season is a new entry here plus a theme block in seasonal.css.
+Optional, used by the Valentine's hub:
+    year      the year the hub is written for, when it goes up before its season starts
+    calendar  a dated list of new releases, shown after the shelf named in ``after`` (the same shape as
+              the Christmas guide's in holiday_guides.py; a row may add ``href`` to link to a write-up elsewhere)
+    sources   ((label, url), ...) listed under "How we chose"
+
+Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py), which is how saving works.
+Manga, podcast and audiobook picks are saved straight to their tracker (seasonal.extra_entry).
+A new season is a new entry here plus a theme block in seasonal.css and seasonal-card.css.
 """
+from .dated_text import Dated
 
 SEASONS = {
     "halloween": {
@@ -46,8 +55,8 @@ SEASONS = {
             "the scariest thing available. Most of us aren't that person every year. Some Octobers you want a proper "
             "fright with the lights off. Others you want a ghost story you can watch with a nine-year-old, or something "
             "loud and silly for a room full of friends who will talk over it anyway.",
-            "So this hub is sorted by mood first. There are four shelves, and each has one pick in every format "
-            "OmniTrackr tracks: a film, a series, an anime, a game, a book and an album. Every pick has a fright level "
+            "So this hub is sorted by mood first. There are four shelves, and each has one pick in each of six "
+            "formats: a film, a series, an anime, a game, a book and an album. Every pick has a fright level "
             "from one to five, a note on how much time it takes, and a caveat that lists what is actually in it. "
             "Find the shelf that fits the night you're planning. Then pick a format.",
             "For the slower, stranger side of October, where nothing jumps out at you and the unease stays with you "
@@ -420,7 +429,7 @@ SEASONS = {
             "is full of very different evenings: a table of relatives who agree on nothing, a houseful of children with "
             "days off school, a quiet night when you have had enough tinsel for one year, a long trip home.",
             "So this hub is sorted by the kind of time you have. There are four shelves, "
-            "and each has one pick in every format OmniTrackr tracks: a film, a series, an anime, a game, a book and an "
+            "and each has one pick in each of six formats: a film, a series, an anime, a game, a book and an "
             "album. Every pick has a festive level from one to five, so you can tell at a glance whether it is wall-to-wall "
             "Christmas or simply cold outside, along with a note on how much time it takes and a caveat that lists what "
             "is actually in it.",
@@ -572,8 +581,13 @@ SEASONS = {
                             "you: festive decorations and recipes arrive, trees drop ornaments when you shake them, "
                             "and Toy Day comes on Christmas Eve. Because it runs on your clock, it is the one pick "
                             "here you can visit for a few minutes every day of the season.",
-                     "note": "Start in November so your island is settled by December. Visiting a friend's or relative's "
-                             "island is part of the fun, and an easy way to keep in touch with someone far away.",
+                     "note": Dated("Start in November so your island is settled by December. Visiting a friend's or "
+                                   "relative's island is part of the fun, and an easy way to keep in touch with someone "
+                                   "far away.",
+                                   ("2026-12-01",
+                                    "Start early in December and your island will have settled in by Toy Day. Visiting "
+                                    "a friend's or relative's island is part of the fun, and an easy way to keep in "
+                                    "touch with someone far away.")),
                      "caveat": "Nintendo Switch only, and visiting islands over the internet needs a paid Nintendo Switch "
                                "Online membership. Very slow by design."},
                     {"kind": "book", "title": "A Christmas Carol", "year": 1843, "creator": "Charles Dickens", "level": 5,
@@ -818,3 +832,8 @@ SEASONS = {
         ],
     },
 }
+
+# The Valentine's Day hub lives in its own module (it is the longest of the three); it is the last season in the year.
+from .seasonal_guides_valentines import VALENTINES  # noqa: E402
+
+SEASONS["valentines"] = VALENTINES

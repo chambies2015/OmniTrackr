@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import email as email_utils, models, public_profiles, supporters
+from .. import email as email_utils, gift_memberships, models, public_profiles, support_asks, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -44,18 +44,100 @@ def _goal_html(db: Session) -> str:
     )
 
 
+# Without KOFI_MONTHLY_COSTS the page still says where the money goes, just without numbers.
+COST_PLACES = (
+    ("The web server", "Runs the site, the app and every page you open, all day."),
+    ("The database", "Holds every library, review, list and diary entry."),
+    ("Email", "Verification, password resets, release alerts and the weekly digest."),
+    ("The domain", "omnitrackr.xyz, renewed every year."),
+)
+
+
+def _costs_html() -> str:
+    costs = supporters.monthly_costs()
+    if not costs:
+        rows = "".join(f'<li><strong>{_e(name)}</strong><span>{_e(note)}</span></li>' for name, note in COST_PLACES)
+        return f'<ul class="support-costs support-costs--plain">{rows}</ul>'
+    total = sum(item["amount"] for item in costs)
+    rows = "".join(
+        f'<li><strong>{_e(item["label"])}</strong><span class="support-costs__amount">{_e(_money(item["amount"]))}</span>'
+        f'<span class="support-costs__bar" aria-hidden="true"><span class="support-costs__fill support-costs__fill--{_share(item["amount"], total)}"></span></span></li>'
+        for item in costs)
+    return (f'<ul class="support-costs">{rows}</ul>'
+            f'<p class="support-costs__total">About <strong>{_e(_money(total))}</strong> a month in all. '
+            f'That\'s {_e(_coffees(total))} on Ko-fi.</p>')
+
+
+def _share(amount: float, total: float) -> int:
+    """The item's share of the total, rounded to a 5% step for a CSS class (no inline styles under the CSP)."""
+    if total <= 0:
+        return 0
+    return max(5, min(100, int(round(amount * 20 / total)) * 5)) if amount > 0 else 0
+
+
+def _coffees(total: float) -> str:
+    count = max(1, int(-(-total // 3)))  # $3 coffees, rounded up
+    return "one $3 coffee" if count == 1 else f"{count} $3 coffees"
+
+
+# ---------------------------------------------------------------- "Try it on"
+
+TRY_NAMES = {
+    "filmstrip": "Film strip", "film": "Film reel", "gilded": "Gilded",
+}
+
+
+def _try_group(kind: str, legend: str, options, start: str, tags: dict) -> str:
+    buttons = []
+    for value in options:
+        label = TRY_NAMES.get(value, value.replace("_", " ").capitalize())
+        tag = tags.get(value)
+        extra = f' <small>{_e(tag)}</small>' if tag else ""
+        swatch = (f'<span class="support-try__dot support-try__dot--{_e(value)}" aria-hidden="true"></span>'
+                  if kind in ("accent", "theme") else "")
+        buttons.append(f'<button type="button" class="support-try__chip" data-try="{_e(kind)}" data-value="{_e(value)}" '
+                       f'aria-pressed="{"true" if value == start else "false"}">{swatch}{_e(label)}{extra}</button>')
+    return (f'<fieldset class="support-try__group"><legend>{_e(legend)}</legend>'
+            f'<div class="support-try__chips">{"".join(buttons)}</div></fieldset>')
+
+
+def _try_controls_html() -> str:
+    gold = {"gold": "Gold"}
+    members = {name: "Members" for name in supporters.MEMBER_BANNERS + supporters.MEMBER_FRAMES + supporters.MEMBER_THEMES}
+    return "".join((
+        _try_group("theme", "App theme", ("default",) + supporters.ALL_THEMES, "default", {**members, "gilded": "Gold"}),
+        _try_group("accent", "Profile color", supporters.ACCENTS, "violet", gold),
+        _try_group("banner", "Banner", ("none",) + supporters.ALL_BANNERS, "aurora", members),
+        _try_group("frame", "Avatar frame", ("none",) + supporters.ALL_FRAMES, "halo", members),
+    ))
+
+
 # What each Ko-fi tier adds, on top of every supporter perk. Lower tiers' extras carry up.
 TIER_EXTRAS = {
-    "popcorn": ("A Popcorn member tag beside your badge", "Three member banners: neon, marquee and comic"),
-    "season_pass": ("Everything in Popcorn", "Moving banners: a slow sheen across yours, and the marquee bulbs chase"),
+    "popcorn": ("A Popcorn member tag beside your badge", "Two member app themes: Midnight and Matinee",
+                "Member frames and banners: neon and orbit frames, neon, marquee and comic banners"),
+    "season_pass": ("Everything in Popcorn", "Your banner and frame can move: a sheen, a turning halo, a flickering neon"),
     "directors_cut": ("Everything in Season Pass", "Gold for your profile from the first month",
                       "Your name in the Director's Cut credits at the top of the wall"),
 }
 
 
+def _coffee_card() -> str:
+    """The one-time option, beside the memberships, so a first-time supporter sees the small step too."""
+    founding = "<li>Founding supporter for good if it's before 2027</li>" if supporters.founding_open() else ""
+    return ('<article class="support-tier support-tier--coffee">'
+            '<p class="support-tier__price"><strong>$3</strong> once</p>'
+            '<h3>A coffee</h3>'
+            f'<ul><li>Every supporter perk for 30 days</li>{founding}'
+            '<li>Give more if you like, and send another whenever you want</li></ul>'
+            f'<a class="site-btn site-btn--ghost" data-kofi data-kofi-place="coffee" href="{_e(supporters.KOFI_URL)}" '
+            'target="_blank" rel="noopener noreferrer">Buy a coffee ↗</a>'
+            '</article>')
+
+
 def _tiers_html() -> str:
     url = supporters.tiers_url()
-    cards = []
+    cards = [_coffee_card()]
     for tier in supporters.TIERS:
         extras = "".join(f"<li>{_e(line)}</li>" for line in TIER_EXTRAS.get(tier["slug"], ()))
         cards.append(
@@ -63,7 +145,8 @@ def _tiers_html() -> str:
             f'<p class="support-tier__price"><strong>{_e(_money(tier["price"]))}</strong> a month</p>'
             f'<h3>{_e(tier["name"])}</h3>'
             f'<ul>{extras}</ul>'
-            f'<a class="site-btn site-btn--{"primary" if tier["rank"] == 2 else "ghost"}" data-kofi href="{_e(url)}" '
+            f'<a class="site-btn site-btn--{"primary" if tier["rank"] == 2 else "ghost"}" data-kofi '
+            f'data-kofi-place="{_e(tier["slug"])}" href="{_e(url)}" '
             f'target="_blank" rel="noopener noreferrer">Join {_e(tier["name"])} ↗</a>'
             '</article>')
     return f'<div class="support-tiers">{"".join(cards)}</div>'
@@ -82,7 +165,12 @@ def _wall_entry(entry: dict) -> str:
         title += f' · {entry["tier"]} member'
     if not entry["active"]:
         title += " (past)"
+    number = supporters.number_text(entry.get("number"))
+    if number:
+        title += f" · supporter {number}"
     name = f'<span class="support-wall__mark" aria-hidden="true">{mark}</span>{_e(entry["name"])}'
+    if number:
+        name += f' <small class="support-wall__number">{_e(number)}</small>'
     if entry["path"]:
         return f'<li><a class="{" ".join(classes)}" href="{_e(entry["path"])}" title="{_e(title)}">{name}</a></li>'
     return f'<li><span class="{" ".join(classes)}" title="{_e(title)}">{name}</span></li>'
@@ -91,8 +179,9 @@ def _wall_entry(entry: dict) -> str:
 def _wall_html(db: Session) -> str:
     entries = supporters.wall(db)
     if not entries:
+        founding = ", and the first few will be founding supporters" if supporters.founding_open() else ""
         return ('<p class="support-wall__empty">No names here yet. Supporters can add theirs from '
-                '<a href="/#supporter">Account → Supporter</a>, and the first few will be founding supporters.</p>')
+                f'<a href="/#supporter">Account → Supporter</a>{founding}.</p>')
     credits = [entry for entry in entries if entry.get("credits")]
     rest = [entry for entry in entries if not entry.get("credits")]
     html = ""
@@ -107,15 +196,69 @@ def _wall_html(db: Session) -> str:
 
 def _count_html(db: Session) -> str:
     count = supporters.active_count(db)
-    if count < 3:  # a tiny number reads as a ghost town; the wall says thanks instead
+    following = supporters.next_number(db)
+    if following == 1:
+        # Nobody yet. Said plainly, it's an opening rather than a ghost town.
+        return ('<p class="support-hero__count">Nobody has supported OmniTrackr yet. Whoever goes first is '
+                '<strong>supporter #1</strong>, and the number stays on their badge.</p>')
+    if count < 3:  # a tiny count reads as a ghost town; the next number says the same thing better
+        return f'<p class="support-hero__count">The next supporter will be <strong>#{following}</strong>.</p>'
+    return (f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now. '
+            f'The next one will be #{following}.</p>')
+
+
+def _founding_html() -> str:
+    line = supporters.founding_deadline()
+    if not line:
         return ""
-    return f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now.</p>'
+    return f'<p class="support-hero__founding"><span aria-hidden="true">★</span> {_e(line)}</p>'
+
+
+def _number_perk_html(db: Session) -> str:
+    following = supporters.next_number(db)
+    mark, label = ("★", "Founding supporter") if supporters.founding_open() else ("♥", "Supporter")
+    gold = " support-sample--gold" if supporters.founding_open() else ""
+    open_now = "Nobody has it yet, so #1 is still open." if following == 1 else f"The next one is #{following}."
+    return ('<article class="support-perk support-perk--new support-perk--number">'
+            f'<p class="support-perk__preview"><span class="support-sample{gold}">{mark} {label} #{following}</span></p>'
+            '<h3>Your supporter number</h3>'
+            '<p>Supporters are numbered in the order they first supported, and the number goes on your badge, '
+            f'your profile card and the wall. It never changes, even if you take a break. {_e(open_now)}</p>'
+            '</article>')
+
+
+def _coffee_html() -> str:
+    return f'<p class="support-hero__coffee">{_e(support_asks.coffee_line())}</p>'
+
+
+def _recent_html() -> str:
+    """The newest feature entries from the changelog, so visitors can see the work support pays for."""
+    entries = support_asks.recent_work()
+    if not entries:
+        return ""
+    rows = "".join(
+        f'<li><a href="/changelog#{_e(anchor)}"><span class="support-recent__date">{_e(date)}</span>'
+        f'<span class="support-recent__title">{_e(title)}</span></a></li>'
+        for anchor, date, title in entries)
+    return (f'<ol class="support-recent">{rows}</ol>'
+            '<p class="support-recent__more"><a href="/changelog">Read the whole changelog</a></p>')
 
 
 def page_sections(db: Session) -> dict:
-    """Live parts of /supporters: the hosting goal, the supporter count, the membership tiers and the wall. All text is escaped."""
+    """Live parts of /supporters: the hosting goal, the supporter count, the ways to support, recent work and the wall.
+    All text is escaped."""
     return {"<!--SUPPORTERS_GOAL-->": _goal_html(db), "<!--SUPPORTERS_COUNT-->": _count_html(db),
-            "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db)}
+            "<!--SUPPORTERS_COSTS-->": _costs_html(), "<!--SUPPORTERS_TRY-->": _try_controls_html(),
+            "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db),
+            "<!--SUPPORTERS_COFFEE-->": _coffee_html(), "<!--SUPPORTERS_RECENT-->": _recent_html(),
+            "<!--SUPPORTERS_FOUNDING-->": _founding_html(), "<!--SUPPORTERS_NUMBER-->": _number_perk_html(db),
+            "<!--SUPPORTERS_GIFT_FOUNDING-->": _gift_founding_html()}
+
+
+def _gift_founding_html() -> str:
+    if not supporters.founding_open():
+        return ""
+    return " Gifts bought before 2027 make a founding supporter, even if they're opened in January."
 
 
 def _no_store(response: Response) -> None:
@@ -124,7 +267,7 @@ def _no_store(response: Response) -> None:
 
 
 @router.post("/api/kofi/webhook", include_in_schema=False)
-async def kofi_webhook(request: Request, db: Session = Depends(get_db)):
+async def kofi_webhook(request: Request, background: BackgroundTasks, db: Session = Depends(get_db)):
     """Ko-fi posts form data with one field, ``data``, holding the payment as JSON."""
     try:
         form = await request.form()
@@ -135,6 +278,12 @@ async def kofi_webhook(request: Request, db: Session = Depends(get_db)):
         result = supporters.handle_webhook(db, supporters.parse_payload(raw if isinstance(raw, str) else None))
     except supporters.WebhookError as error:
         raise HTTPException(status_code=error.status, detail=error.detail)
+    gift_id, email = result.pop("_gift_id", None), result.pop("_email", None)
+    if gift_id and email and supporters.looks_like_email(email):
+        gift = db.get(models.GiftMembership, gift_id)
+        if gift is not None:
+            # The gift's links go to the address that paid, the only one Ko-fi tells us about.
+            background.add_task(gift_memberships.send_links, email, [gift_memberships.email_item(gift)])
     return result
 
 
@@ -144,6 +293,8 @@ class SupporterSettingsUpdate(BaseModel):
     accent: Optional[str] = Field(None, max_length=16)
     banner: Optional[str] = Field(None, max_length=24)
     banner_motion: Optional[bool] = None
+    app_theme: Optional[str] = Field(None, max_length=24)
+    frame: Optional[str] = Field(None, max_length=24)
 
 
 @router.get("/api/supporter")
@@ -156,6 +307,7 @@ def supporter_status(response: Response, user: models.User = Depends(get_current
 @router.put("/api/supporter")
 def update_supporter(
     payload: SupporterSettingsUpdate,
+    request: Request,
     response: Response,
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -266,8 +418,8 @@ CLAIM_EMAIL_SENT = ("If a Ko-fi payment from that address is waiting, we've emai
 async def _send_claim(email: str, username: str, token: str) -> None:
     try:
         await email_utils.send_kofi_claim_email(email, username, f"{email_utils.APP_URL}/supporter/claim?token={token}")
-    except Exception as error:  # the member sees the same reply either way
-        print(f"Failed to send Ko-fi claim email: {error}")
+    except Exception:  # the member sees the same reply either way
+        print("Failed to send Ko-fi claim email.")
 
 
 @router.post("/api/supporter/claim")

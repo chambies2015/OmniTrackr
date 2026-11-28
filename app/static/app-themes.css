@@ -1,0 +1,133 @@
+/* App themes for Ko-fi supporters (Nov 2026). They recolor the member's own signed-in app
+   through the tokens in app-theme.css, in light and night mode. Only the supporter sees them.
+   body[data-app-theme] is set by app-themes.js before the first paint. Light rules use
+   :not(.dark-mode) so night mode never inherits a light value. */
+
+/* Lagoon */
+body.app-shell:not(.dark-mode)[data-app-theme="lagoon"] {
+  --bg: #eff6f6; --surface-muted: #f4faf9; --surface-hover: #e0efed; --table-row-alt: #f5fbfa;
+  --primary: #0f766e; --primary-hover: #115e59; --accent-solid: #0f766e; --accent-soft: #dcf3ef;
+}
+body.app-shell.dark-mode[data-app-theme="lagoon"] {
+  --bg: #061314; --card-bg: #0d1f21; --surface-muted: #0a1a1b; --surface-hover: #143234; --field-bg: #081718;
+  --border: #1d3b3d; --border-strong: #2b5558; --fg-secondary: #9cc3bf; --table-row-alt: #0b1c1e;
+  --primary: #5eead4; --primary-hover: #99f6e4; --accent-solid: #0f766e; --accent-soft: #113532;
+}
+
+/* Sunset */
+body.app-shell:not(.dark-mode)[data-app-theme="sunset"] {
+  --bg: #faf4ee; --surface-muted: #fdf8f2; --surface-hover: #f5e8d8; --table-row-alt: #fdf9f4;
+  --primary: #c2410c; --primary-hover: #9a3412; --accent-solid: #c2410c; --accent-soft: #ffedd8;
+}
+body.app-shell.dark-mode[data-app-theme="sunset"] {
+  --bg: #150c07; --card-bg: #22150c; --surface-muted: #1b1109; --surface-hover: #33200f; --field-bg: #170e08;
+  --border: #3d2817; --border-strong: #5a3b20; --fg-secondary: #cdb39c; --table-row-alt: #1d1209;
+  --primary: #fdba74; --primary-hover: #fed7aa; --accent-solid: #c2410c; --accent-soft: #3b220f;
+}
+
+/* Sakura */
+body.app-shell:not(.dark-mode)[data-app-theme="sakura"] {
+  --bg: #fbf3f6; --surface-muted: #fdf7f9; --surface-hover: #f6e2eb; --table-row-alt: #fdf8fa;
+  --primary: #be185d; --primary-hover: #9d174d; --accent-solid: #be185d; --accent-soft: #fce6f0;
+}
+body.app-shell.dark-mode[data-app-theme="sakura"] {
+  --bg: #160a11; --card-bg: #24111d; --surface-muted: #1d0d17; --surface-hover: #3a1a2d; --field-bg: #180b13;
+  --border: #43203a; --border-strong: #602e52; --fg-secondary: #d0a9bf; --table-row-alt: #1e0e18;
+  --primary: #f9a8d4; --primary-hover: #fbcfe8; --accent-solid: #be185d; --accent-soft: #3d1530;
+}
+
+/* Ocean */
+body.app-shell:not(.dark-mode)[data-app-theme="ocean"] {
+  --bg: #eff5fb; --surface-muted: #f5f9fd; --surface-hover: #e0edf8; --table-row-alt: #f6fafd;
+  --primary: #0369a1; --primary-hover: #075985; --accent-solid: #0369a1; --accent-soft: #ddf0fd;
+}
+body.app-shell.dark-mode[data-app-theme="ocean"] {
+  --bg: #06101b; --card-bg: #0c1a2b; --surface-muted: #091523; --surface-hover: #13283f; --field-bg: #071220;
+  --border: #1b3350; --border-strong: #284a70; --fg-secondary: #9fb8d0; --table-row-alt: #0a1726;
+  --primary: #7dd3fc; --primary-hover: #bae6fd; --accent-solid: #0369a1; --accent-soft: #0f2d47;
+}
+
+/* Forest */
+body.app-shell:not(.dark-mode)[data-app-theme="forest"] {
+  --bg: #f0f6f2; --surface-muted: #f5faf7; --surface-hover: #e0efe5; --table-row-alt: #f6fbf8;
+  --primary: #047857; --primary-hover: #065f46; --accent-solid: #047857; --accent-soft: #daf4e6;
+}
+body.app-shell.dark-mode[data-app-theme="forest"] {
+  --bg: #07120c; --card-bg: #0e1f16; --surface-muted: #0a1811; --surface-hover: #163322; --field-bg: #08150e;
+  --border: #1d3a29; --border-strong: #2b553c; --fg-secondary: #a0c4b0; --table-row-alt: #0b1a12;
+  --primary: #6ee7b7; --primary-hover: #a7f3d0; --accent-solid: #047857; --accent-soft: #11331f;
+}
+
+/* Crimson */
+body.app-shell:not(.dark-mode)[data-app-theme="crimson"] {
+  --bg: #faf2f2; --surface-muted: #fdf7f7; --surface-hover: #f5e1e1; --table-row-alt: #fdf8f8;
+  --primary: #b91c1c; --primary-hover: #991b1b; --accent-solid: #dc2626; --accent-soft: #fde4e4;
+}
+body.app-shell.dark-mode[data-app-theme="crimson"] {
+  --bg: #140808; --card-bg: #221010; --surface-muted: #1b0b0b; --surface-hover: #381818; --field-bg: #170909;
+  --border: #431f1f; --border-strong: #602c2c; --fg-secondary: #d0a8a8; --table-row-alt: #1d0c0c;
+  --primary: #fca5a5; --primary-hover: #fecaca; --accent-solid: #dc2626; --accent-soft: #3d1414;
+}
+
+/* Gilded */
+body.app-shell:not(.dark-mode)[data-app-theme="gilded"] {
+  --bg: #f9f5ea; --surface-muted: #fdfaf1; --surface-hover: #f2e8cf; --table-row-alt: #fdfaf2;
+  --primary: #8a5a00; --primary-hover: #6f4700; --accent-solid: #a16207; --accent-soft: #f9eed0;
+}
+body.app-shell.dark-mode[data-app-theme="gilded"] {
+  --bg: #100d05; --card-bg: #1c170b; --surface-muted: #161208; --surface-hover: #2e2611; --field-bg: #120f07;
+  --border: #3a3017; --border-strong: #574823; --fg-secondary: #cfc09a; --table-row-alt: #18130a;
+  --primary: #fcd34d; --primary-hover: #fde68a; --accent-solid: #a16207; --accent-soft: #352a0d;
+}
+
+/* Member themes change the whole room, not just the accent.
+   Midnight: true black for OLED screens at night, cool silver by day, indigo accents. */
+body.app-shell:not(.dark-mode)[data-app-theme="midnight"] {
+  --bg: #eceff5; --card-bg: #ffffff; --surface-muted: #f3f5f9; --surface-hover: #e2e6ef; --field-bg: #ffffff;
+  --border: #d3d9e5; --border-strong: #b9c1d3; --fg: #161a26; --fg-secondary: #545d72; --table-row-alt: #f5f6fa;
+  --primary: #3730a3; --primary-hover: #312e81; --accent-solid: #4f46e5; --accent-soft: #e5e6fb;
+}
+body.app-shell.dark-mode[data-app-theme="midnight"] {
+  --bg: #000000; --card-bg: #0a0a0f; --surface-muted: #050508; --surface-hover: #16161f; --field-bg: #050507;
+  --border: #1c1c26; --border-strong: #2c2c3a; --fg: #f5f5fa; --fg-secondary: #a1a1b5; --table-row-alt: #07070b;
+  --primary: #a5b4fc; --primary-hover: #c7d2fe; --accent-solid: #4f46e5; --accent-soft: #16173a;
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, .04) inset; --shadow-md: 0 14px 40px rgba(0, 0, 0, .8); --shadow-lg: 0 30px 80px rgba(0, 0, 0, .9);
+}
+
+/* Matinee: an old picture house. Cream paper and red velvet by day, warm dark with gold at night. */
+body.app-shell:not(.dark-mode)[data-app-theme="matinee"] {
+  --bg: #f5eee1; --card-bg: #fffaf1; --surface-muted: #faf3e6; --surface-hover: #eee1c9; --field-bg: #fffdf8;
+  --border: #e3d3b6; --border-strong: #d0ba93; --fg: #2b1d14; --fg-secondary: #6e5a48; --table-row-alt: #fbf5ea;
+  --primary: #9f1239; --primary-hover: #881337; --accent-solid: #be123c; --accent-soft: #f9e1e5;
+}
+body.app-shell.dark-mode[data-app-theme="matinee"] {
+  --bg: #110907; --card-bg: #1e1310; --surface-muted: #180f0c; --surface-hover: #33201a; --field-bg: #140c0a;
+  --border: #3d2a22; --border-strong: #5a3e31; --fg: #f6ece0; --fg-secondary: #c9b29d; --table-row-alt: #170e0b;
+  --primary: #fcd34d; --primary-hover: #fde68a; --accent-solid: #be123c; --accent-soft: #3a1519;
+}
+
+/* A few dashboard buttons and the night sky carry their own violet; themes recolor those too. */
+body.app-shell[data-app-theme] {
+  --theme-grad: linear-gradient(135deg, var(--accent-solid), color-mix(in srgb, var(--accent-solid) 78%, #000000));
+  --home-bar: linear-gradient(180deg, color-mix(in srgb, var(--accent-solid) 60%, #ffffff), var(--accent-solid));
+  --home-card-tint: linear-gradient(180deg, color-mix(in srgb, var(--accent-solid) 4%, transparent), transparent 140px);
+}
+body.app-shell.dark-mode[data-app-theme] {
+  background:
+    radial-gradient(1100px 520px at 88% -160px, color-mix(in srgb, var(--accent-solid) 26%, transparent), transparent 70%),
+    var(--bg);
+}
+body.app-shell.dark-mode[data-app-theme="midnight"] { background: var(--bg); }
+body.app-shell[data-app-theme] :is(.quick-capture-trigger, .library-add-form button[type="submit"], .library-launchpad__primary,
+  .todays-pick button.action-btn:first-of-type, .todays-pick__open, #monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall, .app-dock__add,
+  .for-you-item__add:not(.is-added)) {
+  background: var(--theme-grad);
+}
+body.app-shell[data-app-theme] .for-you-card {
+  background:
+    radial-gradient(circle at 96% 0%, rgba(20, 184, 166, .12), transparent 38%),
+    linear-gradient(120deg, color-mix(in srgb, var(--accent-solid) 20%, transparent), color-mix(in srgb, var(--accent-solid) 6%, transparent));
+  border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent);
+}
+body.app-shell[data-app-theme] .quick-capture-trigger { box-shadow: 0 10px 28px color-mix(in srgb, var(--accent-solid) 35%, transparent); }
+body.app-shell[data-app-theme] .app-dock__add { box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-solid) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, .25); }

@@ -1,8 +1,9 @@
 """Every written guide on the public site, in one list.
 
 The Discover guides, monthly editions, "In order" and "If you liked" guides, the
-seasonal hubs, the best-of-the-year lists and the release guides are the pages a
-visitor can read in full without an account. They live in seven catalogs; this module gathers them so the
+seasonal hubs, the best-of-the-year lists, the release guides and the "how long does
+it take" guides are the pages a visitor can read in full without an account. They live
+in eight catalogs; this module gathers them so the
 homepage (and anything else that wants "the latest reading") links to them without
 knowing each catalog's shape.
 """
@@ -12,6 +13,16 @@ from datetime import date
 from html import escape
 from itertools import zip_longest
 
+# The person who reviews every guide before it goes up. None keeps the bylines and the
+# editorial standards page anonymous ("the site owner").
+EDITOR_NAME = None
+
+
+def editor_label() -> str:
+    """How the editorial standards page names the reviewer, at the start of a sentence."""
+    return f"{escape(EDITOR_NAME)}, who runs OmniTrackr," if EDITOR_NAME else "The site owner"
+
+
 SECTION_LABELS = {
     "discover": "Discover guide",
     "monthly": "Monthly edition",
@@ -19,7 +30,9 @@ SECTION_LABELS = {
     "if-you-liked": "If you liked",
     "seasonal": "Seasonal",
     "best-of": "Best of the year",
+    "essentials": "The Essential 100",
     "new-releases": "Release guide",
+    "binge": "How long it takes",
 }
 
 
@@ -34,7 +47,7 @@ def _discover() -> list[dict]:
 def _monthly() -> list[dict]:
     from .discover_catalog import published_editions
     return [{"section": "monthly", "href": f"/discover/monthly/{slug}", "name": edition["name"],
-             "summary": edition["intro"], "updated": edition["published_date"]}
+             "summary": edition["intro"], "updated": edition.get("reviewed", edition["published_date"])}
             for slug, edition in published_editions().items()]
 
 
@@ -59,7 +72,26 @@ def _seasonal() -> list[dict]:
     from .seasonal_guides import SEASONS
     return [{"section": "seasonal", "href": entry["path"], "name": f"{entry['name']} picks",
              "summary": entry["summary"], "updated": entry["reviewed"]}
-            for entry in SEASONS.values()]
+            for entry in SEASONS.values()] + [_gift_guide(), _deals_guide()] + _holiday_guides()
+
+
+def _holiday_guides() -> list[dict]:
+    from .holiday_guides import GUIDES
+    return [{"section": "seasonal", "href": entry["path"], "name": entry["name"],
+             "summary": entry["summary"], "updated": entry["reviewed"]}
+            for entry in GUIDES.values()]
+
+
+def _gift_guide() -> dict:
+    from .gift_guides import GUIDE
+    return {"section": "seasonal", "href": GUIDE["path"], "name": "Holiday gift guide",
+            "summary": GUIDE["summary"], "updated": GUIDE["reviewed"]}
+
+
+def _deals_guide() -> dict:
+    from .deal_guides import GUIDE
+    return {"section": "seasonal", "href": GUIDE["path"], "name": GUIDE["name"],
+            "summary": GUIDE["summary"], "updated": GUIDE["reviewed"]}
 
 
 def _best_of() -> list[dict]:
@@ -70,6 +102,13 @@ def _best_of() -> list[dict]:
             for slug, guide in GUIDES.items()]
 
 
+def _essentials() -> list[dict]:
+    from . import essentials
+    return [{"section": "essentials", "href": essentials.path(fmt), "name": data["name"],
+             "summary": data["summary"], "updated": data["reviewed"]}
+            for fmt, data in essentials.lists().items()]
+
+
 def _new_releases() -> list[dict]:
     from . import new_releases
     return [{"section": "new-releases", "href": new_releases.path(slug), "name": guide["name"],
@@ -77,10 +116,67 @@ def _new_releases() -> list[dict]:
             for slug, guide in new_releases.published().items()]
 
 
+def _binge() -> list[dict]:
+    # Only the guides long enough to be indexed, so the ledger and the cross-links
+    # never point readers (or Google) at a page that is kept out of search.
+    from . import binge_calculator
+    from .binge_guides import GUIDES
+    return [{"section": "binge", "href": binge_calculator.path(slug), "name": binge_calculator.heading(guide),
+             "summary": guide["summary"], "updated": guide["reviewed"]}
+            for slug, guide in GUIDES.items() if binge_calculator.is_indexable(guide)]
+
+
+def _new_year() -> list[dict]:
+    from . import new_year_challenge
+    from .new_year_challenge_guide import GUIDES
+    return [{"section": "seasonal", "href": new_year_challenge.path(year), "name": GUIDES[year]["title"],
+             "summary": GUIDES[year]["description"], "updated": edition["published"]}
+            for year, edition in new_year_challenge.EDITIONS.items()
+            if year in GUIDES and new_year_challenge.is_public(year)]
+
+
+def _advent() -> list[dict]:
+    from . import advent_calendar
+    year = advent_calendar.current_year()
+    if year is None:
+        return []
+    edition = advent_calendar.edition(year)
+    return [{"section": "seasonal", "href": advent_calendar.BASE_PATH, "name": edition["headline"],
+             "summary": edition["summary"], "updated": edition["published"]}]
+
+
+def _awards() -> list[dict]:
+    from . import awards, awards_data
+    season = awards_data.SEASON
+    listed = [{"section": "seasonal", "href": awards.BASE_PATH, "name": season["name"],
+               "summary": season["description"], "updated": season["reviewed"]}]
+    listed += [{"section": "seasonal", "href": awards.path(slug), "name": show["title"],
+                "summary": show["description"], "updated": show["reviewed"]}
+               for slug, show in awards.ordered()]
+    return listed
+
+
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _best_of() + _new_releases()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _new_year() + _advent() + _awards() + _best_of() + _essentials() + _new_releases() + _binge()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
+
+
+def _advent_first(by_section: dict[str, list[dict]]) -> None:
+    """While the advent calendar's doors are still opening somewhere, it leads the seasonal section.
+
+    The New Year challenge opens the same day (December 1) and is listed before it, so without
+    this the calendar left the homepage the morning its first door opened.
+    """
+    from . import advent_calendar
+    year = advent_calendar.current_year()
+    if year is None or advent_calendar.latest_today() > advent_calendar.door_date(year, advent_calendar.DOORS):
+        return
+    pieces = by_section.get("seasonal", [])
+    for index, piece in enumerate(pieces):
+        if piece["href"] == advent_calendar.BASE_PATH:
+            pieces.insert(0, pieces.pop(index))
+            return
 
 
 def latest(limit: int = 6) -> list[dict]:
@@ -88,6 +184,7 @@ def latest(limit: int = 6) -> list[dict]:
     by_section: dict[str, list[dict]] = {}
     for piece in entries():
         by_section.setdefault(piece["section"], []).append(piece)
+    _advent_first(by_section)
     # Sections with the most recent piece go first.
     ordered = sorted(by_section.values(), key=lambda pieces: pieces[0]["updated"], reverse=True)
     mixed = [piece for row in zip_longest(*ordered) for piece in row if piece]
@@ -129,7 +226,7 @@ def homepage_section(limit: int = 6) -> str:
         'and themed picks across every format. Each one is dated and says who each pick suits, with a fair caveat.</p>'
         '</div></div>'
         f'<ul class="lp-reads__grid">{cards}</ul>'
-        '<p class="lp-reads__more"><a href="/in-order">Franchises in order</a>'
+        '<p class="lp-reads__more"><a href="/guides">Every guide</a><a href="/in-order">Franchises in order</a>'
         '<a href="/if-you-liked">If you liked…</a><a href="/discover">Discover trails</a></p>'
         '</div></section>'
     )
@@ -142,7 +239,9 @@ SECTION_ORDER = (
     ("monthly", "Monthly editions", "/discover"),
     ("seasonal", "Seasonal picks", "/halloween"),
     ("best-of", "Best of the year", "/best-of"),
+    ("essentials", "The Essential 100", "/essentials"),
     ("new-releases", "Release guides", "/new-releases"),
+    ("binge", "How long it takes", "/binge-calculator"),
 )
 
 
@@ -158,4 +257,57 @@ def directory_html() -> str:
                         for piece in links)
         groups.append(f'<div class="directory-group"><h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a></h3>'
                       f'<ul>{items}</ul></div>')
+    for heading, hub, links in _other_written_pages():
+        if not links:
+            continue
+        items = "".join(f'<li><a href="{escape(href, quote=True)}">{escape(name)}</a></li>' for name, href in links)
+        groups.append(f'<div class="directory-group"><h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a></h3>'
+                      f'<ul>{items}</ul></div>')
     return "".join(groups)
+
+
+def _other_written_pages() -> list[tuple[str, str, list[tuple[str, str]]]]:
+    """Written pages outside the guide catalog that the XML sitemap lists: switch guides,
+    browse shelves and monthly challenges. The site map linked only their hubs."""
+    from . import browse, challenges, switch_guides
+    switch = [(f"Switch from {guide['name']}" if guide["name"] != "your podcast app" else "Switch podcast apps",
+               switch_guides.path(slug)) for slug, guide in switch_guides.GUIDES.items()]
+    shelves = [(f"{kind.capitalize()} worth starting", browse.path(kind)) for kind in browse.KINDS]
+    months = []
+    for month in challenges.public_months():
+        label = date.fromisoformat(f"{month}-01")
+        months.append((f"{label:%B} {label.year}: {challenges.CHALLENGES[month]['name']}",
+                       f"/challenges/{challenges.slug_for(month)}"))
+    return [
+        ("Switch from another tracker", "/switch", switch),
+        ("Browse shelves", browse.path(), shelves),
+        ("Monthly challenges", "/challenges", months),
+    ]
+
+
+def ledger_html() -> str:
+    """Every guide with the date it was last checked, grouped by section, for the editorial standards page."""
+    pieces = entries()
+    groups = []
+    for section, heading, hub in SECTION_ORDER:
+        rows = sorted(sorted((piece for piece in pieces if piece["section"] == section), key=lambda piece: piece["name"]),
+                      key=lambda piece: piece["updated"], reverse=True)
+        if not rows:
+            continue
+        items = "".join(
+            f'<li><a href="{escape(piece["href"], quote=True)}">{escape(piece["name"])}</a>'
+            + (f' <span class="ledger-date">checked <time datetime="{escape(piece["updated"])}">'
+               f'{escape(_date_label(piece["updated"]))}</time></span>' if _date_label(piece["updated"]) else "")
+            + '</li>'
+            for piece in rows
+        )
+        count = f'{len(rows)} guide{"s" if len(rows) != 1 else ""}'
+        groups.append(f'<h3><a href="{escape(hub, quote=True)}">{escape(heading)}</a> <span class="ledger-count">{count}</span></h3>'
+                      f'<ul class="guide-ledger">{items}</ul>')
+    if not groups:
+        return ""
+    newest = max(piece["updated"] for piece in pieces)
+    return (f'<p>There are {len(pieces)} guides on the site right now. The most recent check was on '
+            f'<time datetime="{escape(newest)}">{escape(_date_label(newest))}</time>. Each date below is the last time '
+            'that guide was reread and its facts checked, and it matches the "Updated" line on the guide itself.</p>'
+            + "".join(groups))

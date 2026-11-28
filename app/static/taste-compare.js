@@ -21,7 +21,7 @@
         if (ID.test(id) && ANSWERS.has(answer)) answers[id] = answer;
       });
       const name = typeof data.name === 'string' ? data.name.slice(0, 50) : '';
-      const link = typeof data.link === 'string' && data.link.startsWith('/u/') ? data.link : '';
+      const link = typeof data.link === 'string' && /^\/(u|join)\//.test(data.link) ? data.link : '';
       return { owner: data.owner, name, link, answers, pending: data.pending === true };
     } catch (error) {
       return null;
@@ -182,19 +182,28 @@
     ].filter(Boolean).forEach(part => root.appendChild(part));
 
     const save = el('div', 'compare-save site-card');
-    save.appendChild(el('h3', null, 'Keep your answers'));
+    save.appendChild(el('h3', null, ctx.invite ? `Join ${name} and keep your answers` : 'Keep your answers'));
     const saved = answerList(ctx.answers).length;
-    save.appendChild(el('p', null, saved
-      ? `Make a free library and the ${plural(saved, 'title', 'titles')} you just rated go straight into it. Then you can compare with anyone's whole library, not just this deck.`
-      : 'Make a free library, rate what you finish, and compare with anyone\'s whole library.'));
+    if (ctx.invite) {
+      save.appendChild(el('p', null, saved
+        ? `Sign up through ${name}'s invite and you two become friends. The ${plural(saved, 'title', 'titles')} you just rated go straight into your free library, and you get the full match across both libraries.`
+        : `Sign up through ${name}'s invite and you two become friends, with the full match across both libraries.`));
+    } else {
+      save.appendChild(el('p', null, saved
+        ? `Make a free library and the ${plural(saved, 'title', 'titles')} you just rated go straight into it. Then you can compare with anyone's whole library, not just this deck.`
+        : 'Make a free library, rate what you finish, and compare with anyone\'s whole library.'));
+    }
     const actions = el('div', 'compare-save__actions');
-    const join = el('a', 'site-btn site-btn--primary', 'Save my answers, free');
-    join.href = '/#signup';
-    join.addEventListener('click', () => report('compare_signup_clicked'));
-    const share = el('button', 'site-btn site-btn--ghost', 'Share my result');
-    share.type = 'button';
-    share.addEventListener('click', () => shareResult(share, shareText(data.score, name), ctx.link));
-    actions.append(join, share);
+    const join = el('a', 'site-btn site-btn--primary', ctx.invite ? 'Join free and save my answers' : 'Save my answers, free');
+    join.href = ctx.joinUrl;
+    join.addEventListener('click', () => report(ctx.signupEvent));
+    actions.append(join);
+    if (ctx.shareable) {
+      const share = el('button', 'site-btn site-btn--ghost', 'Share my result');
+      share.type = 'button';
+      share.addEventListener('click', () => shareResult(share, shareText(data.score, name), ctx.link));
+      actions.append(share);
+    }
     save.appendChild(actions);
     root.appendChild(save);
     root.appendChild(restartButton(ctx));
@@ -252,6 +261,13 @@
       minAnswers: Number(root.dataset.minAnswers) || 3,
       answers: {},
     };
+    // A taste test invite (/join/<token>) scores through its own endpoint and signs up through the invite.
+    ctx.guessUrl = /^\/api\/[a-z-]+\/[A-Za-z0-9_/-]+\/guess$/.test(root.dataset.guessUrl || '')
+      ? root.dataset.guessUrl : `/api/taste-match/u/${ctx.owner}/guess`;
+    ctx.joinUrl = /^\/\?invite=[A-Za-z0-9_-]{16,32}#signup$/.test(root.dataset.joinUrl || '') ? root.dataset.joinUrl : '/#signup';
+    ctx.invite = root.dataset.invite === 'true';
+    ctx.shareable = root.dataset.share !== 'off';
+    ctx.signupEvent = root.dataset.signupEvent === 'invite_test_signup_clicked' ? 'invite_test_signup_clicked' : 'compare_signup_clicked';
     const stored = read();
     if (!ctx.signedIn && stored && stored.owner === ctx.owner) ctx.answers = { ...stored.answers };
     let index = 0;
@@ -312,7 +328,7 @@
           if (!ok || !data || !data.match) throw new Error('save failed');
           renderMember(result, data.match, ctx, (data.added || []).length);
         } else {
-          const { ok, data } = await request(`${base}/api/taste-match/u/${ctx.owner}/guess`, {
+          const { ok, data } = await request(`${base}${ctx.guessUrl}`, {
             method: 'POST', body: JSON.stringify({ answers }),
           });
           if (!ok || !data) throw new Error('guess failed');
@@ -453,7 +469,9 @@
       if (added) {
         const match = data.match || {};
         const score = match.score !== null && match.score !== undefined ? ` You're a ${match.score}% match with ${state.name}.` : '';
-        toast(`Added ${plural(added, 'title', 'titles')} from comparing tastes.${score}`, state.link || null, 'See the full comparison');
+        // A taste test invite has no compare page to go back to; the two are friends now.
+        const back = state.link && state.link.startsWith('/u/') ? state.link : null;
+        toast(`Added ${plural(added, 'title', 'titles')} from comparing tastes.${score}`, back, 'See the full comparison');
         LOADERS.forEach(name => { if (typeof window[name] === 'function') { try { window[name](); } catch (error) { /* ignore */ } } });
       }
       return data;

@@ -40,6 +40,14 @@ Supporter levels are counted, never stored: anyone whose support started
 before ``FOUNDING_BEFORE`` is a founding supporter, and "months supported" is
 the number of perk payments linked to the member. Founding supporters and
 anyone past ``GOLD_MONTHS`` unlock the gold accent.
+
+Gifts (Nov 23 2026, see gift_memberships): a one-time payment with OT-GIFT in its
+message buys perks for someone else. It is recorded and marked ``gift``, never linked to
+the payer and never on the owner's "to link" list.
+
+Supporter numbers (Nov 23 2026) are the exception: each new supporter row gets
+the next number (#1, #2, ...) once, and it is stored so a late-linked payment
+with an earlier date can't renumber anyone. The number shows on the badge.
 """
 from __future__ import annotations
 
@@ -53,7 +61,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import and_, func, not_, or_
+from sqlalchemy import and_, func, not_, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -72,6 +80,16 @@ BANNERS = ("aurora", "filmstrip", "pixels", "pages", "vinyl", "stars")
 # Extra banners for monthly members of any tier.
 MEMBER_BANNERS = ("neon", "marquee", "comic")
 ALL_BANNERS = BANNERS + MEMBER_BANNERS
+# App themes (Nov 2026): colors for the member's own signed-in OmniTrackr, in light and night mode.
+# Only the supporter sees them. "gilded" follows the gold accent; the member themes need a membership.
+APP_THEMES = ("lagoon", "sunset", "sakura", "ocean", "forest", "crimson")
+GOLD_THEMES = ("gilded",)
+MEMBER_THEMES = ("midnight", "matinee")
+ALL_THEMES = APP_THEMES + GOLD_THEMES + MEMBER_THEMES
+# Avatar frames (Nov 2026) drawn around the profile picture on the public profile, in the accent color.
+FRAMES = ("halo", "film", "sparkle", "pixel")
+MEMBER_FRAMES = ("neon", "orbit")
+ALL_FRAMES = FRAMES + MEMBER_FRAMES
 # Ko-fi membership tiers, lowest first. Keep names and prices in step with ko-fi.com/omnitrackr/tiers;
 # a payment whose tier name isn't listed here is placed by its amount.
 TIERS = (
@@ -84,6 +102,9 @@ MOTION_RANK = 2  # moving banners
 CREDITS_RANK = 3  # gold right away and the credits on the wall
 GOLD_MONTHS = 6
 FOUNDING_BEFORE = datetime(2027, 1, 1)
+# December 31 ends in UTC-12 at noon UTC on January 1. Support that starts before then still counts as
+# founding, so someone in the Americas paying on the evening of December 31 gets what the page promised.
+FOUNDING_GRACE = timedelta(hours=12)
 WALL_LIMIT = 150
 # Hyphens, spaces or dashes between the parts: people retype the code as often as they paste it.
 CODE_RE = re.compile(r"\bOT[\s\-\u2010-\u2015_]*(\d{1,10})[\s\-\u2010-\u2015_]+([0-9a-f]{6})\b", re.IGNORECASE)
@@ -256,13 +277,104 @@ def shown_banner(supporter: Optional[models.Supporter]) -> Optional[str]:
     return banner if banner in unlocked_banners(supporter) else None
 
 
+def unlocked_themes(supporter: Optional[models.Supporter], months: int, now: Optional[datetime] = None) -> tuple:
+    if not is_active(supporter, now):
+        return ()
+    themes = APP_THEMES
+    if "gold" in unlocked_accents(supporter, months):
+        themes += GOLD_THEMES
+    if is_member(supporter, now):
+        themes += MEMBER_THEMES
+    return themes
+
+
+def shown_theme(db: Session, supporter: Optional[models.Supporter]) -> Optional[str]:
+    """The saved app theme, if the member can still use it. A lapse hides it but keeps the choice."""
+    theme = supporter.app_theme if supporter else None
+    if theme not in ALL_THEMES:
+        return None
+    return theme if theme in unlocked_themes(supporter, months_supported(db, supporter.user_id)) else None
+
+
+def unlocked_frames(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> tuple:
+    if not is_active(supporter, now):
+        return ()
+    return ALL_FRAMES if is_member(supporter, now) else FRAMES
+
+
+def shown_frame(supporter: Optional[models.Supporter]) -> Optional[str]:
+    frame = supporter.avatar_frame if supporter else None
+    return frame if frame in unlocked_frames(supporter) else None
+
+
 def is_ad_free(db: Session, user) -> bool:
     """Whether this member should see no ads. Supporters get it while their perks are active."""
     return user is not None and is_active(get_supporter(db, user.id))
 
 
 def is_founding(supporter: Optional[models.Supporter]) -> bool:
-    return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE)
+    return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE + FOUNDING_GRACE)
+
+
+def founding_open(now: Optional[datetime] = None) -> bool:
+    """Whether new support still makes a founding supporter: until December 31 is over everywhere."""
+    return (now or _now()) < FOUNDING_BEFORE + FOUNDING_GRACE
+
+
+def founding_days_left(now: Optional[datetime] = None) -> int:
+    """Calendar days left to become a founding supporter, counting today (1 on December 31, 0 after)."""
+    now = now or _now()
+    if not founding_open(now):
+        return 0
+    return (FOUNDING_BEFORE.date() - now.date()).days
+
+
+def founding_deadline(now: Optional[datetime] = None) -> Optional[str]:
+    """One plain sentence about when founding supporter closes, or None once it has."""
+    days = founding_days_left(now)
+    if days <= 0:
+        return None
+    last_day = f"{FOUNDING_BEFORE - timedelta(days=1):%B} {(FOUNDING_BEFORE - timedelta(days=1)).day}"
+    if days == 1:
+        # Not "today": the page can't tell where the reader is, and it's still December 30 in the Americas.
+        return f"{last_day} is the last day to become a founding supporter."
+    if days <= 31:
+        return f"{days} days left to become a founding supporter. It closes on {last_day}."
+    return f"Founding supporter is open until {last_day}, {(FOUNDING_BEFORE - timedelta(days=1)).year}."
+
+
+def next_number(db: Session) -> int:
+    """The number the next new supporter will get. Rows the startup migration hasn't numbered yet still count,
+    and so do rows this session has added but not saved yet."""
+    top, total = db.query(func.max(models.Supporter.number), func.count(models.Supporter.id)).one()
+    pending = [row.number or 0 for row in db.new if isinstance(row, models.Supporter)]
+    return max(int(top or 0), int(total or 0) + len(pending), *pending) + 1
+
+
+# pg_advisory_xact_lock key for making supporter rows. Held until the transaction ends.
+GRANT_LOCK_KEY = 0x4F54_5355_5050
+
+
+def _lock_grants(db: Session) -> None:
+    """Make supporter rows one transaction at a time on Postgres. Without it, two payments landing together
+    read the same top number (two members both #1), or both make a row for one member and the second
+    payment fails on the unique user_id. SQLite already lets only one writer through at a time."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": GRANT_LOCK_KEY})
+
+
+def _supporter_for_grant(db: Session, user_id: int) -> Optional[models.Supporter]:
+    # The session doesn't flush before queries, so a row made for an earlier payment in this same
+    # transaction (two waiting payments linked at once) isn't in the database yet. Look for it first.
+    for row in db.new:
+        if isinstance(row, models.Supporter) and row.user_id == user_id:
+            return row
+    _lock_grants(db)
+    return get_supporter(db, user_id)
+
+
+def number_text(number) -> str:
+    return f"#{int(number)}" if isinstance(number, int) and number > 0 else ""
 
 
 def months_supported(db: Session, user_id: int) -> int:
@@ -278,23 +390,36 @@ def unlocked_accents(supporter: Optional[models.Supporter], months: int) -> tupl
     return BASE_ACCENTS
 
 
-def level_label(founding: bool, months: int) -> str:
-    """The badge text: "Founding supporter", or "Supporter" with the months once there are a few."""
+def level_label(founding: bool, months: int, number: Optional[int] = None) -> str:
+    """The badge text: "Founding supporter #1", or "Supporter #12" with the months once there are a few."""
     label = "Founding supporter" if founding else "Supporter"
+    if number_text(number):
+        label = f"{label} {number_text(number)}"
     return f"{label} · {months} months" if months >= 2 else label
 
 
-def public_badge(db: Session, user_id: int) -> Optional[dict]:
-    """What a public page may show about this member's support, or None."""
-    supporter = get_supporter(db, user_id)
+_UNREAD = object()
+
+
+def public_badge(db: Session, user_id: int, supporter=_UNREAD) -> Optional[dict]:
+    """What a public page may show about this member's support, or None.
+
+    Pass ``supporter`` (the member's row, or None) when the caller already read it.
+    """
+    if supporter is _UNREAD:
+        supporter = get_supporter(db, user_id)
     if not is_active(supporter) or not supporter.show_badge:
         return None
     tier = member_tier(supporter)
     banner = shown_banner(supporter)
+    frame = shown_frame(supporter)
+    moving = bool(supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
             "banner": banner, "founding": is_founding(supporter), "months": months_supported(db, user_id),
+            "number": supporter.number,
             "tier": tier["name"] if tier else None,
-            "motion": bool(banner and supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)}
+            "motion": bool(banner and moving),
+            "frame": frame, "frame_motion": bool(frame and moving)}
 
 
 def public_badges(db: Session, user_ids) -> dict:
@@ -307,7 +432,7 @@ def public_badges(db: Session, user_ids) -> dict:
                     models.Supporter.show_badge.is_(True)).all())
     return {row.user_id: {"accent": row.accent if row.accent in ACCENTS else None,
                           "since": f"{row.since:%B} {row.since.year}" if row.since else None,
-                          "founding": is_founding(row)} for row in rows}
+                          "founding": is_founding(row), "number": row.number} for row in rows}
 
 
 def chip_html(badge: Optional[dict]) -> str:
@@ -315,8 +440,12 @@ def chip_html(badge: Optional[dict]) -> str:
     if not badge:
         return ""
     since = badge.get("since")
-    who = "Founding supporter of OmniTrackr" if badge.get("founding") else "Supporting OmniTrackr"
-    title = f"{who} on Ko-fi since {since}" if since else "Supports OmniTrackr on Ko-fi"
+    number = number_text(badge.get("number"))
+    if badge.get("founding"):
+        who = f"Founding supporter {number} of OmniTrackr" if number else "Founding supporter of OmniTrackr"
+    else:
+        who = f"Supporter {number} of OmniTrackr" if number else "Supporting OmniTrackr"
+    title = f"{who} on Ko-fi since {since}" if since else f"{who} on Ko-fi"
     accent = badge.get("accent")
     accent_class = f" supporter-chip--{accent}" if accent in ACCENTS else ""
     return (f'<a class="supporter-chip{accent_class}" href="/supporters" title="{html.escape(title)}">'
@@ -324,7 +453,7 @@ def chip_html(badge: Optional[dict]) -> str:
 
 
 def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Supporter:
-    supporter = get_supporter(db, user_id)
+    supporter = _supporter_for_grant(db, user_id)
     paid_at = payment.received_at or _now()
     # A payment linked late (unmatched email, claimed later) still gets its full days, counted from
     # now, while the supporter date goes back to when they paid.
@@ -332,7 +461,8 @@ def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Sup
     start_at = now if now - paid_at > LATE_LINK else paid_at
     days = MONTHLY_DAYS if payment.monthly else DONATION_DAYS
     if supporter is None:
-        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=start_at, show_badge=True)
+        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=start_at, show_badge=True,
+                                     number=next_number(db))
         db.add(supporter)
     start = max(supporter.active_until or start_at, start_at)
     supporter.active_until = start + timedelta(days=days)
@@ -350,12 +480,16 @@ def _link(db: Session, payment: models.KofiPayment, user_id: int) -> None:
     payment.linked_at = _now()
     if payment.kind in PERK_TYPES:
         _grant(db, user_id, payment)
+    if not looks_like_test(payment):
+        from .support_asks import note_support  # avoids a circular import
+        note_support(db, user_id)
 
 
 def _waiting():
-    """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner."""
+    """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner, and not
+    a gift (a gift's perks go to whoever opens it, never to the payer)."""
     return (models.KofiPayment.user_id.is_(None), not_(is_test_payment()),
-            models.KofiPayment.dismissed_at.is_(None))
+            models.KofiPayment.dismissed_at.is_(None), models.KofiPayment.gift.is_(False))
 
 
 def _waiting_for_email(db: Session, email: Optional[str]) -> list[models.KofiPayment]:
@@ -411,6 +545,9 @@ def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
         raise LookupError("Payment not found")
     if payment.user_id is not None:
         raise ValueError("That payment is already linked")
+    if payment.gift:
+        # Its perks belong to whoever opens the gift. Linking it as well would pay out twice.
+        raise ValueError("That payment bought a gift, so it can't be linked to a member")
     _link(db, payment, user.id)
     db.commit()
     _thank(db, user.id, 1)
@@ -527,8 +664,10 @@ def status_payload(db: Session, user) -> dict:
     return {
         "active": active,
         "founding": founding,
+        "founding_open": founding_open(),
         "months": months,
-        "level": level_label(founding, months) if supporter else None,
+        "level": level_label(founding, months, supporter.number) if supporter else None,
+        "number": supporter.number if supporter else None,
         "on_wall": bool(supporter and supporter.on_wall),
         "unlocked_accents": list(unlocked_accents(supporter, months)) if active else [],
         "gold_months": GOLD_MONTHS,
@@ -548,12 +687,33 @@ def status_payload(db: Session, user) -> dict:
         "member_until": supporter.member_until.isoformat() if tier and supporter.member_until else None,
         "banner_motion": bool(supporter and supporter.banner_motion),
         "can_animate": bool(tier and tier["rank"] >= MOTION_RANK),
+        "app_theme": (supporter.app_theme if supporter and supporter.app_theme in ALL_THEMES else None),
+        "shown_theme": shown_theme(db, supporter) if supporter else None,
+        "themes": list(APP_THEMES),
+        "gold_themes": list(GOLD_THEMES),
+        "member_themes": list(MEMBER_THEMES),
+        "unlocked_themes": list(unlocked_themes(supporter, months)) if supporter else [],
+        "frame": (supporter.avatar_frame if supporter and supporter.avatar_frame in ALL_FRAMES else None),
+        "frames": list(FRAMES),
+        "member_frames": list(MEMBER_FRAMES),
+        "unlocked_frames": list(unlocked_frames(supporter)) if supporter else [],
         "tiers": [dict(item) for item in TIERS],
         "tiers_url": tiers_url(),
         "ad_free": active,
         "code": supporter_code(user.id),
         "kofi_url": KOFI_URL,
+        "gift": _gift_summary(db, user.id),
+        "gift_path": "/supporters/gift",
     }
+
+
+def _gift_summary(db: Session, user_id: int) -> Optional[dict]:
+    from . import gift_memberships  # avoids a circular import
+    try:
+        return gift_memberships.received_summary(db, user_id)
+    except Exception:  # pragma: no cover - a status read must not fail over gifts
+        db.rollback()
+        return None
 
 
 def save_settings(db: Session, user, changes: dict) -> models.Supporter:
@@ -587,6 +747,26 @@ def save_settings(db: Session, user, changes: dict) -> models.Supporter:
         if motion and member_rank(supporter) < MOTION_RANK:
             raise PermissionError("Moving banners come with the Season Pass and Director's Cut memberships.")
         supporter.banner_motion = motion
+    if "app_theme" in changes:
+        theme = changes["app_theme"] or None
+        if theme is not None and theme not in ALL_THEMES:
+            raise ValueError("Pick one of the listed app themes.")
+        if theme is not None and not is_active(supporter):
+            raise PermissionError("App themes are a perk for current supporters.")
+        if theme in MEMBER_THEMES and not is_member(supporter):
+            raise PermissionError("Midnight and Matinee come with a monthly Ko-fi membership.")
+        if theme in GOLD_THEMES and "gold" not in unlocked_accents(supporter, months_supported(db, user.id)):
+            raise PermissionError(f"Gilded unlocks with gold: for founding supporters and after {GOLD_MONTHS} months of support.")
+        supporter.app_theme = theme
+    if "frame" in changes:
+        frame = changes["frame"] or None
+        if frame is not None and frame not in ALL_FRAMES:
+            raise ValueError("Pick one of the listed avatar frames.")
+        if frame is not None and not is_active(supporter):
+            raise PermissionError("Avatar frames are a perk for current supporters.")
+        if frame in MEMBER_FRAMES and not is_member(supporter):
+            raise PermissionError("Neon and orbit frames come with a monthly Ko-fi membership.")
+        supporter.avatar_frame = frame
     db.commit()
     db.refresh(supporter)
     return supporter
@@ -610,7 +790,7 @@ def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
         tier = member_tier(supporter, now)
         entries.append({
             "name": user.username, "path": paths.get(user.id), "active": active,
-            "founding": is_founding(supporter), "since": supporter.since,
+            "founding": is_founding(supporter), "since": supporter.since, "number": supporter.number,
             "accent": supporter.accent if active and supporter.accent in ACCENTS else None,
             "tier": tier["name"] if tier else None, "credits": bool(tier and tier["rank"] >= CREDITS_RANK),
         })
@@ -619,12 +799,45 @@ def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
 
 
 def monthly_goal() -> Optional[float]:
-    """The monthly hosting goal in US dollars, from ``KOFI_MONTHLY_GOAL``. Unset hides the meter."""
+    """The monthly hosting goal in US dollars, from ``KOFI_MONTHLY_GOAL``, or else the total of
+    ``KOFI_MONTHLY_COSTS``. Neither set hides the meter."""
+    raw = (os.getenv("KOFI_MONTHLY_GOAL") or "").strip()
+    if not raw:
+        total = sum(item["amount"] for item in monthly_costs())
+        return round(total, 2) if total > 0 else None
     try:
-        goal = float((os.getenv("KOFI_MONTHLY_GOAL") or "").strip().lstrip("$"))
+        goal = float(raw.lstrip("$"))
     except ValueError:
         return None
     return goal if 0 < goal < 1_000_000 else None
+
+
+COST_LIMIT = 8
+_COST_SPLIT = re.compile(r"[;\n]")
+
+
+def monthly_costs() -> list[dict]:
+    """What running OmniTrackr costs a month, from ``KOFI_MONTHLY_COSTS``.
+
+    The format is "Label: amount" pairs split by semicolons or new lines, in US dollars, for example
+    "Web server: 7; Database: 19; Email: 15". Lines that don't read cleanly are skipped, and an unset
+    variable gives an empty list (the page then describes the costs without numbers).
+    """
+    items = []
+    for part in _COST_SPLIT.split(os.getenv("KOFI_MONTHLY_COSTS") or ""):
+        label, sep, amount = part.rpartition(":")
+        if not sep:
+            label, sep, amount = part.rpartition("=")
+        label = " ".join(label.split())[:40]
+        try:
+            value = float(amount.strip().lstrip("$").replace(",", ""))
+        except ValueError:
+            continue
+        if label and 0 <= value < 100_000:
+            items.append({"label": label, "amount": value})
+        if len(items) >= COST_LIMIT:
+            break
+    return items
 
 
 def _amount(value: Optional[str]) -> float:
@@ -696,20 +909,42 @@ def handle_webhook(db: Session, data: dict) -> dict:
     )
     db.add(payment)
 
-    user = None if payment.test else _match(db, data, email)
-    if user is not None:
-        _link(db, payment, user.id)
+    from . import gift_memberships  # avoids a circular import
+
+    # OT-GIFT in a one-time payment's message: the perks are for someone else, opened with a code.
+    marker = (gift_memberships.find_marker(data)
+              if not payment.test and kind == "donation" and not monthly else None)
+    user = gift = None
     try:
+        if marker is not None:
+            giver = db.get(models.User, marker["giver_id"]) if marker["giver_id"] else None
+            if giver is None or not giver.is_active:
+                # Only the payer's own email, not a supporter code: a plain OT-123-abc code written next to
+                # OT-GIFT is as likely to be the person it's for, and the giver can never open their gift.
+                giver = _match(db, data, email, codes=False)
+            gift = gift_memberships.from_webhook(db, payment, giver)
+            if giver is not None:
+                from .support_asks import note_support  # avoids a circular import
+                note_support(db, giver.id)
+        else:
+            user = None if payment.test else _match(db, data, email)
+            if user is not None:
+                _link(db, payment, user.id)
         db.commit()
     except IntegrityError:
         db.rollback()  # the same delivery arrived twice at once
         return {"status": "duplicate", "linked": False}
-    return {"status": "recorded", "linked": user is not None}
+    if gift is None:
+        return {"status": "recorded", "linked": user is not None}
+    gift_memberships.tell_giver_ready(db, gift)
+    # Keys starting with "_" are for the webhook route (the payer's email) and never go back to Ko-fi.
+    return {"status": "recorded", "linked": False, "gift": True, "_gift_id": gift.id, "_email": email}
 
 
-def _match(db: Session, data: dict, email: Optional[str]):
-    """The member a new payment belongs to: a supporter code anywhere the payer could type it, else one verified email."""
-    for field in ("message", "from_name"):
+def _match(db: Session, data: dict, email: Optional[str], codes: bool = True):
+    """The member a new payment belongs to: a supporter code anywhere the payer could type it, else one verified email.
+    ``codes=False`` skips the codes and goes by the email alone."""
+    for field in ("message", "from_name") if codes else ():
         code_id = user_id_from_text(data.get(field) if isinstance(data.get(field), str) else None)
         user = db.get(models.User, code_id) if code_id is not None else None
         if user is not None:

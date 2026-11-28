@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="{{DESCRIPTION}}">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
@@ -47,7 +47,8 @@
     .guide-updated { font-size: .9rem; }
     .switch-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0 0 36px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
     .switch-cta p { flex: 1 1 260px; margin: 0; color: var(--fg-secondary); }
-    .switch-cta a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 700; text-decoration: none; }
+    /* A fixed violet: in dark mode --primary turns light lilac, and white text on it drops to 1.8:1. */
+    .switch-cta a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border-radius: 999px; background: #6d28d9; color: #fff; font-weight: 700; text-decoration: none; }
     .switch-cta a:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
 .public-reader .reader-shell .switch-cta a, .public-reader .reader-shell .switch-cta a:hover { color: #fff; text-decoration: none; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
@@ -60,9 +61,14 @@
 .switch-others a { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px; color: var(--fg); text-decoration: none; }
 .switch-others a:hover { border-color: var(--primary); color: var(--primary); }
 .switch-others a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.switch-scale { max-width: 26rem; margin: 8px 0 16px; }
+.switch-scale td { font-variant-numeric: tabular-nums; }
+.content-section h3#changes-heading { font-size: 1.05rem; margin: 22px 0 8px; color: var(--fg); }
+.switch-changes { margin: 0 0 10px 20px; padding: 0; }
+.switch-changes li { margin-bottom: 10px; }
 </style>
 {{STRUCTURED_DATA}}
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261120-a11y-1">
 </head>
 
 <body class="public-reader site">

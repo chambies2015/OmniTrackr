@@ -1,0 +1,110 @@
+/* "Pick swap" home card (pick-swap-home.js): each swap the member is in and the next thing to do. The card
+   surface comes from the board's one card look in dashboard-home.css; the swap pages use pick-swap.css. */
+
+body.app-shell .home-board #swapHome { --card-accent: #d97706; --psh-ink: #b45309; }
+body.app-shell.dark-mode .home-board #swapHome { --card-accent: #fbbf24; --psh-ink: #fcd34d; }
+
+.swap-home__head { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+.swap-home__intro { min-width: 0; }
+.swap-home__eyebrow {
+  color: var(--psh-ink, #b45309);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+body.app-shell .home-board__main #swapHomeTitle,
+body.app-shell .home-board #swapHomeTitle {
+  align-items: center;
+  display: flex;
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  gap: 10px;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+  margin: 0;
+}
+body.app-shell .home-board #swapHomeTitle::before {
+  align-self: flex-start;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 60%, #fff), var(--card-accent));
+  border-radius: 999px;
+  content: "";
+  flex: none;
+  height: 18px;
+  margin-top: 3px;
+  width: 4px;
+}
+.swap-home__more {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  display: inline-flex;
+  flex: none;
+  font-size: .8rem;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+.swap-home__more:hover { background: var(--surface-hover); }
+
+.swap-home__list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }
+.swap-home__item {
+  align-items: center;
+  background: color-mix(in srgb, var(--card-accent) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 20%, var(--border));
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  padding: 12px;
+}
+.swap-home__item--urgent { border-color: color-mix(in srgb, var(--card-accent) 55%, var(--border)); }
+.swap-home__box {
+  background: linear-gradient(140deg, #8b5cf6, #6d28d9);
+  border-radius: 7px;
+  height: 34px;
+  position: relative;
+  width: 34px;
+}
+.swap-home__item[data-state="drawn"] .swap-home__box { background: linear-gradient(140deg, #f472b6, #db2777); }
+.swap-home__item[data-state="revealed"] .swap-home__box { background: transparent; border: 2px solid var(--card-accent); }
+.swap-home__box::before, .swap-home__box::after { background: linear-gradient(180deg, #fde68a, #f59e0b); content: ""; position: absolute; }
+.swap-home__box::before { height: 100%; left: calc(50% - 3px); top: 0; width: 6px; }
+.swap-home__box::after { height: 6px; left: 0; top: calc(50% - 3px); width: 100%; }
+.swap-home__item[data-state="revealed"] .swap-home__box::before, .swap-home__item[data-state="revealed"] .swap-home__box::after { opacity: .45; }
+.swap-home__body { display: grid; gap: 2px; min-width: 0; }
+.swap-home__name { color: var(--fg); font-weight: 700; overflow: hidden; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.swap-home__name:hover { text-decoration: underline; }
+.swap-home__line { color: var(--fg-secondary); font-size: .86rem; line-height: 1.45; margin: 0; overflow-wrap: anywhere; }
+.swap-home__go {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  display: inline-flex;
+  font-size: .84rem;
+  font-weight: 600;
+  min-height: 38px;
+  padding: 0 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.swap-home__go:hover { background: var(--surface-hover); }
+.swap-home__go--urgent {
+  background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0));
+  border-color: transparent;
+  box-shadow: var(--cta-shadow, none);
+  color: #fff;
+}
+.swap-home__go--urgent:hover { background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0)); filter: brightness(1.05); }
+#swapHome :is(a, button):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@media (max-width: 560px) {
+  .swap-home__item { grid-template-columns: 30px minmax(0, 1fr); }
+  .swap-home__box { height: 30px; width: 30px; }
+  .swap-home__go { grid-column: 2; justify-self: start; }
+}

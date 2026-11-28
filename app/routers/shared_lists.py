@@ -17,8 +17,8 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["shared-lists"])
-CSS_VERSION = "20261027-a11y-speed-1"
-JS_VERSION = "20261026-clubs-1"
+CSS_VERSION = "20261113-clubs-1"
+JS_VERSION = "20261113-clubs-1"
 DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends, or run it as a watch club: "
                "pick one title, finish it by a date and talk it over.")
 
@@ -148,7 +148,10 @@ def lists_page(user=Depends(get_optional_current_user)):
         '<p>A watchlist for the two of you, an anime queue for the group chat, a book club shortlist. Everyone adds '
         'titles, says which ones they\'re in for, and marks them done when you get to them.</p>'
         '<p class="sl-hero__club">Want a club? Pick one title from any list, set a finish-by date, and everyone '
-        'checks in and talks it over once they\'re done. Spoilers stay hidden until you finish.</p></header>'
+        'checks in and talks it over once they\'re done. Spoilers stay hidden until you finish.</p>'
+        '<p class="sl-hero__club">Watching a whole season or reading a long book? <a href="/together">Watch '
+        'together</a> sets a weekly pace, so everyone gets through the same episodes or chapters each week and '
+        'leaves notes that open when the others reach them.</p></header>'
         '<section class="sl-app" id="sharedLists" data-view="index" aria-live="polite">'
         '<form class="sl-create" data-list-create>'
         '<h2>Start a list</h2>'

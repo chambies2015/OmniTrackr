@@ -77,6 +77,11 @@ jobs:
       with:
         node-version: '22'
 
+    # tests/test_minify_equivalence.cjs checks the served (minified) scripts and stylesheets with
+    # esbuild's parser. Nothing else uses it, so it is installed here instead of in a package.json.
+    - name: Install esbuild for the minifier check
+      run: npm install --no-save --no-package-lock esbuild@0.25.12
+
     - name: Run browser behavior tests
       run: node --test tests/*.cjs
 

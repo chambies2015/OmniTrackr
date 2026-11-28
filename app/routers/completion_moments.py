@@ -3,9 +3,10 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Type
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from .. import models, review_spoilers, schemas, title_pages
+from .. import discussion_hub, models, review_spoilers, schemas, title_pages
 from ..integer_bounds import PositiveDatabaseId
 from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
 from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
@@ -84,15 +85,20 @@ def create_completion_moment(
             rating=item.rating,
         )
         db.add(moment)
-        # A title added as already finished has its journal entry from that moment.
+        # A title added as already finished has its journal entry from that moment. A finish the member logged
+        # in the journal themselves this month is that entry already: the challenge card's "Write it" opens
+        # this screen for such a finish, and logging it again would put a second finish in the journal.
+        now = datetime.utcnow()
         logged = db.query(models.ActivityEntry.id).filter(
             models.ActivityEntry.user_id == current_user.id, models.ActivityEntry.category == payload.category,
             models.ActivityEntry.item_id == item.id, models.ActivityEntry.action == "completed",
-            models.ActivityEntry.source == "automatic").first()
+            or_(models.ActivityEntry.source == "automatic",
+                models.ActivityEntry.occurred_at >= datetime(now.year, now.month, 1))).first()
         if logged is None:
             record_completion_activity(db, current_user.id, payload.category, item)
         db.flush()
-    result = {**_serialize(moment), "has_review": bool((item.review or "").strip())}
+    result = {**_serialize(moment), "has_review": bool((item.review or "").strip()),
+              "talk": discussion_hub.talk_for_item(db, title_pages.LIBRARY_TO_KIND[payload.category], item)}
     db.commit()
     return result
 

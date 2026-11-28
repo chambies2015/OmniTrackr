@@ -1,5 +1,6 @@
 let activeCompletionMomentId = null;
 let activeCompletionCategory = null;
+let activeCompletionItemId = null;
 let completionSaving = false;
 const COMPLETION_RELOADERS = {
   movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
@@ -73,7 +74,11 @@ async function openCompletionMoment(category, itemId) {
     const moment = await response.json();
     activeCompletionMomentId = moment.id;
     activeCompletionCategory = category;
+    activeCompletionItemId = itemId;
     document.getElementById('completionRitualTitle').textContent = moment.title;
+    showCompletionShare(category, itemId, moment.title);
+    showCompletionTalk(moment.talk);
+    showCompletionRank(category, itemId);
     document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
     document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
     const step = document.getElementById('completionReviewStep');
@@ -97,11 +102,94 @@ async function openCompletionMoment(category, itemId) {
   }
 }
 
+// Finishing something is when people say "you have to see this", so offer Recommend to a friend
+// right there. The dialog sends it to friends' inboxes or makes a link that doubles as an invite.
+function showCompletionShare(category, itemId, title) {
+  const box = document.getElementById('completionShare');
+  const button = document.getElementById('completionShareBtn');
+  if (!box || !button) return;
+  const recs = typeof window !== 'undefined' ? window.OmniFriendRecs : null;
+  box.hidden = !(recs && typeof recs.open === 'function');
+  if (box.hidden) return;
+  button.onclick = () => {
+    try {
+      if (typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'finish_recommend_opened' })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
+    recs.open({ category, item_id: itemId, title: title || 'this title' });
+  };
+}
+
+// Finishing is also when there's most to say, so point at the title's discussion board.
+function showCompletionTalk(talk) {
+  const box = document.getElementById('completionTalk');
+  const link = document.getElementById('completionTalkLink');
+  const note = document.getElementById('completionTalkNote');
+  if (!box || !link || !note) return;
+  const url = talk && typeof talk.url === 'string' ? talk.url : '';
+  box.hidden = !/^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions$/.test(url);
+  if (box.hidden) return;
+  const count = Number(talk.count) || 0;
+  note.textContent = count
+    ? `${count} discussion${count === 1 ? '' : 's'} going already. Jump in while it's fresh.`
+    : 'Nobody has started one yet. Members who track it hear when you do.';
+  link.href = count ? url : `${url}?opener=0#start`;
+  link.textContent = count ? 'Join the discussion' : 'Start the first one';
+  link.onclick = () => {
+    try {
+      if (typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+        navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'finish_talk_clicked' })], { type: 'application/json' }));
+      }
+    } catch (error) { /* counting only */ }
+  };
+}
+
+// A title just finished is the easiest one to place: the member still knows how it compares.
+// The reflection is saved first when anything was typed, then the Rankings dialog asks.
+function showCompletionRank(category, itemId) {
+  const box = document.getElementById('completionRank');
+  const button = document.getElementById('completionRankBtn');
+  if (!box || !button) return;
+  const ranker = typeof window !== 'undefined' ? window.OmniRankings : null;
+  box.hidden = !(ranker && typeof ranker.place === 'function');
+  if (box.hidden) return;
+  button.disabled = false;
+  button.onclick = async () => {
+    const takeaway = document.getElementById('completionRitualTakeaway');
+    const favorite = document.getElementById('completionRitualFavorite');
+    const step = document.getElementById('completionReviewStep');
+    const review = document.getElementById('completionReviewText');
+    const typed = Boolean((takeaway && takeaway.value.trim()) || (favorite && favorite.checked)
+      || (step && !step.hidden && review && review.value.trim()));
+    button.disabled = true;
+    if (typed) {
+      await saveCompletionRitual();
+      const save = document.getElementById('completionRitualSave');
+      // Still open with the save button waiting: it didn't save, and the member's text is still there.
+      if (activeCompletionMomentId && save && save.dataset.action !== 'close-completion-ritual') {
+        button.disabled = false;
+        return;
+      }
+    }
+    closeCompletionRitual();
+    ranker.place(category, itemId, 'finish');
+  };
+}
+
 function closeCompletionRitual() {
   const modal = document.getElementById('completionRitualModal');
   if (modal) modal.style.display = 'none';
   activeCompletionMomentId = null;
   activeCompletionCategory = null;
+  activeCompletionItemId = null;
+}
+
+// Tell the rest of the dashboard that a takeaway or review was saved (the monthly challenge card counts the words).
+function announceCompletionSaved(category, itemId) {
+  try {
+    window.dispatchEvent(new CustomEvent('omnitrackr:completion-saved', { detail: { category, id: itemId } }));
+  } catch (error) { /* nothing listens */ }
 }
 
 async function saveCompletionReview(momentId, review, isPublic, spoilers) {
@@ -119,6 +207,7 @@ async function saveCompletionRitual() {
   if (!activeCompletionMomentId || completionSaving) return;
   const momentId = activeCompletionMomentId;
   const category = activeCompletionCategory;
+  const itemId = activeCompletionItemId;
   const takeaway = document.getElementById('completionRitualTakeaway').value;
   const favorite = document.getElementById('completionRitualFavorite').checked;
   const step = document.getElementById('completionReviewStep');
@@ -135,6 +224,7 @@ async function saveCompletionRitual() {
     if (typeof loadMonthlyReplay === 'function') loadMonthlyReplay();
     if (!review) {
       closeCompletionRitual();
+      announceCompletionSaved(category, itemId);
       return;
     }
     let result;
@@ -153,6 +243,7 @@ async function saveCompletionRitual() {
       const reload = typeof globalThis !== 'undefined' ? globalThis[COMPLETION_RELOADERS[category]] : null;
       if (typeof reload === 'function') reload();
     }
+    announceCompletionSaved(category, itemId);
     step.hidden = true;
     reviewBox.value = '';
     const save = document.getElementById('completionRitualSave');

@@ -277,6 +277,11 @@ a.title-where__provider:hover, a.title-where__provider:focus-visible { border-co
 .title-where__more { color: var(--site-violet-soft); display: inline-block; font-weight: 600; margin-top: 18px; }
 .title-where__note { color: var(--site-muted); font-size: .82rem; line-height: 1.55; margin: 10px 0 0; }
 .title-where__note a { color: inherit; }
+.title-where__group--buy .title-where__mono { background: var(--site-amber); }
+.title-where__search { border-top: 1px solid var(--site-border); margin-top: 20px; padding-top: 16px; }
+.title-where__search h3 { color: var(--site-muted); font-size: .78rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 8px; text-transform: uppercase; }
+.title-where__search ul { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0; padding: 0; }
+.title-where__search a { color: var(--site-violet-soft); display: inline-block; font-weight: 600; padding: 6px 0; }
 
 /* Credited names that have a people or studio page. */
 .title-facts dd a { color: var(--site-violet-soft); text-decoration: none; }

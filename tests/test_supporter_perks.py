@@ -37,7 +37,7 @@ def test_new_supporters_are_founding_until_2027(client, db_session):
     db_session.commit()
     post(client, payment())
     data = client.get("/api/supporter", headers=headers_for(user)).json()
-    assert data["founding"] is True and data["months"] == 1 and data["level"] == "Founding supporter"
+    assert data["founding"] is True and data["months"] == 1 and data["level"] == "Founding supporter #1"
     assert "gold" in data["unlocked_accents"] and data["on_wall"] is False
     assert client.put("/api/supporter", headers=headers_for(user), json={"accent": "gold"}).status_code == 200
 
@@ -74,7 +74,7 @@ def test_the_wall_is_opt_in(client, db_session):
     assert "support-wall__name" not in client.get("/supporters").text
     assert client.put("/api/supporter", headers=headers_for(user), json={"on_wall": True}).json()["on_wall"] is True
     assert supporters.get_supporter(db_session, user.id).on_wall is True
-    assert ">shy</span>" in client.get("/supporters").text
+    assert '>shy <small class="support-wall__number">#1</small></span>' in client.get("/supporters").text
 
 
 def test_wall_lists_current_supporters_first_and_links_public_profiles(client, db_session):
@@ -125,10 +125,14 @@ def test_supporter_count_hides_until_there_are_a_few(client, db_session):
     for name in ("a1", "a2"):
         _supporter(db_session, member(db_session, name))
     db_session.commit()
-    assert "support-hero__count" not in client.get("/supporters").text
+    page = client.get("/supporters").text
+    # Two is too few to boast about; the page names the next supporter number instead.
+    assert "members support OmniTrackr right now" not in page
+    assert "The next supporter will be <strong>#3</strong>." in page
     _supporter(db_session, member(db_session, "a3"))
     db_session.commit()
-    assert "<strong>3</strong> members support OmniTrackr right now." in client.get("/supporters").text
+    assert ("<strong>3</strong> members support OmniTrackr right now. The next one will be #4."
+            in client.get("/supporters").text)
 
 
 def test_wall_migration_keeps_existing_supporters_off_the_wall(tmp_path, monkeypatch):

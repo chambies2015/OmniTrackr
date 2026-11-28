@@ -196,8 +196,8 @@
 .demo-practice { border-left-color: rgba(167, 139, 250, .4); }
 .demo-practice-icon { color: var(--site-violet-soft); }
 .demo-button { border-radius: 999px; }
-.demo-button-primary { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff !important; }
-.demo-button-primary:hover { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); filter: brightness(1.08); }
+.demo-button-primary { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff !important; }
+.demo-button-primary:hover { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); filter: brightness(1.04); }
 .demo-button-quiet { background: var(--site-surface); border-color: var(--site-border-strong); color: var(--site-text); }
 .demo-button:disabled { background: var(--site-surface); border-color: var(--site-border); color: var(--site-muted) !important; box-shadow: none; }
 .demo-stats { background: linear-gradient(110deg, rgba(139, 92, 246, .14), rgba(45, 212, 191, .06)); border-color: var(--site-border); border-radius: 18px; }
@@ -217,3 +217,18 @@
 .demo-next-step { background: radial-gradient(420px 260px at 95% 0%, rgba(45, 212, 191, .28), transparent 70%), linear-gradient(135deg, #4c1d95 0%, #3b0764 55%, #134e4a 100%); border-color: rgba(255, 255, 255, .12); border-radius: 24px; }
 .demo-skip { background: #fff; border-radius: 8px; color: #140f2e; font-weight: 700; }
 .demo-shell { padding-bottom: 24px; }
+
+/* Phones (Nov 21 2026): the 600px rules above took labels down to 9px and notes to 10.5px.
+   Labels stay at 11.5px or more and sentences at 13px or more. */
+@media (max-width: 600px) {
+  .demo-eyebrow, .demo-library-heading .demo-eyebrow, .demo-panel-heading .demo-eyebrow { font-size: .74rem; letter-spacing: .1em; }
+  .demo-category, .demo-progress-label, .demo-cover > span { font-size: .72rem; }
+  .demo-practice strong { font-size: .9rem; }
+  .demo-practice p, .demo-stats-caption, .demo-filter-summary p, .demo-filter-hint, .demo-status { font-size: .84rem; }
+  .demo-stats span, .demo-stats .demo-stat-unit { font-size: .84rem; }
+  .demo-card-description, .demo-note, .demo-card-progress p, .demo-card-progress p.demo-progress-reminder { font-size: .88rem; }
+  .demo-card-facts, .demo-card-edit, .demo-panel small, .demo-next-step p.demo-transfer-note, .demo-footer { font-size: .84rem; }
+  .demo-panel > p, .demo-progress-form > p:not(.demo-error), .demo-explainer p { font-size: .9rem; }
+  .demo-toolbar .demo-button { font-size: .88rem; }
+  .demo-filters button, .demo-quick-filters button { font-size: .84rem; min-height: 40px; }
+}

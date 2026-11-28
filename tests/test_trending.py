@@ -152,8 +152,10 @@ def test_writeup_reads_from_the_numbers(db_session):
 
 
 def test_trending_pages_render_and_stay_out_of_search_while_thin(client, db_session):
+    # The page reads the real clock, so date the adds from it (NOW stops being "this week" after Nov 6).
     for user in crowd(db_session, "r", 3):
-        add(db_session, user, "Page Film", director="Some Director")
+        item = add(db_session, user, "Page Film", director="Some Director")
+        item.added_at = datetime.utcnow() - timedelta(days=1)
     db_session.commit()
     response = client.get("/trending")
     assert response.status_code == 200
@@ -187,7 +189,7 @@ def test_trending_pages_are_indexed_and_in_sitemap_with_enough_titles(client, db
     db_session.commit()
     response = client.get("/trending")
     assert "X-Robots-Tag" not in response.headers
-    assert '<meta name="robots" content="index, follow">' in response.text
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
     sitemap = client.get("/sitemap.xml").text
     assert "/trending</loc>" in sitemap and "/trending/movie</loc>" in sitemap
     assert "/trending/book</loc>" not in sitemap

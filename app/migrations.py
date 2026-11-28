@@ -356,6 +356,10 @@ def run_migrations():
                 "report_count": "INTEGER DEFAULT 0",
                 "report_content_hash": "VARCHAR",
                 "suspended_at": "TIMESTAMP",
+                # Nov 2026 share links and ranked lists. Existing collections start
+                # with no link and unranked, so nothing new is shared.
+                "link_token": "VARCHAR(32)",
+                "ranked": "BOOLEAN NOT NULL DEFAULT FALSE",
             }
             for column_name, column_type in collection_additions.items():
                 if column_name not in collection_columns:
@@ -373,6 +377,7 @@ def run_migrations():
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_suspended_at ON collections(suspended_at)"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_collections_link_token ON collections(link_token)"))
                 conn.commit()
 
         if inspector.has_table("collection_items"):
@@ -822,12 +827,59 @@ def run_migrations():
     add_supporter_wall_column()
     add_supporter_banner_column()
     add_membership_columns()
+    add_supporter_style_columns()
+    add_supporter_number_column()
     add_public_diary_column()
     add_taste_match_link_column()
+    add_profile_now_column()
+    add_showcase_note_column()
     add_calendar_episodes_column()
+    add_invite_taste_test_column()
+    add_next_up_started_column()
+    add_poll_round_column()
     add_lookup_indexes()
     add_kofi_matching_columns()
     fold_unreadable_traffic_sources()
+    fold_private_link_pages()
+    split_shared_regular_badge()
+    add_week_one_start_column()
+    add_follow_suggest_column()
+    add_break_item_undo_column()
+    add_kofi_gift_column()
+
+
+def add_kofi_gift_column():
+    """Mark Ko-fi payments that bought a gift (Nov 23 2026). Every recorded payment gets FALSE, so it reads
+    and links exactly as before. The gift_memberships table itself is new and made by create_all."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("kofi_payments"):
+            return
+        if "gift" in {col["name"] for col in inspector.get_columns("kofi_payments")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE kofi_payments ADD COLUMN gift BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added gift column to kofi_payments table")
+    except Exception as e:
+        print(f"Migration warning (Ko-fi gifts): {e}")
+
+
+def add_follow_suggest_column():
+    """Add the "suggest my profile" switch to follower settings. Existing rows get TRUE, the same
+    as members with no row: a profile that is public and taking followers can be suggested."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("follow_settings"):
+            return
+        if "suggest_me" in {col["name"] for col in inspector.get_columns("follow_settings")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE follow_settings ADD COLUMN suggest_me BOOLEAN NOT NULL DEFAULT TRUE"))
+            conn.commit()
+            print("Added suggest_me column to follow_settings table")
+    except Exception as e:
+        print(f"Migration warning (follow suggest): {e}")
 
 
 def add_notification_link_column():
@@ -878,6 +930,72 @@ def add_supporter_banner_column():
         print(f"Migration warning (supporter banner): {e}")
 
 
+def add_poll_round_column():
+    """Add the link from a group poll to the round before it. Existing polls keep NULL (no earlier round)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("tonight_polls"):
+            return
+        if "previous_id" not in {col["name"] for col in inspector.get_columns("tonight_polls")}:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE tonight_polls ADD COLUMN previous_id INTEGER"))
+                conn.commit()
+                print("Added previous_id column to tonight_polls table")
+        with engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tonight_polls_previous_id ON tonight_polls(previous_id)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (poll rounds): {e}")
+
+
+def add_week_one_start_column():
+    """Add when a new member's week showed on the start page. Existing rows keep NULL (not shown there)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("week_one_plans"):
+            return
+        if "start_seen_at" in {col["name"] for col in inspector.get_columns("week_one_plans")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE week_one_plans ADD COLUMN start_seen_at TIMESTAMP"))
+            conn.commit()
+            print("Added start_seen_at column to week_one_plans table")
+    except Exception as e:
+        print(f"Migration warning (week one start): {e}")
+
+
+def add_break_item_undo_column():
+    """Add the checkpoint a break plan tick replaced. Existing rows keep NULL (an untick changes only the plan)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("break_plan_items"):
+            return
+        if "undo_progress" in {col["name"] for col in inspector.get_columns("break_plan_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE break_plan_items ADD COLUMN undo_progress TEXT"))
+            conn.commit()
+            print("Added undo_progress column to break_plan_items table")
+    except Exception as e:
+        print(f"Migration warning (break plan undo): {e}")
+
+
+def add_next_up_started_column():
+    """Add when a queued title was started. Existing queue rows keep NULL (not started), so queues look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("next_up_items"):
+            return
+        if "started_at" in {col["name"] for col in inspector.get_columns("next_up_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE next_up_items ADD COLUMN started_at TIMESTAMP"))
+            conn.commit()
+            print("Added started_at column to next_up_items table")
+    except Exception as e:
+        print(f"Migration warning (next up started): {e}")
+
+
 def add_membership_columns():
     """Add Ko-fi membership tiers. Every new column is nullable or defaults off, so nothing changes for anyone.
 
@@ -904,6 +1022,49 @@ def add_membership_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (memberships): {e}")
+
+
+def add_supporter_style_columns():
+    """Add the app theme and avatar frame picks (Nov 2026). Both nullable, so every supporter looks the same until they pick."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("supporters")}
+        with engine.connect() as conn:
+            if "app_theme" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN app_theme VARCHAR(24)"))
+                print("Added app_theme column to supporters table")
+            if "avatar_frame" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN avatar_frame VARCHAR(24)"))
+                print("Added avatar_frame column to supporters table")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (supporter styles): {e}")
+
+
+def add_supporter_number_column():
+    """Add supporter numbers (Nov 23 2026) and number any supporter who doesn't have one yet, oldest
+    support first, after the highest number already given. Numbers once given are never changed."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("supporters")}
+        with engine.connect() as conn:
+            if "number" not in columns:
+                conn.execute(text("ALTER TABLE supporters ADD COLUMN number INTEGER"))
+                print("Added number column to supporters table")
+            rows = conn.execute(text("SELECT id FROM supporters WHERE number IS NULL ORDER BY since, id")).fetchall()
+            if rows:
+                top = int(conn.execute(text("SELECT COALESCE(MAX(number), 0) FROM supporters")).scalar() or 0)
+                for offset, (row_id,) in enumerate(rows, start=1):
+                    conn.execute(text("UPDATE supporters SET number = :number WHERE id = :id AND number IS NULL"),
+                                 {"number": top + offset, "id": row_id})
+                print(f"Numbered {len(rows)} supporter(s)")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (supporter numbers): {e}")
 
 
 def add_public_diary_column():
@@ -936,6 +1097,38 @@ def add_taste_match_link_column():
             print("Added show_taste_match column to public_profiles table")
     except Exception as e:
         print(f"Migration warning (taste match link): {e}")
+
+
+def add_profile_now_column():
+    """Add the opt-in "Right now" shelf flag. Existing profiles start with it off (FALSE), so nothing new is shared."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_now" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_now BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_now column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (profile right now): {e}")
+
+
+def add_showcase_note_column():
+    """Add the optional note on a pinned showcase title. Existing pins keep NULL (no note), so they look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("profile_showcase_items"):
+            return
+        if "note" in {col["name"] for col in inspector.get_columns("profile_showcase_items")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE profile_showcase_items ADD COLUMN note VARCHAR(140)"))
+            conn.commit()
+            print("Added note column to profile_showcase_items table")
+    except Exception as e:
+        print(f"Migration warning (showcase notes): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks")
@@ -984,6 +1177,22 @@ def add_calendar_episodes_column():
         print(f"Migration warning (calendar episodes): {e}")
 
 
+def add_invite_taste_test_column():
+    """Add the taste test switch to friend invite links. Existing links get FALSE, so they work as before."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("friend_invites"):
+            return
+        if "taste_test" in {col["name"] for col in inspector.get_columns("friend_invites")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE friend_invites ADD COLUMN taste_test BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added taste_test column to friend_invites table")
+    except Exception as e:
+        print(f"Migration warning (invite taste test): {e}")
+
+
 # (table, creator column) for the "More by" lists on title pages.
 CREATOR_COLUMNS = (("movies", "director"), ("music", "artist"), ("books", "author"),
                    ("manga", "author"), ("podcasts", "host"), ("audiobooks", "author"))
@@ -996,6 +1205,8 @@ def add_lookup_indexes():
       review_public set, a few percent of each table. A partial index covers just those.
     * "More by this director/author" matches lower(trim(creator)); an index on that
       expression turns a full table read into a lookup.
+    * "Added this week" (Nov 15 speed pass): the homepage numbers, trending, the weekly
+      digest and roundup and the friends feed filter every library by added_at.
 
     Indexes only: no table or row changes. IF NOT EXISTS makes each one run once.
     """
@@ -1010,6 +1221,9 @@ def add_lookup_indexes():
             if inspector.has_table(table):
                 statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_{column}_lookup "
                                   f"ON {table} (lower(trim({column})))")
+        for table in LIBRARY_TABLES:
+            if inspector.has_table(table) and "added_at" in {col["name"] for col in inspector.get_columns(table)}:
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_added_at ON {table} (added_at)")
         for statement in statements:
             with engine.connect() as conn:
                 conn.execute(text(statement))
@@ -1102,3 +1316,127 @@ def fold_unreadable_traffic_sources():
             print(f"Folded {folded} unreadable traffic source label(s) into {BAD_TAG!r}")
     except Exception as e:
         print(f"Migration warning (traffic sources): {e}")
+
+
+def fold_private_link_pages():
+    """Take share-link tokens out of the Site stats page counts (Nov 4 2026 security check).
+
+    Gift lists, shared-list invites, polls and recaps are opened by a link whose token is the
+    key. Until site_traffic.mask_private_link, each opened link was counted under its own full
+    address, so the tokens were stored in site_traffic_daily and listed on the Site stats page.
+    This moves each such row's count onto the "/gifts/(private link)" style row for the same day
+    and kind. Visit totals stay the same; only the token is dropped.
+    """
+    try:
+        from .site_traffic import mask_private_link
+        inspector = inspect(engine)
+        if not inspector.has_table("site_traffic_daily"):
+            return
+        folded = 0
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, day, kind, key, count FROM site_traffic_daily WHERE kind IN ('page', 'human_page')"
+            )).fetchall()
+            for row in rows:
+                masked = mask_private_link(row.key or "")
+                if masked == (row.key or ""):
+                    continue
+                existing = conn.execute(text(
+                    "SELECT id FROM site_traffic_daily WHERE day = :day AND kind = :kind AND key = :key AND id != :id"
+                ), {"day": row.day, "kind": row.kind, "key": masked, "id": row.id}).first()
+                if existing is None:
+                    conn.execute(text("UPDATE site_traffic_daily SET key = :key WHERE id = :id"),
+                                 {"key": masked, "id": row.id})
+                else:
+                    conn.execute(text("UPDATE site_traffic_daily SET count = count + :count WHERE id = :target"),
+                                 {"count": int(row.count or 0), "target": existing.id})
+                    conn.execute(text("DELETE FROM site_traffic_daily WHERE id = :id"), {"id": row.id})
+                folded += 1
+            conn.commit()
+        if folded:
+            print(f"Folded {folded} share-link page row(s) in Site stats")
+    except Exception as e:
+        print(f"Migration warning (share-link pages): {e}")
+
+
+REGULAR_BADGE_FIX = "split-regular-badge-2026-11"
+
+
+def split_shared_regular_badge():
+    """Give the Podcast Regular badge its own stored row (Nov 2026 security and speed check).
+
+    Until now the Podcast Regular track (podcasts listened to) and the Regular track
+    (days visited) both saved their tier under the key "regular", so a member had one
+    row for the two. Its tier was the higher of the two tracks, both badges showed it,
+    and a member who reached both at once could not save any new badge at all (the
+    second insert broke the unique key and rolled the whole save back).
+
+    Podcast Regular is now "podcaster". Visit days only ever go up, so for each old row:
+
+    - if the member's visit days still reach its tier, the row is the Regular badge and
+      stays. Podcast Regular gets its own row at the tier their podcasts reach today;
+    - otherwise the tier can only have come from podcasts, so the row moves to
+      "podcaster" with its tier and dates, and Regular gets a row at the tier their
+      visit days reach (none if they haven't reached bronze).
+
+    No tier a track actually reached is lowered. New rows are marked seen so nobody is
+    told about a badge they already had. Runs once, recorded in data_fixes.
+    """
+    try:
+        from datetime import datetime
+        from sqlalchemy.exc import IntegrityError
+        from . import badges
+        inspector = inspect(engine)
+        if not inspector.has_table("user_badges") or not inspector.has_table("users"):
+            return
+        models.DataFix.__table__.create(bind=engine, checkfirst=True)
+        podcasts, visits = badges.BY_KEY["podcaster"], badges.BY_KEY["regular"]
+        now = datetime.utcnow()
+        moved = added = 0
+        try:
+            with engine.begin() as conn:
+                if conn.execute(text("SELECT 1 FROM data_fixes WHERE name = :name"),
+                                {"name": REGULAR_BADGE_FIX}).first():
+                    return
+                # Claimed first, so a second worker starting at the same moment stops here.
+                conn.execute(text("INSERT INTO data_fixes (name, ran_at) VALUES (:name, :now)"),
+                             {"name": REGULAR_BADGE_FIX, "now": now})
+                rows = conn.execute(text(
+                    "SELECT b.id, b.user_id, b.tier, b.earned_at, b.seen_at, COALESCE(u.visit_days, 0) AS visit_days "
+                    "FROM user_badges b JOIN users u ON u.id = b.user_id WHERE b.badge = 'regular'"
+                )).fetchall()
+                if not rows:
+                    return
+                has_podcaster = {user_id for (user_id,) in conn.execute(text(
+                    "SELECT user_id FROM user_badges WHERE badge = 'podcaster'")).fetchall()}
+                listened = {}
+                if inspector.has_table("podcasts"):
+                    listened = {user_id: int(count) for user_id, count in conn.execute(text(
+                        "SELECT user_id, COUNT(id) FROM podcasts WHERE listened = :yes GROUP BY user_id"
+                    ), {"yes": True}).fetchall()}
+                insert = text("INSERT INTO user_badges (user_id, badge, tier, earned_at, seen_at) "
+                              "VALUES (:user_id, :badge, :tier, :earned_at, :seen_at)")
+                for row in rows:
+                    if row.user_id in has_podcaster:
+                        continue
+                    visit_tier = badges.tier_for(visits, int(row.visit_days or 0))
+                    podcast_tier = badges.tier_for(podcasts, listened.get(row.user_id, 0))
+                    seen = row.seen_at or now
+                    if visit_tier >= row.tier:
+                        if podcast_tier:
+                            conn.execute(insert, {"user_id": row.user_id, "badge": "podcaster", "tier": podcast_tier,
+                                                  "earned_at": row.earned_at, "seen_at": seen})
+                            added += 1
+                        continue
+                    conn.execute(text("UPDATE user_badges SET badge = 'podcaster' WHERE id = :id"), {"id": row.id})
+                    moved += 1
+                    if visit_tier:
+                        conn.execute(insert, {"user_id": row.user_id, "badge": "regular", "tier": visit_tier,
+                                              "earned_at": row.earned_at, "seen_at": seen})
+                        added += 1
+        except IntegrityError:
+            return  # another worker ran it
+        if moved or added:
+            print(f"Split the shared 'regular' badge: {moved} row(s) moved to Podcast Regular, {added} added")
+    except Exception as e:
+        print(f"Migration warning (regular badge split): {e}")

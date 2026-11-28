@@ -42,8 +42,8 @@ SECTIONS = {"guides": ("Guides", "/guides"), "about": ("About", "/about")}
 
 PAGES = {
     "guides.html": ReaderPage("/guides", "Guides", "guides",
-        "Step-by-step help for starting a library, importing a list, saving your place and sharing.",
-        ("media_tracking.html", "export_import_guide.html", "media_tracker_checklist.html")),
+        "Every guide on the site by format and kind, and how to use the tracker.",
+        ("content_quality.html", "media_tracking.html", "switch.html")),
     "media_tracking.html": ReaderPage("/media-tracking", "Media tracking hub", "guides",
         "Every tracking guide in one place, grouped by what you track.",
         ("guides.html", "use_cases.html", "compare.html")),
@@ -106,7 +106,10 @@ PAGES = {
         ("content_quality.html", "advertising.html", "roadmap.html")),
     "content_quality.html": ReaderPage("/content-quality", "Editorial standards", "about",
         "How guides are written, fact-checked and corrected.",
-        ("about.html", "advertising.html", "sample_library")),
+        ("about.html", "corrections.html", "sample_library")),
+    "corrections.html": ReaderPage("/corrections", "Corrections and updates", "about",
+        "What the guides got wrong, what changed after they went up, and how to send a correction.",
+        ("content_quality.html", "about.html", "contact.html")),
     "advertising.html": ReaderPage("/advertising", "Ads and affiliates", "about",
         "Where ads can appear, where they never do, and how affiliate links are labelled.",
         ("privacy.html", "about.html", "content_quality.html")),
@@ -117,8 +120,8 @@ PAGES = {
         "Every release, newest first.",
         ("roadmap.html", "guides.html", "about.html")),
     "contact.html": ReaderPage("/contact", "Contact", "about",
-        "Support, bug reports and feature ideas.",
-        ("faq.html", "about.html", "privacy.html")),
+        "Support, bug reports, corrections and feature ideas.",
+        ("faq.html", "corrections.html", "privacy.html")),
     "site_map.html": ReaderPage("/site-map", "Site map", "about",
         "Every public page, grouped by section.",
         ("guides.html", "media_tracking.html", "about.html")),
@@ -135,11 +138,11 @@ OTHER_PAGES = {
     "demo": ReaderPage("/demo", "Try the demo", "tools",
         "A sample library to click through, no account needed.", ()),
     "sample_library": ReaderPage("/sample-library", "Sample library", "tools",
-        "What a tracked library looks like, filled with made-up entries.", ()),
+        "What a tracked library looks like, with nine real titles and the notes a member might keep.", ()),
     "reviews": ReaderPage("/reviews", "Member reviews", "tools",
         "Reviews members chose to share, across every kind of media.", ()),
     "binge_calculator": ReaderPage("/binge-calculator", "Binge calculator", "tools",
-        "How long a show, anime or book series takes, and the day you'd finish.", ()),
+        "How long a show, anime, film or book series takes, and the day you'd finish.", ()),
 }
 KINDS = {"guides": "Guide", "about": "About OmniTrackr", "tools": "Try it"}
 
@@ -148,7 +151,7 @@ MIN_WORDS_FOR_TIME = 300
 MIN_SECTIONS_FOR_CONTENTS = 4
 WORDS_PER_MINUTE = 230
 
-INLINE_STYLES = ("fonts.css", "public-reader.css", "site.css")
+INLINE_STYLES = ("fonts.css", "public-reader.css", "site.css", "guide-library.css")
 _STYLE_LINK = re.compile(
     r'<link rel="stylesheet" href="/static/(' + "|".join(re.escape(n) for n in INLINE_STYLES) + r')(?:\?v=[\w.-]+)?">'
 )

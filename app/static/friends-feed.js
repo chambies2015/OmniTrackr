@@ -27,6 +27,14 @@
     ['opinions', 'Ratings & reviews'],
     ['added', 'Added'],
   ];
+  const VIEW_KEY = 'omnitrackr_social_view';
+  const SPOILER = /\|\|([^|\n]{1,500})\|\|/g;
+  const ICONS = {
+    cheer: 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z',
+    queue: 'M12 5v14 M5 12h14',
+    library: 'M6 4h12v16l-6-4-6 4z',
+    check: 'M5 12.5l4.5 4.5L19 7.5',
+  };
   const state = { items: [], next: null, loading: false, loaded: false, request: 0, peek: 0, filter: 'all', friends: 0, sharing: true };
 
   const $ = id => document.getElementById(id);
@@ -76,6 +84,22 @@
     return node;
   }
 
+  function icon(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'ffeed-icon');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', ICONS[name]);
+    svg.appendChild(path);
+    return svg;
+  }
+
+  function labelled(node, name, text) {
+    node.replaceChildren(icon(name), el('span', '', text));
+    return node;
+  }
+
   // The server sends naive UTC times.
   function parseTime(value) {
     if (!value) return null;
@@ -98,6 +122,49 @@
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
+  // Groups the feed by day: "Today", "Yesterday", "This week", then "Earlier".
+  function dayLabel(value, now = new Date()) {
+    const date = parseTime(value);
+    if (!date) return 'Earlier';
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const days = Math.round((start - day) / 86400000);
+    if (days <= 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return 'This week';
+    return 'Earlier';
+  }
+
+  // Review text with ||hidden bits|| kept back until tapped, like discussion posts.
+  function spoilerParts(text) {
+    const parts = [];
+    let last = 0;
+    String(text || '').replace(SPOILER, (match, hidden, offset) => {
+      if (offset > last) parts.push({ text: text.slice(last, offset) });
+      parts.push({ text: hidden, hidden: true });
+      last = offset + match.length;
+      return match;
+    });
+    if (last < String(text || '').length) parts.push({ text: String(text).slice(last) });
+    return parts;
+  }
+
+  function reviewText(node, text) {
+    spoilerParts(text).forEach(part => {
+      if (!part.hidden) { node.append(document.createTextNode(part.text)); return; }
+      const bit = el('button', 'ffeed-spoiler', part.text);
+      bit.type = 'button';
+      bit.setAttribute('aria-label', 'Hidden spoiler. Show it');
+      bit.addEventListener('click', () => {
+        bit.classList.add('is-shown');
+        bit.removeAttribute('aria-label');
+        bit.disabled = true;
+      }, { once: true });
+      node.append(bit);
+    });
+    return node;
+  }
+
   function rating(value) {
     if (value === null || value === undefined) return '';
     const number = Number(value);
@@ -114,9 +181,16 @@
     return `added ${noun}`;
   }
 
+  // A run of adds can bring finished titles with it (an import, or ticking down a list).
+  function burstLine(item) {
+    const finished = Number(item.finished) || 0;
+    if (!finished) return `added ${item.count} titles`;
+    return finished >= item.count ? `added ${item.count} titles they've finished` : `added ${item.count} titles, ${finished} finished`;
+  }
+
   function matches(item, filter) {
     if (filter === 'all') return true;
-    if (item.type === 'burst') return filter === 'added';
+    if (item.type === 'burst') return filter === 'added' || (filter === 'finished' && item.finished > 0);
     if (filter === 'finished') return item.kind === 'finished' || (item.kind === 'added' && item.finished);
     if (filter === 'opinions') return item.kind === 'rated' || item.kind === 'reviewed' || Boolean(item.review) || item.rating !== null;
     if (filter === 'added') return item.kind === 'added';
@@ -149,16 +223,18 @@
   }
 
   function who(item) {
+    const head = el('div', 'ffeed-card__head');
+    head.append(avatar(item.friend));
     const line = el('p', 'ffeed-card__who');
     const name = button('ffeed-card__name', item.friend.username);
     name.dataset.action = 'open-friend-profile';
     name.dataset.friendId = String(item.friend.id);
     name.title = `See ${item.friend.username}'s library`;
-    line.append(name, document.createTextNode(` ${item.type === 'burst' ? `added ${item.count} titles` : action(item)}`));
+    line.append(name, document.createTextNode(` ${item.type === 'burst' ? burstLine(item) : action(item)}`));
     const time = el('time', 'ffeed-card__time', ago(item.at));
     time.dateTime = item.at;
-    line.append(time);
-    return line;
+    head.append(line, time);
+    return head;
   }
 
   function titleLink(item) {
@@ -170,7 +246,7 @@
 
   function review(item) {
     if (!item.review) return null;
-    const quote = el('blockquote', 'ffeed-card__review', item.review);
+    const quote = reviewText(el('blockquote', 'ffeed-card__review'), item.review);
     if (!item.spoiler) return quote;
     const box = el('details', 'ffeed-card__spoiler');
     box.append(el('summary', '', 'Spoilers. Show their review'), quote);
@@ -178,7 +254,7 @@
   }
 
   function cheerLabel(node, item) {
-    node.textContent = item.cheered ? `Cheered${item.cheers > 1 ? ` · ${item.cheers}` : ''}` : `Cheer${item.cheers ? ` · ${item.cheers}` : ''}`;
+    labelled(node, 'cheer', item.cheered ? `Cheered${item.cheers > 1 ? ` · ${item.cheers}` : ''}` : `Cheer${item.cheers ? ` · ${item.cheers}` : ''}`);
     node.setAttribute('aria-pressed', String(Boolean(item.cheered)));
     node.disabled = Boolean(item.cheered);
   }
@@ -205,7 +281,7 @@
       });
       item.in_library = true;
       actions.querySelectorAll('[data-feed-save]').forEach(node => node.remove());
-      actions.appendChild(el('span', 'ffeed-card__owned', 'In your library'));
+      actions.appendChild(owned());
       note(card, data.queued ? `Added to your Next Up.` : data.created ? 'Added to your library.' : 'Already in your library.');
       const loader = window[LOADERS[data.category]];
       if (data.created && typeof loader === 'function') {
@@ -227,19 +303,28 @@
     card.querySelector('.ffeed-card__body').appendChild(box);
   }
 
+  function owned() {
+    return labelled(el('span', 'ffeed-card__owned'), 'check', 'In your library');
+  }
+
   function titleCard(item) {
     const card = el('li', 'ffeed-card');
     card.dataset.kind = item.kind;
     card.dataset.feedId = item.id;
-    card.append(avatar(item.friend));
+    if (item.category) card.dataset.format = item.category;
+    card.append(who(item));
     const body = el('div', 'ffeed-card__body');
-    body.append(who(item));
     const main = el('div', 'ffeed-card__main');
     main.append(cover(item, 'ffeed-card__cover'));
     const copy = el('div', 'ffeed-card__copy');
     copy.append(titleLink(item));
     const meta = [item.category_label, item.year, item.creator].filter(Boolean).join(' · ');
-    if (meta) copy.append(el('p', 'ffeed-card__meta', meta));
+    if (meta) {
+      const line = el('p', 'ffeed-card__meta');
+      line.append(el('span', 'ffeed-card__format', item.category_label || ''), document.createTextNode([item.year, item.creator].filter(Boolean).join(' · ')));
+      if (!item.category_label) line.firstChild.remove();
+      copy.append(line);
+    }
     const chips = el('p', 'ffeed-card__chips');
     if (item.rating !== null && item.rating !== undefined) chips.append(el('span', 'ffeed-chip ffeed-chip--rating', `★ ${rating(item.rating)}`));
     if (item.finished) chips.append(el('span', 'ffeed-chip ffeed-chip--done', 'Finished'));
@@ -254,11 +339,11 @@
     cheerLabel(cheerButton, item);
     actions.append(cheerButton);
     if (item.in_library) {
-      actions.append(el('span', 'ffeed-card__owned', 'In your library'));
+      actions.append(owned());
     } else {
-      const queue = button('ffeed-btn', 'Add to Next Up', () => save(item, card, true));
+      const queue = labelled(button('ffeed-btn ffeed-btn--queue', '', () => save(item, card, true)), 'queue', 'Add to Next Up');
       queue.dataset.feedSave = 'next-up';
-      const library = button('ffeed-btn ffeed-btn--quiet', 'Add to library', () => save(item, card, false));
+      const library = labelled(button('ffeed-btn ffeed-btn--quiet', '', () => save(item, card, false)), 'library', 'Add to library');
       library.dataset.feedSave = 'library';
       actions.append(queue, library);
     }
@@ -270,9 +355,8 @@
   function burstCard(item) {
     const card = el('li', 'ffeed-card ffeed-card--burst');
     card.dataset.feedId = item.id;
-    card.append(avatar(item.friend));
+    card.append(who(item));
     const body = el('div', 'ffeed-card__body');
-    body.append(who(item));
     const row = el('ul', 'ffeed-burst');
     item.titles.forEach(title => {
       const entry = el('li', 'ffeed-burst__item');
@@ -299,7 +383,9 @@
       const add = button('action-btn', '+ Add a friend', () => {
         if (typeof window.openFriendRequestModal === 'function') window.openFriendRequestModal();
       });
-      box.append(add);
+      // No friends yet: members with similar taste are one tap away in Find people.
+      const find = button('ffeed-empty__find', 'Or find people with your taste to follow', () => showView('people', true));
+      box.append(add, find);
     } else if (state.filter !== 'all' && state.items.length) {
       box.append(el('p', '', 'Nothing like that in the last 30 days. Try another filter.'));
     } else {
@@ -313,7 +399,20 @@
     const list = $('friendsFeedList');
     if (!list) return;
     const shown = state.items.filter(item => matches(item, state.filter));
-    list.replaceChildren(...(shown.length ? shown.map(item => (item.type === 'burst' ? burstCard(item) : titleCard(item))) : [emptyState()]));
+    const rows = [];
+    let day = null;
+    const now = new Date();
+    shown.forEach(item => {
+      const label = dayLabel(item.at, now);
+      if (label !== day) {
+        day = label;
+        const divider = el('li', 'ffeed-day');
+        divider.append(el('h3', 'ffeed-day__label', label));
+        rows.push(divider);
+      }
+      rows.push(item.type === 'burst' ? burstCard(item) : titleCard(item));
+    });
+    list.replaceChildren(...(rows.length ? rows : [emptyState()]));
     const more = $('friendsFeedMore');
     if (more) more.hidden = !state.next;
     document.querySelectorAll('[data-feed-filter]').forEach(node => {
@@ -339,8 +438,33 @@
     if (dot) dot.hidden = true;
   }
 
+  // The rail's Discussions card: new replies where you're talking, or talk about titles on your list.
+  async function loadTalk() {
+    const list = $('socialTalkList');
+    const summary = $('socialTalkSummary');
+    if (!list || !summary) return;
+    try {
+      const data = await api('/api/discussions/summary');
+      const rows = Array.isArray(data.threads) ? data.threads.filter(row => /^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions\/[1-9]\d{0,9}$/.test(row.url || '')) : [];
+      const fresh = Number(data.new_replies) || 0;
+      if (fresh) summary.textContent = `${fresh} new repl${fresh === 1 ? 'y' : 'ies'} where you're talking.`;
+      else if (rows.length) summary.textContent = 'People are talking about titles on your list.';
+      list.replaceChildren(...rows.map(row => {
+        const item = el('li', 'social-talk__item');
+        const link = el('a', 'social-talk__thread', row.subject || 'A discussion');
+        link.href = row.url;
+        item.append(link, el('span', 'social-talk__about', row.new_replies ? `${row.title} · ${row.new_replies} new` : row.title));
+        return item;
+      }));
+      list.hidden = !rows.length;
+    } catch (error) {
+      // Optional; the card still links to /discussions.
+    }
+  }
+
   async function load(reset = true) {
     if (!$('friendsFeedList') || state.loading) return;
+    if (reset) loadTalk();
     const request = ++state.request;
     state.loading = true;
     if (reset) status(state.loaded ? '' : 'Loading your friends\' updates…');
@@ -412,7 +536,48 @@
     else if (typeof switchTab === 'function') switchTab(TAB);
   }
 
+  // Friends / Following / Find people switch at the top of the tab. Remembers the last choice.
+  // `load` is false while the page starts: the Following list and Find people are fetched when
+  // the tab opens (library.js), not on every dashboard visit by someone who last left them open.
+  function showView(view, focus, load = true) {
+    const root = document.querySelector('.social[data-social-view]');
+    if (!root) return;
+    const wanted = view === 'following' || view === 'people' ? view : 'friends';
+    root.dataset.socialView = wanted;
+    const panels = { friends: $('friendsFeedPanel'), following: $('followingFeed'), people: $('peoplePanel') };
+    Object.entries(panels).forEach(([key, panel]) => { if (panel) panel.hidden = key !== wanted; });
+    const filters = $('friendsFeedFilters');
+    if (filters) filters.hidden = wanted !== 'friends';
+    document.querySelectorAll('[data-social-tab]').forEach(tab => {
+      const on = tab.dataset.socialTab === wanted;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+    });
+    try { localStorage.setItem(VIEW_KEY, wanted); } catch (error) { /* storage off */ }
+    if (load && wanted === 'following' && window.OmniFollowing && typeof window.OmniFollowing.load === 'function') window.OmniFollowing.load();
+    if (load && wanted === 'people' && window.OmniPeople && typeof window.OmniPeople.load === 'function') window.OmniPeople.load();
+  }
+
+  function initSwitch() {
+    const tabs = [...document.querySelectorAll('[data-social-tab]')];
+    if (!tabs.length) return;
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => showView(tab.dataset.socialTab));
+      tab.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        event.preventDefault();
+        const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        showView(next.dataset.socialTab, true);
+      });
+    });
+    let saved = 'friends';
+    try { saved = localStorage.getItem(VIEW_KEY) || 'friends'; } catch (error) { /* storage off */ }
+    showView(saved, false, false);
+  }
+
   function init() {
+    initSwitch();
     const filters = $('friendsFeedFilters');
     if (filters && !filters.childNodes.length) {
       FILTERS.forEach(([value, label]) => {
@@ -430,12 +595,12 @@
     window.addEventListener('hashchange', openFromHash);
   }
 
-  window.OmniFriendFeed = { load, refresh, reset };
+  window.OmniFriendFeed = { load, refresh, reset, showView };
   window.loadFriendFeed = load;
   window.refreshFriendFeed = refresh;
   window.resetFriendFeed = reset;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { action, ago, matches, parseTime, rating, safePath };
+    module.exports = { action, ago, burstLine, dayLabel, initSwitch, matches, parseTime, rating, safePath, showView, spoilerParts };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

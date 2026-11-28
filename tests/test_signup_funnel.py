@@ -127,8 +127,10 @@ def test_unverified_login_and_duplicate_email_are_counted(client, recorder):
     assert client.post("/auth/login", data={"username": "newfan", "password": "tea on the porch"}).status_code == 403
     assert counted(recorder, "login_blocked_unverified") == 1
     again = register(client, username="another")
-    assert again.status_code == 400 and "Log in, or reset" in again.json()["detail"]
-    assert counted(recorder, "signup_rejected_email_taken") == 1
+    # Never confirmed: the card offers a new code for that account (Nov 18 2026).
+    assert again.status_code == 400 and again.json()["unverified"] is True
+    assert counted(recorder, "signup_rejected_email_pending") == 1
+    assert counted(recorder, "signup_rejected_email_taken") == 0
 
 
 def test_expired_links_are_counted(client, recorder):
@@ -272,7 +274,7 @@ def test_homepage_picks_section(db_session):
     items = guest_picks.picks(db_session)
     assert len(items) == 6
     html = guest_picks.section_html(items)
-    assert 'data-guest-slug="interstellar-2014"' in html and "Start your list" in html
+    assert 'data-guest-slug="interstellar-2014"' in html and "Start your library" in html
     assert "data-guest-bar" not in html  # the page's one save bar offers sign-up
     assert guest_picks.section_html(items[:5]) == ""  # too few to be worth showing
 

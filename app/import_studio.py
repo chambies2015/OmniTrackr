@@ -4,7 +4,6 @@ from __future__ import annotations
 import csv
 import hashlib
 import html
-import io
 import math
 import re
 from dataclasses import dataclass
@@ -14,11 +13,11 @@ from typing import Any, Iterable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from . import game_playtime, import_formats, models, schemas, steam
+from . import game_playtime, import_formats, models, schemas, steam, text_limits
+from .import_formats import MAX_IMPORT_ROWS
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
-MAX_IMPORT_ROWS = 5000
 SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam",
                      "spotify", "opml", "rateyourmusic", "libib", "generic"}
 SOURCE_LABELS = {
@@ -95,6 +94,8 @@ class ParsedRow:
     error: str | None = None
     # Facts kept beside the library record, such as Steam minutes played.
     extra: dict[str, Any] | None = None
+    # Said beside a row that will import, such as a review shortened to fit.
+    note: str | None = None
 
 
 def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "", filename: str = "") -> str:
@@ -245,19 +246,19 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
         dialect = csv.Sniffer().sniff(text[:8192], delimiters=",;\t")
     except csv.Error:
         dialect = csv.excel
-    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
-    if not reader.fieldnames:
-        raise ValueError("The CSV file does not contain a header row.")
     rows = []
     try:
-        for row in reader:
+        headers, records = import_formats.csv_records(text, dialect)
+        if not headers:
+            raise ValueError("The CSV file does not contain a header row.")
+        for row in records:
             # Stop at the cap: a file of millions of one-letter rows fits in 5 MB.
             if len(rows) >= MAX_IMPORT_ROWS:
                 raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
             rows.append(_normalized_row(row))
     except csv.Error as exc:
         raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
-    return rows, {_header(name) for name in reader.fieldnames}
+    return rows, {_header(name) for name in headers}
 
 
 def _field(row: dict[str, str], mapping: dict[str, str], target: str, *aliases: str) -> str:
@@ -524,11 +525,12 @@ def parse_csv(
     for number, row in enumerate(rows, start=2):
         try:
             category, data = _source_row(detected, row, category_override, normalized_mapping, watchlist)
+            note = text_limits.describe(text_limits.clip_fields(data))
             validated = SCHEMA_BY_CATEGORY[category](**data)
-            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), note=note))
         except ValueError as exc:
             title = _field(row, normalized_mapping, "title", "title", "name", "series title") or f"Row {number}"
-            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
+            parsed.append(ParsedRow(number, None, text_limits.shorten(title, text_limits.TITLE_MAX), None, _error_message(exc)))
     return detected, parsed
 
 
@@ -536,7 +538,13 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
     """Read a ZIP, XML or JSON export; its layout decides the source and categories."""
     if len(content) > MAX_IMPORT_BYTES:
         raise ValueError("Import files must be 5 MB or smaller.")
-    detected, rows = import_formats.read_structured(content, filename)
+    try:
+        detected, rows = import_formats.read_structured(content, filename)
+    except csv.Error as exc:
+        raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
+    except RecursionError as exc:
+        # json.loads gives up on arrays nested thousands deep; that is a broken file, not a server error.
+        raise ValueError("This file is nested too deeply to be an export.") from exc
     if source not in {"auto", "generic", detected}:
         raise ValueError(f"This file looks like a {SOURCE_LABELS[detected]} export. Choose {SOURCE_LABELS[detected]} or Detect automatically.")
     if not rows:
@@ -553,10 +561,12 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
                 data["cover_art_url"] = steam.cover_url(appid)
                 extra = {"source": "steam", "external_id": str(appid), "minutes": int(row.get("steam_minutes") or 0),
                          "store_url": steam.store_url(appid)}
+            note = text_limits.describe(text_limits.clip_fields(data))
             validated = SCHEMA_BY_CATEGORY[category](**data)
-            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra))
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra, note=note))
         except ValueError as exc:
-            parsed.append(ParsedRow(number, None, row.get("title") or f"Entry {number}", None, _error_message(exc)))
+            title = text_limits.shorten(str(row.get("title") or f"Entry {number}"), text_limits.TITLE_MAX)
+            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
     return detected, parsed
 
 
@@ -567,7 +577,9 @@ def _error_message(exc: ValueError) -> str:
 
 
 def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
-    title = re.sub(r"\s+", " ", data["title"].strip().casefold())
+    # Compared at the shortened length too, so a title saved before the length limit
+    # still matches the shortened copy of it in a file.
+    title = re.sub(r"\s+", " ", _title_key(data["title"]).casefold())
     if category == "movies":
         return title, int(data.get("year") or 0)
     if category in {"tv-shows", "anime"}:
@@ -584,6 +596,10 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
     if category == "audiobooks":
         return title, _clean(data.get("author")).casefold()
     return title, _clean(data.get("author")).casefold()
+
+
+def _title_key(title: str) -> str:
+    return text_limits.shorten(title.strip(), text_limits.TITLE_MAX)
 
 
 def _unknown(identity: tuple[Any, ...]) -> bool:
@@ -639,7 +655,7 @@ def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[
             classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data, "extra": row.extra})
             continue
         identities[row.category].add(identity)
-        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data, "extra": row.extra})
+        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": row.note, "data": row.data, "extra": row.extra})
     return classified
 
 

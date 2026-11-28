@@ -78,6 +78,39 @@ def _cta(text: str) -> str:
             f'<a href="{SIGNUP}" rel="nofollow">Start importing</a></div>\n')
 
 
+def _note(note: dict) -> str:
+    """One of a guide's own sections: paragraphs (trusted HTML), an optional table, more paragraphs."""
+    body = "".join(f"<p>{paragraph}</p>" for paragraph in note["paragraphs"])
+    table = note.get("table")
+    if table:
+        head = "".join(f'<th scope="col">{_e(cell)}</th>' for cell in table["head"])
+        rows = "".join(f'<tr><th scope="row">{_e(theirs)}</th><td>{_e(ours)}</td></tr>' for theirs, ours in table["rows"])
+        body += (f'<div class="switch-table-wrap switch-scale" tabindex="0" role="region" aria-label="{_e(table["label"])}">'
+                 f'<table class="switch-table"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>')
+    body += "".join(f"<p>{paragraph}</p>" for paragraph in note.get("more", ()))
+    return (f'      <section class="content-section" aria-labelledby="{note["id"]}">\n'
+            f'        <h2 id="{note["id"]}">{_e(note["heading"])}</h2>{body}</section>\n')
+
+
+def _changes(slug: str) -> str:
+    """The guide's entries in the corrections log, newest first, or nothing."""
+    from .corrections_log import KINDS, changes_for
+    logged = changes_for(path(slug))
+    if not logged:
+        return ""
+    items = "".join(
+        f'<li><time datetime="{change.date}">{_long(change.date)}</time> '
+        f'<span class="fix-kind fix-kind--{change.kind}">{KINDS[change.kind]}</span> {_e(line)}</li>'
+        for change, line in logged)
+    return (f'<h3 id="changes-heading">Changes to this guide</h3><ol class="switch-changes">{items}</ol>'
+            '<p><a href="/corrections">Every correction and update</a></p>')
+
+
+def _long(value: str) -> str:
+    day = date.fromisoformat(value)
+    return f"{day:%B} {day.day}, {day.year}"
+
+
 def _content(slug: str, guide: dict) -> str:
     name = guide["name"]
     sections = []
@@ -108,6 +141,7 @@ def _content(slug: str, guide: dict) -> str:
     stays = "".join(f"<li>{_e(item)}</li>" for item in guide["stays"])
     sections.append(f'      <section class="content-section" aria-labelledby="stays-heading">\n'
                     f'        <h2 id="stays-heading">What stays on {_e(name)}</h2><ul>{stays}</ul></section>\n')
+    sections.extend(_note(note) for note in guide.get("notes", ()))
     if slug in {"anilist", "steam"}:
         how = ("<li>Create a free account. The Import Studio opens under Account Settings.</li>"
                "<li>Fetch your list as described above. The preview says what it found.</li>")
@@ -140,7 +174,7 @@ def _content(slug: str, guide: dict) -> str:
         f'<p>Written by OmniTrackr and checked against the Import Studio on '
         f'<time datetime="{reviewed.isoformat()}">{reviewed.strftime("%B")} {reviewed.day}, {reviewed.year}</time>. '
         f'{_e(name[0].upper() + name[1:])} changes its menus from time to time, so the steps say where to look rather than quoting every button. '
-        'If something no longer matches, tell us through <a href="/contact">Contact</a>.</p></section>\n')
+        f'If something no longer matches, tell us through <a href="/contact">Contact</a>.</p>{_changes(slug)}</section>\n')
     sections.append(
         '      <section class="content-section" aria-labelledby="related-heading">\n'
         '        <h2 id="related-heading">Related pages</h2>'

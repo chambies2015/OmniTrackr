@@ -1,5 +1,131 @@
 # Public content review — September 17, 2026
 
+## Follow-up — November 18, 2026: the hubs, the Daily archive and stale copy
+
+Crawled a local build of November-Updates again (the sitemap plus every followed link, 270
+pages, 168 indexable) and ranked indexable pages by how many of their words appear on no more
+than two other pages. The guides themselves held up: in-order, if-you-liked, best-of, Discover,
+release and holiday guides all carry 1,000 to 5,000 words of their own. The thinnest indexable
+pages were the hubs a reviewer reaches from the header menu, and one directory:
+
+| Page | Own words before | After |
+| --- | --- | --- |
+| `/challenges` | 250 | 613 |
+| `/browse` | 265 | 841 |
+| `/new-releases` | 322 | 1,064 |
+| `/if-you-liked` | 395 | 1,201 |
+
+- **Hubs.** Each gained writing that is useful before you open a guide. If you liked: how a
+  guide is put together, a table of what each guide's picks share (from the guides' own
+  `threads`), and five questions for working out what you liked about something. Release
+  guides: what a release date means in each format (cinema windows, streaming drop patterns,
+  anime seasons and simulcasts, game unlocks and early access, US Tuesday and UK Thursday book
+  days, Friday album releases) and when to go on day one. Challenges: making a challenge of
+  your own, sizing it, and tracking it with library tags. Browse: choosing a first manga,
+  podcast and audiobook, and borrowing through Libby and Hoopla. Facts that change often are
+  written as usual practice, not rules.
+- **The Daily archive is noindex.** It is a list of past puzzle pages, all noindex since
+  November 4, one templated line each and a line longer every day: the same shape as the
+  People and Studios directories that were taken out of search then. It now follows
+  `daily.INDEX_PAST_PUZZLES` (`daily.archive_indexable()`), stays linked and followed, and
+  left the sitemap. `/daily` stays indexed.
+- **Stale copy.** Three pages (`/guides`, `/content-quality` and the related-pages blurb)
+  still called the sample library "made-up" or "fictional"; it has used nine real titles since
+  November 17. The December challenge said OmniTrackr has six formats; it tracks nine, and the
+  challenge counts all nine. The challenges hub listed six formats too.
+
+Left alone: the twelve `/switch/<service>` guides are now the thinnest indexable pages (450 to
+590 words of their own, about a third shared with the other switch guides). They don't load
+ads, and anything more would be detail about other services' export files that is easy to get
+wrong. The awards pages waiting for nominees (Golden Globes and Oscars, about 500 words each)
+fill in on December 7 and January 21. `/demo` keeps its fictional practice titles and stays
+indexed; a test pins it to the sitemap and it is clearly labelled as a sandbox.
+
+## Follow-up — November 15, 2026: crawl before the December review request
+
+Crawled the live site (900 pages, production on roughly the November 12 code) and a local
+build of November-Updates (297 pages). No broken links, nothing in the sitemap is noindex,
+and no noindex page loads the ad script. ads.txt and the www redirect are correct. The
+switches from November 4 still hold: roundups, past puzzles and the directories stay out of
+search. What needed fixing:
+
+- **The 30 "how long does it take" guides weren't in `editorial_index`.** They had bylines
+  and dates but were missing from the `/content-quality` ledger and from the "Elsewhere in
+  the guides" cross-links, so most had three to six links pointing at them. Indexable ones
+  (`binge_calculator.is_indexable`) are now a "binge" section, and `guide_links` reads
+  their titles, so the Game of Thrones watch order and the Game of Thrones binge guide link
+  to each other. The editorial standards page explains how their totals are worked out, and
+  how the awards pages handle nominees.
+- **Sign-in links were followed again.** About forty pages (Discover trails, awards,
+  gift and Black Friday guides, Release Radar, shared lists) linked to `/?next=<page>`
+  without `rel="nofollow"`. Those are copies of the homepage with a canonical to `/`.
+  `link_hints.nofollow_account_links`, an html_finish step, now adds nofollow to every link
+  to `/?next=` or `/?login=`, so new pages don't need to remember.
+- **Title pages linked to the calculator hub with their own query.** The live crawl found
+  twelve `/binge-calculator?lookup=...` URLs reachable from title pages. Those links are
+  nofollow now; the hub's canonical already pointed at `/binge-calculator`.
+- **The privacy policy was two weeks behind.** It now covers two-step sign-in, passkeys,
+  episode notes, award ballots, the advent calendar, gift lists, shared lists and clubs,
+  what stays in the browser before sign-up, Ko-fi and Amazon Associates. Updated date:
+  November 15, 2026.
+
+Left alone: hub pages such as `/new-releases` and `/challenges` are short (about 300
+words) but are lists of guides with an introduction, which is what a hub is. Awards pages
+waiting for nominees still have dates, history and how to watch (440 to 650 words). The
+Discover guides still don't load the ad script (October 16 decision).
+
+## Follow-up — November 4, 2026: another "low value content" rejection
+
+Crawled the live sitemap (138 URLs) and every page those link to (362 more). Only six
+linked pages outside the sitemap were indexable (privacy, terms, contact, editorial
+standards, the current roundup and a `?login=1` homepage variant with a canonical), so
+the gates on title, people, studio and review pages are working. The question this time
+was what kind of pages make up the indexed set. Roughly:
+
+- 70 written guides: Discover trails and monthly editions, If you liked, In order,
+  best-of, release guides, the seasonal hubs, browse shelves, challenges, editors'
+  collections, Pick for me, the Daily hub and archive.
+- 35 pages about the app: the homepage, about and FAQ, nine tracker pages, thirteen
+  /switch import guides, the tools.
+- 35 pages built mostly from data or one template: eight weekly roundups plus the
+  archive and current week, twenty past Daily puzzles, the People and Studios
+  directories, a movies-only review listing.
+
+The weekly roundups were the clearest problem. Each is a list of 40 to 80 releases from
+the Release Radar feeds, every one with a "Find it on Amazon" search link, under a
+write-up assembled from counts ("The week of October 5 to 11 brought 10 new films, 30 TV
+premieres..."). That is close to what Google's thin-content policy calls thin affiliate
+and automatically generated pages. Release Radar category pages were already noindex for
+the same reason in October.
+
+Changes:
+
+- `weekly_roundup.INDEX_ROUNDUPS = False`: every roundup, the archive and the current
+  week are noindex and out of the sitemap. The thresholds still apply if it's turned on.
+- `daily.INDEX_PAST_PUZZLES = False`: past puzzle pages (about 300 words each, one more a
+  day) are noindex and out of the sitemap. `/daily` and `/daily/archive` stay indexed.
+- People and Studios directories are indexed only when at least six of the pages they
+  list are indexable (`people_pages.DIRECTORY_INDEX_MIN_PAGES`). On November 4 none of
+  the 62 linked people pages or 43 studio pages was, so the directory was a list of
+  links to noindex pages.
+- One-format review listings need eight standalone reviews
+  (`review_quality.MIN_INDEXED_CATEGORY_REVIEWS`). The movies listing was about 10% its
+  own text; the rest repeated `/reviews`.
+- Release Radar cards for TV and anime premieres no longer carry Amazon links
+  (`release_radar.SHOP_LINK_CATEGORIES`). The indexed `/release-radar` page had 29.
+- `ad-loader.js` now allows `/best-of/<year>/<format>` and `/new-releases/<slug>`. Both
+  routers already added the loader for signed-out visitors on indexed pages, but the
+  script's own path list skipped them, so the strongest guides could never show an ad.
+
+After this the indexed set is about 70 guides and 35 app pages. Nothing was deleted or
+redirected, and no member data changed.
+
+What code can't fix: the rejection text now asks for "a consistent presence on the web"
+and "genuine user interest". With about 550 Google visits a month and a domain that
+started publishing guides in September, time and real visitors are a large part of the
+answer. See `adsense/adsense-account-checklist.md` in the project files for the
+Search Console steps and the waiting period.
+
 ## Follow-up — October 31, 2026: landing pages Google sends people to
 
 Measured the live pages first (Playwright, desktop 1366 px and a throttled Pixel 7)

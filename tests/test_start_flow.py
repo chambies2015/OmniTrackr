@@ -222,3 +222,33 @@ def test_day_one_welcome_email_points_an_empty_library_to_the_start_page():
     assert links[0] == "/start" and "/taste-quiz" in links
     _, _, _, started = welcome_emails._day_one(3)
     assert "/start" not in [path for _, items in started for _, _, path in items]
+
+
+# ---------------------------------------------------------------- the poster wall
+
+def test_start_page_opens_on_the_poster_wall(authenticated_client):
+    html = authenticated_client.get("/start").text
+    assert 'data-st-screen="pick"' in html and "data-st-grid" in html
+    # The page opens straight onto titles: no "How do you want to start?" choice first.
+    assert 'data-st-screen="choose"' not in html and "data-st-answer" not in html
+    assert 'id="stSearch"' in html and 'href="/?start=import"' in html and 'href="/taste-quiz"' in html
+    # Progress and the way out stay in the pinned bar.
+    assert "data-st-bar" in html and "data-st-skip" in html
+
+
+def test_deck_brings_covers_already_looked_up(authenticated_client, db_session, monkeypatch):
+    import json
+    from app import title_metadata, title_pages
+    for title, year, status, poster in (("Interstellar", 2014, "ok", "https://image.tmdb.org/t/p/w342/known.jpg"),
+                                        ("The Matrix", 1999, "miss", "https://image.tmdb.org/t/p/w342/not-facts.jpg")):
+        db_session.add(models.TitleMetadata(key=title_metadata.cache_key("movie", title_pages.normalize(title), year),
+                                            status=status, data=json.dumps({"poster": poster}), fetched_at=datetime.utcnow()))
+    db_session.commit()
+    cards = {card["id"]: card for card in authenticated_client.get("/api/start/deck?kinds=movie").json()["cards"]}
+    assert len(cards) >= 18
+    assert cards["movie/interstellar-2014"]["image"] == "https://image.tmdb.org/t/p/w342/known.jpg"
+    assert cards["movie/the-matrix-1999"]["image"] is None
+
+
+def test_deck_has_room_for_a_few_screens_of_posters():
+    assert start_flow.DECK_SIZE >= 3 * 18

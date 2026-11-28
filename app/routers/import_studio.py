@@ -6,6 +6,7 @@ import httpx
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -63,13 +64,21 @@ async def preview_import(
 ):
     """Parse a migration file and report every outcome without writing data."""
     content = await _read_upload(file)
+    # Reading a ZIP or a 5 MB CSV and matching it against the library can take a couple of
+    # seconds. A worker thread does it so other members' pages keep loading in the meantime.
+    return await run_in_threadpool(_preview, db, current_user.id, content, source, category, mapping_json,
+                                   status_filter, offset, limit, file.filename)
+
+
+def _preview(db: Session, user_id: int, content: bytes, source: str, category: str | None, mapping_json: str,
+             status_filter: str, offset: int, limit: int, filename: str) -> dict:
     mapping = _mapping_or_400(mapping_json)
-    detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
-    digest = fingerprint(content, source, category or "", mapping_json, file.filename)
-    classified = classify_rows(db, current_user.id, rows)
+    detected, rows = _parse_or_400(content, source, category, mapping, filename)
+    digest = fingerprint(content, source, category or "", mapping_json, filename)
+    classified = classify_rows(db, user_id, rows)
     summary = summarize(detected, digest, classified, status_filter, offset, limit)
-    return {**summary, "diary_count": len(_diary_plan(db, current_user.id, detected, content, file.filename)),
-            "playtime_refresh_count": game_playtime.refreshable(db, current_user.id, classified)}
+    return {**summary, "diary_count": len(_diary_plan(db, user_id, detected, content, filename)),
+            "playtime_refresh_count": game_playtime.refreshable(db, user_id, classified)}
 
 
 def _diary_plan(db: Session, user_id: int, detected: str, content: bytes, filename: str) -> list[dict]:
@@ -92,17 +101,23 @@ async def apply_import(
 ):
     """Atomically create only the rows that a matching preview marked ready."""
     content = await _read_upload(file)
-    digest = fingerprint(content, source, category or "", mapping_json, file.filename)
+    return await run_in_threadpool(_apply, db, current_user.id, content, fingerprint_confirmation, source, category,
+                                   mapping_json, file.filename)
+
+
+def _apply(db: Session, user_id: int, content: bytes, fingerprint_confirmation: str, source: str,
+           category: str | None, mapping_json: str, filename: str) -> dict:
+    digest = fingerprint(content, source, category or "", mapping_json, filename)
     if digest != fingerprint_confirmation:
         raise HTTPException(status_code=409, detail="The file changed after preview. Preview it again before importing.")
     mapping = _mapping_or_400(mapping_json)
-    detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
+    detected, rows = _parse_or_400(content, source, category, mapping, filename)
     try:
         # Reserve SQLite's write transaction too; FOR UPDATE alone is ignored
         # there. Reclassify only after another same-owner import has committed.
-        lock_progress_owner(db, current_user.id)
-        classified = classify_rows(db, current_user.id, rows)
-        result = apply_classified(db, current_user.id, classified)
+        lock_progress_owner(db, user_id)
+        classified = classify_rows(db, user_id, rows)
+        result = apply_classified(db, user_id, classified)
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="Nothing was imported because the batch could not be saved.") from exc
@@ -110,7 +125,7 @@ async def apply_import(
     try:
         # After the titles are saved, so each visit can link to its film in the library.
         diary_created = diary.save_letterboxd_import(
-            db, current_user.id, _diary_plan(db, current_user.id, detected, content, file.filename))
+            db, user_id, _diary_plan(db, user_id, detected, content, filename))
     except Exception:
         # The titles are already saved; a diary that can't be added never undoes them.
         db.rollback()

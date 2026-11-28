@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Explore a fictional OmniTrackr sample media library with movies, TV, anime, games, music, books, ratings, reviews, privacy choices, and cleanup workflows.">
+  <meta name="description" content="A sample OmniTrackr library of nine real titles, from Arrival to Hades to Serial, with the actual checkpoints, reminders and reviews a reader might keep for each.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Sample Media Library - OmniTrackr Example Tracking Workflow</title>
@@ -14,7 +14,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/sample-library">
   <meta property="og:title" content="Sample Media Library - OmniTrackr">
-  <meta property="og:description" content="A fictional sample library showing how OmniTrackr can organize watchlists, backlogs, ratings, reviews, privacy settings, and statistics.">
+  <meta property="og:description" content="A sample library of real titles showing how OmniTrackr can organize watchlists, backlogs, ratings, reviews, privacy settings, and statistics.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr sample media library">
   <meta property="og:site_name" content="OmniTrackr">
@@ -23,12 +23,12 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:url" content="https://omnitrackr.xyz/sample-library">
   <meta name="twitter:title" content="Sample Media Library - OmniTrackr">
-  <meta name="twitter:description" content="See a fictional OmniTrackr library with example media records, reviews, statuses, and privacy decisions.">
+  <meta name="twitter:description" content="See a sample OmniTrackr library of real titles with example media records, reviews, statuses, and privacy decisions.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr sample media library">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1080px; margin: 0 auto; }
@@ -49,6 +49,7 @@
     .sample-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 16px; margin-top: 20px; }
     .sample-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
     .sample-card p { margin-bottom: 8px; }
+    .sample-note { border-left: 3px solid var(--primary); padding-left: 12px; font-style: italic; }
     .sample-label { color: var(--primary); font-size: 0.85rem; font-weight: 800; text-transform: uppercase; }
   </style>
 
@@ -57,7 +58,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Sample Media Library",
-    "description": "A fictional OmniTrackr sample media library showing tracking decisions across movies, TV, anime, games, music, books, manga, podcasts, and audiobooks.",
+    "dateModified": "2026-11-17",
+    "description": "An OmniTrackr sample media library of nine real titles showing tracking decisions across movies, TV, anime, games, music, books, manga, podcasts, and audiobooks.",
     "url": "https://omnitrackr.xyz/sample-library",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -69,18 +71,21 @@
   {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "name": "Fictional OmniTrackr Sample Records",
+    "name": "OmniTrackr sample library records",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Movie sample record" },
-      { "@type": "ListItem", "position": 2, "name": "TV show sample record" },
-      { "@type": "ListItem", "position": 3, "name": "Anime sample record" },
-      { "@type": "ListItem", "position": 4, "name": "Game sample record" },
-      { "@type": "ListItem", "position": 5, "name": "Music sample record" },
-      { "@type": "ListItem", "position": 6, "name": "Book sample record" }
+      { "@type": "ListItem", "position": 1, "name": "Arrival (2016)" },
+      { "@type": "ListItem", "position": 2, "name": "Severance (2022)" },
+      { "@type": "ListItem", "position": 3, "name": "Frieren: Beyond Journey's End (2023)" },
+      { "@type": "ListItem", "position": 4, "name": "Hades (2020)" },
+      { "@type": "ListItem", "position": 5, "name": "To Pimp a Butterfly, Kendrick Lamar (2015)" },
+      { "@type": "ListItem", "position": 6, "name": "Project Hail Mary, Andy Weir (2021)" },
+      { "@type": "ListItem", "position": 7, "name": "Vagabond, Takehiko Inoue" },
+      { "@type": "ListItem", "position": 8, "name": "Serial" },
+      { "@type": "ListItem", "position": 9, "name": "The Hobbit, read by Andy Serkis (2020)" }
     ]
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261121-refresh-1">
 </head>
 
 <body class="public-reader site">
@@ -92,13 +97,14 @@
 
       <header class="privacy-header">
         <h1>Sample Media Library</h1>
-        <p>A fictional example of keeping favorites, unfinished stories, and private checkpoints in one library.</p>
+        <p>Nine real titles, one for each format, with the status, checkpoint and actual note a reader might keep for each.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
           <a href="#why-sample-heading">Why look at a sample library</a>
           <a href="#records-heading">Example records</a>
+          <a href="#notes-heading">What the good notes have in common</a>
           <a href="#workflow-heading">A weekly cleanup</a>
           <a href="#privacy-heading">Privacy choices in the sample</a>
           <a href="#stats-heading">What statistics would show</a>
@@ -109,69 +115,104 @@
 
       <section class="privacy-section" aria-labelledby="why-sample-heading">
         <h2 id="why-sample-heading">Why look at a sample library</h2>
-        <p>Everything on this page is made up. It isn't copied from a user account or pulled from anyone's private data. It shows how someone might organize movies, TV shows, anime, games, albums, and books. Use it to decide which details would help you remember your own media, then try the controls in the <a href="/demo">interactive demo</a>.</p>
-        <p>The library below doesn't try to catalog everything perfectly. It's set up to answer everyday questions: what am I watching now, what did I finish, what do I want to go back to, which notes are private, and which reviews am I happy to share? A plain list of titles can't answer most of those.</p>
+        <p>The records below use real titles, but the reader is made up. Nothing here is copied from a user account or pulled from anyone's private data. The site owner wrote every note on this page to show what a useful entry looks like in each of the nine formats OmniTrackr tracks. To try the controls themselves, open the <a href="/demo">interactive demo</a>.</p>
+        <p>Most tracking advice stops at "add your titles". The hard part is what you write next to them. A title alone can't tell you where you stopped, why you stopped, whether you'd recommend it, or who you promised to watch it with. Each record below shows the status, the checkpoint if there is one, and the actual text of the note or review, so you can see how little it takes.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="records-heading">
         <h2 id="records-heading">Example records</h2>
+        <p>Nine titles, one per format, in different states: finished, in progress, paused on purpose and waiting on a decision.</p>
         <div class="sample-grid">
           <article class="sample-card">
             <p class="sample-label">Movie</p>
-            <h3>Signal Harbor</h3>
-            <p><strong>Status:</strong> Watched. <strong>Rating:</strong> 8.5/10. <strong>Review choice:</strong> Public.</p>
-            <p>The public review focuses on pacing, character payoff, and whether the ending feels earned. The writer leaves personal details and plot spoilers out of this shared review.</p>
+            <h3>Arrival (2016)</h3>
+            <p><strong>Watched:</strong> Yes. <strong>Rating:</strong> 9/10. <strong>Review:</strong> Public.</p>
+            <p>Finished, rated the next morning, and reviewed in a way that would help a stranger decide whether to start it. The review says what the film is like to sit through and leaves the twist alone.</p>
+            <p class="sample-note">Public review: “A first-contact film that is really about grief and language. Almost nothing explodes; the tension comes from two people trying to understand a written language nobody has seen before. The ending changes how you read everything before it, so it gets better on a second watch. Pick a night when you can give it your full attention.”</p>
           </article>
           <article class="sample-card">
-            <p class="sample-label">TV Show</p>
-            <h3>Northline Dispatch</h3>
-            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Season 2, episode 4. <strong>Review choice:</strong> Private.</p>
-            <p>Update progress records the last episode finished. The separate Private reminder says “Start episode 5 next time; watch with Sam.” Neither changes the rating or the show's total episode count.</p>
+            <p class="sample-label">TV show</p>
+            <h3>Severance (2022)</h3>
+            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Season 2, episode 4. <strong>Review:</strong> None yet.</p>
+            <p>Watched with a friend, one or two episodes a week. The checkpoint holds the season and episode, and the private reminder holds the rule that matters most for a shared show.</p>
+            <p class="sample-note">Private reminder: “Start S2E5. Watching with Sam, don't go ahead.”</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">Anime</p>
-            <h3>Glass Circuit</h3>
-            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Episode 3, with no season specified. <strong>Review choice:</strong> Not reviewed yet.</p>
-            <p>The viewer uses continuous episode numbering, so the season stays blank. A short checkpoint reminder makes this easy to resume without writing a review before forming an opinion.</p>
+            <h3>Frieren: Beyond Journey's End (2023)</h3>
+            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Episode 17, no season. <strong>Review:</strong> None yet.</p>
+            <p>The first season is 28 episodes numbered straight through, so the season stays blank. The reminder marks where a new arc begins, which is the natural place to pause a long show.</p>
+            <p class="sample-note">Private reminder: “Start 18. The mage exam arc starts here.”</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">Game</p>
-            <h3>Lantern Vale</h3>
-            <p><strong>Played:</strong> Unchecked. <strong>Rating:</strong> Not rated yet. <strong>Review choice:</strong> Private notes now, public review later.</p>
-            <p>The note tracks combat feel, accessibility settings, and whether the side quests still feel fresh after ten hours. Completion status can be updated when the credits roll.</p>
+            <h3>Hades (2020)</h3>
+            <p><strong>Played:</strong> Unchecked. <strong>Rating:</strong> 9/10. <strong>Review:</strong> Private notes.</p>
+            <p>Rated after the first escape, because by then the combat and the story had both made their case. It stays unfinished on purpose: the story keeps going after the first clear, and the epilogue takes ten escapes.</p>
+            <p class="sample-note">Private note: “First clear on run 19, with the bow. Ten escapes for the epilogue. Mark as played when I get there or when I stop wanting to.”</p>
           </article>
           <article class="sample-card">
-            <p class="sample-label">Music</p>
-            <h3>Late Map Atlas</h3>
-            <p><strong>Status:</strong> Listened. <strong>Format:</strong> Album. <strong>Review choice:</strong> Public short review.</p>
-            <p>The review mentions favorite tracks, the mood it fits, and whether the album works best as a full listen or as individual songs in a playlist.</p>
+            <p class="sample-label">Album</p>
+            <h3>To Pimp a Butterfly, Kendrick Lamar (2015)</h3>
+            <p><strong>Listened:</strong> Yes. <strong>Rating:</strong> 9.5/10. <strong>Review:</strong> Public.</p>
+            <p>Rated after three full listens, in order. The review says how to listen as well as whether to, which is often the more useful half for an album.</p>
+            <p class="sample-note">Public review: “Dense, jazz-heavy and close to 80 minutes long. A poem is pieced together a few lines at a time across the record, and the last track finally reads it all the way through. Don't put this on shuffle.”</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">Book</p>
-            <h3>The Orchard Index</h3>
-            <p><strong>Read:</strong> Unchecked. <strong>Last read:</strong> Chapter 9. <strong>Review choice:</strong> Private.</p>
-            <p>The reader chose chapters because they move between editions with different page numbers. The checkpoint reminder says “Start the orchard letters next.” A page checkpoint would work too; the book keeps one position at a time.</p>
+            <h3>Project Hail Mary, Andy Weir (2021)</h3>
+            <p><strong>Read:</strong> Unchecked. <strong>Last read:</strong> Chapter 9. <strong>Review:</strong> Private, in progress.</p>
+            <p>Chapters instead of pages, because the reader moves between a paperback and an ebook and only the chapter numbers match in both.</p>
+            <p class="sample-note">Private note so far: “Funnier than The Martian. The flashback chapters are doing more work than I expected.” Reminder: “Start chapter 10.”</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Manga</p>
+            <h3>Vagabond, Takehiko Inoue</h3>
+            <p><strong>Read:</strong> Unchecked. <strong>Last read:</strong> Chapter 150. <strong>Review:</strong> None yet.</p>
+            <p>A series that has been on hiatus since 2015, with 37 volumes out. The reminder records a decision, so the title doesn't look forgotten every time the reader scrolls past it.</p>
+            <p class="sample-note">Private reminder: “Reading slowly on purpose. There may never be an ending.”</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Podcast</p>
+            <h3>Serial</h3>
+            <p><strong>Listened:</strong> Unchecked. <strong>Last listened:</strong> Season 1, episode 12. <strong>Review:</strong> None yet.</p>
+            <p>The first season is a complete story in twelve episodes. Later seasons follow different cases, so the reminder says that none of them is a cliffhanger waiting to be resolved.</p>
+            <p class="sample-note">Private reminder: “Season 1 done. The other seasons are separate stories, start any of them.”</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Audiobook</p>
+            <h3>The Hobbit, read by Andy Serkis (2020)</h3>
+            <p><strong>Listened:</strong> Yes. <strong>Rating:</strong> 8.5/10. <strong>Review:</strong> Private notes.</p>
+            <p>About ten and a half hours. The note is about the performance rather than the book, because the book was already rated years ago on the book shelf.</p>
+            <p class="sample-note">Private note: “Serkis gives every dwarf a voice you can tell apart, which I never managed on the page. Gollum is exactly who you'd expect.”</p>
           </article>
         </div>
       </section>
 
+      <section class="privacy-section" aria-labelledby="notes-heading">
+        <h2 id="notes-heading">What the good notes have in common</h2>
+        <p>None of these notes is long. The private reminders are one line each, and they answer the question you'll have when you come back: where was I, and was I stopping for a reason? "Start S2E5" is more use in three weeks than a paragraph about the episode you just watched.</p>
+        <p>The two public reviews do something different. They are written for a stranger, so they say what the experience is like (slow, dense, funny, long) and who should wait for another night. Neither one retells the plot. The Arrival review avoids the ending entirely and still tells you the ending matters, which is about as much as a spoiler-free review can say.</p>
+        <p>The ratings came at different times on purpose. Arrival was rated the morning after, the album after three listens, Hades after the first escape. A score given when the credits roll tends to be a score for the last ten minutes. The <a href="/movie-tracker#scale-heading">movie tracker guide</a> suggests a few anchors for the 0 to 10 scale if you want your ratings to mean the same thing next year.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="workflow-heading">
         <h2 id="workflow-heading">A weekly cleanup</h2>
-        <p>Once a week, this reader checks unfinished items and decides what still sounds appealing. They update a show's last watched episode, change a book's checkpoint to the last chapter read, and mark a finished album Listened. “Paused,” “planned,” and “playing” describe their intentions; they are not extra completion states in the app. A short private review or checkpoint reminder can hold that context.</p>
-        <p>Use Clear progress when you start a show or book over: it removes only the checkpoint and its reminder. The title, completion choice, rating, and review stay in place. Before a larger cleanup, the reader exports a JSON backup, which includes private checkpoints and reminders, and stores it somewhere private.</p>
-        <p>The cleanup is also a chance to reread reviews. Short private notes are fine as reminders, but a public review needs enough context for someone else to use it. Instead of posting "good" or "boring," the reader adds what worked, who might enjoy it, and whether the rating is about craft, their mood at the time, or rewatch value. Visitors get better reviews in the public feed, and the reader's private notes stay as rough as they like.</p>
+        <p>Once a week, this reader looks at what is unfinished and decides what still appeals. Severance moves on an episode or two. Project Hail Mary's checkpoint goes to the last chapter read. Vagabond doesn't change, and that's fine, because its reminder already explains why. "Paused," "planned" and "playing" describe what the reader intends; they are not extra statuses in the app, and a one-line reminder carries them well enough.</p>
+        <p>Clear progress is for starting over, for example a second run through Frieren. It removes only the checkpoint and its reminder; the title, the finished choice, the rating and the review stay. Before a big tidy-up, the reader exports a JSON backup, which includes private checkpoints and reminders, and keeps it somewhere private.</p>
+        <p>The cleanup is also when private notes become public reviews. When Project Hail Mary is finished, the "funnier than The Martian" line will grow into a few sentences about pacing and who the book suits, and the spoilers will stay in the private note.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy choices in the sample</h2>
-        <p>In this sample, the movie and album reviews are published because they're finished and free of spoilers. The TV, game, and book reviews are not published to public review pages; keeping their categories private also prevents friends from reading those notes. Episode, page, and chapter checkpoints and their reminders always stay private; publishing a review does not publish a checkpoint.</p>
-        <p>Friend visibility can be adjusted by category separately from public review choices. Letting friends see TV shows does not reveal episode checkpoints or their reminders. Copying a public collection or saving a reviewed title also does not copy the author's personal progress.</p>
+        <p>Only Arrival and To Pimp a Butterfly have public reviews, because they're finished and the reviews are free of spoilers. Every other note stays private. Episode, chapter and page checkpoints and their reminders are always private: publishing a review never publishes a checkpoint, so "Watching with Sam" stays between the reader and Sam.</p>
+        <p>Friend visibility is set by category, separately from public reviews. Letting friends see TV shows shows them Severance and its rating, if there is one, but not the episode checkpoint or the reminder. Copying a public collection or saving a reviewed title doesn't copy anyone's progress either.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="stats-heading">
         <h2 id="stats-heading">What statistics would show</h2>
-        <p>With these six records, completion statistics count one watched movie and one listened album: two finished titles and four unfinished. A checkpoint at episode 4 or chapter 9 does not increase the completion count. Ratings show reactions, while review coverage shows which titles have a written note or review. A checkpoint reminder stays separate from review coverage.</p>
-        <p>This is why OmniTrackr keeps media types together. A spreadsheet can count entries too, but an app built for this makes the routine quicker: add the item, update the status, write a note, decide whether it is public, and let the dashboard summarize the pattern over time.</p>
+        <p>With these nine records, completion statistics count three finished titles (Arrival, the album and the audiobook) and six unfinished ones. A checkpoint at episode 17 or chapter 150 doesn't change the completion count. Four titles are rated, two have public reviews, and review coverage counts the private notes on Hades, the audiobook and Project Hail Mary as written notes. Checkpoint reminders are kept apart from review coverage.</p>
+        <p>Even at nine titles, the numbers say something: this reader finishes the short things and keeps several long ones going at once. That's normal, and seeing it written down makes it easier to decide which of the long ones to finish next and which to let go.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="next-heading">

@@ -64,10 +64,10 @@ def test_button_is_hidden_until_configured(client):
 
 def test_button_shows_on_both_forms_once_configured(client, google):
     page = client.get("/").text
-    # The log-in form, the sign-up form, the homepage hero and the save bar.
-    assert page.count('href="/auth/google/start"') == 4
+    # The log-in form, the sign-up form, the homepage hero, the save bar and the two rows between sections.
+    assert page.count('href="/auth/google/start"') == 6
     # Every sign-up button (not the log-in one) counts as starting to sign up.
-    assert page.count("data-google-signup") == 3
+    assert page.count("data-google-signup") == 5
     assert "Sign up with Google" in page and "Log in with Google" in page
 
 
@@ -113,7 +113,7 @@ def test_new_member_is_created_verified_and_signed_in(client, google, db_session
 def test_returning_member_signs_in_by_google_id(client, google, db_session):
     _sign_in(client, google)
     client.cookies.clear()
-    response = _sign_in(client, google, email="renamed@gmail.com")
+    response = _sign_in(client, google, email="renamed@example.com")
     assert response.headers["location"] == "/?signed_in=google"
     assert db_session.query(models.User).count() == 1
     assert _user(db_session, "newfan@gmail.com").login_count == 2
@@ -125,7 +125,7 @@ def test_existing_verified_member_is_linked_and_keeps_their_password(client, goo
     user.is_verified = True
     db_session.commit()
     original = user.hashed_password
-    response = _sign_in(client, google, email="Test@Example.com", sub="2002")
+    response = _sign_in(client, google, email="Test@Example.com", hd="example.com", sub="2002")
     assert response.headers["location"] == "/?signed_in=google"
     db_session.refresh(user)
     assert user.google_sub == "2002" and user.hashed_password == original and user.has_password
@@ -138,7 +138,7 @@ def test_unverified_account_is_claimed_by_the_inbox_owner(client, google, db_ses
     assert client.post("/auth/register", json=test_user_data).status_code == 201
     user = _user(db_session, "test@example.com")
     original = user.hashed_password
-    _sign_in(client, google, email="test@example.com", sub="3003")
+    _sign_in(client, google, email="test@example.com", hd="example.com", sub="3003")
     db_session.refresh(user)
     assert user.is_verified and user.verification_token is None
     assert user.hashed_password != original and user.has_password is False
@@ -151,7 +151,7 @@ def test_deactivated_account_is_left_untouched(client, google, db_session, test_
     user = _user(db_session, "test@example.com")
     user.is_verified, user.is_active = True, False
     db_session.commit()
-    response = _sign_in(client, google, email="test@example.com", sub="4004")
+    response = _sign_in(client, google, email="test@example.com", hd="example.com", sub="4004")
     assert response.headers["location"] == "/?google_error=deactivated#landing-auth"
     db_session.refresh(user)
     assert user.google_sub is None and auth.AUTH_COOKIE_NAME not in response.headers.get("set-cookie", "")
@@ -168,6 +168,28 @@ def test_bad_id_tokens_are_refused(client, google, db_session, overrides, code):
     response = _sign_in(client, google, **overrides)
     assert response.headers["location"] == f"/?google_error={code}#landing-auth"
     assert db_session.query(models.User).count() == 0
+
+
+@pytest.mark.parametrize("hd", [None, " "])
+def test_external_google_address_can_still_make_a_new_account(client, google, db_session, hd):
+    overrides = {"email": "new@example.com", "sub": "6006"}
+    if hd is not None:
+        overrides["hd"] = hd
+    response = _sign_in(client, google, **overrides)
+    assert "google_error" not in response.headers["location"]
+    user = _user(db_session, "new@example.com")
+    assert user.google_sub == "6006" and auth.AUTH_COOKIE_NAME in response.headers.get("set-cookie", "")
+
+
+def test_external_email_alone_cannot_link_a_member(client, google, db_session, test_user_data):
+    client.post("/auth/register", json=test_user_data)
+    user = _user(db_session, test_user_data["email"])
+    user.is_verified = True
+    db_session.commit()
+    response = _sign_in(client, google, email=user.email)
+    assert response.headers["location"] == "/?google_error=unverified#landing-auth"
+    db_session.refresh(user)
+    assert user.google_sub is None and auth.AUTH_COOKIE_NAME not in response.headers.get("set-cookie", "")
 
 
 def test_state_must_match_the_cookie(client, google, db_session):

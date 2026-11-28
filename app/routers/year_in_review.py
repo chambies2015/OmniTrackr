@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from .. import auth, funnel, models, supporters, year_in_review, year_so_far
+from .. import auth, funnel, models, supporters, year_fill, year_in_review, year_so_far
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -31,7 +31,7 @@ FIRST_TRACKED_NOTE = {
 }
 _CARDS = _CardCache(size=96)
 STORY_JS_VERSION = "20261019-story-1"
-CSS_VERSION = "20261031-recap-2"
+CSS_VERSION = "20261126-fill-1"
 CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast", "audiobooks": "audiobook"}
 SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
                "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
@@ -95,11 +95,29 @@ def recap_api(year: int, response: Response, user: models.User = Depends(get_cur
 
 
 @router.get("/api/year-in-review-season")
-def recap_season(response: Response, user: models.User = Depends(get_current_user)):
-    """Which recap the dashboard should promote right now, if any (December and January)."""
+def recap_season(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Which recap the dashboard should promote right now, if any (December and January).
+
+    Nothing for a member who joined after that year ended: in January, someone who signed up
+    on New Year's Day has no year to look back on, and their recap page would be empty."""
     response.headers["Cache-Control"] = "private, no-store"
     year = year_in_review.season_year()
-    return {"year": year, "url": f"/year-in-review/{year}" if year else None}
+    joined = getattr(user, "created_at", None)
+    if year and joined is not None and joined.year > year:
+        year = None
+    return {"year": year, "url": f"/year-in-review/{year}" if year else None, "fill": _fill_summary(db, user, year)}
+
+
+def _fill_summary(db: Session, user: models.User, year: Optional[int]) -> Optional[dict]:
+    """Titles the recap is missing ("Fill in your year"), for the banner and the recap page. Never raises."""
+    if not year or not year_fill.is_fill_year(year):
+        return None
+    try:
+        found = year_fill.summary(db, user.id, year)
+    except Exception:
+        db.rollback()
+        return None
+    return found if (found["undated"] or found["open"] or found["filled"]) else None
 
 
 @router.get("/api/year-in-review-so-far")
@@ -508,7 +526,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/year-in-review.css?v={CSS_VERSION}">
@@ -549,7 +567,7 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
                 f'<h2 id="recap-support">Thank you for supporting OmniTrackr</h2>'
                 f'<p>Your Ko-fi support{_e(since)} helped pay for the hosting behind this recap, your library and '
                 f'everything else you used in {year}. It keeps every tracking feature free for everyone.</p>'
-                '<p><a class="site-btn site-btn--ghost" href="/supporters">See what supporters get</a></p></section>')
+                '<p><a class="site-btn site-btn--ghost" href="/supporters?from=recap">See what supporters get</a></p></section>')
     if supporter is not None:
         heading = f"Thanks for supporting OmniTrackr in {year}"
         lead = (f"Your Ko-fi support helped keep OmniTrackr running this year. If you'd like your badge back "
@@ -561,15 +579,141 @@ def _support_box(db: Session, user: models.User, year: int) -> str:
                 "If this recap was worth a few minutes of your year, a one-off tip or a small monthly membership "
                 "helps keep it running next year.")
     code = _e(supporters.supporter_code(user.id))
+    founding = (' Anyone whose support starts before 2027 stays a founding supporter for good.'
+                if supporter is None and supporters.founding_open() else '')
     return (f'<section class="site-card recap-support" aria-labelledby="recap-support">'
             f'<h2 id="recap-support">{_e(heading)}</h2><p>{_e(lead)}</p>'
-            '<p>Every tracking feature stays free either way. Supporters get a badge beside their name on their profile '
-            'and reviews, and a profile accent color.</p>'
+            '<p>Every tracking feature stays free either way. Supporters get a numbered badge beside their name on their '
+            f'profile and reviews, color themes for the app, and a banner and frame for their profile.{founding}</p>'
             f'<p class="recap-support__code">Use the same email on Ko-fi as here, or paste your supporter code '
             f'<code>{code}</code> into the Ko-fi message, and the badge finds your account.</p>'
             f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{kofi}" target="_blank" '
             'rel="noopener noreferrer" data-recap-kofi>Support on Ko-fi ↗</a>'
-            '<a class="site-btn site-btn--ghost" href="/supporters">How supporting works</a></p></section>')
+            '<a class="site-btn site-btn--ghost" href="/supporters?from=recap">How supporting works</a></p></section>')
+
+
+def _next_year_box(db: Session, user: models.User, year: int) -> str:
+    """On last year's recap, while the next New Year challenge takes pledges: a link to it."""
+    from .. import new_year_challenge
+    upcoming = year + 1
+    if not new_year_challenge.is_open(upcoming):
+        return ""
+    href = _e(new_year_challenge.path(upcoming) + "#pledge")
+    if new_year_challenge.get(db, user.id, upcoming) is not None:
+        heading, lead, label = (f"You're in for {upcoming}", "Your pledge is set. Check your numbers against this "
+                                "recap, and raise or lower them while the year is young.", "See your pledge")
+    else:
+        heading, lead, label = (f"Pick what you'll finish in {upcoming}",
+                                f"The {upcoming} challenge form shows your {year} counts next to each format, so you can "
+                                "start from this year. Each number becomes a yearly goal you can change any time.",
+                                "Make your pledge")
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-next-year">'
+            f'<h2 id="recap-next-year">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a></p></section>')
+
+
+def _yearbook_box(db: Session, user: models.User, year: int) -> str:
+    """While that year's yearbook takes notes: a link to make it, or to see how it's going."""
+    from .. import yearbook
+    if year not in yearbook.EDITIONS or yearbook.state_of(year) != "open":
+        return ""
+    book = yearbook.get(db, user.id, year)
+    if book is None:
+        heading = f"Get your friends to sign your {year}"
+        lead = ("Make a yearbook page with your picks of the year and send the link. Friends sign it with a short note "
+                f"and a \"most likely to\" vote until the end of {yearbook.closes_label(year)}.")
+        label = "Make my yearbook"
+    else:
+        heading = f"Your {year} yearbook"
+        lead = (f"Signing is open until the end of {yearbook.closes_label(year)}. Send the link to anyone who shows up in "
+                "this recap.")
+        label = "Open my yearbook"
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-yearbook">'
+            f'<h2 id="recap-yearbook">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="/yearbook">{_e(label)}</a>'
+            '</p></section>')
+
+
+def _top_nine_box(year: int) -> str:
+    """In year-end season: the year's nine favourites as a picture to post (app/top_nine.py)."""
+    from .. import top_nine
+    if not top_nine.promo_season() or top_nine.season_year() != year:
+        return ""
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-top-nine">'
+            f'<h2 id="recap-top-nine">Post your {year} top nine</h2>'
+            f'<p>Pick nine favourites from this recap and anything else you loved in {year}. You get a picture sized '
+            'for Instagram, a story version and a link where friends tap the ones they\'ve seen too. Your finishes '
+            'from this year are at the top of the list to pick from.</p>'
+            '<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="/top-nine">Make my top nine'
+            '</a></p></section>')
+
+
+def _big_finished(db: Session, user: models.User, year: int) -> Optional[int]:
+    """The recap's finish count when it's short enough to offer the year's big releases, else None."""
+    from .. import year_catchup
+    try:
+        if not year_catchup.available(year):
+            return None
+        finished = year_fill.finished_total(db, user.id, year)
+        if finished >= year_catchup.THIN_BELOW or not year_catchup.tally(db, user.id, year)["open"]:
+            return None
+    except Exception:
+        db.rollback()
+        return None
+    return finished
+
+
+def _big_box(db: Session, user: models.User, year: int) -> str:
+    """For an empty or short recap with nothing to date: the year's big releases to tap in (app/year_catchup.py)."""
+    finished = _big_finished(db, user, year)
+    if finished is None:
+        return ""
+    so_far = "Your recap is empty so far." if not finished else f"Your recap has {_plural(finished, 'finish', 'finishes')} so far."
+    lead = (f"{so_far} If you watched, played, read or listened to any of {year}’s biggest releases, tap them in and "
+            "pick the month. They go into your library and the numbers below.")
+    return (f'<section class="site-card recap-fill" aria-labelledby="recap-big">'
+            f'<h2 id="recap-big">Add {year}’s big ones</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" '
+            f'href="/year-in-review/{year}/fill#big-ones">See the big ones</a></p></section>')
+
+
+def _fill_box(db: Session, user: models.User, year: int) -> str:
+    """At the top of the owner's recap: the titles it's missing, and a link to date them."""
+    found = _fill_summary(db, user, year)
+    if not found:
+        return _big_box(db, user, year)
+    waiting = found["undated"] + found["open"]
+    href = _e(found["url"])
+    if not waiting:
+        return (f'<section class="site-card recap-fill recap-fill--done" aria-labelledby="recap-fill">'
+                f'<h2 id="recap-fill">You filled in your {year}</h2>'
+                f'<p>{_plural(found["filled"], "title")} you dated by hand {"is" if found["filled"] == 1 else "are"} in '
+                'the numbers below. Change one any time.</p>'
+                f'<p class="recap-support__actions"><a class="site-btn site-btn--ghost" href="{href}">Change the dates</a></p></section>'
+                + _big_box(db, user, year))
+    since = found.get("dated_from")
+    heading = f"Your recap starts in {since}" if since and not found["filled"] else f"{_plural(waiting, 'title')} still to date"
+    parts = []
+    if found["undated"]:
+        parts.append(f"{_plural(found['undated'], 'title')} in your library {'is' if found['undated'] == 1 else 'are'} "
+                     "ticked off with no date")
+    if found["open"]:
+        parts.append(f"{_plural(found['open'], 'title')} {'is' if found['open'] == 1 else 'are'} still on your list "
+                     "from before this month")
+    lead = " and ".join(parts) + "."
+    if since and not found["filled"]:
+        lead = (f"OmniTrackr started dating what you finish in {since}, so anything you ticked off before then isn't "
+                f"counted yet. {lead} Give each one a month and it joins your {year}.")
+    else:
+        lead += f" Give each one a month and it joins your {year}."
+    label = "Keep filling in" if found["filled"] else f"Fill in your {year}"
+    big = ""
+    if _big_finished(db, user, year) is not None:
+        big = (f' <a class="site-btn site-btn--ghost" href="/year-in-review/{year}/fill#big-ones">'
+               f'Add {year}’s big ones</a>')
+    return (f'<section class="site-card recap-fill" aria-labelledby="recap-fill">'
+            f'<h2 id="recap-fill">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{href}">{_e(label)}</a>{big}</p></section>')
 
 
 def _summary(recap: dict) -> str:
@@ -639,7 +783,12 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=_play_button() + f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box + ("" if recap.get("is_empty") else _support_box(db, user, year)),
+        extra=_fill_box(db, user, year),
+        # An empty recap gets the pledge box (start next year fresh) but no yearbook or Ko-fi box.
+        body=_body(recap, private=True) + share_box
+        + ("" if recap.get("is_empty") else _yearbook_box(db, user, year) + _top_nine_box(year))
+        + _next_year_box(db, user, year)
+        + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),
     )

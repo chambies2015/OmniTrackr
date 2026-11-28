@@ -23,8 +23,15 @@ READER_TEMPLATES = (
 
 def test_dashboard_loads_the_new_theme_last():
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)"', INDEX.split("</head>")[0])
-    # Only the accessibility layer (contrast, focus, tap targets) follows the theme.
-    assert links[-2].startswith("/static/dashboard-2026.css?v=")
+    # The workspace refresh builds on the theme and the library view (Nov 20 2026)
+    # builds on both, then the member look refresh (Nov 22 2026) and the member
+    # phone layer (Nov 21 2026); only the accessibility layer (contrast, focus,
+    # tap targets) comes after them.
+    assert links[-6].startswith("/static/dashboard-2026.css?v=")
+    assert links[-5].startswith("/static/workspace-2026.css?v=")
+    assert links[-4].startswith("/static/library-view.css?v=")
+    assert links[-3].startswith("/static/member-look.css?v=")
+    assert links[-2].startswith("/static/member-phone.css?v=")
     assert links[-1].startswith("/static/a11y.css?v=")
 
 

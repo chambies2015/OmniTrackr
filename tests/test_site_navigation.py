@@ -37,9 +37,9 @@ def test_the_menu_holding_the_current_page_is_marked(client, path, menu, href):
 
 def test_search_and_library_buttons_degrade_without_scripts(client):
     nav = header(client.get("/discover").text)
-    assert '<a class="site-search" href="/titles" data-site-search' in nav
+    assert '<a class="site-search" href="/search" data-site-search' in nav
     assert 'class="site-nav__library site-btn site-btn--primary site-btn--sm" href="/" hidden>My library</a>' in nav
-    assert "/api/titles/search?q=" in SITE_JS and "textContent" in SITE_JS and "innerHTML" not in SITE_JS
+    assert "/api/search?" in SITE_JS and "textContent" in SITE_JS and "innerHTML" not in SITE_JS
     assert "localStorage.getItem('omnitrackr_user')" in SITE_JS
 
 

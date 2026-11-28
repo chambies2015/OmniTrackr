@@ -30,8 +30,10 @@ function updateMetadata(review) {
   const posterUrl = review.poster_url || review.cover_art_url || 'https://omnitrackr.xyz/omnitrackr_vortex.png';
   const fullPosterUrl = posterUrl.startsWith('http') ? posterUrl : `https://omnitrackr.xyz${posterUrl}`;
   const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
-  const reviewTitle = `${escapeHtml(review.title)} Review - OmniTrackr`;
-  const reviewDescription = review.review ? escapeHtml(review.review.substring(0, 160)) + (review.review.length > 160 ? '...' : '') : `Read a review of ${escapeHtml(review.title)} by ${escapeHtml(review.username)} on OmniTrackr.`;
+  // document.title and setAttribute() take plain text, so nothing here is HTML-escaped:
+  // escaping would show "Ocean&#39;s Eleven" in the browser tab and in link previews.
+  const reviewTitle = `${review.title || ''} Review - OmniTrackr`;
+  const reviewDescription = review.review ? review.review.substring(0, 160) + (review.review.length > 160 ? '...' : '') : `Read a review of ${review.title || ''} by ${review.username || ''} on OmniTrackr.`;
 
   document.title = reviewTitle;
 
@@ -227,10 +229,15 @@ function displayReview(review) {
   }
 }
 
+// Also escapes quotes: the result goes into src="" and alt="" attributes too, where a
+// title with a double quote could otherwise end the attribute and add its own.
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 document.addEventListener('error', (event) => {

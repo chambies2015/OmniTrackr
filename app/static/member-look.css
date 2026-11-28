@@ -1,0 +1,756 @@
+/* Member app look refresh, Nov 22 2026.
+
+   The signed-in app in the same dress as the public pages after their Nov 21 refresh
+   (site.css): the nine-format spectrum as the brand mark, Poppins 800 at a slightly
+   looser track for page titles, a hairline of light along the top of dark cards, and
+   one filled button colour that keeps white text above 4.5:1.
+
+   Visual only: every id, handler and layout hook stays where library.js, home.js and
+   friends.js expect it. Loaded after library-view.css and before member-phone.css, so
+   the phone layer still has the last word on small screens. */
+
+/* ---------- Tokens ---------- */
+body.app-shell {
+  /* The nine format colours and their spectrum, the same values as site.css :root. */
+  --fmt-movie: #f472b6;
+  --fmt-tv: #60a5fa;
+  --fmt-anime: #f87171;
+  --fmt-game: #34d399;
+  --fmt-album: #a78bfa;
+  --fmt-book: #fbbf24;
+  --fmt-manga: #fb923c;
+  --fmt-podcast: #2dd4bf;
+  --fmt-audiobook: #e879f9;
+  --spectrum: linear-gradient(90deg, #f87171, #fb923c, #fbbf24, #34d399, #2dd4bf, #60a5fa, #a78bfa, #e879f9, #f472b6);
+  --spectrum-fade: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  /* Page titles. Poppins 800 at the old -.04em let letters touch. */
+  --display-track: -.032em;
+  /* Filled buttons: the public site's button violet. White text on #a855f7 was 4.0:1. */
+  --cta: #7f4ef0;
+  --cta-2: #963cf0;
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 8px 18px -10px rgba(127, 78, 240, .75);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .22), 0 12px 24px -12px rgba(127, 78, 240, .9);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .7);
+  --name-ink: linear-gradient(100deg, #be185d 0%, #7c3aed 40%, #1d4ed8 70%, #0f766e 100%);
+  --bar-lift: 0 16px 36px -18px rgba(26, 34, 56, .28);
+}
+body.app-shell.dark-mode {
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 10px 24px -10px rgba(127, 78, 240, .9);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .22), 0 16px 32px -12px rgba(127, 78, 240, 1);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .06);
+  /* Every card already takes --shadow-sm; this lifts its top-edge highlight from .03 to the public cards' .06. */
+  --shadow-sm: var(--edge), 0 8px 24px rgba(0, 0, 0, .25);
+  --name-ink: linear-gradient(100deg, #f9a8d4 0%, #c4b5fd 38%, #93c5fd 66%, #5eead4 100%);
+  --bar-lift: 0 18px 40px -16px rgba(0, 0, 0, .6);
+}
+/* Supporter themes (app-themes.css) recolour the filled buttons too, through their own
+   accent. Every theme accent keeps white text at 4.8:1 or better, and the second stop
+   is darker still. */
+body.app-shell[data-app-theme] {
+  --cta: var(--accent-solid);
+  --cta-2: color-mix(in srgb, var(--accent-solid) 86%, #000);
+  --cta-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 8px 18px -10px color-mix(in srgb, var(--accent-solid) 80%, transparent);
+  --cta-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, .2), 0 12px 24px -12px color-mix(in srgb, var(--accent-solid) 95%, transparent);
+}
+
+/* ---------- App bar ---------- */
+/* The header card carries the brand line along its bottom edge, like the public header. */
+body.app-shell .header { position: relative; }
+body.app-shell .header::after {
+  background: var(--spectrum);
+  bottom: -1px;
+  content: "";
+  height: 1px;
+  left: 18px;
+  -webkit-mask-image: var(--spectrum-fade);
+  mask-image: var(--spectrum-fade);
+  opacity: .75;
+  pointer-events: none;
+  position: absolute;
+  right: 18px;
+}
+body.app-shell .app-explore > summary { border-radius: var(--radius-pill); box-shadow: var(--edge); }
+body.app-shell .app-explore__panel { border-radius: var(--radius-lg); }
+body.app-shell .app-explore__group p { color: var(--teal); letter-spacing: .12em; }
+
+/* Wider screens: the bar stays in reach while a long library scrolls. It floats 10px
+   below the top edge, frosts what passes under it and settles a shadow once the page
+   has moved (scroll-driven where supported; a static shadow elsewhere is fine). From
+   768px down the search drops to a second row, and phones have the bottom bar, so
+   the bar only sticks while it is one row. */
+@media (min-width: 769px) {
+  html { scroll-padding-top: 112px; } /* Only the app shell links this file. */
+  body.app-shell .account-toolbar { z-index: 45; }
+  body.app-shell .header {
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    background: color-mix(in srgb, var(--card-bg) 86%, transparent);
+    position: sticky;
+    top: 10px;
+    z-index: 40;
+  }
+  body.app-shell.dark-mode .header {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)), color-mix(in srgb, var(--card-bg) 84%, transparent);
+  }
+  @supports (animation-timeline: scroll()) {
+    body.app-shell .header {
+      animation: member-bar-lift linear both;
+      animation-range: 0 140px;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+@keyframes member-bar-lift {
+  from { box-shadow: var(--shadow-sm); }
+  to { box-shadow: var(--edge), var(--bar-lift); }
+}
+
+/* ---------- Filled buttons ---------- */
+/* The violet gradients these used ended on #a855f7, where white text is 4.0:1. */
+body.app-shell :is(.quick-capture-trigger,
+  .library-add-form button[type="submit"],
+  .library-launchpad__primary,
+  .todays-pick button.action-btn:first-of-type,
+  .home-board .todays-pick__open,
+  .backlog-draw__btn--primary,
+  .for-you-item__add,
+  .home-focus__actions button.home-focus__primary,
+  .account-toolbar .site-stats-link) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  border-color: transparent;
+  box-shadow: var(--cta-shadow);
+  color: #fff;
+}
+body.app-shell :is(.quick-capture-trigger,
+  .library-add-form button[type="submit"],
+  .library-launchpad__primary,
+  .todays-pick button.action-btn:first-of-type,
+  .home-board .todays-pick__open,
+  .backlog-draw__btn--primary,
+  .for-you-item__add,
+  .home-focus__actions button.home-focus__primary,
+  .account-toolbar .site-stats-link):hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.04);
+}
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall) {
+  background: linear-gradient(135deg, var(--cta), var(--cta-2));
+  box-shadow: var(--cta-shadow);
+}
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall):hover:not(:disabled) { box-shadow: var(--cta-shadow-hover); filter: brightness(1.04); }
+body.app-shell .quick-capture-trigger kbd { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .34); opacity: 1; }
+@media (max-width: 760px) {
+  .app-dock__add { background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 12px 24px -8px rgba(127, 78, 240, .8); }
+  .app-dock__item[aria-current="page"]::before { background: var(--spectrum, var(--primary)); left: 26%; right: 26%; }
+}
+
+/* ---------- Library tabs ---------- */
+/* The open library takes its own format colour, like the chips in the public footer. */
+body.app-shell .tabs .library-nav__group:not(.library-nav__group--tools) .tab[data-switch-tab].active {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 15%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 62%, transparent);
+  box-shadow: var(--edge);
+}
+body.app-shell .library-nav__label { letter-spacing: .14em; }
+
+/* ---------- Page titles and kickers ---------- */
+body.app-shell :is(.home-hero__title,
+  .library-section .library-panel > .library-heading h2,
+  .stats-head h2,
+  .social-head h2,
+  .picks-hero h2,
+  .activity-hero h2,
+  .postcards-hero h2,
+  .collections-hero h2) {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: var(--display-track);
+}
+/* The member's name in the welcome line runs through four of the format colours,
+   like "One library." on the homepage. */
+body.app-shell .home-hero__name {
+  background: var(--name-ink);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+@media (forced-colors: active) {
+  body.app-shell .home-hero__name { background: none; color: inherit; -webkit-text-fill-color: currentColor; }
+}
+/* A short spectrum tick before each page's kicker line, as on the public pages. */
+body.app-shell :is(.home-hero__date:not(:empty),
+  .stats-head__eyebrow,
+  .social-head__eyebrow,
+  .picks-hero__eyebrow,
+  .activity-hero__eyebrow,
+  .postcards-hero .postcards-eyebrow,
+  .collections-hero__eyebrow)::before {
+  background: var(--spectrum);
+  border-radius: 2px;
+  content: "";
+  display: inline-block;
+  height: 2px;
+  margin-right: 10px;
+  vertical-align: .32em;
+  width: 18px;
+}
+
+/* ---------- Welcome strip ---------- */
+/* A faint dot grid behind the fanned covers, fading out before the greeting. */
+body.app-shell .home-hero::before {
+  background-image: radial-gradient(color-mix(in srgb, var(--fg) 13%, transparent) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  content: "";
+  inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse 42% 80% at 86% 50%, #000 10%, transparent 72%);
+  mask-image: radial-gradient(ellipse 42% 80% at 86% 50%, #000 10%, transparent 72%);
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+/* One column (covers above the greeting) leaves no quiet corner for it. */
+body.app-shell .home-hero:not(.home-hero--covers)::before { display: none; }
+@media (max-width: 900px) {
+  body.app-shell .home-hero::before { display: none; }
+}
+body.app-shell .home-hero__mix { box-shadow: var(--edge); }
+
+/* ---------- Statistics ---------- */
+/* Finished, by format: each bar in its format's colour, the rest of it a tint of the same. */
+body.app-shell .stats-mix__row[data-format] .stats-mix__done { background: hsl(var(--fmt-hue) 72% var(--fmt-dot-l)); }
+body.app-shell .stats-mix__row[data-format] .stats-mix__total { background: hsl(var(--fmt-hue) 60% var(--fmt-dot-l) / .2); }
+body.app-shell .stats-legend__key--done { background: var(--spectrum); }
+body.app-shell .stats-tab[data-format][aria-selected="true"] {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 15%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 62%, transparent);
+}
+
+/* ---------- Footer ---------- */
+/* Same three bands as the public footer: who we are with the Ko-fi ask and the nine
+   libraries, the link columns, then the legal line. The spectrum runs along the top. */
+body.app-shell #mainFooter.app-footer { border-top: 0; padding-top: 0; position: relative; }
+body.app-shell #mainFooter.app-footer::before {
+  background: var(--spectrum);
+  content: "";
+  height: 1px;
+  left: 0;
+  -webkit-mask-image: var(--spectrum-fade);
+  mask-image: var(--spectrum-fade);
+  opacity: .6;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+body.app-shell .app-footer__top {
+  align-items: end;
+  display: grid;
+  gap: 28px 56px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  padding: 40px 0 32px;
+}
+body.app-shell .app-footer__intro p { max-width: 380px; }
+body.app-shell .app-footer__actions { margin-top: 16px; }
+body.app-shell #mainFooter .app-footer__support {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--edge);
+  color: var(--fg);
+  display: inline-flex;
+  font-size: .88rem;
+  font-weight: 600;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+}
+body.app-shell #mainFooter .app-footer__support:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell #mainFooter .app-footer__support span { color: #e11d48; }
+body.app-shell.dark-mode #mainFooter .app-footer__support span { color: #fb7185; }
+body.app-shell .app-footer__formats ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+body.app-shell .app-footer__lib {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--edge);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 600;
+  gap: 9px;
+  min-height: 36px;
+  padding: 0 14px 0 12px;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+body.app-shell .app-footer__lib::before {
+  background: hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%));
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%) / .22);
+  content: "";
+  flex: none;
+  height: 7px;
+  width: 7px;
+}
+body.app-shell .app-footer__lib:hover {
+  background: color-mix(in srgb, var(--kind, var(--accent-solid)) 10%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--kind, var(--accent-solid)) 55%, transparent);
+}
+/* A library the member hid from the tab row is hidden here too (updateTabVisibilityUI in account.js
+   sets [hidden]; a body:has() rule used to, and it made every change on the page restyle all of it). */
+body.app-shell .app-footer__lib[hidden] { display: none; }
+body.app-shell .app-footer__grid {
+  background: linear-gradient(var(--border), var(--border)) center top / 100% 1px no-repeat;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 32px;
+}
+@media (max-width: 900px) {
+  body.app-shell .app-footer__top { align-items: start; grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .app-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  body.app-shell .app-footer__lib { min-height: 40px; }
+}
+
+/* ==========================================================================
+   Home refresh (Nov 27 2026): a calmer signed-in home.
+   - The welcome strip and "Do this next" read as one Today panel.
+   - The main column runs in three labelled groups (index.html, home-layout.js).
+   - Every board card shares one quiet surface: a hairline edge, no corner tint,
+     no coloured bar before the title, grey kickers. Colour stays on covers and
+     on the buttons that do something.
+   - Offers (the break planner before a holiday, starting a yearbook) sit in a
+     slim row instead of a full card; setting up streaming services is denser.
+   A new card fits in without styles of its own: a <section id> inside the right
+   group with a kicker (.home-card__eyebrow), an h2, a line (.home-card__summary)
+   and a row of buttons (.home-card__actions). See "Building blocks" below.
+   ========================================================================== */
+body.app-shell {
+  --home-line: rgba(28, 20, 68, .1);
+  --home-lift: 0 1px 2px rgba(28, 20, 68, .05), 0 12px 32px -24px rgba(28, 20, 68, .4);
+  --home-strip: color-mix(in srgb, var(--surface-muted) 70%, var(--card-bg));
+  --home-kicker: color-mix(in srgb, var(--fg-secondary) 88%, var(--fg));
+}
+body.app-shell.dark-mode {
+  --home-line: rgba(255, 255, 255, .08);
+  --home-lift: inset 0 1px 0 rgba(255, 255, 255, .035), 0 14px 36px -26px rgba(0, 0, 0, .8);
+  --home-strip: color-mix(in srgb, var(--card-bg) 82%, #000);
+}
+
+/* ---------- Today: the welcome strip and "Do this next" as one panel ---------- */
+body.app-shell .home-hero { border-color: var(--home-line); box-shadow: var(--home-lift); padding: 26px 30px; }
+body.app-shell .home-hero:has(+ #homeFocus:not([hidden])) {
+  border-bottom-color: transparent;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
+}
+body.app-shell .home-hero:not([hidden]) + .home-focus:not([hidden]) {
+  background:
+    linear-gradient(90deg, hsl(var(--fmt-hue, 262) 70% 55% / .1), transparent 46%),
+    var(--home-strip);
+  border: 1px solid var(--home-line);
+  border-top-color: color-mix(in srgb, var(--home-line) 70%, transparent);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: var(--home-lift);
+  margin: 0 0 30px;
+  padding: 14px 30px 14px 22px;
+}
+body.app-shell .home-focus { border-color: var(--home-line); box-shadow: var(--home-lift); }
+body.app-shell .home-focus__eyebrow,
+body.app-shell.dark-mode .home-focus__eyebrow { color: var(--home-kicker); display: flex; align-items: center; gap: 8px; }
+body.app-shell .home-focus__eyebrow::before {
+  background: hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%));
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px hsl(var(--fmt-hue, 262) 72% var(--fmt-dot-l, 60%) / .2);
+  content: "";
+  flex: none;
+  height: 6px;
+  width: 6px;
+}
+body.app-shell .home-focus__title { font-size: 1.22rem; font-weight: 700; letter-spacing: -.02em; }
+body.app-shell .home-focus__cover { width: 64px; }
+/* Buttons other than the first: plain outlines with readable text. The next-episode button kept the
+   dark ink it has on its usual teal fill, so on this card it read as an empty pill in Night Mode. */
+body.app-shell .home-focus__actions button:not(.home-focus__primary),
+body.app-shell.dark-mode .home-focus__actions button.episode-next:not(.home-focus__primary) {
+  background: transparent;
+  border: 1px solid var(--home-line);
+  color: var(--fg);
+}
+body.app-shell .home-focus__actions button:not(.home-focus__primary):hover:not(:disabled) { background: var(--surface-hover); }
+body.app-shell .home-focus__actions button.home-focus__primary,
+body.app-shell.dark-mode .home-focus__actions button.home-focus__primary {
+  background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0));
+  box-shadow: var(--cta-shadow, none);
+  color: #fff;
+}
+body.app-shell .home-focus__actions button.home-focus__primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0));
+  filter: brightness(1.07);
+}
+
+/* ---------- Group labels and the rail title ---------- */
+body.app-shell .home-board__group,
+body.app-shell .home-board__rail-title {
+  align-items: center;
+  color: var(--home-kicker);
+  display: flex;
+  font-size: .72rem;
+  font-weight: 700;
+  gap: 10px;
+  letter-spacing: .12em;
+  margin: 0 2px -4px;
+  text-transform: uppercase;
+}
+body.app-shell .home-board__rail-title { justify-content: flex-start; margin: 0 2px 12px; }
+body.app-shell .home-board__group[hidden] { display: none; }
+/* A hairline runs from each label to the column's edge. */
+body.app-shell .home-board__group::after,
+body.app-shell .home-board__rail-title::before {
+  background: var(--home-line);
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  order: 2;
+}
+body.app-shell .home-board__rail-title::before { order: 1; }
+body.app-shell .home-board__rail-title::after { order: 3; }
+/* Every label after the first one opens a new stretch of the column. */
+body.app-shell .home-board__main > * + .home-board__group { margin-top: 18px; }
+body.app-shell .home-board { column-gap: 28px; margin-top: 0; }
+body.app-shell .home-board__main,
+body.app-shell .home-board__rail-cards { gap: 14px; }
+
+/* ---------- One quiet surface for every card ---------- */
+body.app-shell .home-board :is(.home-board__main, .home-board__rail-cards) > section[id],
+body.app-shell .home-board .daily-dashboard:has(> section:not([hidden])),
+body.app-shell .home-board :is(#seasonCard, #adventCard, #supportAsk, #yearbookHome, #rankDuel, #onYourServices, #breakHome, #swapHome, #togetherHome) {
+  background: var(--card-bg);
+  border: 1px solid var(--home-line);
+  border-radius: var(--radius-xl, 22px);
+  box-shadow: var(--home-lift);
+}
+body.app-shell .home-board .home-board__main > section[id] { padding: 22px 24px; }
+body.app-shell .home-board .home-board__rail-cards > section[id] { padding: 20px; }
+body.app-shell .home-board :is(.home-board__main, .home-board__rail-cards) > section[id][hidden] { display: none; }
+/* The season card is the one that dresses up for the time of year: it keeps a thin line of its colour. */
+body.app-shell .home-board .home-board__rail-cards > #seasonCard {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--season-accent, #0f766e) 9%, transparent), transparent 120px), var(--card-bg);
+  border-top: 3px solid var(--season-accent, #0f766e);
+}
+
+/* Titles: one size, no colour bar. */
+body.app-shell .home-board :is(.home-board__main, .home-board__rail-cards) h2::before,
+body.app-shell .home-board :is(#libraryPulseTitle, #todaysPickTitle, #nextUpQueueTitle, #comingUpTitle, #badgeCaseTitle, #homeNewsTitle,
+  #onYourServicesTitle, #breakHomeTitle, #yearbookHomeTitle, #swapHomeTitle, #togetherHomeTitle, #rankDuelTitle, #weekOneTitle,
+  #yourWeekTitle, #backlogDrawTitle, #stayPostedTitle, #picksTeaserTitle, #reviewInboxTitle, #onThisDayTitle)::before { display: none; }
+body.app-shell .home-board .home-board__main h2 {
+  font-family: var(--font-display, Poppins, sans-serif);
+  font-size: 1.14rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.3;
+}
+body.app-shell .home-board .home-board__rail-cards > section[id] h2 { font-size: 1.04rem; font-weight: 700; letter-spacing: -.015em; }
+
+/* Kickers: one grey, one size. The card's title says what it is; colour is for what to press. */
+body.app-shell .home-board :is(.week-one__eyebrow, .break-home__eyebrow, .library-pulse__eyebrow, .together-home__eyebrow,
+  .swap-home__eyebrow, .yearbook-home__eyebrow, .on-services__eyebrow, .home-news__eyebrow, .your-week__eyebrow,
+  .backlog-draw__eyebrow, .rank-card__eyebrow, .stay-posted__eyebrow, .for-you-card__eyebrow, .on-this-day__eyebrow,
+  .badge-case__eyebrow, .month-challenge__eyebrow, .year-goals__eyebrow, .year-so-far__eyebrow, .support-ask__eyebrow,
+  .install-card__eyebrow, .home-card__eyebrow),
+body.app-shell.dark-mode .home-board :is(.week-one__eyebrow, .break-home__eyebrow, .library-pulse__eyebrow, .together-home__eyebrow,
+  .swap-home__eyebrow, .yearbook-home__eyebrow, .on-services__eyebrow, .home-news__eyebrow, .your-week__eyebrow,
+  .backlog-draw__eyebrow, .rank-card__eyebrow, .stay-posted__eyebrow, .for-you-card__eyebrow, .on-this-day__eyebrow,
+  .badge-case__eyebrow, .month-challenge__eyebrow, .year-goals__eyebrow, .year-so-far__eyebrow, .support-ask__eyebrow,
+  .install-card__eyebrow, .home-card__eyebrow) {
+  color: var(--home-kicker);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+/* The season card's kicker keeps its colour: it names the holiday. */
+body.app-shell .home-board .season-card__eyebrow { letter-spacing: .1em; }
+
+/* Lines under titles: one grey and measure. */
+body.app-shell .home-board :is(.week-one__summary, .break-home__summary, .yearbook-home__line, .on-services__summary, .home-news__summary,
+  .stay-posted__summary, .for-you-card__summary, .home-card__summary) {
+  color: var(--fg-secondary);
+  font-size: .92rem;
+  line-height: 1.55;
+  max-width: 64ch;
+}
+
+/* ---------- Building blocks for a new card ---------- */
+body.app-shell .home-board .home-card__head { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+body.app-shell .home-board .home-card__summary { margin: 4px 0 0; }
+body.app-shell .home-board .home-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 14px; }
+body.app-shell .home-board .home-card__go {
+  align-items: center;
+  background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0));
+  border: 0;
+  border-radius: 999px;
+  box-shadow: var(--cta-shadow, none);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 18px;
+  text-decoration: none;
+}
+body.app-shell .home-board .home-card__go:hover { filter: brightness(1.07); }
+body.app-shell .home-board .home-card__quiet {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0 10px;
+}
+body.app-shell .home-board .home-card__quiet:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .home-board :is(.home-card__go, .home-card__quiet):focus-visible { box-shadow: var(--ring); outline: 2px solid var(--primary); outline-offset: 2px; }
+/* A card that is only an offer (one line and a button or two) can sit in a slim row: add .home-card--slim. */
+body.app-shell .home-board .home-card--slim { align-items: center; display: grid; gap: 4px 20px; grid-template-columns: minmax(0, 1fr) auto; }
+body.app-shell .home-board .home-card--slim .home-card__actions { margin-top: 0; }
+
+/* ---------- Offers in a slim row ---------- */
+/* Before a holiday the break planner is a question and two buttons. */
+@media (min-width: 761px) {
+  body.app-shell .home-board #breakHome[data-state="offer"] {
+    align-items: center;
+    column-gap: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-block: 18px;
+  }
+  body.app-shell .home-board #breakHome[data-state="offer"] > :not(.break-home__head, .break-home__actions) { grid-column: 1 / -1; }
+  body.app-shell .home-board #breakHome[data-state="offer"] .break-home__actions { margin: 0; }
+  body.app-shell .home-board #breakHome[data-state="offer"] .break-home__summary { margin-bottom: 0; }
+  /* Starting a yearbook: the same. */
+  body.app-shell .home-board #yearbookHome[data-stage="start"] {
+    align-items: center;
+    column-gap: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-block: 18px;
+  }
+  body.app-shell .home-board #yearbookHome[data-stage="start"] > :not(.yearbook-home__actions) { grid-column: 1; }
+  body.app-shell .home-board #yearbookHome[data-stage="start"] .yearbook-home__actions { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+  body.app-shell .home-board #yearbookHome[data-stage="start"] .yearbook-home__line { margin: 2px 0 0; }
+  body.app-shell .home-board #yearbookHome[data-stage="start"] .yearbook-home__badge { display: none; }
+}
+
+/* ---------- Continue: one tidy list ---------- */
+/* Titles in progress stack as rows with their buttons on the right, instead of a two-up grid whose
+   boxes grew to different heights. The whole title area still opens the title. */
+@media (min-width: 641px) {
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue { gap: 0; grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > :is(.library-pulse__progress-row, .library-pulse__item) {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    border-top: 1px solid var(--home-line);
+    box-shadow: none;
+  }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > :first-child { border-top: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > .library-pulse__progress-row {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    padding: 0;
+  }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .library-pulse__item {
+    background: transparent;
+    border: 0;
+    flex: none;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue :is(.library-pulse__item) { padding: 12px 4px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .episode-actions { display: flex; gap: 6px; grid-column: 2; grid-row: 1; margin: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .episode-actions[hidden] { display: none; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .progress-update { grid-column: 3; grid-row: 1; margin: 0 4px 0 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > .episode-actions:not([hidden]) + .progress-update { margin-left: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue .library-pulse__item:hover { background: transparent; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue .library-pulse__item:hover .library-pulse__item-title { text-decoration: underline; text-underline-offset: 3px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue .episode-progress { max-width: 280px; }
+}
+/* "Open →" stays in the button's name; the row's own buttons are what the eye needs. */
+body.app-shell .home-board .daily-dashboard .library-pulse__progress-row .library-pulse__item-action {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+/* Buttons in the rows: the next episode keeps its teal; the rest are plain outlines. */
+body.app-shell .home-board .daily-dashboard .library-pulse__progress-row :is(.progress-update, .episode-guide-open) {
+  background: transparent;
+  border: 1px solid var(--home-line);
+  color: var(--fg);
+}
+body.app-shell .home-board .daily-dashboard .library-pulse__progress-row :is(.progress-update, .episode-guide-open):hover:not(:disabled) { background: var(--surface-hover); }
+body.app-shell .home-board .library-pulse__insights { background: transparent; border-color: var(--home-line); }
+
+/* ---------- Next Up: one filled button a row ---------- */
+body.app-shell .home-board .next-up-queue__item { background: transparent; border-color: var(--home-line); box-shadow: none; }
+body.app-shell .home-board .next-up-queue__controls :is(.next-up-queue__done, .next-up-queue__open, .episode-next, .episode-guide-open, .progress-update),
+body.app-shell.dark-mode .home-board .next-up-queue__controls :is(.next-up-queue__done, .next-up-queue__open, .episode-next, .episode-guide-open, .progress-update) {
+  background: transparent;
+  border: 1px solid var(--home-line);
+  color: var(--fg);
+}
+body.app-shell .home-board .next-up-queue__controls :is(.next-up-queue__done, .next-up-queue__open, .episode-next, .episode-guide-open, .progress-update):hover:not(:disabled) {
+  background: var(--surface-hover);
+  filter: none;
+}
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__remove { color: var(--fg-secondary); }
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__remove:hover:not(:disabled) { color: var(--danger); }
+body.app-shell .home-board .next-up-queue__header button { background: transparent; border-color: var(--home-line); }
+
+/* ---------- What's new: rows, not boxes ---------- */
+body.app-shell .home-board .home-news__list { gap: 0; }
+body.app-shell .home-board .home-news__row {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--home-line);
+  padding: 10px 2px;
+}
+body.app-shell .home-board .home-news__list > .home-news__row:first-child { border-top: 0; padding-top: 4px; }
+body.app-shell .home-board .home-news__idea { border-top-style: solid; border-top-color: var(--home-line); }
+/* "Open the friends feed" and the promo's "Not now" kept the light theme's #7c3aed in Night Mode: 3.2:1 on the
+   card. The same light violet as "View insights" on the Continue card (sweep, Nov 27 2026). */
+body.app-shell.dark-mode .home-board .home-news__link { color: #c4b5fd; }
+
+/* ---------- Setting up streaming services: denser chips ---------- */
+@media (min-width: 641px) {
+  body.app-shell .home-board .on-services__chips { gap: 6px; }
+  body.app-shell .home-board .on-services__chip { font-size: .84rem; min-height: 36px; padding-inline: 13px; }
+}
+
+/* ---------- One call to action colour ---------- */
+body.app-shell .home-board .break-home__btn--primary,
+body.app-shell.dark-mode .home-board .break-home__btn--primary {
+  background: linear-gradient(135deg, var(--cta, #7f4ef0), var(--cta-2, #963cf0));
+  border-color: transparent;
+  box-shadow: var(--cta-shadow, none);
+  color: #fff;
+}
+
+/* ---------- Show more ---------- */
+body.app-shell .home-board__more { gap: 8px 14px; margin-top: 10px; }
+body.app-shell .home-board__more-toggle {
+  background: var(--card-bg);
+  border: 1px solid var(--home-line);
+  box-shadow: var(--home-lift);
+}
+body.app-shell .home-board__more-toggle:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--home-line)); }
+body.app-shell .home-board__more-names { color: var(--home-kicker); font-size: .8rem; margin-inline: auto; max-width: 70ch; }
+body.app-shell .home-board .next-up-queue__items { gap: 0; }
+body.app-shell .home-board .next-up-queue__item {
+  border-width: 1px 0 0;
+  border-radius: 0;
+  padding-inline: 0 2px;
+}
+body.app-shell .home-board .next-up-queue__items > .next-up-queue__item:first-child { border-top-width: 0; }
+
+/* ---------- Phones ---------- */
+@media (max-width: 640px) {
+  body.app-shell .home-hero { padding: 18px; }
+  body.app-shell .home-hero:not([hidden]) + .home-focus:not([hidden]) { margin-bottom: 24px; padding: 14px 16px 16px; }
+  body.app-shell .home-board__main > * + .home-board__group { margin-top: 14px; }
+  body.app-shell .home-board .home-board__main > section[id] { padding: 18px 16px; }
+  body.app-shell .home-board .home-board__rail-cards > section[id] { padding: 18px 16px; }
+  body.app-shell .home-board .home-board__main h2 { font-size: 1.06rem; }
+
+  /* Continue: rows split by a hairline, buttons under each title. */
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue { gap: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > :is(.library-pulse__progress-row, .library-pulse__item) {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    border-top: 1px solid var(--home-line);
+    box-shadow: none;
+  }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > :first-child { border-top: 0; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue .library-pulse__item { background: transparent; border: 0; padding: 12px 0 10px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__continue > .library-pulse__progress-row { padding: 0 0 12px; }
+  body.app-shell .home-board .daily-dashboard .library-pulse__progress-row > :is(.episode-actions, .progress-update) { margin-left: 0; }
+
+  /* What's new: Cheer sits at the end of its row instead of on a line of its own. */
+  body.app-shell .home-board .home-news__row { grid-template-columns: 36px minmax(0, 1fr) auto; }
+  body.app-shell .home-board .home-news__row > :is(.home-news__btn, .home-news__actions) { grid-column: 3; justify-self: end; }
+
+  /* Trophy case: the badges closest to done swipe sideways. */
+  body.app-shell .home-board .badge-case__next {
+    grid-auto-columns: 84%;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 16px 4px;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  body.app-shell .home-board .badge-case__next::-webkit-scrollbar { display: none; }
+  body.app-shell .home-board .badge-case__next > * { scroll-snap-align: start; }
+
+  /* Free services: one row to swipe, like the paid ones. */
+  body.app-shell .home-board .on-services__chips[data-services="free"] { grid-template-rows: auto; }
+
+  /* The names of the cards behind "Show more": two lines at most. */
+  body.app-shell .home-board__more-names {
+    -webkit-box-orient: vertical;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+}
+
+/* ---------- Cards above the board ---------- */
+/* First steps, quick start and friends' recommendations take the board's surface and grey kickers too.
+   The welcome-back deck and the Year in Review banner keep their own dress: each is the one thing to do while it's up. */
+body.app-shell :is(#friendRecs, #starterPicks, #libraryLaunchpad):not([hidden]) {
+  background: var(--card-bg);
+  border: 1px solid var(--home-line);
+  border-radius: var(--radius-xl, 22px);
+  box-shadow: var(--home-lift);
+}
+body.app-shell :is(#friendRecs, #starterPicks, #libraryLaunchpad) :is(.friend-recs__eyebrow, .for-you-card__eyebrow, .library-launchpad__eyebrow),
+body.app-shell.dark-mode :is(#friendRecs, #starterPicks, #libraryLaunchpad) :is(.friend-recs__eyebrow, .for-you-card__eyebrow, .library-launchpad__eyebrow) {
+  color: var(--home-kicker);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+body.app-shell #libraryLaunchpad .library-launchpad__secondary,
+body.app-shell.dark-mode #libraryLaunchpad .library-launchpad__secondary {
+  background: transparent;
+  border: 1px solid var(--home-line);
+  box-shadow: none;
+  color: var(--fg);
+}
+body.app-shell #libraryLaunchpad .library-launchpad__secondary:hover { background: var(--surface-hover); }

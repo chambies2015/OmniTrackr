@@ -137,7 +137,7 @@ def test_saved_views_round_trip(authenticated_client, db_session):
 
 def test_saved_view_validation_and_limit(authenticated_client, db_session):
     post = lambda name, **filters: authenticated_client.post("/library/views/tv-shows", json={"name": name, "filters": filters})
-    assert post("Bad sort", sort="title-asc").status_code == 422
+    assert post("Bad sort", sort="popularity-desc").status_code == 422
     assert post("Bad state", completion="maybe").status_code == 422
     assert post("   ").status_code == 422
     assert post("x" * 41).status_code == 422

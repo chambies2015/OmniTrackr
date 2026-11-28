@@ -33,6 +33,9 @@ async function loadNotifications() {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Read their take</a>`;
         } else if (notif.type === 'discussion_reply' && /^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions\/[1-9]\d{0,9}$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}#replies">Read the reply</a>`;
+        } else if ((notif.type === 'discussion_mention' || notif.type === 'discussion_started') && /^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions\/[1-9]\d{0,9}$/.test(notif.link || '')) {
+          const label = notif.type === 'discussion_mention' ? 'Read it' : 'Join the discussion';
+          actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">${label}</a>`;
         } else if (notif.type === 'discussion_report' && notif.link === '/discussions/moderation') {
           actionButtons = '<a class="notification-action-btn" href="/discussions/moderation">Open reports</a>';
         } else if (notif.type === 'goal_reached' && notif.link === '/#goals') {
@@ -51,6 +54,10 @@ async function loadNotifications() {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">See it on Release Radar</a>`;
         } else if (notif.type === 'episode_today' && /^\/titles\/(tv|anime)\/[a-z0-9-]{1,120}$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Open the show</a>`;
+        } else if (notif.type === 'service_arrival' && notif.link === '/#on-your-services') {
+          actionButtons = '<a class="notification-action-btn" href="/#on-your-services">See what you can stream</a>';
+        } else if ((notif.type === 'gift_ready' || notif.type === 'gift_opened') && notif.link === '/supporters/gift#your-gifts') {
+          actionButtons = '<a class="notification-action-btn" href="/supporters/gift#your-gifts">See your gifts</a>';
         }
 
         return `
@@ -77,6 +84,9 @@ async function updateNotificationCount() {
       const data = await response.json();
       window.setAppIconBadge?.(data.count);
       const notificationDot = document.getElementById('notificationDot');
+      const bell = document.getElementById('notificationBell');
+      // The red number is only drawn, so the button's name carries it for screen readers.
+      if (bell) bell.setAttribute('aria-label', data.count > 0 ? `View notifications, ${data.count} unread` : 'View notifications');
 
       if (!notificationDot) {
         console.warn('Notification dot element not found');

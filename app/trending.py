@@ -45,6 +45,9 @@ LEADERS_PER_KIND = 3
 # Fewer named titles than this is a thin page: noindex, kept out of the sitemap.
 INDEX_MIN_OVERALL = 8
 INDEX_MIN_KIND = 5
+# A chart built from fewer members than this describes a handful of people, not the site, so it
+# stays out of search too (Nov 25 2026: the anime month chart was indexed with three members).
+INDEX_MIN_MEMBERS = 10
 CACHE_SECONDS = 600
 SCAN_LIMIT = 60000
 
@@ -89,11 +92,26 @@ def _period(moment: datetime, now: datetime, days: int) -> Optional[str]:
     return None
 
 
+def _backdated_adds(db: Session, since: datetime) -> set[tuple[str, int]]:
+    """(category, row id) of titles saved from the year's big ones with a finish dated to an earlier month
+    (app/year_catchup.py). A film watched in August and put in the library in December isn't something
+    members are adding now, the same way its "filled-in" finish isn't counted below."""
+    answer = models.YearCatchupAnswer
+    found = set()
+    for category, item_id, year, month, created in db.query(
+            answer.category, answer.item_id, answer.year, answer.month, answer.created_at).filter(
+            answer.answer == "month", answer.created_row.is_(True), answer.created_at >= since):
+        if category and item_id and month and created and (year, month) != (created.year, created.month):
+            found.add((category, item_id))
+    return found
+
+
 def scan(db: Session, now: Optional[datetime] = None) -> list[dict]:
     """Every signal from the last 60 days: one dict per (kind, title, member, signal, moment)."""
     now = now or datetime.utcnow()
     since = now - timedelta(days=2 * max(WINDOWS.values()))
     members = _members(db)
+    backdated = _backdated_adds(db, since)
     shareable = {kind: {row[0] for row in title_pages._shareable_ids(db, kind)} & members for kind in title_pages.KINDS}
     signals: list[dict] = []
     titles: dict[tuple[str, int], tuple] = {}  # (kind, row id) -> (title, year, image, creator)
@@ -111,17 +129,21 @@ def scan(db: Session, now: Optional[datetime] = None) -> list[dict]:
         rows = (db.query(model).with_entities(*columns, model.added_at)
                 .filter(model.added_at >= since, model.added_at <= now)
                 .order_by(model.id).limit(SCAN_LIMIT).all())
+        category = title_pages.KINDS[kind][2]
         for row in rows:
             if row[1] not in shareable[kind]:
                 continue
             remember(kind, row[:6])
+            if (category, row[0]) in backdated:
+                continue
             signals.append({"kind": kind, "row": row[0], "user": row[1], "signal": "added", "at": row[6], "rating": None})
 
     entry = models.ActivityEntry
     wanted: dict[str, set[int]] = defaultdict(set)
     journal = (db.query(entry.category, entry.item_id, entry.title, entry.user_id, entry.action, entry.rating, entry.occurred_at)
                .filter(entry.occurred_at >= since, entry.occurred_at <= now,
-                       entry.action.in_(ACTIVE_ACTIONS + FINISH_ACTIONS), entry.source != "import")
+                       entry.action.in_(ACTIVE_ACTIONS + FINISH_ACTIONS),
+                       entry.source.notin_(("import", "filled-in")))
                .order_by(entry.id).limit(SCAN_LIMIT).all())
     for category, item_id, title, user_id, action, rating, occurred_at in journal:
         kind = title_pages.LIBRARY_TO_KIND.get(category)
@@ -276,14 +298,16 @@ def build_window(signals: list[dict], window: str, now: datetime) -> dict:
                           key=lambda e: (-e["finished"], -(e["average"] or 0), e["title"].casefold()))[:LIST_LIMIT]
         rated = sorted((e for e in own if e["average"] is not None),
                        key=lambda e: (-e["average"], -e["rated"], e["title"].casefold()))[:LIST_LIMIT]
-        kinds[kind] = {"chart": chart, "finished": finished, "rated": rated, "totals": _totals(groups, {kind}),
-                       "indexable": len(chart) >= INDEX_MIN_KIND}
+        totals = _totals(groups, {kind})
+        kinds[kind] = {"chart": chart, "finished": finished, "rated": rated, "totals": totals,
+                       "indexable": len(chart) >= INDEX_MIN_KIND and totals["members"] >= INDEX_MIN_MEMBERS}
     overall = _chart(groups, list(groups), OVERALL_LIMIT)
     every = [_entry(groups[key], _score(groups[key], "now", weights_now)) for key in named]
     finished = sorted((e for e in every if e["finished"] >= MIN_MEMBERS),
                       key=lambda e: (-e["finished"], -(e["average"] or 0), e["title"].casefold()))[:LIST_LIMIT]
     rated = sorted((e for e in every if e["average"] is not None),
                    key=lambda e: (-e["average"], -e["rated"], e["title"].casefold()))[:LIST_LIMIT]
+    totals = _totals(groups, set(title_pages.KINDS))
     return {
         "window": window,
         "built_at": now.replace(microsecond=0).isoformat() + "Z",
@@ -292,8 +316,8 @@ def build_window(signals: list[dict], window: str, now: datetime) -> dict:
         "rated": rated,
         "leaders": {kind: data["chart"][:LEADERS_PER_KIND] for kind, data in kinds.items() if data["chart"]},
         "kinds": kinds,
-        "totals": _totals(groups, set(title_pages.KINDS)),
-        "indexable": len(overall) >= INDEX_MIN_OVERALL,
+        "totals": totals,
+        "indexable": len(overall) >= INDEX_MIN_OVERALL and totals["members"] >= INDEX_MIN_MEMBERS,
     }
 
 

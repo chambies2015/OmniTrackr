@@ -4,17 +4,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Start a media library, import an existing list, save your place, or share selectively. Step-by-step OmniTrackr guides with examples and a no-account demo.">
+  <meta name="description" content="Every OmniTrackr guide in one place: series in order, how long a show takes, the Essential 100, the best of 2026, release previews and how to use the tracker.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
-  <title>OmniTrackr Guides - Track Media, Reviews, Stats, Friends & Export</title>
+  <title>Guides: Series in Order, Binge Times and Best-Of Lists | OmniTrackr</title>
   <link rel="canonical" href="https://omnitrackr.xyz/guides">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
 
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/guides">
-  <meta property="og:title" content="OmniTrackr Guides - Track Media, Reviews, Stats, Friends & Export">
-  <meta property="og:description" content="Choose a useful first step: start a library, bring an existing list, resume a title, or share selectively. Follow practical instructions and try the demo.">
+  <meta property="og:title" content="The OmniTrackr guides">
+  <meta property="og:description" content="Watch and reading orders, how long a series takes, what to try after a favourite, the year's best and what's coming out, across nine formats. Every guide is dated.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr guides">
   <meta property="og:site_name" content="OmniTrackr">
@@ -22,13 +22,13 @@
 
   <meta name="twitter:card" content="summary">
   <meta name="twitter:url" content="https://omnitrackr.xyz/guides">
-  <meta name="twitter:title" content="OmniTrackr Guides">
-  <meta name="twitter:description" content="Start a library, import a list, save your place, or choose what to share. Practical steps and a no-account demo.">
+  <meta name="twitter:title" content="The OmniTrackr guides">
+  <meta name="twitter:description" content="Watch and reading orders, binge times, the year's best and what's coming out, across nine formats. Every guide is dated.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr guides">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1000px; margin: 0 auto; }
@@ -46,31 +46,19 @@
     .privacy-section strong { color: var(--fg); }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
     .back-link:hover { color: var(--secondary); }
-    .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
-    .guide-card { display: block; border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); color: inherit; text-decoration: none; }
-    .guide-card h3 { font-size: 1.05rem; margin: 0 0 8px; color: var(--fg); }
-    .guide-card p { margin: 0; }
-    .guide-card:hover { border-color: var(--primary); }
   </style>
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": "How to Use OmniTrackr",
-    "description": "Guides for getting started, tracking media, reviews, statistics, friends, and export in OmniTrackr.",
+    "@type": "CollectionPage",
+    "name": "The OmniTrackr guides",
+    "description": "Every written guide on OmniTrackr, grouped by format and by kind: series in order, how long a series takes, If you liked, the Essential 100, the best of the year, release guides, seasonal and awards guides, and how-to guides for the tracker.",
     "url": "https://omnitrackr.xyz/guides",
-    "dateModified": "2026-09-24",
+    "dateModified": "2099-01-01",
     "inLanguage": "en-US",
-    "step": [
-      { "@type": "HowToStep", "name": "Get an account and sign in" },
-      { "@type": "HowToStep", "name": "Add movies, TV shows, anime, games, music, books, manga, podcasts, or audiobooks" },
-      { "@type": "HowToStep", "name": "Rate and review your entries" },
-      { "@type": "HowToStep", "name": "Use the Statistics tab" },
-      { "@type": "HowToStep", "name": "Add friends and adjust privacy" },
-      { "@type": "HowToStep", "name": "Export or import your data" }
-    ],
-    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
+    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/about" }
   }
   </script>
   <script type="application/ld+json">
@@ -78,27 +66,29 @@
     "@context": "https://schema.org",
     "@type": "ItemList",
     "name": "OmniTrackr Guide Library",
-    "description": "A directory of OmniTrackr guides for tracking movies, TV shows, anime, games, music, books, reviews, statistics, privacy, and data portability.",
+    "description": "The sections of the OmniTrackr guide library, from franchise orders and binge times to the tracker's own how-to guides.",
     "url": "https://omnitrackr.xyz/guides",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "FAQ", "url": "https://omnitrackr.xyz/faq" },
-      { "@type": "ListItem", "position": 2, "name": "Media Tracking Hub", "url": "https://omnitrackr.xyz/media-tracking" },
-      { "@type": "ListItem", "position": 3, "name": "Movie Tracker", "url": "https://omnitrackr.xyz/movie-tracker" },
-      { "@type": "ListItem", "position": 4, "name": "TV Show Tracker", "url": "https://omnitrackr.xyz/tv-show-tracker" },
-      { "@type": "ListItem", "position": 5, "name": "Anime Tracker", "url": "https://omnitrackr.xyz/anime-tracker" },
-      { "@type": "ListItem", "position": 6, "name": "Game Tracker", "url": "https://omnitrackr.xyz/game-tracker" },
-      { "@type": "ListItem", "position": 7, "name": "Music Tracker", "url": "https://omnitrackr.xyz/music-tracker" },
-      { "@type": "ListItem", "position": 8, "name": "Book Tracker", "url": "https://omnitrackr.xyz/book-tracker" },
-      { "@type": "ListItem", "position": 9, "name": "Media Statistics", "url": "https://omnitrackr.xyz/media-statistics" },
-      { "@type": "ListItem", "position": 10, "name": "Export and Import Guide", "url": "https://omnitrackr.xyz/export-import-guide" },
-      { "@type": "ListItem", "position": 11, "name": "Media Tracker Setup Checklist", "url": "https://omnitrackr.xyz/media-tracker-checklist" },
-      { "@type": "ListItem", "position": 12, "name": "Media Tracking Templates", "url": "https://omnitrackr.xyz/tracking-templates" },
-      { "@type": "ListItem", "position": 13, "name": "Media Review Guidelines", "url": "https://omnitrackr.xyz/review-guidelines" },
-      { "@type": "ListItem", "position": 14, "name": "Sample Media Library", "url": "https://omnitrackr.xyz/sample-library" }
+      { "@type": "ListItem", "position": 1, "name": "Franchises in order", "url": "https://omnitrackr.xyz/in-order" },
+      { "@type": "ListItem", "position": 2, "name": "How long it takes", "url": "https://omnitrackr.xyz/binge-calculator" },
+      { "@type": "ListItem", "position": 3, "name": "If you liked", "url": "https://omnitrackr.xyz/if-you-liked" },
+      { "@type": "ListItem", "position": 4, "name": "Discover trails", "url": "https://omnitrackr.xyz/discover" },
+      { "@type": "ListItem", "position": 5, "name": "The Essential 100", "url": "https://omnitrackr.xyz/essentials" },
+      { "@type": "ListItem", "position": 6, "name": "Best of the year", "url": "https://omnitrackr.xyz/best-of" },
+      { "@type": "ListItem", "position": 7, "name": "Release guides", "url": "https://omnitrackr.xyz/new-releases" },
+      { "@type": "ListItem", "position": 8, "name": "Holiday picks", "url": "https://omnitrackr.xyz/holidays" },
+      { "@type": "ListItem", "position": 9, "name": "Awards season", "url": "https://omnitrackr.xyz/awards" },
+      { "@type": "ListItem", "position": 10, "name": "Monthly challenges", "url": "https://omnitrackr.xyz/challenges" },
+      { "@type": "ListItem", "position": 11, "name": "Browse shelves", "url": "https://omnitrackr.xyz/browse" },
+      { "@type": "ListItem", "position": 12, "name": "Switch from another tracker", "url": "https://omnitrackr.xyz/switch" },
+      { "@type": "ListItem", "position": 13, "name": "Media tracking hub", "url": "https://omnitrackr.xyz/media-tracking" },
+      { "@type": "ListItem", "position": 14, "name": "FAQ", "url": "https://omnitrackr.xyz/faq" }
     ]
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261120-a11y-1">
+  <link rel="stylesheet" href="/static/guide-library.css?v=20261121-library-1">
+  <script src="/static/guide-library.js?v=20261121-library-1" defer></script>
 </head>
 
 <body class="public-reader site">
@@ -109,17 +99,66 @@
 <a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
-        <p class="reader-kicker">Pick a task</p>
-        <h1>How-To Guides</h1>
-        <p>Start with what you're trying to do. Each guide covers the few controls you need, so you can get back to your movies, shows, anime, games, music, books, manga, podcasts, and audiobooks.</p>
+        <p class="reader-kicker">The OmniTrackr guides</p>
+        <h1>Guides</h1>
+        <p><!--GUIDE_COUNT--> guides to films, TV, anime, games, books, music, manga, podcasts and audiobooks: the order to take a long series in, how many hours it will take, what to try after a favourite, and what's worth your time this year. Every guide is dated, and the date is the last time its facts were checked.</p>
+        <!--GUIDE_STATS-->
         <div class="reader-actions">
-          <a href="/demo">Try the demo (no account needed)</a>
-          <a href="/#landing-auth">Open your library</a>
+          <a href="#guide-library-heading">Browse the library</a>
+          <a href="#choose-path-heading">How to use OmniTrackr</a>
         </div>
       </header>
 
-      <section class="privacy-section" aria-labelledby="choose-path-heading">
-        <h2 id="choose-path-heading">What would you like to do?</h2>
+      <nav class="reader-jump" aria-label="On this page">
+        <a href="#start-here-heading">Start here</a>
+        <a href="#formats-heading">By format</a>
+        <a href="#guide-library-heading">Every guide</a>
+        <a href="#recent-heading">Recently checked</a>
+        <a href="#standards-heading">How they're written</a>
+        <a href="#choose-path-heading">Using OmniTrackr</a>
+      </nav>
+
+      <section class="privacy-section gl-section" aria-labelledby="start-here-heading">
+        <h2 id="start-here-heading">Start here</h2>
+        <p>New to the site? These six show the main kinds of guide, and each one leads on to others like it.</p>
+        <!--GUIDE_START_HERE-->
+      </section>
+
+      <section class="privacy-section gl-section" aria-labelledby="formats-heading">
+        <h2 id="formats-heading">Pick a format</h2>
+        <p>Most guides stick to one format. The rest mix them on purpose, so a Valentine's shelf can hold a film, a game and a podcast side by side. Choose a format to see everything that covers it, mixed guides included.</p>
+        <!--GUIDE_FORMATS-->
+      </section>
+
+      <section class="privacy-section gl-section gl-library" aria-labelledby="guide-library-heading">
+        <h2 id="guide-library-heading">Every guide</h2>
+        <p>The full Guide Library, grouped by kind. Each line shows the formats a guide covers and the day it was last checked. Help pages for the tracker itself come last.</p>
+        <!--GUIDE_LIBRARY-->
+      </section>
+
+      <section class="privacy-section gl-section" aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recently checked</h2>
+        <p>The newest guides and the ones most recently reread against their sources, one from each kind before a second from any.</p>
+        <!--GUIDE_RECENT-->
+        <p><a href="/content-quality#ledger-heading">Every guide with its last check date</a></p>
+      </section>
+
+      <section class="privacy-section gl-section" aria-labelledby="standards-heading">
+        <h2 id="standards-heading">How these guides are written</h2>
+        <p>OmniTrackr is run by one person. Drafts are written with the help of AI writing tools, and the site owner reads, edits and fact-checks every guide before it goes up: release dates, episode counts, running times and who made what are checked against the sources each guide lists. Anything that doesn't hold up is cut. The date at the top of a guide is the last time that check was done, and a guide gets a new date only when it is checked again.</p>
+        <p>A pick gets in because it fits what the guide is about. Chart position doesn't decide it, and nobody pays to be included. Most picks carry a note on who they won't suit. Some guides show ads to keep the site free, and a few, like the gift guide, the Black Friday guide and some of the best-of lists, have Amazon links that earn the site a small commission. Those pages say so before the first link.</p>
+        <p>If you find a mistake, a broken order or a date that has moved, <a href="/contact">send a correction</a>. The fix goes into the guide and its date changes.</p>
+        <div class="reader-actions">
+          <a href="/content-quality">Read the editorial standards</a>
+          <a href="/about">About OmniTrackr</a>
+          <a href="/advertising">Ads and affiliate links</a>
+        </div>
+      </section>
+
+      <section class="privacy-section gl-part" aria-labelledby="choose-path-heading">
+        <p class="reader-kicker">Using OmniTrackr</p>
+        <h2 id="choose-path-heading">How to use the tracker</h2>
+        <p>The rest of this page is the how-to for OmniTrackr itself: start a library, bring a list over from another site, save your place in a show or a book, and choose who sees what. Each part covers the few controls you need. The <a href="/demo">demo</a> lets you try them without an account.</p>
         <div class="guide-paths">
           <a class="guide-path" href="#getting-started-heading">
             <span class="guide-path__number" aria-hidden="true">01</span>
@@ -144,12 +183,6 @@
         </div>
       </section>
 
-      <nav class="reader-jump" aria-label="On this page">
-        <a href="#library-filters-heading">Find a title</a>
-        <a href="#reviews-heading">Ratings &amp; reviews</a>
-        <a href="#statistics-heading">Statistics</a>
-        <a href="#guide-library-heading">All guides</a>
-      </nav>
 
       <section class="privacy-section" aria-labelledby="getting-started-heading">
         <p class="reader-kicker">Start a library</p>
@@ -249,47 +282,6 @@
           <li>Export periodically as a backup.</li>
           <li>Adjust privacy per category so friends see only what you're comfortable sharing.</li>
         </ul>
-      </section>
-
-      <section class="privacy-section" aria-labelledby="guide-library-heading">
-        <h2 id="guide-library-heading">Guide library</h2>
-        <p>Longer guides for specific tasks. They're all public, so you can read them before you create an account.</p>
-
-        <div class="guide-directory-group">
-          <h3>Plan your library</h3>
-          <div class="guide-grid">
-            <a class="guide-card" href="/media-tracking"><h4>Media Tracking Hub</h4><p>A map of watchlists, backlogs, reviews, privacy, exports, and statistics.</p></a>
-            <a class="guide-card" href="/media-tracker-checklist"><h4>Setup Checklist</h4><p>Choose categories, rating habits, privacy settings, and a first-week routine.</p></a>
-            <a class="guide-card" href="/tracking-templates"><h4>Tracking Templates</h4><p>Rating scales, review prompts, and backlog cleanup steps to copy.</p></a>
-            <a class="guide-card" href="/sample-library"><h4>Sample Library</h4><p>A fictional library with example records, notes, and privacy choices.</p></a>
-          </div>
-        </div>
-
-        <div class="guide-directory-group">
-          <h3>Choose a media category</h3>
-          <div class="guide-grid">
-            <a class="guide-card" href="/movie-tracker"><h4>Movie Tracker</h4><p>Watchlists, watched status, ratings, reviews, posters, and movie stats.</p></a>
-            <a class="guide-card" href="/tv-show-tracker"><h4>TV Show Tracker</h4><p>Shows, seasons, episode checkpoints, and TV reviews.</p></a>
-            <a class="guide-card" href="/anime-tracker"><h4>Anime Tracker</h4><p>Seasonal anime, episode progress, watched status, ratings, and notes.</p></a>
-            <a class="guide-card" href="/game-tracker"><h4>Game Tracker</h4><p>A game backlog with played status, genres, ratings, and reviews.</p></a>
-            <a class="guide-card" href="/music-tracker"><h4>Music Tracker</h4><p>Albums, artists, listened status, genres, ratings, and review notes.</p></a>
-            <a class="guide-card" href="/book-tracker"><h4>Book Tracker</h4><p>Reading lists, authors, saved reading checkpoints, ratings, and notes.</p></a>
-            <a class="guide-card" href="/manga-tracker"><h4>Manga Tracker</h4><p>Series, volumes, chapter checkpoints, manhwa and webtoons, ratings, and reviews.</p></a>
-            <a class="guide-card" href="/podcast-tracker"><h4>Podcast Tracker</h4><p>Shows you follow, the episode you stopped on, limited series, backlogs, and reviews.</p></a>
-            <a class="guide-card" href="/audiobook-tracker"><h4>Audiobook Tracker</h4><p>Narrators, runtimes, the chapter you reached, and your listening hours.</p></a>
-          </div>
-        </div>
-
-        <div class="guide-directory-group">
-          <h3>Maintain and share your history</h3>
-          <div class="guide-grid">
-            <a class="guide-card" href="/switch"><h4>Switch From Another Tracker</h4><p>Where IMDb, Letterboxd, Goodreads, MyAnimeList, Spotify and your podcast app keep their exports, and what comes across.</p></a>
-            <a class="guide-card" href="/export-import-guide"><h4>Export and Import</h4><p>CSV migration, duplicate handling, worked examples, and JSON backups.</p></a>
-            <a class="guide-card" href="/media-statistics"><h4>Media Statistics</h4><p>Completion, rating distribution, review coverage, and category patterns.</p></a>
-            <a class="guide-card" href="/review-guidelines"><h4>Review Guidelines</h4><p>How to write public reviews, with prompts, examples, and privacy checks.</p></a>
-            <a class="guide-card" href="/faq"><h4>FAQ</h4><p>Answers about accounts, tracking, sharing, exports, and advertising.</p></a>
-          </div>
-        </div>
       </section>
 
 </main>

@@ -6,6 +6,7 @@ The page shell at /site-stats contains no data; the numbers come from
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -16,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, funnel, google_signin, models, release_radar, supporters
+from .. import account_removal, editorial_collections, funnel, google_signin, models, release_radar, search_journey, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -186,12 +187,34 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
 
 
 def _funnel(db: Session, days: int, today: date) -> dict:
-    """Sign-up funnel counters for the range (see app/funnel.py)."""
+    """Sign-up funnel counters for the range (see app/funnel.py), with phones counted on their own.
+
+    Phones, people by device and people inside other apps' browsers are counted from Nov 26 2026.
+    """
+    table = models.SiteTrafficDaily
+    start = today - timedelta(days=days - 1)
+    kinds = ("funnel", funnel.PHONE_KIND, "human_people_device", "human_app")
+    grouped: dict[str, dict[str, int]] = {kind: {} for kind in kinds}
+    for kind, key, value in db.query(table.kind, table.key, func.sum(table.count)).filter(
+            table.kind.in_(kinds), table.day >= start).group_by(table.kind, table.key).all():
+        grouped[kind][key] = int(value or 0)
+    result = funnel.summary(grouped["funnel"], grouped[funnel.PHONE_KIND])
+    ordered = lambda counts: [{"key": key, "count": count}  # noqa: E731
+                              for key, count in sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))]
+    result["people_devices"] = ordered(grouped["human_people_device"])
+    result["app_browser_people"] = ordered(grouped["human_app"])
+    since = db.query(func.min(table.day)).filter(table.kind == "human_people_device").scalar()
+    result["phones_since"] = since.isoformat() if since else None
+    return result
+
+
+def _search_journey(db: Session, days: int, today: date) -> dict:
+    """Search visitors by landing section: landed, saved, started signing up, made an account."""
     table = models.SiteTrafficDaily
     start = today - timedelta(days=days - 1)
     counts = dict(db.query(table.key, func.sum(table.count)).filter(
-        table.kind == "funnel", table.day >= start).group_by(table.key).all())
-    return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+        table.kind == search_journey.KIND, table.day >= start).group_by(table.key).all())
+    return search_journey.summary({key: int(value or 0) for key, value in counts.items()})
 
 
 def _retention(db: Session) -> dict:
@@ -206,8 +229,19 @@ def _count(query) -> int:
     return int(query.scalar() or 0)
 
 
+def _gifts(db: Session, start: datetime, days: int, now: datetime) -> dict:
+    """Supporter gifts (Nov 23 2026): bought, opened and still waiting, plus page counters."""
+    from .. import gift_memberships
+    table = models.SiteTrafficDaily
+    keys = ("gift_page_seen", "gift_link_opened", "gift_opened", "page_kofi_gift")
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "support", table.key.in_(keys), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
+    return {**gift_memberships.stats(db, start), **{key: int(counts.get(key) or 0) for key in keys}}
+
+
 def _growth(db: Session, days: int, now: datetime) -> dict:
-    """This month's growth features: invite links, Ko-fi supporters, weekly email, release calendars and "ask a friend"."""
+    """Growth features: invite links, Ko-fi supporters, weekly email, release calendars, "ask a friend", notifications and shared reviews."""
     start = now - timedelta(days=days)
     signup = models.FriendInviteSignup
     supporter = models.Supporter
@@ -219,6 +253,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "signups": _counts_between(db, signup.created_at, start),
             "friends_made": _counts_between(db, signup.completed_at, start),
             "awaiting_verification": _count(db.query(func.count(signup.id)).filter(signup.completed_at.is_(None))),
+            "taste_tests": _count(db.query(func.count(models.FriendInvite.id)).filter(models.FriendInvite.taste_test.is_(True))),
         },
         "supporters": {
             "active": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now)),
@@ -228,6 +263,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, ~supporters.is_test_payment())),
             # Ko-fi test pings and payments the owner set aside don't need linking.
             "unlinked_payments": supporters.waiting_count(db),
+            "gifts": _gifts(db, start, days, now),
         },
         "weekly_email": _weekly_email(db, days, now, start),
         "calendar": {
@@ -240,8 +276,129 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "asked": _counts_between(db, models.TakeRequest.created_at, start),
             "answered": _counts_between(db, models.TakeResponse.created_at, start),
         },
+        "people": _people_to_follow(db, days, now),
         "push": _push(db, days, now, start),
+        "reviews": _review_inbox(db, days, now),
+        "support": _support_asks(db, days, now),
+        "stay": _stay_posted(db, days, now),
+        "week_one": _week_one(db, days, now),
+        "app": _installed_app(db, days, now),
+        "backlog_draw": _backlog_draw(db, days, now),
+        "your_week": _your_week(db, days, now),
+        "streaming": _streaming(db, days, now),
+        "rankings": _rankings(db, days, now),
+        "widgets": _profile_widgets(db, days, now),
     }
+
+
+def _people_to_follow(db: Session, days: int, now: datetime) -> dict:
+    """Find people: follows made, where they came from, follow-backs and opt-outs."""
+    try:
+        from .. import people_to_follow
+        return people_to_follow.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _your_week(db: Session, days: int, now: datetime) -> dict:
+    """Your week: paces picked, weeks kept, Sunday nudges and who came back after one."""
+    try:
+        from .. import your_week
+        return your_week.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _streaming(db: Session, days: int, now: datetime) -> dict:
+    """On your services: members who picked services, which ones, arrivals found and the notes that went out."""
+    try:
+        from .. import streaming_services
+        return streaming_services.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _rankings(db: Session, days: int, now: datetime) -> dict:
+    """Rankings: members putting their finished titles in order, answers given and top tens shared."""
+    try:
+        from .. import rankings
+        return rankings.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _profile_widgets(db: Session, days: int, now: datetime) -> dict:
+    """Profile widgets: how often they loaded on other sites, which sites, and the visits they sent back."""
+    try:
+        from .. import profile_widgets
+        return profile_widgets.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _backlog_draw(db: Session, days: int, now: datetime) -> dict:
+    """Draw from your backlog: dealt, kept, nights picked, evening emails, and who came back after their night."""
+    try:
+        from .. import backlog_draw
+        return backlog_draw.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _week_one(db: Session, days: int, now: datetime) -> dict:
+    """The first-week home card: seen, came back on a later day, reminder emails asked for and sent."""
+    try:
+        from .. import week_one
+        return week_one.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _installed_app(db: Session, days: int, now: datetime) -> dict:
+    """The installed app: offers, presses, Add to Home Screen steps, and members who open it from its icon."""
+    try:
+        from .. import app_install
+        return app_install.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _stay_posted(db: Session, days: int, now: datetime) -> dict:
+    """The "stay posted" card and the note after saving a show: shown, and which channel members picked."""
+    try:
+        from .. import stay_posted
+        return stay_posted.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _support_asks(db: Session, days: int, now: datetime) -> dict:
+    """Support notes on the dashboard, /supporters visits and Ko-fi presses, and payments that followed a press."""
+    try:
+        from .. import support_asks
+        return support_asks.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
+
+
+def _review_inbox(db: Session, days: int, now: datetime) -> dict:
+    """The "Share your reviews" card: answers in the range and private reviews still waiting."""
+    try:
+        from .. import review_inbox
+        return review_inbox.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return {}
 
 
 def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
@@ -253,6 +410,9 @@ def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
         table.kind == "push", table.key.like("sent_%"), table.day >= (now - timedelta(days=days - 1)).date(),
     ).group_by(table.key).all()
     titles = {**web_push.TITLES, "held": "Catch-up after quiet hours"}
+    places = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "push", table.key.like("on_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
     by_kind = sorted(({"kind": titles.get(key[5:], key[5:].replace("_", " ")), "count": int(total or 0)}
                       for key, total in counts if total), key=lambda row: -row["count"])
     return {
@@ -264,6 +424,8 @@ def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
         "sent": sum(row["count"] for row in by_kind),
         "sent_by_kind": by_kind[:8],
         "away_reminders": _counts_between(db, models.PushNudge.sent_at, start),
+        "on_by_place": [{"place": label, "count": int(places.get(f"on_{key}") or 0)}
+                        for key, label in web_push.SOURCES.items()],
     }
 
 
@@ -286,7 +448,17 @@ def _weekly_email(db: Session, days: int, now: datetime, start: datetime) -> dic
                                for source in digest.SOURCES if source in digest.OFF_SOURCES],
         "emailed": _counts_between(db, models.EmailDigestSubscription.last_sent_at, start),
         "emailed_7d": _counts_between(db, models.EmailDigestSubscription.last_sent_at, now - timedelta(days=7)),
+        "preview": _weekly_preview_stats(db, days, now),
     }
+
+
+def _weekly_preview_stats(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import weekly_preview
+        return weekly_preview.stats(db, days, now)
+    except Exception:
+        db.rollback()
+        return None
 
 
 def _announcement_status(db: Session) -> dict | None:
@@ -316,16 +488,65 @@ def _welcome_status(db: Session) -> dict | None:
         return None
 
 
+def _check_in_status(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import check_in
+        return check_in.status(db, now, days)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _year_fill_status(db: Session, days: int, now: datetime) -> dict | None:
+    try:
+        from .. import year_fill
+        return year_fill.status(db, now, days)
+    except Exception:
+        db.rollback()
+        return None
+
+
+# Other lookups share the title_metadata table under their own key prefixes. They used to be
+# counted as title pages, so a show that isn't airing, or AniList being busy for a release
+# calendar refresh, showed up as a title page "not found" or "error".
+OTHER_LOOKUPS = (("episodes:", "episode_guides"), ("airing:", "release_schedules"))
+PROBLEMS_SHOWN = 10
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job).
 
-    Where-to-watch lookups share the table under "where:" keys. They are left out: a film
-    that streams nowhere is a normal answer, not a title page missing its details.
+    Where-to-watch lookups ("where:" keys) are left out: a film that streams nowhere is a
+    normal answer. Episode guides and release schedules are counted on their own lines.
     """
-    counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
-                  .filter(~models.TitleMetadata.key.startswith("where:"))
-                  .group_by(models.TitleMetadata.status).all())
-    return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
+    def counts(*conditions) -> dict:
+        rows = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                    .filter(*conditions).group_by(models.TitleMetadata.status).all())
+        return {"found": int(rows.get("ok", 0)) + int(rows.get("ended", 0)),
+                "not_found": int(rows.get("miss", 0)), "errors": int(rows.get("error", 0))}
+
+    others = [prefix for prefix, _ in OTHER_LOOKUPS] + ["where:"]
+    page_rows = [~models.TitleMetadata.key.startswith(prefix) for prefix in others]
+    result = counts(*page_rows)
+    for prefix, name in OTHER_LOOKUPS:
+        result[name] = counts(models.TitleMetadata.key.startswith(prefix))
+    problems = []
+    rows = (db.query(models.TitleMetadata.key, models.TitleMetadata.status, models.TitleMetadata.data,
+                     models.TitleMetadata.fetched_at)
+            .filter(*page_rows, models.TitleMetadata.status.in_(("miss", "error")))
+            .order_by(models.TitleMetadata.fetched_at.desc()).limit(PROBLEMS_SHOWN).all())
+    for key, status, data, fetched_at in rows:
+        try:
+            reason = (json.loads(data) or {}).get("reason") if data else None
+        except (ValueError, AttributeError):
+            reason = None
+        kind, _, rest = key.partition(":")
+        title, _, year = rest.rpartition(":")
+        problems.append({"kind": kind, "title": title, "year": year or None, "status": status,
+                         "reason": reason or ("Saved before reasons were kept" if status == "error" else "No source had this title"),
+                         "checked": fetched_at.strftime("%Y-%m-%d %H:%M") if fetched_at else None})
+    result["problems"] = problems
+    return result
 
 
 def _system() -> dict:
@@ -398,6 +619,7 @@ def site_stats_overview(
         "journal_activity": _library_additions(db, days, today),
         "traffic": _traffic(db, days, today),
         "funnel": _funnel(db, days, today),
+        "search_journey": _search_journey(db, days, today),
         "retention": _retention(db),
         "growth": _growth(db, days, now),
         "popular_titles": _popular_titles(db),
@@ -407,6 +629,8 @@ def site_stats_overview(
         "announcement": _announcement_status(db),
         "comeback": _comeback_status(db),
         "welcome": _welcome_status(db),
+        "check_in": _check_in_status(db, days, now),
+        "year_fill": _year_fill_status(db, days, now),
     }
 
 
@@ -593,3 +817,175 @@ async def welcome_action(payload: WelcomeAction, response: Response,
         return {**welcome_emails.status(db), "message": f"All three sent to {current_user.email}."}
     welcome_emails.set_status(db, "sending" if payload.action == "start" else "paused")
     return welcome_emails.status(db)
+
+
+# ---------------------------------------------------------------- check-in email
+
+class CheckInAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/check-in-preview", include_in_schema=False)
+def check_in_preview(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The check-in email as the owner would receive it, buttons and all (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import check_in
+    _require_admin(current_user)
+    built = check_in.email_for(db, current_user)
+    if built is None:
+        response = HTMLResponse('<p style="font:15px Arial,sans-serif;padding:24px">Your library has nothing to check in on: '
+                                'every title is finished and has a score. Save a title without ticking it off to see a preview.</p>')
+    else:
+        subject, html, _text, _url = built
+        banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+                  f'Preview only, filled in from your own library. The buttons work and change your own titles. '
+                  f'Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+        response = HTMLResponse(html.replace('<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/check-in")
+async def check_in_action(payload: CheckInAction, response: Response,
+                          current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import check_in
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not check_in.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            sent = await check_in.send_test(db, current_user)
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        if not sent:
+            raise HTTPException(status_code=409, detail="Your library has nothing to check in on, so there's no email to send.")
+        return {**check_in.status(db), "message": f"Test sent to {current_user.email}."}
+    check_in.set_status(db, "sending" if payload.action == "start" else "paused")
+    return check_in.status(db)
+
+
+# ---------------------------------------------------------------- Year in Review fill-in email
+
+class YearFillAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test|test_big)$")
+
+
+@router.get("/site-stats/year-fill-preview", include_in_schema=False)
+def year_fill_preview(variant: str = Query("", max_length=10), current_user: models.User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    """The December Year in Review email as the owner would receive it (nothing is sent). ``variant=big`` shows the
+    "big ones" email that members with an empty or thin recap get, built from the owner's own library."""
+    from fastapi.responses import HTMLResponse
+    from .. import year_fill
+    _require_admin(current_user)
+    now = datetime.utcnow()
+    big = variant == "big"
+    built = year_fill.email_for(db, current_user, now, force_big=big)
+    if built is None:
+        response = HTMLResponse('<p style="font:15px Arial,sans-serif;padding:24px">Your library has nothing to fill in '
+                                'and nothing finished this year, so you would get no email. Tick a title off in the '
+                                'library to see a preview.</p>')
+    else:
+        subject, html, _text, _url = built
+        note = ("Preview only. Members with an empty or thin recap get this one; the posters skip anything already in "
+                "your library, and the buttons save to your own library." if big else
+                "Preview only, filled in from your own library. The month buttons work and date your own titles.")
+        banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+                  f'{note} '
+                  f'Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+        response = HTMLResponse(html.replace('<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.get("/api/site-stats/year-fill")
+def year_fill_card(response: Response, days: int = Query(30, ge=1, le=366),
+                   current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The card's own read, so its script (site-stats-year-fill.js) doesn't wait on the whole overview."""
+    from .. import year_fill
+    _require_admin(current_user)
+    _no_store(response)
+    return year_fill.status(db, datetime.utcnow(), days)
+
+
+@router.post("/api/site-stats/year-fill")
+async def year_fill_action(payload: YearFillAction, response: Response,
+                           current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import year_fill
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action in ("test", "test_big"):
+        if not year_fill.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            sent = await year_fill.send_test(db, current_user, force_big=payload.action == "test_big")
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        if not sent:
+            raise HTTPException(status_code=409, detail="Your library has nothing to fill in and nothing finished this year, "
+                                                        "so there's no email to send.")
+        return {**year_fill.status(db), "message": f"Test sent to {current_user.email}."}
+    year_fill.set_status(db, "sending" if payload.action == "start" else "paused")
+    return year_fill.status(db)
+
+
+# ---------------------------------------------------------------- remove an account
+
+class AccountRemoval(BaseModel):
+    user_id: int = Field(..., ge=1)
+    username: str = Field(..., min_length=1, max_length=100)
+    confirm: str = Field(..., max_length=100)
+
+
+def _account_for(db: Session, username: str) -> models.User:
+    member = db.query(models.User).filter(models.User.username == username.strip().lstrip("@")).first()
+    if member is None:
+        raise HTTPException(status_code=404, detail="No member has that username (capitals count).")
+    return member
+
+
+def _account_card(member: models.User, plan: dict) -> dict:
+    library = {"movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks"}
+    domain = (member.email or "").rpartition("@")[2]
+    return {
+        **plan,
+        "joined_at": member.created_at.isoformat() if member.created_at else None,
+        "verified": bool(member.is_verified),
+        "active": bool(member.is_active),
+        "deactivated_at": member.deactivated_at.isoformat() if member.deactivated_at else None,
+        "last_seen_on": member.last_seen_on.isoformat() if member.last_seen_on else None,
+        "google": bool(member.google_sub),
+        "email_domain": domain or None,
+        "titles": sum(row["count"] for row in plan["rows"] if row["table"] in library),
+    }
+
+
+@router.get("/api/site-stats/accounts")
+def account_removal_preview(response: Response, username: str = Query(..., min_length=1, max_length=100),
+                            current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """What removing one account would delete. Nothing changes."""
+    _require_admin(current_user)
+    _no_store(response)
+    member = _account_for(db, username)
+    return _account_card(member, account_removal.plan_for(db, member, current_user).summary())
+
+
+@router.post("/api/site-stats/accounts/remove")
+def account_removal_action(payload: AccountRemoval, response: Response,
+                           current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete one account for good. The owner types the username again to confirm."""
+    _require_admin(current_user)
+    _no_store(response)
+    member = db.query(models.User).filter(models.User.id == payload.user_id).first()
+    if member is None or member.username != payload.username:
+        raise HTTPException(status_code=404, detail="That account changed or is already gone. Look it up again.")
+    if payload.confirm != member.username:
+        raise HTTPException(status_code=422, detail="Type the username exactly as shown to confirm.")
+    try:
+        summary = account_removal.remove(db, member, current_user)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {"removed": True, **summary}

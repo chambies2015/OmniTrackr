@@ -36,8 +36,10 @@ from collections import Counter
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import Headers
 from starlette.requests import Request
+
+from . import app_browsers, search_journey
 
 EXCLUDED_PREFIXES = (
     "/api/", "/static/", "/auth/", "/docs", "/redoc", "/openapi.json", "/site-stats",
@@ -119,10 +121,21 @@ def classify_device(user_agent: str) -> str:
     return "desktop"
 
 
+# Pages whose address is the key to something: a gift list anyone can mark, a shared list
+# anyone can join, a poll, a recap, a pledge card, a shared awards ballot, an emailed check-in or fill-in. Site stats counts them under one row per kind of page,
+# so the links themselves never sit in the database or on the stats page.
+PRIVATE_LINK = re.compile(r"^/(gifts|gift|supporters/gift/manage|lists/join|together/join|swap/join|collections/link|tonight|recap|goal|challenge|pledge|ballot|join|r|check-in|fill-in|tier-list/s|ranked|on-my-services|break/s|yearbook|top-nine)/[^/]+")
+PRIVATE_LINK_LABEL = "(private link)"
+
+
+def mask_private_link(path: str) -> str:
+    return PRIVATE_LINK.sub(lambda match: f"/{match.group(1)}/{PRIVATE_LINK_LABEL}", path, count=1)
+
+
 def clean_path(path: str) -> str:
     if len(path) > 1:
         path = path.rstrip("/") or "/"
-    return _clean(path)
+    return _clean(mask_private_link(path))
 
 
 def source_for(utm: str | None, referer: str | None) -> str | None:
@@ -237,7 +250,7 @@ class TrafficRecorder:
                 return False
             pending = self._pending
             pending[(day, "total", "views")] += 1
-            pending[(day, "page", _clean(path))] += 1
+            pending[(day, "page", clean_path(path))] += 1
             pending[(day, "device", classify_device(user_agent))] += 1
             pending[(day, "audience", "member" if member else "guest")] += 1
             if source:
@@ -267,23 +280,34 @@ class TrafficRecorder:
             digest = self._digest(request, user_agent, b"person|")
             state = self._people.get(digest)
             pending = self._pending
+            device = classify_device(user_agent)
             if state is None:
                 state = [0, "", 0.0, False]
                 if len(self._people) < MAX_SEEN_VISITORS:
                     self._people[digest] = state
                 pending[(day, "human_total", "visitors")] += 1
+                # People (not page views) by device, and those reading inside another app's
+                # browser, where Google sign-in can't work (app_browsers.py). Nov 26 2026.
+                pending[(day, "human_people_device", device)] += 1
+                in_app = app_browsers.app_name(user_agent)
+                if in_app:
+                    pending[(day, "human_app", in_app)] += 1
             elif state[0] >= HUMAN_MAX_VIEWS_PER_DAY or (state[1] == path and now - state[2] < HUMAN_REPEAT_SECONDS):
                 return False
             state[0], state[1], state[2] = state[0] + 1, path, now
             pending[(day, "human_total", "views")] += 1
             pending[(day, "human_page", path)] += 1
-            pending[(day, "human_device", classify_device(user_agent))] += 1
+            pending[(day, "human_device", device)] += 1
             pending[(day, "human_audience", "member" if member else "guest")] += 1
             if source:
                 pending[(day, "human_source", source)] += 1
+                if not member and search_journey.is_search(source):
+                    pending[(day, search_journey.KIND, search_journey.key(search_journey.section_for(path), "landed"))] += 1
             if path == "/" and not member and not state[3]:
                 state[3] = True
                 pending[(day, "funnel", "landing_seen")] += 1  # one per person per day
+                if device == "mobile":
+                    pending[(day, "funnel_phone", "landing_seen")] += 1
             self._events += 1
         return True
 
@@ -333,22 +357,37 @@ RECORDER = TrafficRecorder()
 _background_flushes: set = set()
 
 
-class SiteTrafficMiddleware(BaseHTTPMiddleware):
-    """Count human page views after the response is ready; never affects the response."""
+class SiteTrafficMiddleware:
+    """Count human page views once the response starts; never affects the response.
+
+    Plain ASGI rather than BaseHTTPMiddleware, which ran the rest of the app in a
+    separate task on every request just to read the status code.
+    """
 
     def __init__(self, app, recorder: TrafficRecorder | None = None):
-        super().__init__(app)
+        self.app = app
         self.recorder = recorder
 
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_and_count(message):
+            if message["type"] == "http.response.start":
+                self.count(Request(scope), message)
+            await send(message)
+
+        await self.app(scope, receive, send_and_count)
+
+    def count(self, request: Request, start: dict) -> None:
         recorder = self.recorder or RECORDER
         try:
-            counted = recorder.record(request, response.status_code, response.headers.get("content-type", ""))
+            content_type = Headers(raw=start.get("headers", [])).get("content-type", "")
+            counted = recorder.record(request, start["status"], content_type)
             if counted and recorder.flush_due():
                 task = asyncio.create_task(asyncio.to_thread(recorder.flush))
                 _background_flushes.add(task)
                 task.add_done_callback(_background_flushes.discard)
         except Exception:
             pass  # Analytics must never break a page.
-        return response

@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
+from . import app_browsers, search_journey
 from .site_traffic import BOT_PATTERN, RECORDER
 
 # Ordered as the Site stats page shows them: (step, label). "signup_sent" and
@@ -49,6 +50,7 @@ DERIVED_STEPS = {"signup_sent", "account_confirmed"}
 FIRST_LOGIN_MAX_AGE = timedelta(days=30)
 REJECTIONS = (
     ("signup_rejected_email_taken", "Email already registered"),
+    ("signup_rejected_email_pending", "Email already signed up but never confirmed (offered a new code)"),
     ("signup_rejected_username_taken", "Username taken"),
     ("signup_rejected_username_invalid", "Username not allowed"),
     ("signup_rejected_email_invalid", "Email address not accepted"),
@@ -61,14 +63,54 @@ REJECTIONS = (
 )
 GUEST = (
     ("hero_signup_clicked", "Sign-up button at the top of the homepage pressed"),
+    ("home_cta_clicked", "Homepage: a sign-up button between sections pressed"),
+    ("home_tour_opened", "Homepage: a visitor switched screens in the Look inside tour"),
+    ("home_import_clicked", "Homepage: Sign up and import pressed"),
+    ("home_binge_demo_used", "Homepage: binge calculator demo changed"),
+    ("home_tool_opened", "Homepage: a free tool, switching guide, Pick swap or Watch together opened"),
+    ("home_picks_filtered", "Homepage: a format chip over the Start your library picks used"),
+    ("home_shelf_suggestion_added", "Homepage: a title added from Members also track in the Your library panel"),
+    ("home_shelf_signup", "Homepage: a sign-up button in the Your library panel pressed"),
+    ("title_signup_clicked", "Title page: sign-up button in the Free account band pressed"),
+    ("guide_signup_clicked", "Guide page: Start a free library pressed in the Keep a list note beside the guide"),
+    ("title_trailer_played", "Title page: trailer played"),
     ("title_search_used", "Guest searched for a title on the homepage"),
     ("guest_pick_added", "Guest saved a title"),
     ("pick_used", "Pick for me suggestion asked for"),
     ("pick_saved", "Pick for me suggestion saved to a list or library"),
     ("liked_saved", "If you liked guide: a pick saved to a list or library"),
     ("order_saved", "In order guide: entries saved to a list or library"),
+    ("binge_planned", "Binge calculator: a plan changed by a visitor"),
+    ("binge_saved", "Binge calculator guide: a series saved to a list or library"),
     ("seasonal_saved", "Seasonal hubs (Halloween, Holiday): a pick saved to a list or library"),
+    ("gift_list_started", "Gift guide: a member started a gift list"),
+    ("gift_list_link_opened", "Gift guide: a gift list link opened by a visitor without an account"),
+    ("gift_claimed", "Gift guide: someone marked a gift on a list as theirs to buy"),
+    ("gift_buy_clicked", "Gift guide: an Amazon link opened from the guide or a gift list"),
+    ("gift_list_signup_clicked", "Gift guide: sign-up button pressed"),
+    ("advent_door_opened", "Advent calendar: a member opened a door"),
+    ("advent_guest_opened", "Advent calendar: a visitor without an account opened a door"),
+    ("advent_saved", "Advent calendar: a door's pick added to a library"),
+    ("advent_reminder_on", "Advent calendar: a member asked for the morning reminder"),
+    ("advent_shared", "Advent calendar: a door shared"),
+    ("advent_door_link_opened", "Advent calendar: a shared door opened by a visitor without an account"),
+    ("advent_signup_clicked", "Advent calendar: sign-up button pressed"),
+    ("essentials_ticked", "Essential 100: a visitor ticked a title they have finished"),
+    ("essentials_signup_clicked", "Essential 100: Keep my count pressed by a visitor"),
+    ("essentials_saved", "Essential 100: a member added a title from a list"),
+    ("essentials_shared", "Essential 100: a count shared"),
+    ("essentials_count_opened", "Essential 100: a shared count opened by a visitor without an account"),
+    ("essentials_imported", "Essential 100: titles ticked before sign-up moved into a new library"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
+    ("guest_sheet_opened", "Keep your list sheet opened on a guide or title page"),
+    ("guest_sheet_google", "Keep your list sheet: Continue with Google pressed"),
+    ("guest_sheet_email", "Keep your list sheet: Sign up with email pressed"),
+    ("guest_sheet_login", "Keep your list sheet: Log in pressed"),
+    ("signup_sheet_opened", "Phones: Start tracking sheet opened on a guide or other public page"),
+    ("signup_sheet_google", "Phones: Start tracking sheet, Continue with Google pressed"),
+    ("signup_sheet_email", "Phones: Start tracking sheet, Sign up with email pressed"),
+    ("signup_sheet_login", "Phones: Start tracking sheet, Log in pressed"),
+    ("guest_return_clicked", "New library: Back to the page the list was saved from pressed"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
     ("recap_kofi_clicked", "Ko-fi link opened from Year in Review"),
@@ -80,10 +122,39 @@ GUEST = (
     ("year_so_far_card_opened", "Year so far (November): opened from the dashboard card"),
     ("year_so_far_email_opened", "Year so far (November): opened from the weekly email"),
     ("year_so_far_push_opened", "Year so far (November): opened from the notification"),
+    ("pledge_made", "New Year challenge: a member made a pledge"),
+    ("pledge_link_created", "New Year challenge: pledge card link created"),
+    ("pledge_link_opened", "New Year challenge: shared pledge opened by a visitor without an account"),
+    ("pledge_signup_clicked", "New Year challenge: sign-up pressed with numbers filled in"),
+    ("ballot_started", "Awards ballot: a member made their first pick for a show"),
+    ("ballot_link_created", "Awards ballot: share link created"),
+    ("ballot_link_opened", "Awards ballot: shared ballot opened by a visitor without an account"),
+    ("ballot_signup_clicked", "Awards ballot: sign-up pressed with picks made"),
+    ("ballot_title_added", "Awards ballot: a nominee or past winner added to a library"),
     ("supporters_kofi_clicked", "Ko-fi link opened from the supporters page"),
     ("calendar_subscribe_clicked", "Release calendar subscribe button used"),
     ("tier_list_started", "Tier list: a title ranked"),
     ("tier_list_exported", "Tier list: image saved or shared"),
+    ("tier_list_template_started", "Tier list: a starting set opened"),
+    ("tier_list_link_created", "Tier list: share link made"),
+    ("tier_list_link_opened", "Tier list: a shared link opened by a visitor without an account"),
+    ("tier_list_remix_started", "Tier list: someone started ranking a shared list's titles themselves"),
+    ("tier_list_signup_clicked", "Tier list: sign-up pressed from the maker or a shared list"),
+    ("tier_list_link_claimed", "Tier list: links made before sign-up moved into a new account"),
+    ("rank_link_created", "Rankings: a member made a share link for a top ten"),
+    ("rank_link_shared", "Rankings: a top ten link copied, shared or saved as an image"),
+    ("rank_link_opened", "Rankings: a shared top ten opened by a visitor without an account"),
+    ("rank_take_started", "Rankings: someone started ranking a shared top ten themselves"),
+    ("rank_take_finished", "Rankings: someone finished ranking a shared top ten and saw how much they agree"),
+    ("rank_result_shared", "Rankings: an agreement result shared"),
+    ("rank_signup_clicked", "Rankings: sign-up pressed on a shared top ten"),
+    ("rank_take_saved", "Rankings: a ranking made on a shared top ten moved into a library"),
+    ("svc_link_created", "On your services: a member made a share link for their list"),
+    ("svc_link_shared", "On your services: a list link copied, shared or saved as an image"),
+    ("svc_link_opened", "On your services: a shared list opened by a visitor without an account"),
+    ("svc_services_ticked", "On your services: someone ticked their own services on a shared list"),
+    ("svc_title_saved", "On your services: a title saved from a shared list"),
+    ("svc_signup_clicked", "On your services: sign-up pressed on a shared list"),
     ("daily_played", "Daily puzzle: a game started"),
     ("daily_solved", "Daily puzzle: solved"),
     ("daily_shared", "Daily puzzle: result shared"),
@@ -94,16 +165,35 @@ GUEST = (
     ("compare_signup_clicked", "Compare tastes: sign-up button pressed after a result"),
     ("compare_imported", "Compare tastes: answers saved before sign-up moved into a new library"),
     ("compare_shared", "Compare tastes: a result or link shared"),
+    ("invite_test_sent", "Taste test invite: a member sent one"),
+    ("invite_test_opened", "Taste test invite: opened by a visitor without an account"),
+    ("invite_test_finished", "Taste test invite: a visitor rated the deck and saw their score"),
+    ("invite_test_signup_clicked", "Taste test invite: sign-up pressed after a result"),
+    ("finish_recommend_opened", "Finish screen: Recommend it pressed"),
     ("shared_list_created", "Shared list created"),
     ("shared_list_link_opened", "Shared list link opened by a visitor without an account"),
     ("shared_list_joined", "Someone joined a shared list through its link"),
     ("club_pick_started", "Watch club: a club pick started on a shared list"),
     ("club_post", "Watch club: a post in a club pick's discussion"),
+    ("discussion_started", "Discussions: a member started a discussion on a title"),
+    ("discussion_started_from_opener", "Discussions: a discussion started from one of the suggested openers"),
+    ("discussion_replied", "Discussions: a reply posted"),
+    ("discussion_hub_viewed", "Discussions: the /discussions page opened"),
+    ("discussion_review_reply_clicked", "Discussions: Reply pressed under a member review"),
+    ("finish_talk_clicked", "Finish screen: Talk about it pressed"),
     ("tonight_poll_created", "Group poll: a poll made"),
     ("tonight_poll_link_opened", "Group poll: link opened by a visitor without an account"),
     ("tonight_poll_guest_voted", "Group poll: a visitor without an account voted"),
     ("tonight_poll_voted", "Group poll: a member voted"),
     ("tonight_poll_signup_clicked", "Group poll: sign-up button pressed"),
+    ("tonight_poll_draft_started", "Group poll: a visitor without an account started a shortlist"),
+    ("tonight_poll_draft_signup", "Group poll: a visitor pressed Get the link and went to sign up"),
+    ("tonight_poll_draft_sent", "Group poll: a shortlist built before sign-up became a poll"),
+    ("tonight_poll_shared", "Group poll: a share button used"),
+    ("tonight_poll_next_round", "Group poll: another round started from a closed poll"),
+    ("tonight_poll_winner_kept", "Group poll: a member added the winner to their library or Next Up"),
+    ("tonight_poll_winner_saved", "Group poll: a visitor saved the winner to their list"),
+    ("tonight_poll_where_clicked", "Group poll: a where-to-watch link opened from a result"),
     ("friend_rec_sent", "Recommend to a friend: a title sent to friends"),
     ("friend_rec_link_opened", "Recommend to a friend: link opened by a visitor without an account"),
     ("friend_rec_claimed", "Recommend to a friend: link saved into someone's inbox"),
@@ -112,6 +202,76 @@ GUEST = (
     ("quiz_finished", "Taste quiz finished"),
     ("quiz_imported", "Taste quiz answers saved before sign-up moved into a new library"),
     ("quiz_saved", "Taste quiz: a suggested pick saved to a list or library"),
+    ("collection_link_created", "Lists: a member turned on a share link"),
+    ("together_created", "Watch together: a plan started"),
+    ("together_shared", "Watch together: an invite link copied or shared"),
+    ("together_link_opened", "Watch together: an invite link opened by a visitor without an account"),
+    ("together_signup_clicked", "Watch together: sign-up pressed on an invite or the guide"),
+    ("together_joined", "Watch together: someone joined a plan"),
+    ("together_moved", "Watch together: someone moved forward"),
+    ("together_note", "Watch together: a note left"),
+    ("together_week_done", "Watch together: someone got through a week's stretch"),
+    ("together_finished", "Watch together: someone reached the end"),
+    ("together_email_sent", "Watch together: weekly reminder email sent"),
+    ("together_back_from_email", "Watch together: a plan opened from the reminder email"),
+    ("swap_created", "Pick swap: a swap started"),
+    ("swap_shared", "Pick swap: an invite link copied or shared"),
+    ("swap_link_opened", "Pick swap: an invite link opened by a visitor without an account"),
+    ("swap_signup_clicked", "Pick swap: sign-up pressed on an invite or the guide"),
+    ("swap_joined", "Pick swap: someone joined a swap"),
+    ("swap_drawn", "Pick swap: names drawn"),
+    ("swap_picked", "Pick swap: a pick wrapped"),
+    ("swap_revealed", "Pick swap: unwrap day reached"),
+    ("swap_unwrapped", "Pick swap: someone opened the pick they got"),
+    ("swap_gift_added", "Pick swap: a pick someone got saved to their library"),
+    ("swap_email_sent", "Pick swap: email sent (draw, reminder or unwrap day)"),
+    ("swap_back_from_email", "Pick swap: a swap opened from one of its emails"),
+    ("break_created", "Break planner: a plan made"),
+    ("break_day_opened", "Break planner: plan opened on a day of the break (once a day per plan)"),
+    ("break_ticked", "Break planner: something on a plan ticked off"),
+    ("break_finished", "Break planner: a title finished from a plan"),
+    ("break_rated", "Break planner: a title scored from a plan"),
+    ("break_added", "Break planner: a title put on a plan by hand"),
+    ("break_swapped", "Break planner: a title swapped for something else"),
+    ("break_reshuffled", "Break planner: another mix tried"),
+    ("break_calendar", "Break planner: plan added to a calendar"),
+    ("break_shared", "Break planner: a share link made"),
+    ("break_link_opened", "Break planner: a shared plan opened by a visitor without an account"),
+    ("break_signup_clicked", "Break planner: sign-up pressed on the guide or a shared plan"),
+    ("break_demo_used", "Break planner: the sample plan on the guide changed"),
+    ("break_home_offer_clicked", "Break planner: \"Plan it\" pressed on the home card"),
+    ("break_email_sent", "Break planner: email sent (the morning it starts, the day after it ends)"),
+    ("break_back_from_email", "Break planner: plan opened from one of its emails"),
+    ("break_from_link_started", "Break planner: a member opened the planner from someone's shared plan"),
+    ("break_from_link_created", "Break planner: a plan made from someone's shared plan"),
+    ("break_link_shared", "Break planner: a share link copied or sent by its owner"),
+    ("break_story_saved", "Break planner: a shared plan's story picture saved or shared"),
+    ("break_title_saved", "Break planner: a title saved from someone's shared plan"),
+    ("break_same_days_clicked", "Break planner: a member pressed \"Plan the same days\" on someone's shared plan"),
+    ("yearbook_started", "Yearbook: a member made theirs"),
+    ("yearbook_shared", "Yearbook: a link copied or shared by its owner"),
+    ("yearbook_story_saved", "Yearbook: the story picture saved or shared by its owner"),
+    ("yearbook_link_opened", "Yearbook: a link opened by a visitor without an account"),
+    ("yearbook_signed", "Yearbook: a member signed someone's yearbook"),
+    ("yearbook_signed_guest", "Yearbook: someone without an account signed a yearbook"),
+    ("yearbook_let_in", "Yearbook: an owner let a waiting note in"),
+    ("yearbook_signup_clicked", "Yearbook: sign-up pressed on a yearbook or the guide"),
+    ("yearbook_email_sent", "Yearbook: email sent (new notes or signing closed)"),
+    ("yearbook_back_from_email", "Yearbook: the yearbook page opened from one of its emails"),
+    ("top_nine_started", "Top nine: a first square filled in the maker"),
+    ("top_nine_made", "Top nine: pictures and a link made"),
+    ("top_nine_saved", "Top nine: a picture saved or shared by its maker"),
+    ("top_nine_shared", "Top nine: a link copied or shared"),
+    ("top_nine_link_opened", "Top nine: a link opened by a visitor without an account"),
+    ("top_nine_answered", "Top nine: someone said how many of the nine they've seen too"),
+    ("top_nine_start_clicked", "Top nine: Make my top nine pressed on someone's grid"),
+    ("top_nine_remixed", "Top nine: a grid made after opening someone else's"),
+    ("top_nine_signup_clicked", "Top nine: sign-up pressed in the maker or on a shared grid"),
+    ("top_nine_claimed", "Top nine: grids made before sign-up moved into a new account"),
+    ("top_nine_kept", "Top nine: the nine put into a member's library"),
+    ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
+    ("collection_title_saved", "Lists: a title added to a library from someone's list"),
+    ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
     ("profile_link_opened", "Public profile opened by a visitor without an account"),
     ("profile_signup_clicked", "Public profile: sign-up button pressed"),
 )
@@ -124,7 +284,7 @@ START = (
     ("start_next_step", "Went on to a first-week step"),
 )
 START_PATHS = (
-    ("start_quick_add", "Used quick add"),
+    ("start_quick_add", "Tapped posters on the wall"),
     ("start_search", "Used search"),
     ("start_import", "Opened the importer"),
     ("start_quiz", "Opened the taste quiz"),
@@ -137,14 +297,105 @@ GOOGLE = (
     ("google_signin", "Log-ins with Google"),
     ("google_signin_failed", "Google sign-in that didn't finish"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+# The email form step by step, once per visit each. "Started signing up" mixes the email
+# form with Google buttons, and in the Nov 16 2026 report none of the 15 starts sent the
+# email form, with no rejections either: these show whether people chose email at all.
+EMAIL_FORM = (
+    ("signup_email_opened", "Email form opened"),
+    ("signup_email_typed", "Typed an email address"),
+    ("signup_email_password", "Typed a password"),
+    ("signup_email_pressed", "Pressed Create free account"),
+)
+# After the email form: how new accounts confirm their address (Nov 18 2026). The email
+# now carries a 6-digit code that can be typed on the card, so the tab that signed up
+# (and the titles a guest saved there) opens the library; before, only the link did,
+# and on phones the mail app opens links in its own browser, which then asked to log in.
+EMAIL_CONFIRM = (
+    ("email_confirmed_code", "Confirmed by typing the code"),
+    ("email_confirmed_link", "Confirmed with the link, signed straight in"),
+    ("email_link_other_browser", "Confirmed with the link in another browser, asked to log in"),
+    ("signup_code_wrong", "Wrong or expired code typed"),
+    ("signup_inbox_opened", "Open Gmail (or another mail service) pressed"),
+)
+# Where the email form turned people back before anything reached the server, by box,
+# and Create presses whose request never got an answer (Nov 23 2026). "Caught by form
+# checks" in REJECTIONS is the total; these say which box, so a confusing rule shows.
+EMAIL_SNAGS = (
+    ("signup_check_email", "Email box: the address didn't look right"),
+    ("signup_check_password", "Password box: fewer than 8 characters"),
+    ("signup_check_username", "Username box: the name wasn't allowed"),
+    ("signup_request_failed", "Create pressed, but no answer came back (connection or server error)"),
+)
+# The code email itself: how long the mail server took. Create waits at most 8 seconds
+# (routers/auth.py SIGNUP_EMAIL_WAIT_SECONDS) and then shows the code step while it finishes.
+EMAIL_DELIVERY = (
+    ("signup_email_quick", "Sent in under 3 seconds"),
+    ("signup_email_wait", "Sent in 3 to 8 seconds"),
+    ("signup_email_slow", "Took longer than 8 seconds (the code step showed while it finished)"),
+    ("signup_email_failed", "Failed to send"),
+)
+# Coming back to a sign-up that waits for its code (Nov 23 2026). Leaving the code step
+# to read the email, a phone often reloads the tab, and the homepage then looked as if
+# nothing had happened. Now the card opens on the code box again.
+EMAIL_RETURN = (
+    ("signup_waiting_resumed", "Came back before confirming: the code box opened again"),
+    ("signup_waiting_confirmed", "Came back after confirming in another browser: asked to log in"),
+    ("signup_restart_clicked", "Wrong address? Start again pressed"),
+)
+# Browsers inside other apps (Nov 26 2026). Google refuses to sign anyone in inside Instagram,
+# Facebook, TikTok and the like, so Continue with Google there now opens /continue, which
+# explains and hands the sign-up (and any saved titles) to Safari or Chrome. See app/app_browsers.py.
+APP_BROWSER = (
+    ("inapp_google_caught", "Continue with Google pressed inside an app's browser (shown how to finish in Safari or Chrome)"),
+    ("inapp_chrome_opened", "Open in Chrome pressed (Android)"),
+    ("inapp_link_copied", "Copy link pressed"),
+    ("inapp_email_chosen", "Sign up with email pressed inside the app instead"),
+    ("inapp_google_anyway", "Tried Google inside the app anyway"),
+    ("carry_arrived", "Opened the sign-up link in Safari or Chrome"),
+    ("carry_titles_moved", "Saved titles came along to Safari or Chrome"),
+    ("continue_google", "Continue with Google pressed after switching browsers"),
+    ("continue_email", "Sign up with email pressed after switching browsers"),
+)
+# The main steps again, counted only for phones (Nov 26 2026). Every event is also counted
+# under kind "funnel_phone" when it comes from a phone, so any step can be split later.
+PHONE_STEPS = (
+    ("landing_seen", "Homepage seen by a person"),
+    ("signup_form_opened", "Started signing up"),
+    ("google_signin_started", "Pressed Continue with Google"),
+    ("signup_sent", "Sign-up sent"),
+    ("signup_created", "Account created"),
+    ("first_login", "First log-in"),
+)
+PHONE_KIND = "funnel_phone"
+SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS + EMAIL_FORM + EMAIL_CONFIRM
+                 + EMAIL_SNAGS + EMAIL_DELIVERY + EMAIL_RETURN + APP_BROWSER} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN + APP_BROWSER} - {"inapp_google_caught", "inapp_google_anyway"} | {"signup_inbox_opened", "signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
-                 "order_saved", "seasonal_saved",
+                 "order_saved", "binge_planned", "binge_saved", "seasonal_saved", "gift_buy_clicked", "gift_list_signup_clicked",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
+                 "tier_list_template_started", "tier_list_remix_started", "tier_list_signup_clicked",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
-                 "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared"}
+                 "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared",
+                 "invite_test_signup_clicked", "finish_recommend_opened", "finish_talk_clicked",
+                 "discussion_review_reply_clicked",
+                 "tonight_poll_draft_started", "tonight_poll_draft_signup", "tonight_poll_draft_sent", "tonight_poll_shared",
+                 "tonight_poll_winner_saved", "tonight_poll_where_clicked",
+                 "collection_signup_clicked", "pledge_signup_clicked", "ballot_signup_clicked",
+                 "advent_guest_opened", "advent_shared", "advent_signup_clicked",
+                 "home_cta_clicked", "home_tour_opened", "home_import_clicked", "home_binge_demo_used", "home_tool_opened",
+                 "home_picks_filtered", "home_shelf_suggestion_added", "home_shelf_signup",
+                 "title_signup_clicked", "title_trailer_played", "guide_signup_clicked",
+                 "guest_sheet_opened", "guest_sheet_google", "guest_sheet_email", "guest_sheet_login", "guest_return_clicked",
+                 "signup_sheet_opened", "signup_sheet_google", "signup_sheet_email", "signup_sheet_login",
+                 "essentials_ticked", "essentials_signup_clicked", "essentials_shared",
+                 "rank_link_shared", "rank_take_started", "rank_take_finished", "rank_result_shared", "rank_signup_clicked",
+                 "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
+                 "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked",
+                 "break_signup_clicked", "break_home_offer_clicked", "break_link_shared", "break_story_saved",
+                 "break_title_saved", "break_same_days_clicked", "yearbook_shared", "yearbook_story_saved", "yearbook_signup_clicked",
+                 "top_nine_started", "top_nine_saved", "top_nine_shared", "top_nine_start_clicked",
+                 "top_nine_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:
@@ -155,8 +406,14 @@ def record(event: str, request=None) -> bool:
         if request is not None and BOT_PATTERN.search(request.headers.get("user-agent", "") or "x"):
             return False
         day = datetime.now(timezone.utc).date()
+        journey = search_journey.step_key(event, request)
+        phone = request is not None and app_browsers.is_phone(request.headers.get("user-agent", ""))
         with RECORDER._lock:
             RECORDER._pending[(day, "funnel", event)] += 1
+            if phone:
+                RECORDER._pending[(day, PHONE_KIND, event)] += 1
+            if journey:
+                RECORDER._pending[(day, search_journey.KIND, journey)] += 1
             RECORDER._events += 1
         if RECORDER.flush_due():
             try:
@@ -186,8 +443,19 @@ def _plural(count: int, one: str, many: str) -> str:
     return f"{count:,} {one if count == 1 else many}"
 
 
-def summary(counts: dict[str, int]) -> dict:
-    """Shape raw {event: count} for the Site stats page."""
+def phone_summary(counts: dict[str, int], phone_counts: dict[str, int]) -> list[dict]:
+    """The main sign-up steps for every device and for phones alone, for the Site stats table."""
+    def value(source: dict, name: str) -> int:
+        if name == "signup_sent":
+            return int(source.get("signup_submitted", 0)) + int(source.get("google_account_created", 0))
+        return int(source.get(name, 0))
+
+    return [{"event": name, "label": label, "count": value(counts, name), "phones": value(phone_counts, name)}
+            for name, label in PHONE_STEPS]
+
+
+def summary(counts: dict[str, int], phone_counts: dict[str, int] | None = None) -> dict:
+    """Shape raw {event: count} (and the same for phones only) for the Site stats page."""
     count = lambda name: int(counts.get(name, 0))  # noqa: E731
     google = count("google_account_created")
     email_created = max(count("signup_created") - google, 0)
@@ -210,6 +478,15 @@ def summary(counts: dict[str, int]) -> dict:
         "issues": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in REJECTIONS],
         "guest": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GUEST],
         "google": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GOOGLE],
+        "email_form": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_FORM]
+                      + [{"event": "signup_submitted", "label": "Reached our server", "count": count("signup_submitted")}],
+        "email_confirm": [{"event": "signup_created_email", "label": "Accounts made with the email form", "count": email_created}]
+                         + [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_CONFIRM],
+        "email_snags": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_SNAGS],
+        "email_delivery": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_DELIVERY],
+        "email_return": [{"event": name, "label": label, "count": count(name)} for name, label in EMAIL_RETURN],
         "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
         "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
+        "app_browser": [{"event": name, "label": label, "count": count(name)} for name, label in APP_BROWSER],
+        "phones": phone_summary(counts, phone_counts or {}),
     }

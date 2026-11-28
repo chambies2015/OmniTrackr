@@ -93,7 +93,7 @@ p { line-height: 1.75; }
 .trail .muted { color: #aeb6d2; font-size: .88rem; margin-top: auto; }
 .button, .save-panel button {
   align-self: flex-start;
-  background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2));
+  background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0));
   border: 0;
   border-radius: 999px;
   box-shadow: 0 10px 26px rgba(139, 92, 246, .32);
@@ -107,7 +107,7 @@ p { line-height: 1.75; }
   text-decoration: none;
   transition: background-color .2s ease, transform .2s ease;
 }
-.button:hover, .save-panel button:hover { color: #fff; filter: brightness(1.08); text-decoration: none; transform: translateY(-1px); }
+.button:hover, .save-panel button:hover { color: #fff; filter: brightness(1.04); text-decoration: none; transform: translateY(-1px); }
 .discover-main .button { color: #fff; }
 button:disabled { cursor: wait; opacity: .6; }
 .editorial {
@@ -121,6 +121,8 @@ button:disabled { cursor: wait; opacity: .6; }
 }
 .editorial h2 { color: var(--site-text); font-size: 1.28rem; }
 .editorial p { margin: 0; }
+.editorial p + p { margin-top: 12px; }
+.edition-notes p + p { margin-top: 12px; }
 .edition-essay { border-left: 3px solid #5eead4; }
 .picks { display: grid; gap: 18px; }
 .pick { background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); border: 1px solid var(--site-border); border-radius: var(--site-radius); padding: 27px 30px; }
@@ -219,3 +221,182 @@ button:disabled { cursor: wait; opacity: .6; }
 .challenge-cta .button{display:inline-block;margin-right:1rem}
 .challenge-cta__member{display:inline-block;margin-top:.5rem}
 .challenge-intro p + p{margin-top:.9em}
+
+/* Guest saves: one tap per pick into the browser-only list (guest-list.js), then a bar to keep it. */
+.pick-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 14px; }
+.pick-save { background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: 999px; color: var(--site-text); cursor: pointer; font: inherit; font-weight: 700; min-height: 44px; padding: 0 18px; }
+.pick-save:hover { border-color: var(--site-teal); }
+.pick-save[aria-pressed="true"] { background: #14b8a6; border-color: #14b8a6; color: #06211f; }
+.dc-bar { align-items: center; background: #15172b; border: 1px solid var(--site-border-strong); border-radius: 16px; bottom: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, .45); display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: space-between; margin: 24px 0; padding: 14px 18px; position: sticky; z-index: 5; }
+.dc-bar[hidden] { display: none; }
+.dc-bar__count { color: #e6e9f5; margin: 0; }
+.dc-bar .button { margin-top: 0; }
+.save-panel__guest { background: rgba(0, 0, 0, .18); border-radius: 14px; padding: 12px 14px; }
+
+/* Longer written sections on the guide hubs (If you liked, release guides, challenges) */
+.hub-notes h3 { color: var(--site-text); font-size: 1.05rem; margin: 24px 0 6px; }
+.hub-notes p + p, .hub-notes p + ul, .hub-notes p + ol, .hub-notes ul + p, .hub-notes ol + p { margin-top: 12px; }
+.hub-notes ul, .hub-notes ol { margin: 12px 0 0; padding-left: 22px; }
+.hub-notes li { line-height: 1.6; }
+.hub-notes li + li { margin-top: 8px; }
+.hub-notes strong { color: var(--site-text); }
+.hub-table-wrap { margin-top: 16px; overflow-x: auto; }
+.hub-table { border-collapse: collapse; min-width: 480px; width: 100%; }
+/* The legacy stylesheet styles every table as the app's library table; undo that here. */
+.hub-table th, .hub-table td { background: none; border: 0; border-radius: 0; border-top: 1px solid var(--site-border); box-shadow: none; color: #d8dced; font-size: .95rem; letter-spacing: 0; padding: 10px 14px 10px 0; position: static; text-align: left; text-transform: none; vertical-align: top; white-space: normal; z-index: auto; }
+.hub-table thead th { border-top: 0; color: #aeb6d2; font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.hub-table tbody tr, .hub-table tbody tr:nth-child(2n), .hub-table tbody tr:hover { background: none; box-shadow: none; transform: none; }
+.hub-table tbody tr:nth-child(2n) td:last-child, .hub-table tbody tr:hover td:last-child { background: none; }
+.hub-table tbody th { font-weight: 600; }
+.hub-table tbody th a { color: var(--site-text); }
+.hub-table td:last-child, .hub-table thead th:last-child { padding-right: 0; text-align: right; }
+
+/* ---------- Discover hub and trail pages: Nov 20 2026 refresh ----------
+   Covers, format colours and the save dock come from explore.css (body.explore). */
+.discover-hub .discover-main { max-width: 1180px; }
+.dx-sr { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.dx-heading { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.025em; line-height: 1.15; margin: 0 0 6px; }
+
+/* Hero: the words on the left, a wall of covers from the trails on the right. */
+.dx-hero { align-items: center; display: grid; gap: clamp(28px, 5vw, 64px); grid-template-columns: minmax(0, 1fr) minmax(0, .95fr); max-width: none; padding: clamp(36px, 6vw, 76px) 0 clamp(40px, 5vw, 64px); }
+.dx-hero h1 { margin-bottom: 20px; }
+.dx-hero__copy > p:not(.eyebrow) { color: #d9def0; font-size: 1.14rem; line-height: 1.65; margin: 0; max-width: 560px; }
+.dx-hero__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 28px; }
+.dx-hero__actions .button { margin: 0; }
+.discover-main .dx-hero__link { color: var(--site-violet-soft); font-weight: 700; text-decoration: none; }
+.discover-main .dx-hero__link:hover { color: #fff; }
+.dx-hero__wall {
+  display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 24px 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  transform: rotate(-5deg);
+}
+.dx-hero__wall .x-art { width: 100%; }
+.dx-hero__wall .x-art:nth-child(4n + 2), .dx-hero__wall .x-art:nth-child(4n + 4) { transform: translateY(30px); }
+.dx-hero__wall .x-art:nth-child(n + 9) { display: none; }
+
+/* The monthly edition: its words, then its six picks as covers. */
+.monthly-feature.dx-edition { align-items: center; display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); padding: 32px; }
+.dx-edition__copy .button { margin-top: 18px; }
+.dx-edition__copy > .muted { margin-bottom: 0; }
+.dx-edition__picks { display: grid; gap: 18px 16px; grid-template-columns: repeat(3, minmax(0, 132px)); justify-content: end; list-style: none; margin: 0; padding: 0; }
+.discover-main .dx-edition__picks a { color: #fff; display: grid; gap: 9px; text-decoration: none; }
+.dx-edition__picks .x-art { transition: transform var(--dur) var(--ease); width: 100%; }
+.dx-edition__picks a:hover .x-art { transform: translateY(-3px); }
+.dx-edition__label { display: grid; gap: 4px; min-width: 0; }
+.dx-edition__label .x-kind { font-size: .62rem; }
+.dx-edition__label b { display: -webkit-box; font-size: .86rem; font-weight: 600; line-height: 1.3; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+/* Trails: a search box and format chips over cards that open with their four covers. */
+.dx-trails { margin-top: 64px; scroll-margin-top: 80px; }
+.dx-trails__head p { color: var(--site-muted); margin: 0; }
+.discover-hub .trail-filters { margin: 22px 0 18px; }
+.discover-hub .trail-filter-fields { align-items: center; gap: 12px; }
+.discover-hub .trail-filter-fields > .dx-search { flex: 0 1 460px; order: 1; }
+.discover-hub .trail-filter-fields > .filter-reset { margin-left: auto; order: 2; }
+.discover-hub .trail-filter-fields > .dx-chips { display: flex; flex: 1 1 100%; flex-wrap: wrap; gap: 8px; order: 3; }
+.discover-hub .trail-filter-fields > .dx-format { display: none; }
+.discover-hub .trail-filter-fields input { border-radius: var(--radius-pill); height: 46px; padding: 10px 18px; }
+.discover-hub .filter-reset { height: 40px; }
+.discover-hub #trail-results { margin: 12px 0 0; }
+.dx-chip {
+  align-items: center; background: var(--site-surface); border: 1px solid var(--site-border-strong); border-radius: var(--radius-pill); box-shadow: none;
+  color: var(--site-soft); cursor: pointer; display: inline-flex; font: 600 .86rem/1 var(--site-font); gap: 8px; height: 40px; margin: 0; padding: 0 15px;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); width: auto;
+}
+.dx-chip[data-kind]::before { background: var(--kind); border-radius: 50%; content: ""; height: 8px; width: 8px; }
+.dx-chip:hover { background: var(--site-surface-2); color: #fff; }
+.dx-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--kind, var(--site-violet)) 22%, transparent); border-color: color-mix(in srgb, var(--kind, var(--site-violet-soft)) 70%, transparent); color: #fff; }
+.discover-hub .trails { gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.discover-hub .trail { min-height: 0; overflow: hidden; padding: 0; }
+.discover-hub .trail:nth-child(4n + 2), .discover-hub .trail:nth-child(4n + 3) { background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); }
+.trail__fan {
+  align-items: flex-start; background: radial-gradient(70% 120% at 50% 110%, rgba(139, 92, 246, .32), transparent 70%), linear-gradient(180deg, rgba(255, 255, 255, .035), transparent);
+  border-bottom: 1px solid var(--site-border); display: flex; gap: 12px; height: 204px; justify-content: center; overflow: hidden; padding-top: 24px;
+}
+.trail__fan .x-art { transform: rotate(var(--tilt, 0deg)) translateY(var(--lift, 0)); transition: transform .3s var(--ease); width: 100px; }
+.trail__fan .x-art:nth-child(1) { --tilt: -6deg; --lift: 12px; }
+.trail__fan .x-art:nth-child(2) { --tilt: -2deg; --lift: 0px; }
+.trail__fan .x-art:nth-child(3) { --tilt: 2deg; --lift: 0px; }
+.trail__fan .x-art:nth-child(4) { --tilt: 6deg; --lift: 12px; }
+.trail:hover .trail__fan .x-art { --lift: -4px; }
+.trail__body { display: flex; flex: 1; flex-direction: column; padding: 22px 26px 26px; }
+.trail__top { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
+.trail__top .eyebrow, .trail__top .trail-guide-label { margin: 0; }
+.discover-main .trail h3 { font-family: Poppins, Inter, sans-serif; font-size: 1.55rem; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 10px; }
+.discover-main .trail h3 a { color: #fff; text-decoration: none; }
+.discover-main .trail h3 a:hover { color: #c7d2fe; }
+.discover-hub .trail p.trail__intro { color: #d3d7e7; line-height: 1.65; margin: 0 0 18px; }
+.trail__picks { border-top: 1px solid rgba(170, 161, 255, .18); display: grid; gap: 9px; list-style: none; margin: 0 0 20px; padding: 16px 0 0; }
+.trail__picks li { align-items: baseline; color: #e6e4f6; display: flex; font-size: .92rem; gap: 10px; line-height: 1.4; }
+.trail__picks .x-kind { flex: 0 0 78px; font-size: .62rem; }
+.discover-main .trail__go { color: var(--site-violet-soft); font-weight: 700; margin-top: auto; text-decoration: none; }
+.discover-main .trail__go:hover { color: #fff; }
+
+/* More ways in: seasonal picks, the month's challenge and the If you liked guides. */
+.dx-more { margin-top: 64px; }
+.dx-more .dx-heading { margin-bottom: 18px; }
+.dx-tiles { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dx-tile {
+  --tone: var(--site-violet-soft);
+  background: radial-gradient(80% 120% at 100% 0%, color-mix(in srgb, var(--tone) 14%, transparent), transparent 60%), var(--site-surface);
+  border: 1px solid var(--site-border); border-radius: var(--site-radius); display: flex; flex-direction: column; gap: 8px; padding: 24px 26px;
+}
+.dx-tile[data-tone="season"] { --tone: #fbbf24; }
+.dx-tile[data-tone="challenge"] { --tone: #2dd4bf; }
+.dx-tile--wide { grid-column: 1 / -1; }
+.dx-tile .eyebrow { color: color-mix(in srgb, var(--tone) 70%, #fff); margin: 0 0 2px; }
+.discover-main .dx-tile h3 { color: #fff; font: 700 1.25rem/1.25 Poppins, Inter, sans-serif; margin: 0; }
+.dx-tile p { color: #d3d7e7; line-height: 1.6; margin: 0; }
+.dx-tile__links { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 4px 0 2px; padding: 0; }
+.discover-main .dx-tile__links a {
+  background: var(--site-surface-2); border: 1px solid var(--site-border); border-radius: var(--radius-pill); color: var(--site-text); display: inline-flex;
+  font-size: .86rem; font-weight: 600; padding: 7px 13px; text-decoration: none;
+}
+.discover-main .dx-tile__links a:hover { border-color: rgba(196, 181, 253, .55); }
+.discover-main .dx-tile__go { color: var(--site-violet-soft); font-weight: 700; margin-top: auto; padding-top: 8px; text-decoration: none; }
+.discover-main .dx-tile__go:hover { color: #fff; }
+.discover-hub .monthly-archive { margin-top: 48px; max-width: none; }
+
+/* Trail and edition pages: each pick carries its cover and its format's colour. */
+.discover-trail .dx-pick { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--kind) 75%, transparent); }
+.discover-trail .dx-pick > .x-art { float: right; margin: 2px 0 14px 22px; width: 116px; }
+.discover-trail .guide-picks .dx-pick > .x-art { width: 92px; }
+.discover-trail .dx-pick > .eyebrow { align-items: center; color: color-mix(in srgb, var(--kind) 55%, #fff); display: flex; gap: 9px; }
+.discover-trail .dx-pick > .eyebrow::before { background: var(--kind); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--kind) 22%, transparent); content: ""; height: 7px; width: 7px; }
+.discover-trail .dx-pick .caveat { border-left-color: color-mix(in srgb, var(--kind) 70%, transparent); }
+.discover-trail .dx-pick .pick-actions { clear: both; }
+.discover-trail .pick-save.x-save { min-height: 42px; }
+
+@media (max-width: 960px) {
+  .dx-hero { grid-template-columns: minmax(0, 1fr); }
+  .dx-hero__wall { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 8px 0 18px; transform: rotate(-3deg); }
+  .dx-hero__wall .x-art:nth-child(n + 6) { display: none; }
+  .dx-hero__wall .x-art:nth-child(4n + 2), .dx-hero__wall .x-art:nth-child(4n + 4) { transform: none; }
+  .dx-hero__wall .x-art:nth-child(2n) { transform: translateY(14px); }
+  .monthly-feature.dx-edition { grid-template-columns: minmax(0, 1fr); }
+  .dx-edition__picks { grid-template-columns: repeat(6, minmax(0, 1fr)); justify-content: stretch; }
+}
+@media (max-width: 760px) {
+  .dx-hero { padding-top: 28px; }
+  .monthly-feature.dx-edition { padding: 22px; }
+  .dx-edition__picks {
+    display: flex; gap: 12px; margin: 0 -22px; overflow-x: auto; padding: 2px 22px 6px; scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .dx-edition__picks::-webkit-scrollbar { display: none; }
+  .dx-edition__picks li { flex: 0 0 104px; scroll-snap-align: start; }
+  .discover-hub .trails, .dx-tiles { grid-template-columns: minmax(0, 1fr); }
+  .discover-hub .trail-filter-fields > .dx-chips { flex-wrap: nowrap; margin: 0 -16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  .discover-hub .trail-filter-fields > .dx-chips::-webkit-scrollbar { display: none; }
+  .dx-chip { flex: none; }
+  .discover-hub .filter-reset { display: none; }
+  .trail__fan { gap: 8px; height: 168px; padding-top: 20px; }
+  .trail__fan .x-art { width: 76px; }
+  .trail__body { padding: 18px 20px 22px; }
+  .discover-main .trail h3 { font-size: 1.35rem; }
+  .trail__picks .x-kind { flex-basis: 70px; }
+  .dx-tile { padding: 20px; }
+  .discover-trail .dx-pick > .x-art, .discover-trail .guide-picks .dx-pick > .x-art { margin-left: 16px; width: 78px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trail__fan .x-art, .dx-edition__picks .x-art { transition: none; }
+}

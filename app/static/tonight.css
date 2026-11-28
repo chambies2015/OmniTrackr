@@ -83,7 +83,6 @@
 .tn-ready { background: radial-gradient(460px 240px at 0% 0%, rgba(45, 212, 191, .16), transparent 70%), var(--site-surface); border-color: rgba(45, 212, 191, .45); grid-column: 1 / -1; }
 .tn-ready h2 { margin: 0 0 6px; }
 .tn-ready h2:focus { outline: none; }
-.tn-ready__link { margin: 8px 0 14px; }
 .tn-make__head { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: space-between; margin-bottom: 14px; }
 .tn-make__head h2 { margin: 0; }
 .tn-make__head p { margin: 0; }
@@ -295,8 +294,112 @@ button.tn-option:hover { border-color: var(--site-violet); transform: translateY
 .tn-nudge ul { color: var(--site-soft); margin: 10px 0 16px; padding-left: 20px; }
 .tn-nudge__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
+/* -------------------------------------------------------------- Nov 2026: visitor builder, sharing, rounds */
+.tn-hero__try { color: var(--site-teal-soft); font-weight: 600; margin: 14px 0 0; }
+.tn-make__note { color: var(--site-muted); font-size: .92rem; margin: 12px 0 0; }
+.tn-make__note a { color: var(--site-violet-soft); }
+.tn-draft {
+  align-items: center;
+  background: rgba(45, 212, 191, .1);
+  border: 1px solid rgba(45, 212, 191, .4);
+  border-radius: 14px;
+  color: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  padding: 8px 8px 8px 14px;
+}
+.tn-draft[hidden] { display: none; }
+.tn-draft > span { flex: 1 1 260px; }
+.tn-draft .tn-link-button { flex: 0 0 auto; }
+.tn-source__more { gap: 0 18px; margin-top: 6px; }
+.tn-source .tn-source__more .tn-link-button { margin-top: 0; }
+.tn-preview { align-self: start; position: sticky; top: 92px; }
+.tn-preview h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.tn-preview > p { font-size: .92rem; margin: 12px 0 0; }
+.tn-sample__row--art { grid-template-columns: auto minmax(0, 1fr) auto; }
+.tn-sample__row--art .tn-sample__title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tn-sample--live { border-color: rgba(139, 92, 246, .5); }
+.tn-intro--steps { grid-template-columns: 1fr; }
+.tn-intro--steps .tn-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+
+.tn-share { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.tn-pill {
+  align-items: center;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--site-border-strong);
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: .94rem;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+.discover-main .tn-pill { color: #fff; text-decoration: none; }
+.tn-pill:hover { border-color: var(--site-violet); }
+.tn-ready { align-items: center; display: grid; gap: 22px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.tn-ready__link { margin: 8px 0 12px; }
+.tn-ready__open { display: inline-flex; align-items: center; margin-top: 4px; }
+.tn-ready__card { margin: 0; }
+.tn-ready__card img { border: 1px solid var(--site-border); border-radius: 14px; display: block; height: auto; width: 100%; }
+.tn-ready__card figcaption { font-size: .86rem; margin-top: 8px; }
+.tn-send, .tn-round {
+  background: radial-gradient(420px 200px at 0% 0%, rgba(45, 212, 191, .14), transparent 70%), var(--site-surface);
+  border: 1px solid rgba(45, 212, 191, .4);
+  border-radius: 18px;
+  display: grid;
+  gap: 4px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+}
+.tn-send strong, .tn-round strong { color: #fff; font-size: 1.08rem; }
+.tn-send .tn-share { margin-top: 10px; }
+.tn-round { align-items: center; gap: 12px 18px; grid-template-columns: minmax(0, 1fr) auto; }
+.tn-round > div { display: grid; gap: 2px; }
+.tn-round--open { background: radial-gradient(420px 200px at 0% 0%, rgba(139, 92, 246, .2), transparent 70%), var(--site-surface); border-color: var(--site-violet); }
+.tn-options + .tn-muted + .tn-round { margin-top: 18px; }
+.tn-winner { align-items: flex-start; }
+.tn-winner__text { flex: 1; min-width: 0; }
+.tn-where { border-top: 1px solid var(--site-border); margin-top: 16px; padding-top: 14px; }
+.tn-where h3 { font-size: 1rem; margin: 0 0 8px; }
+.tn-where__group { align-items: baseline; display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 0 0 8px; }
+.tn-where__label { color: var(--site-muted); flex: 0 0 auto; font-size: .82rem; font-weight: 700; letter-spacing: .04em; min-width: 64px; text-transform: uppercase; }
+.tn-where ul { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.tn-where__chip {
+  align-items: center;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: .9rem;
+  font-weight: 600;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px 0 8px;
+  text-decoration: none;
+}
+.discover-main .tn-where__chip { color: #fff; text-decoration: none; }
+.tn-where__chip img { border-radius: 6px; display: block; }
+.tn-where__chip:not(:has(img)) { padding-left: 12px; }
+a.tn-where__chip:hover { border-color: var(--site-violet); }
+.tn-where__more { display: inline-block; font-size: .92rem; font-weight: 600; margin-top: 2px; }
+.tn-where__note { color: var(--site-muted); font-size: .8rem; margin: 10px 0 0; }
+.tn-nudge__actions { align-items: center; }
+.tn-nudge__login { font-size: .94rem; font-weight: 600; padding: 0 6px; }
+
 @media (max-width: 860px) {
-  .tn-app, .tn-intro { grid-template-columns: 1fr; }
+  .tn-app, .tn-intro, .tn-ready { grid-template-columns: 1fr; }
+  .tn-intro--steps .tn-steps { grid-template-columns: 1fr; gap: 16px; }
+  .tn-preview { position: static; }
+  /* On a phone the list of titles is long, so the button follows once the poll can be made. */
+  .tn-make__go:not(:disabled) { bottom: 12px; position: sticky; width: 100%; z-index: 2; }
 }
 @media (max-width: 560px) {
   .tn-option { gap: 10px; padding: 8px 12px 8px 8px; }
@@ -304,6 +407,9 @@ button.tn-option:hover { border-color: var(--site-violet); transform: translateY
   .tn-winner { align-items: flex-start; flex-direction: column; }
   .tn-art--winner { height: 132px; width: 88px; }
   .tn-chips { grid-template-columns: 1fr; }
+  .tn-round { grid-template-columns: 1fr; }
+  .tn-share__main { flex: 1 1 100%; }
+  .tn-where__label { min-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tn-bar span, button.tn-option, .tn-card, .tn-nudge { transition: none; }

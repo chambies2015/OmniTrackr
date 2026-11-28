@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc
 
-from .. import models, schemas
+from .. import models, schemas, text_limits
 
 
 def get_music(
@@ -56,6 +56,8 @@ def update_music(db: Session, user_id: int, music_id: int, music_update: schemas
     if db_music is None:
         return None
     update_dict = music_update.model_dump(exclude_unset=True)
+    # Text saved before the limits stays editable; it just can't grow past them.
+    text_limits.check_update(db_music, update_dict)
     
     allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'review_public', 'cover_art_url'}
     for field, value in update_dict.items():

@@ -245,8 +245,16 @@ class TestSEOEndpoints:
                 review=movie.review, review_public=True))
         db_session.commit()
         content = client.get("/sitemap.xml").text
-        assert "/reviews?category=movie" in content
+        # Three is enough for /reviews, but a movies-only listing would mostly repeat it.
         assert "/reviews</loc>" in content
+        assert "/reviews?category=movie" not in content
+        for n in range(4, 9):
+            crud.create_movie(db_session, user.id, MovieCreate(
+                title=f"Sitemap Category Movie {n}", director="Category Director", year=2026,
+                review=movie.review, review_public=True))
+        db_session.commit()
+        content = client.get("/sitemap.xml").text
+        assert "/reviews?category=movie" in content
         assert "/reviews?category=book" not in content
         assert f"/reviews/{spammy_movie.id}?category=movie" not in content
 
@@ -742,7 +750,7 @@ class TestSecurityMiddleware:
             "/content-quality": "Editorial Standards",
             "/site-map": "Site Map",
             "/faq": "OmniTrackr FAQ",
-            "/guides": "Track Media, Reviews, Stats",
+            "/guides": "Series in Order, Binge Times and Best-Of Lists",
             "/compare": "OmniTrackr vs Spreadsheets",
             "/use-cases": "Media Tracking Use Cases",
             "/changelog": "OmniTrackr Changelog",
@@ -1059,7 +1067,8 @@ class TestSecurityMiddleware:
         assert "Privacy choices in the sample" in content
         assert "What statistics would show" in content
         assert "copied from a user account" in content
-        assert "Signal Harbor" in content
+        assert "Arrival (2016)" in content
+        assert "Fictional" not in content
         assert '"@type": "ItemList"' in content
         hrefs = extract_hrefs(content)
         assert "/demo" in hrefs
@@ -1289,7 +1298,7 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "<h1>How-To Guides</h1>" in content
+        assert "<h1>Guides</h1>" in content
         assert ".privacy-header h1" in content
         guides_h1_rule = content.split(".privacy-header h1", 1)[1].split("}", 1)[0]
         assert "color: var(--primary)" in guides_h1_rule
@@ -1320,8 +1329,8 @@ class TestSecurityMiddleware:
         assert "Free media tracker" in content
         visible = re.sub(r"<[^>]+>", "", content)
         assert "Every movie, show, game and book. One library." in visible
-        assert "From recommendation to a memory you can revisit" in content
-        assert "Things to try right now" in content
+        assert "This is what your library looks like" in content
+        assert "Tools people come back for" in content
         assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
@@ -1338,15 +1347,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "landing-library-showcase" in content
-        assert "Example library" in content
-        assert "Last watched: episode 18" in content
-        assert "Played</small>" in content
-        assert "Not read" in content
-        assert "journal moments" in content
-        assert "Cross-media explorer" in content
-        assert "18 of 28 episodes" not in content
-        assert "hours played" not in content
+        # The tour shows real screens, labelled as a sample library, with descriptive alt text.
+        assert "taken with a sample library of 48 titles" in content
+        assert "Frieren is at season 1, episode 18" in content
+        assert content.count('<div class="lp-shot" role="tabpanel"') == 6
+        assert "landing-library-showcase" not in content
         assert "Want to read" not in content
         assert "Your most active week this month" not in content
         assert 'class="showcase-progress"' not in content
@@ -1405,8 +1410,8 @@ class TestSecurityMiddleware:
         for heading in ("Who writes the guides", "How facts are checked", "How picks are chosen", "Spoilers",
                         "Corrections and updates", "Member reviews and collections", "What we do not publish"):
             assert heading in content, heading
-        assert '"dateModified": "2026-10-17"' in content
-        assert "the site owner reads and reviews each one before it is published" in content
+        assert '"dateModified": "2026-11-22"' in content
+        assert "The site owner reads, edits and fact-checks every guide before it is published" in content
         assert "No studio, publisher, platform or advertiser pays to appear in a guide" in content
         assert "Reviews that contain links, email addresses, phone numbers or promotional wording" in content
         assert "Plot summaries, reviews or descriptions copied from other sites or databases" in content

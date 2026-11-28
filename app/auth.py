@@ -17,13 +17,22 @@ load_dotenv()
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    if ENVIRONMENT == "production":
-        raise ValueError("SECRET_KEY must be set in production environment")
-    SECRET_KEY = "dev-secret-key-change-in-production"
-    import warnings
-    warnings.warn("Using default SECRET_KEY - not for production!")
+
+def _signing_key() -> str:
+    key = os.getenv("SECRET_KEY", "")
+    published_keys = {
+        "dev-secret-key-change-in-production",
+        "your-super-secret-key-change-this-in-production-use-openssl-rand-hex-32",
+        "replace-with-a-local-development-secret",
+        "omnitrackr-tests-only-secret-key-32-bytes",
+        "omnitrackr-isolated-test-key-not-for-deployment",
+    }
+    if len(key.strip().encode("utf-8")) < 32 or key.strip() in published_keys:
+        raise ValueError("Set SECRET_KEY to a private, persistent key of at least 32 bytes.")
+    return key
+
+
+SECRET_KEY = _signing_key()
 
 ALGORITHM = "HS256"
 # Members stay signed in for 30 days; a password change or reset ends every other session.

@@ -440,6 +440,71 @@
     });
   }
 
+  // Search visitors by the kind of page they landed on (app/search_journey.py).
+  function renderSearchJourney(journey) {
+    const steps = $('searchJourney');
+    const sections = $('searchJourneySections');
+    if (!steps || !sections) return;
+    if (!journey) {
+      steps.replaceChildren(el('p', 'stats-empty', 'Not counted yet.'));
+      sections.replaceChildren();
+      return;
+    }
+    drawSteps(steps, journey.steps || []);
+    const rows = journey.sections || [];
+    if (!rows.length) {
+      sections.replaceChildren(el('p', 'stats-empty', 'No visits from a search engine in this range yet.'));
+      return;
+    }
+    sections.replaceChildren(table(['Landed on', 'Landed', 'Saved a title', 'Started sign-up', 'Made an account'],
+      rows.map(row => [row.label, number(row.landed), number(row.saved), number(row.signup), number(row.account)])));
+  }
+
+  function searchJourneyReport(journey) {
+    if (!journey || !journey.steps) return [];
+    const rows = (journey.sections || []).map(row => `${row.label} ${number(row.landed)}/${number(row.saved)}/${number(row.signup)}/${number(row.account)}`);
+    return [
+      `From search engines: ${journey.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}`,
+      `From search, by landing page (landed/saved/started sign-up/account): ${rows.join('; ') || 'none yet'}`,
+    ];
+  }
+
+  // The main sign-up steps for phones next to every device (counted from Nov 26 2026).
+  function renderPhones(funnel) {
+    const box = $('phoneFunnel');
+    if (!box) return;
+    const rows = funnel.phones || [];
+    if (!funnel.phones_since) {
+      box.replaceChildren(el('p', 'stats-empty', 'Phones are counted from November 26, 2026.'));
+      return;
+    }
+    const people = funnel.people_devices || [];
+    const share = (part, whole) => (whole ? `${Math.round((part / whole) * 100)}%` : '');
+    const allPeople = people.reduce((sum, item) => sum + item.count, 0);
+    const phonePeople = (people.find(item => item.key === 'mobile') || {}).count || 0;
+    box.replaceChildren(table(['Step', 'All devices', 'Phones', 'Phone share'], [
+      ['People (any page)', number(allPeople), number(phonePeople), share(phonePeople, allPeople)],
+      ...rows.map(row => [row.label, number(row.count), number(row.phones), share(row.phones, row.count)]),
+    ]));
+    const note = $('phoneNote');
+    if (note) note.textContent = `The same steps for phones alone, next to every device (tablets count as not phones). Counted since ${funnel.phones_since}.`;
+  }
+
+  function appBrowserRows(funnel) {
+    const people = (funnel.app_browser_people || []).map(item => ({ label: `People reading inside ${item.key === 'this app' ? 'another app' : item.key}`, count: item.count }));
+    return [...(people.length ? people : [{ label: 'People reading inside an app', count: 0 }]), ...(funnel.app_browser || [])];
+  }
+
+  function phoneReport(funnel) {
+    if (!funnel || !funnel.phones_since) return [];
+    const people = funnel.people_devices || [];
+    return [
+      `People by device: ${people.map(item => `${item.key} ${number(item.count)}`).join(', ') || 'none yet'}`,
+      `Phones (all devices / phones): ${(funnel.phones || []).map(row => `${row.label} ${number(row.count)}/${number(row.phones)}`).join(' → ')}`,
+      `Inside other apps' browsers: ${appBrowserRows(funnel).map(item => `${item.label} ${number(item.count)}`).join('; ')}`,
+    ];
+  }
+
   function renderSignupFunnel(data) {
     const container = $('signupFunnel');
     if (!container || !data.funnel) return;
@@ -456,8 +521,16 @@
     };
     fillList('signupIssues', data.funnel.issues);
     if ($('googleSignin')) fillList('googleSignin', data.funnel.google || []);
+    if ($('emailSignupForm')) fillList('emailSignupForm', data.funnel.email_form || []);
+    if ($('emailConfirm')) fillList('emailConfirm', data.funnel.email_confirm || []);
+    if ($('emailSnags')) fillList('emailSnags', data.funnel.email_snags || []);
+    if ($('emailDelivery')) fillList('emailDelivery', data.funnel.email_delivery || []);
+    if ($('emailReturn')) fillList('emailReturn', data.funnel.email_return || []);
     if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
     if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
+    renderSearchJourney(data.search_journey);
+    renderPhones(data.funnel);
+    if ($('appBrowsers')) fillList('appBrowsers', appBrowserRows(data.funnel));
     const retention = data.retention || {};
     fillList('guestList', [
       ...data.funnel.guest,
@@ -468,8 +541,35 @@
 
   function growthRows(growth) {
     const { invites, supporters, weekly_email: email, takes } = growth;
+    const people = growth.people || {};
+    const peopleCounts = people.counts || {};
+    const peopleLabels = people.labels || {};
     const calendar = growth.calendar || {};
     const push = growth.push || {};
+    const reviews = growth.reviews || {};
+    const support = growth.support || {};
+    const stay = growth.stay || {};
+    const stayOn = stay.turned_on || {};
+    const after = stay.after || {};
+    const weekOne = growth.week_one || {};
+    const app = growth.app || {};
+    const weekCounts = weekOne.counts || {};
+    const weekLabels = weekOne.labels || {};
+    const draw = growth.backlog_draw || {};
+    const drawCounts = draw.counts || {};
+    const drawLabels = draw.labels || {};
+    const week = growth.your_week || {};
+    const yourWeekCounts = week.counts || {};
+    const yourWeekLabels = week.labels || {};
+    const streaming = growth.streaming || {};
+    const streamingCounts = streaming.counts || {};
+    const streamingLabels = streaming.labels || {};
+    const ranks = growth.rankings || {};
+    const rankCounts = ranks.counts || {};
+    const rankLabels = ranks.labels || {};
+    const widgets = growth.widgets || {};
+    const widgetCounts = widgets.counts || {};
+    const widgetLabels = widgets.labels || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -477,6 +577,7 @@
         { label: 'Invited, waiting to verify email (now)', count: invites.awaiting_verification },
         { label: 'Invite links created', count: invites.new_links },
         { label: 'Members with a link (all time)', count: invites.links },
+        { label: 'Links that open on a taste test (now)', count: invites.taste_tests || 0 },
       ],
       growthSupporters: [
         { label: 'Active supporters (now)', count: supporters.active },
@@ -485,6 +586,13 @@
         { label: 'Ko-fi payments received', count: supporters.payments },
         { label: 'Payments waiting to be linked (now)', count: supporters.unlinked_payments },
         { label: 'Supporters (all time)', count: supporters.all_time },
+        { label: 'Gifts bought on Ko-fi', count: (supporters.gifts || {}).bought || 0 },
+        { label: 'Gifts made by hand (giveaways)', count: (supporters.gifts || {}).made || 0 },
+        { label: 'Gifts opened', count: (supporters.gifts || {}).opened || 0 },
+        { label: 'Gifts not opened yet (now)', count: (supporters.gifts || {}).waiting || 0 },
+        { label: 'Gift page views', count: (supporters.gifts || {}).gift_page_seen || 0 },
+        { label: 'Ko-fi pressed on the gift page', count: (supporters.gifts || {}).page_kofi_gift || 0 },
+        { label: 'Gift links opened by someone else', count: (supporters.gifts || {}).gift_link_opened || 0 },
       ],
       growthEmail: [
         { label: 'Subscribers (now)', count: email.subscribers },
@@ -494,6 +602,9 @@
         ...(email.opted_out_by_place || []).filter(item => item.count).map(item => ({ label: `Turned off from ${item.place}`, count: item.count })),
         { label: 'Members sent one', count: email.emailed || 0 },
         { label: 'Members sent one in the last 7 days (now)', count: email.emailed_7d || 0 },
+        ...((email.preview && email.preview.previews) || []).filter(item => item.count).map(item => ({ label: `Saw their own email in ${item.place}`, count: item.count })),
+        { label: 'Sent themselves a copy', count: (email.preview && email.preview.copies_sent) || 0 },
+        ...((email.preview && email.preview.copies_failed) ? [{ label: 'Copies that failed to send', count: email.preview.copies_failed }] : []),
       ],
       growthCalendar: [
         { label: 'Members with a private calendar (now)', count: calendar.feeds || 0 },
@@ -504,6 +615,16 @@
         { label: 'Links shared', count: takes.asked },
         { label: 'Friends who answered', count: takes.answered },
       ],
+      growthPeople: [
+        { label: 'Follows between active members (now)', count: people.follows_now || 0 },
+        { label: 'New follows', count: people.new_follows || 0 },
+        { label: 'Members following someone (now)', count: people.members_following || 0 },
+        { label: 'Members with a follower (now)', count: people.members_followed || 0 },
+        { label: 'Pairs who follow each other (now)', count: people.mutual_pairs || 0 },
+        { label: 'Profiles that can be suggested (now)', count: people.suggestable || 0 },
+        { label: 'Profiles with Suggest my profile off (now)', count: people.suggest_off || 0 },
+        ...Object.keys(peopleLabels).filter(key => peopleCounts[key]).map(key => ({ label: peopleLabels[key], count: peopleCounts[key] })),
+      ],
       growthPush: [
         { label: 'Members with notifications on (now)', count: push.members || 0 },
         { label: 'Devices turned on (now)', count: push.devices || 0 },
@@ -512,6 +633,105 @@
         { label: 'Notifications sent', count: push.sent || 0 },
         ...(push.sent_by_kind || []).map(item => ({ label: `Sent: ${item.kind}`, count: item.count })),
         { label: 'Away reminders sent', count: push.away_reminders || 0 },
+        ...(push.on_by_place || []).filter(item => item.count).map(item => ({ label: `Turned on from ${item.place}`, count: item.count })),
+      ],
+      growthApp: [
+        { label: 'Members who opened the installed app (now)', count: app.members || 0 },
+        { label: 'Members who opened it in the last 7 days (now)', count: app.members_7d || 0 },
+        { label: 'Members who opened it in this range', count: app.members_range || 0 },
+        { label: 'Members who opened it for the first time', count: app.new_members || 0 },
+        ...(app.by_platform || []).filter(item => item.count).map(item => ({ label: `Members on ${item.platform} (now)`, count: item.count })),
+        ...(app.offers || []).filter(row => row.shown || row.pressed || row.later).map(row => ({
+          label: `${row.place}: shown ${number(row.shown)}, not now ${number(row.later)}; Install pressed`,
+          count: row.pressed,
+        })),
+        ...(app.steps || []).filter(item => item.count).map(item => ({ label: `Add to Home Screen steps opened: ${item.browser}`, count: item.count })),
+        ...(app.outcomes || []).map(item => ({ label: item.label, count: item.count })),
+      ],
+      growthStayPosted: [
+        { label: 'Home screen card shown', count: stay.shown || 0 },
+        ...(stay.cards || []).filter(row => row.shown || row.push || row.email || row.calendar || row.later || row.stop).map(row => ({
+          label: `Shown for "${row.moment}" (then notifications ${number(row.push)}, weekly email ${number(row.email)}, calendar ${number(row.calendar)}, not now ${number(row.later)}, don't ask ${number(row.stop)})`,
+          count: row.shown,
+        })),
+        { label: 'Note after saving a show shown', count: after.shown || 0 },
+        { label: 'Notifications turned on from them', count: stayOn.push || 0 },
+        { label: 'Weekly email turned on from them', count: stayOn.email || 0 },
+        { label: 'Calendar turned on from them', count: stayOn.calendar || 0 },
+        { label: 'Sample email opened from the card', count: stay.sample || 0 },
+        { label: 'Not now', count: stay.later || 0 },
+        { label: 'Don\'t ask again', count: stay.stopped || 0 },
+        { label: 'Members who said don\'t ask again (now)', count: stay.stopped_now || 0 },
+      ],
+      growthWeekOne: [
+        ...Object.keys(weekLabels).map(key => ({ label: weekLabels[key], count: weekCounts[key] || 0 })),
+        { label: 'Reminder emails waiting to go out (now)', count: weekOne.pending_reminders || 0 },
+      ],
+      growthBacklogDraw: [
+        ...Object.keys(drawLabels).map(key => ({ label: drawLabels[key], count: drawCounts[key] || 0 })),
+        { label: 'Members with a card kept (now)', count: draw.kept_now || 0 },
+        { label: 'Evening emails waiting to go out (now)', count: draw.pending_emails || 0 },
+        { label: 'Picks finished, all time', count: draw.finished_all_time || 0 },
+      ],
+      growthYourWeek: [
+        { label: 'Members keeping count (now)', count: week.with_pace || 0 },
+        ...(week.by_pace || []).filter(item => item.count).map(item => ({ label: `Pace: ${item.pace} (now)`, count: item.count })),
+        { label: 'Kept two or more of the last four weeks (now)', count: week.kept_two_of_four || 0 },
+        { label: 'Sunday email on (now)', count: week.email_on || 0 },
+        { label: 'Sunday notification on (now)', count: week.push_on || 0 },
+        ...Object.keys(yourWeekLabels).map(key => ({ label: yourWeekLabels[key], count: yourWeekCounts[key] || 0 })),
+        { label: 'Weeks kept, all time', count: week.kept_all_time || 0 },
+      ],
+      growthStreaming: [
+        { label: 'Members with services picked (now)', count: streaming.members_now || 0 },
+        { label: 'Arrival notes on (now)', count: streaming.alerts_on_now || 0 },
+        ...(streaming.by_service || []).map(item => ({ label: `Picked ${item.name} (now)`, count: item.count })),
+        ...Object.keys(streamingLabels).map(key => ({ label: streamingLabels[key], count: streamingCounts[key] || 0 })),
+        { label: 'Titles that arrived on a service', count: streaming.arrivals || 0 },
+        { label: 'Titles being watched for arrivals (now)', count: streaming.titles_checked || 0 },
+        { label: 'Share links on (now)', count: streaming.links_now || 0 },
+      ],
+      growthRankings: [
+        { label: 'Members with a ranking (now)', count: ranks.members_now || 0 },
+        { label: 'Members with ten or more ranked (now)', count: ranks.members_ten_now || 0 },
+        { label: 'Titles ranked (now)', count: ranks.titles_now || 0 },
+        { label: 'Top tens on public profiles (now)', count: ranks.public_now || 0 },
+        ...(ranks.by_format || []).map(item => ({ label: `Ranking ${item.label} (now)`, count: item.count })),
+        ...Object.keys(rankLabels).map(key => ({ label: rankLabels[key], count: rankCounts[key] || 0 })),
+      ],
+      growthWidgets: [
+        { label: 'Times members\' widgets loaded on other sites', count: widgets.loads || 0 },
+        { label: 'Members whose widgets loaded', count: widgets.members || 0 },
+        { label: 'Members whose widgets loaded in the last 7 days (now)', count: widgets.members_7d || 0 },
+        ...(widgets.by_kind || []).filter(item => item.count).map(item => ({ label: `Loads: ${item.label}`, count: item.count })),
+        ...(widgets.hosts || []).map(item => ({ label: `Shown on ${item.host} (${number(item.members)} member${item.members === 1 ? '' : 's'})`, count: item.count })),
+        { label: 'Visits from a widget link', count: widgets.visits || 0 },
+        { label: 'Likely people from a widget link', count: widgets.people || 0 },
+        { label: 'Profiles with Right now on (now)', count: widgets.now_on || 0 },
+        ...Object.keys(widgetLabels).filter(key => widgetCounts[key]).map(key => ({ label: widgetLabels[key], count: widgetCounts[key] })),
+      ],
+      growthSupportAsks: [
+        { label: 'Notes shown on the home screen', count: support.shown || 0 },
+        ...(support.asks || []).filter(row => row.shown || row.kofi || row.perks || row.later || row.stop).map(row => ({
+          label: `Shown for "${row.moment}" (then Ko-fi ${number(row.kofi)}, supporters page ${number(row.perks)}, not now ${number(row.later)}, don't ask ${number(row.stop)})`,
+          count: row.shown,
+        })),
+        { label: 'Ko-fi pressed from a note', count: support.kofi || 0 },
+        { label: 'Not now', count: support.later || 0 },
+        { label: 'Don\'t ask again', count: support.stopped || 0 },
+        { label: 'Notes switched off (now)', count: support.asks_off_now || 0 },
+        ...(support.page_seen || []).filter(item => item.count).map(item => ({ label: `Supporters page from: ${item.place}`, count: item.count })),
+        ...(support.page_kofi || []).filter(item => item.count).map(item => ({ label: `Supporters page Ko-fi button: ${item.place}`, count: item.count })),
+        ...(support.elsewhere_kofi || []).filter(item => item.count).map(item => ({ label: `Ko-fi button: ${item.place}`, count: item.count })),
+        { label: 'Payments linked within 2 weeks of a Ko-fi press', count: support.converted_total || 0 },
+        ...(support.converted || []).map(item => ({ label: `Paid after pressing: ${item.place}`, count: item.count })),
+      ],
+      growthReviews: [
+        { label: 'Reviews shared from the card', count: reviews.shared || 0 },
+        { label: 'Members who shared one', count: reviews.sharers || 0 },
+        { label: 'Reviews kept private', count: reviews.kept || 0 },
+        { label: 'Private reviews that could be shared (now)', count: reviews.waiting || 0 },
+        { label: 'Members with one waiting (now)', count: reviews.waiting_members || 0 },
       ],
     };
   }
@@ -522,7 +742,18 @@
     growthEmail: 'Weekly email',
     growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
+    growthPeople: 'Find people to follow',
     growthPush: 'Phone and browser notifications',
+    growthApp: 'The app on home screens',
+    growthStayPosted: 'Stay posted asks (card and note after saving)',
+    growthWeekOne: 'New members\' first-week card',
+    growthBacklogDraw: 'Draw from your backlog',
+    growthYourWeek: 'Your week (weekly pace, kept weeks, Sunday nudge)',
+    growthStreaming: 'On your services (streaming services, arrival notes)',
+    growthRankings: 'Rankings (which did you like more?)',
+    growthWidgets: 'Profile widgets on other sites',
+    growthReviews: 'Share your reviews card',
+    growthSupportAsks: 'Support notes and the supporters page',
   };
 
   function growthReport(data) {
@@ -539,7 +770,7 @@
     if (!card) return;
     card.hidden = !data.growth;
     if (!data.growth) return;
-    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend" and phone notifications in the last ${data.days} days. Rows marked "now" are current totals.`;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars, "ask a friend", phone notifications, the installed app, the "Share your reviews" card and support notes in the last ${data.days} days. Rows marked "now" are current totals.`;
     Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
       const list = $(id);
       list.replaceChildren();
@@ -630,6 +861,11 @@
       const aside = kofiButton('Set aside', 'stats-kofi__aside', () => setAside(payment.message_id, label.name, true, aside));
       aside.title = 'For a refund, a duplicate or a test. It stays recorded but leaves this list.';
       form.append(input, button, aside);
+      if (!payment.monthly) {
+        const gift = kofiButton('Make it a gift', 'stats-kofi__aside', () => giftFromPayment(payment.message_id, label.name, gift));
+        gift.title = 'The payer meant it as a gift but left OT-GIFT out. You get a link to send them.';
+        form.appendChild(gift);
+      }
       form.addEventListener('submit', event => {
         event.preventDefault();
         const who = input.value.trim();
@@ -722,7 +958,112 @@
     }
   }
 
+  // Gifts (Nov 23 2026): codes bought with OT-GIFT, and ones the owner makes for giveaways.
+  const GIFT_STATES = { open: 'Not opened yet', opened: 'Opened', cancelled: 'Turned off' };
+
+  function giftLinks(gift) {
+    const box = el('div', 'stats-kofi__picks');
+    const open = el('a', '', gift.url);
+    open.href = gift.url;
+    open.target = '_blank';
+    open.rel = 'noopener';
+    const card = el('a', '', 'The card (private)');
+    card.href = gift.manage_url;
+    card.target = '_blank';
+    card.rel = 'noopener';
+    box.append(open, el('small', '', ' · '), card);
+    return box;
+  }
+
+  function renderGifts(gifts) {
+    const list = $('giftList');
+    if (!list) return;
+    list.replaceChildren();
+    if (!gifts.length) {
+      list.appendChild(el('li', 'stats-kofi__empty', 'No gifts yet.'));
+      return;
+    }
+    gifts.forEach(gift => {
+      const row = el('li');
+      const info = el('div', 'stats-kofi__info');
+      const who = [gift.to_name ? `for ${gift.to_name}` : '', gift.giver ? `from @${gift.giver}` : (gift.source === 'owner' ? 'made by hand' : 'from a Ko-fi payer')]
+        .filter(Boolean).join(', ');
+      info.append(el('b', '', `${gift.months_label} · ${GIFT_STATES[gift.state] || gift.state}`),
+        el('span', '', [who, gift.code, gift.paid_at ? dayOnly(gift.paid_at) : ''].filter(Boolean).join(' · ')));
+      if (gift.state === 'open') info.appendChild(giftLinks(gift));
+      row.appendChild(info);
+      if (gift.state === 'open') {
+        const off = kofiButton('Turn off', 'stats-kofi__aside', () => cancelGift(gift, off));
+        off.title = 'For a refunded payment, or a code posted somewhere it shouldn\'t be. It can\'t be opened after this.';
+        row.appendChild(off);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  async function loadGifts() {
+    if (!$('giftList')) return;
+    try {
+      const response = await fetch('/api/supporters/gifts', { credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      renderGifts(result.gifts || []);
+    } catch (error) {
+      $('giftStatus').textContent = `Could not load gifts: ${error.message}`;
+    }
+  }
+
+  function giftMade(prefix, gift) {
+    const status = $('giftStatus');
+    status.replaceChildren(`${prefix} ${gift.months_label}, code ${gift.code}. Send this link: `);
+    const link = el('a', '', gift.url);
+    link.href = gift.url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    status.appendChild(link);
+  }
+
+  async function makeGift(event) {
+    event.preventDefault();
+    const months = Number($('giftMonths').value);
+    if (!window.confirm(`Make a gift link for ${months === 12 ? 'a year' : `${months} month${months === 1 ? '' : 's'}`} of supporter perks? Nobody pays for it, so it's for a giveaway or a prize.`)) return;
+    try {
+      giftMade('Made a gift of', await postKofi('/api/supporters/gifts', { months }));
+      await loadGifts();
+    } catch (error) {
+      $('giftStatus').textContent = `Could not make it: ${error.message}`;
+    }
+  }
+
+  async function giftFromPayment(messageId, name, button) {
+    if (!window.confirm(`Turn the payment from ${name} into a gift? It won't switch on anyone's perks until someone opens the gift link, which you send to ${name}.`)) return;
+    button.disabled = true;
+    try {
+      giftMade(`The payment from ${name} is now a gift of`, await postKofi('/api/supporters/gifts/from-payment', { message_id: messageId }));
+      await load();
+    } catch (error) {
+      $('kofiStatus').textContent = `Could not make it a gift: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function cancelGift(gift, button) {
+    if (!window.confirm(`Turn off the ${gift.months_label} gift ${gift.code}? Nobody will be able to open it.`)) return;
+    button.disabled = true;
+    try {
+      await postKofi(`/api/supporters/gifts/${gift.id}/cancel`, {});
+      $('giftStatus').textContent = `Turned off ${gift.code}.`;
+      await loadGifts();
+    } catch (error) {
+      $('giftStatus').textContent = `Could not turn it off: ${error.message}`;
+      button.disabled = false;
+    }
+  }
+
   function bindKofiSearch() {
+    const gifts = $('giftMake');
+    if (gifts) gifts.addEventListener('submit', makeGift);
     const form = $('kofiSearch');
     if (!form) return;
     form.addEventListener('submit', event => {
@@ -781,6 +1122,18 @@
     });
   }
 
+  // Episode guides and release calendars share the facts cache with title pages but are counted apart.
+  function otherLookups(details) {
+    return [['episode_guides', 'Episode guides'], ['release_schedules', 'Release calendar schedules']]
+      .filter(([key]) => details[key])
+      .map(([key, label]) => `${label}: ${number(details[key].found)} found, ${number(details[key].not_found)} not found, ${number(details[key].errors)} errors`);
+  }
+
+  function titleProblem(problem) {
+    const year = problem.year ? ` (${problem.year})` : '';
+    return `${problem.kind}: ${problem.title}${year}: ${problem.reason}${problem.checked ? `, checked ${problem.checked} UTC` : ''}`;
+  }
+
   function renderHealth(data) {
     const list = $('healthList');
     list.replaceChildren();
@@ -794,6 +1147,16 @@
       row.append(el('span', '', `Title pages: details found for ${number(details.found)} (${number(details.not_found)} not found, ${number(details.errors)} errors)`),
         el('span', `stats-status ${details.errors > details.found ? 'stats-status--warn' : 'stats-status--ok'}`, details.errors > details.found ? '! Check' : '✓ OK'));
       list.appendChild(row);
+      otherLookups(details).forEach(text => {
+        const other = el('li');
+        other.append(el('span', '', text));
+        list.appendChild(other);
+      });
+      (details.problems || []).forEach(problem => {
+        const item = el('li', 'stats-health__problem');
+        item.append(el('span', '', titleProblem(problem)), el('span', 'stats-status stats-status--warn', problem.status === 'error' ? 'Error' : 'Not found'));
+        list.appendChild(item);
+      });
     }
     system.integrations.forEach(item => {
       const row = el('li');
@@ -995,6 +1358,69 @@
     }
   }
 
+  function renderCheckIn(data) {
+    const info = data.check_in;
+    const card = $('checkInCard');
+    if (!card) return;
+    card.hidden = !info;
+    if (!info) return;
+    let statusLabel = COMEBACK_STATES[info.status] || info.status;
+    if (info.status === 'sending' && info.waiting_on_whats_new) statusLabel = 'On, waiting until the “What’s new” email finishes';
+    const away = Array.isArray(info.away_days) ? info.away_days : [9, 29];
+    const rows = [
+      ['Status', statusLabel],
+      ['Members due now', `${number(info.due_now)} (last visit ${away[0]} to ${away[1]} days ago)`],
+      ['Sent in the last 30 days', number(info.sent_30d)],
+      [`Came back within ${info.came_back_window_days} days of one`, number(info.came_back)],
+      ['Sent all time', number(info.sent_all_time)],
+      ['Daily limit', `${number(info.daily_limit)} (shares the daily email budget, so sign-up and reset emails always go out)`],
+    ];
+    if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
+    const list = $('checkInList');
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', String(value)));
+      list.appendChild(row);
+    });
+    const pageStats = info.page || {};
+    const sources = Array.isArray(pageStats.by_source) ? pageStats.by_source : [];
+    $('checkInPage').replaceChildren(table(
+      ['Check-in page, this range', 'Opened', 'Marked finished', 'Scores given', 'Still going', 'Answered every title'],
+      sources.map(row => [`From the ${row.source.toLowerCase()}`, number(row.opened), number(row.finished),
+        number(row.rated), number(row.still), number(row.all_done)]),
+    ));
+    $('checkInStart').hidden = info.status === 'sending';
+    $('checkInStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
+    $('checkInPause').hidden = info.status !== 'sending';
+  }
+
+  async function checkInAction(action) {
+    const status = $('checkInStatus');
+    if (action === 'start' && !window.confirm('Turn on the check-in email? Members whose last visit was 9 to 29 days ago get one “did you finish it?” email per stretch away, at most every 90 days, up to 20 a day. You can pause any time.')) return;
+    const buttons = document.querySelectorAll('[data-check-in]');
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = action === 'test' ? 'Sending a test to your email…' : 'Saving…';
+    try {
+      const response = await fetch('/api/site-stats/check-in', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      if (state.data) {
+        state.data.check_in = { ...result, page: result.page || state.data.check_in?.page };
+        renderCheckIn(state.data);
+      }
+      status.textContent = result.message || (action === 'start' ? 'On. The first emails go out within the hour.' : 'Paused. Nothing more will be sent until you resume.');
+    } catch (error) {
+      status.textContent = `Couldn't do that: ${error.message}`;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function renderWelcome(data) {
     const info = data.welcome;
     const card = $('welcomeCard');
@@ -1067,6 +1493,116 @@
     renderAnnouncement(data);
     renderComeback(data);
     renderWelcome(data);
+    renderCheckIn(data);
+  }
+
+  // ---------------------------------------------------------------- remove an account
+  const removal = { account: null };
+
+  function removalRowsText(account) {
+    const rows = (account.rows || []).filter(row => row.count);
+    const cleared = (account.kept_with_link_cleared || []).reduce((sum, row) => sum + row.count, 0);
+    const parts = rows.map(row => `${number(row.count)} ${row.label}`);
+    let text = parts.length
+      ? `Deletes the account and ${number(account.total_rows)} row${account.total_rows === 1 ? '' : 's'} it owns: ${parts.join(', ')}.`
+      : 'Deletes the account row only. It owns nothing else.';
+    if (cleared) text += ` ${number(cleared)} row${cleared === 1 ? '' : 's'} elsewhere stay${cleared === 1 ? 's' : ''}, with the link to this account cleared (a Ko-fi payment, "added by" on someone's list).`;
+    return text;
+  }
+
+  function renderRemoval(account) {
+    removal.account = account;
+    const box = $('removePreview');
+    box.hidden = false;
+    const signIn = account.google ? 'Google' : 'Email and password';
+    const status = !account.active ? `Deactivated ${dayOnly(account.deactivated_at)}` : 'Active';
+    const details = [
+      ['Account', `@${account.username} (id ${account.user_id})`],
+      ['Joined', dayOnly(account.joined_at)],
+      ['Email', account.email_domain ? `at ${account.email_domain}${account.verified ? ', verified' : ', not verified'}` : 'none'],
+      ['Signs in with', signIn],
+      ['Status', status],
+      ['Last seen', account.last_seen_on ? dayOnly(account.last_seen_on) : 'never'],
+      ['Titles', number(account.titles)],
+    ];
+    $('removeDetails').replaceChildren(...details.map(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', value));
+      return row;
+    }));
+    $('removeRows').textContent = removalRowsText(account);
+    $('removeRows').hidden = !account.can_remove && !(account.other_members_rows || []).length;
+    const reason = $('removeReason');
+    reason.hidden = account.can_remove;
+    reason.textContent = account.can_remove ? '' : (account.reason || 'This account can\'t be removed here.');
+    $('removeForm').hidden = !account.can_remove;
+    const label = $('removeConfirmLabel');
+    label.replaceChildren('Type ', el('b', '', account.username), ' to confirm');
+    $('removeConfirm').value = '';
+    $('removeButton').disabled = true;
+  }
+
+  async function lookUpRemoval(username) {
+    const status = $('removeStatus');
+    removal.account = null;
+    $('removePreview').hidden = true;
+    status.textContent = '';
+    const name = (username || '').trim().replace(/^@/, '');
+    if (!name) return;
+    try {
+      const response = await fetch(`/api/site-stats/accounts?username=${encodeURIComponent(name)}`, { credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      renderRemoval(result);
+    } catch (error) {
+      status.textContent = `Could not look that up: ${error.message}`;
+    }
+  }
+
+  async function confirmRemoval() {
+    const account = removal.account;
+    const typed = $('removeConfirm').value;
+    const button = $('removeButton');
+    const status = $('removeStatus');
+    if (!account || typed !== account.username) return;
+    button.disabled = true;
+    button.textContent = 'Removing…';
+    try {
+      const response = await fetch('/api/site-stats/accounts/remove', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: account.user_id, username: account.username, confirm: typed }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      removal.account = null;
+      $('removePreview').hidden = true;
+      $('removeUsername').value = '';
+      status.textContent = `Removed @${result.username} and ${number(result.total_rows)} row${result.total_rows === 1 ? '' : 's'} it owned.`;
+      load();
+    } catch (error) {
+      status.textContent = `Could not remove it: ${error.message}`;
+      button.disabled = false;
+    } finally {
+      button.textContent = 'Remove for good';
+    }
+  }
+
+  function bindRemoval() {
+    const lookup = $('removeLookup');
+    if (!lookup) return;
+    lookup.addEventListener('submit', event => {
+      event.preventDefault();
+      lookUpRemoval($('removeUsername').value);
+    });
+    $('removeConfirm').addEventListener('input', () => {
+      $('removeButton').disabled = !removal.account || $('removeConfirm').value !== removal.account.username;
+    });
+    $('removeForm').addEventListener('submit', event => {
+      event.preventDefault();
+      confirmRemoval();
+    });
   }
 
   // ---------------------------------------------------------------- report
@@ -1095,14 +1631,22 @@
       `Journey: ${insights.activation.map(stage => `${stage.label} ${number(stage.count)}`).join(' → ')}`,
       data.funnel ? `Sign-up funnel: ${funnelSteps(data.funnel).map(step => `${step.label} ${number(step.count)}${step.detail ? ` (${step.detail})` : ''}`).join(' → ')}` : '',
       data.funnel && data.funnel.homepage ? `Homepage path: ${data.funnel.homepage.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
+      ...searchJourneyReport(data.search_journey),
+      ...phoneReport(data.funnel),
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_form ? `Email sign-up form: ${data.funnel.email_form.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
+      data.funnel && data.funnel.email_confirm ? `Confirming the email: ${data.funnel.email_confirm.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_snags ? `Email form, what stopped people: ${data.funnel.email_snags.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_delivery ? `Sending the code email: ${data.funnel.email_delivery.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.email_return ? `Coming back to finish signing up: ${data.funnel.email_return.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.start ? `Start page: ${data.funnel.start.map(step => `${step.label} ${number(step.count)}`).join(' → ')}; ${(data.funnel.start_paths || []).map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
       data.comeback ? `Come-back email: ${data.comeback.status}, ${number(data.comeback.due_now)} members due now, ${number(data.comeback.sent_30d)} sent in 30 days, ${number(data.comeback.came_back)} came back within ${data.comeback.came_back_window_days} days of one.` : '',
       data.welcome ? `Welcome emails: ${data.welcome.status}, ${number(data.welcome.sent_30d)} sent in 30 days, ${number(data.welcome.came_back)} came back within ${data.welcome.came_back_window_days} days of one.` : '',
+      data.check_in ? `Check-in email: ${data.check_in.status}, ${number(data.check_in.due_now)} members due now, ${number(data.check_in.sent_30d)} sent in 30 days, ${number(data.check_in.came_back)} came back within ${data.check_in.came_back_window_days} days of one. Check-in page: ${(data.check_in.page?.by_source || []).map(row => `from the ${row.source.toLowerCase()} ${number(row.opened)} opened, ${number(row.finished)} finished, ${number(row.rated)} scored, ${number(row.still)} still going, ${number(row.all_done)} answered all`).join('; ')}.` : '',
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
@@ -1112,6 +1656,9 @@
       `Health: ${data.system.database}; ${data.system.integrations.map(item => `${item.name}: ${item.configured ? 'ok' : 'NOT SET'}`).join('; ')}.`,
       `Release Radar: ${data.system.release_radar.map(entry => `${entry.category} ${entry.items} titles${entry.error ? ` (${entry.error})` : ''}`).join(', ')}.`,
       data.system.title_details ? `Title pages: details for ${number(data.system.title_details.found)}, not found ${number(data.system.title_details.not_found)}, errors ${number(data.system.title_details.errors)}.` : '',
+      ...(data.system.title_details ? otherLookups(data.system.title_details).map(text => `${text}.`) : []),
+      data.system.title_details && (data.system.title_details.problems || []).length
+        ? `Latest title page problems: ${data.system.title_details.problems.map(titleProblem).join('; ')}.` : '',
     ];
     return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n');
   }
@@ -1178,6 +1725,7 @@
       render(await response.json());
       $('statsToast').textContent = '';
       loadKofiPayments();
+      loadGifts();
     } catch (error) {
       $('statsToast').textContent = 'Could not load the latest numbers. Check your connection and press Refresh.';
     } finally {
@@ -1204,6 +1752,7 @@
     $('statsCopy').addEventListener('click', copyReport);
     $('editorPublish')?.addEventListener('click', publishEditor);
     bindKofiSearch();
+    bindRemoval();
     document.querySelectorAll('[data-announcement]').forEach(button => {
       button.addEventListener('click', () => announcementAction(button.dataset.announcement));
     });
@@ -1212,6 +1761,9 @@
     });
     document.querySelectorAll('[data-welcome]').forEach(button => {
       button.addEventListener('click', () => welcomeAction(button.dataset.welcome));
+    });
+    document.querySelectorAll('[data-check-in]').forEach(button => {
+      button.addEventListener('click', () => checkInAction(button.dataset.checkIn));
     });
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -1226,7 +1778,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, growthRows, paymentLabel, kofiSummary, niceMax, delta, percent, funnelSteps, trafficSet };
+    module.exports = { buildReport, growthRows, paymentLabel, removalRowsText, kofiSummary, niceMax, delta, percent, funnelSteps, trafficSet };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

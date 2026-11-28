@@ -935,6 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupReviewQualityCounters();
   document.getElementById('collectionStudioName')?.addEventListener('input', updateCollectionReadinessDraft);
   document.getElementById('collectionStudioDescription')?.addEventListener('input', updateCollectionReadinessDraft);
+  document.getElementById('collectionStudioSearch')?.addEventListener('input', searchCollectionStudioLibrary);
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {
@@ -980,6 +981,9 @@ const progressOptions = {
   },
   onSaved: (payload, shouldContinue) => {
     if (!shouldContinue()) return;
+    window.OmniYourWeek?.refresh(true);  // today's tile lights up as soon as progress is saved
+    window.OmniTogether?.refresh(true);  // a plan with friends follows the library forward
+    window.OmniBreak?.refresh(true);  // logged progress ticks the matching part of a break plan
     return Promise.allSettled([
       refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue),
       refreshLibraryProgressView(payload, shouldContinue),

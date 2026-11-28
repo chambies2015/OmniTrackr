@@ -52,7 +52,9 @@ TRACKS = (
      "counts": "books read", "next": "Read {n} more {noun}", "noun": ("book", "books"), "shelf": "books"},
     {"key": "mangaka", "name": "Manga Reader", "emoji": "🗯️", "metric": "manga", "targets": (5, 25, 100),
      "counts": "manga series read", "next": "Finish {n} more manga {noun}", "noun": ("series", "series"), "shelf": "manga"},
-    {"key": "regular", "name": "Podcast Regular", "emoji": "🎙️", "metric": "podcasts", "targets": (5, 25, 100),
+    # Saved as "regular" until Nov 2026, the same key as the visits badge below;
+    # migrations.split_shared_regular_badge moved the stored rows apart.
+    {"key": "podcaster", "name": "Podcast Regular", "emoji": "🎙️", "metric": "podcasts", "targets": (5, 25, 100),
      "counts": "podcasts listened to", "next": "Listen to {n} more {noun}", "noun": ("podcast", "podcasts"), "shelf": "podcasts"},
     {"key": "earful", "name": "All Ears", "emoji": "🔊", "metric": "audiobooks", "targets": (5, 25, 100),
      "counts": "audiobooks finished", "next": "Finish {n} more {noun}", "noun": ("audiobook", "audiobooks"), "shelf": "audiobooks"},
@@ -79,12 +81,28 @@ TRACKS = (
     {"key": "challenger", "name": "Challenger", "emoji": "🏆", "metric": "challenges", "targets": (1, 3, 6),
      "counts": "monthly challenges completed", "one": "monthly challenge completed", "next": "Complete {n} more {noun}",
      "noun": ("challenge", "challenges"), "shelf": None},
+    {"key": "steady", "name": "Steady", "emoji": "🗓️", "metric": "weeks_kept", "targets": (4, 12, 26),
+     "counts": "weeks kept on Your week", "one": "week kept on Your week", "next": "Keep {n} more {noun}",
+     "noun": ("week", "weeks"), "shelf": None},
+    {"key": "advent", "name": "Door Opener", "emoji": "🚪", "metric": "advent_doors", "targets": (6, 12, 24),
+     "counts": "advent calendar doors opened in one December", "one": "advent calendar door opened",
+     "next": "Open {n} more advent {noun}", "noun": ("door", "doors"), "shelf": None},
+    {"key": "essentials", "name": "Essentials", "emoji": "🏛️", "metric": "essentials", "targets": (10, 50, 200),
+     "counts": "titles from the Essential 100 lists finished", "one": "title from the Essential 100 lists finished",
+     "next": "Finish {n} more essential {noun}", "noun": ("title", "titles"), "shelf": None},
+    {"key": "ranker", "name": "Ranker", "emoji": "🥇", "metric": "ranked", "targets": (10, 50, 150),
+     "counts": "titles ranked", "one": "title ranked", "next": "Rank {n} more {noun}", "noun": ("title", "titles"),
+     "shelf": None},
 )
 BY_KEY = {track["key"]: track for track in TRACKS}
+# Each key is one stored row per member, so two tracks sharing a key would share a tier.
+assert len(BY_KEY) == len(TRACKS), "badge track keys must be unique"
 TOTAL_LEVELS = len(TRACKS) * len(TIERS)
 # Where on the dashboard each badge's next step happens.
 LINKS = {
     "goals": "/#goals", "challenger": "/#challenge", "recruiter": "/#invite-friends", "company": "/#invite-friends",
+    "advent": "/holidays/advent-calendar", "steady": "/#your-week", "essentials": "/essentials",
+    "ranker": "/#rankings",
 }
 NEXT_COUNT = 3
 
@@ -119,6 +137,14 @@ def counts(db: Session, user: models.User) -> dict:
     result["goals"] = db.query(models.GoalAchievement.id).filter(models.GoalAchievement.user_id == user.id).count()
     result["challenges"] = db.query(models.MonthlyChallengeEntry.id).filter(
         models.MonthlyChallengeEntry.user_id == user.id, models.MonthlyChallengeEntry.completed_at.isnot(None)).count()
+    result["weeks_kept"] = db.query(models.YourWeekWeek.id).filter(
+        models.YourWeekWeek.user_id == user.id, models.YourWeekWeek.kept_at.isnot(None)).count()
+    from .advent_calendar import most_doors
+    result["advent_doors"] = most_doors(db, user.id)
+    from .essentials import finished_count
+    result["essentials"] = finished_count(db, user.id)
+    from .rankings import ranked_total
+    result["ranked"] = ranked_total(db, user.id)
     return result
 
 

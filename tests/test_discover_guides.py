@@ -201,7 +201,8 @@ def test_sitemap_has_exact_promoted_trails_and_preserves_monthly_editions(client
         page = GuidePage(response.text)
         assert published_editions()[slug]["essay"] in page.visible_text
         entry = entries[f"https://omnitrackr.xyz/discover/monthly/{slug}"]
-        assert entry.findtext("sm:lastmod", namespaces=SITEMAP_NS) == published_editions()[slug]["published_date"]
+        edition = published_editions()[slug]
+        assert entry.findtext("sm:lastmod", namespaces=SITEMAP_NS) == edition.get("reviewed", edition["published_date"])
         article = page.articles[0]
         assert article["datePublished"] == published_editions()[slug]["published_date"]
         assert article["mainEntityOfPage"] == f"https://omnitrackr.xyz/discover/monthly/{slug}"

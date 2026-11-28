@@ -32,6 +32,13 @@ PAGE_SIZE = 20
 ROWS_PER_CATEGORY = 300
 BURST_MIN = 4  # This many plain adds by one friend on one day become a single "added N titles" card.
 BURST_SHOWN = 6
+# A run of adds close together (an import, the start page, ticking down an Essential 100 list)
+# becomes one card even when the titles came in finished, rated or reviewed: a member who moves
+# 300 films across would otherwise fill every friend's feed. Each add in a run is at most
+# RUN_GAP after the one before it; a finish, rating or review saved within RUN_GAP of the add
+# counts as part of the add.
+RUN_MIN = 5
+RUN_GAP = timedelta(minutes=3)
 REVIEW_EXCERPT = 280
 DONE_FIELD = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
               "video-games": "played", "music": "listened", "books": "read",
@@ -85,8 +92,16 @@ def events_for(obj, session: Optional[Session] = None) -> Optional[str]:
     return None
 
 
+# A save that ticks a title off without it being news sets this in ``session.info`` for its flush:
+# "Fill in your year" dating a finish to an earlier month, or to before the year (app/year_fill.py).
+# Friends would otherwise see "finished" cards today for things finished in March or years ago.
+QUIET_KEY = "friend_feed_quiet"
+
+
 @event.listens_for(Session, "before_flush")
 def _record(session: Session, flush_context, instances) -> None:
+    if session.info.get(QUIET_KEY):
+        return
     # A feed row must never stop a library save.
     try:
         for obj in list(session.dirty):
@@ -141,6 +156,13 @@ class Burst:
     friend_id: int
     at: datetime
     entries: list = field(default_factory=list)
+    run: bool = False  # A run of adds close together, rather than a day of plain adds.
+
+    @property
+    def id(self) -> str:
+        if self.run:  # More than one run can fall on a day.
+            return f"burst-{self.friend_id}-{self.at.strftime('%Y-%m-%dT%H%M%S')}"
+        return f"burst-{self.friend_id}-{self.at.date().isoformat()}"
 
 
 def _visible_friends(db: Session, viewer_id: int) -> tuple[dict, dict]:
@@ -213,9 +235,9 @@ def collect(db: Session, viewer_id: int, now: Optional[datetime] = None) -> tupl
             if _still_true(category, item, row.kind):
                 offer(Entry(row.user_id, category, item, row.kind, row.created_at))
 
-    cards: list = []
+    cards, rest = _runs(list(best.values()))
     plain_adds: dict[tuple, list] = {}
-    for entry in best.values():
+    for entry in rest:
         if entry.kind == "added" and entry.item.rating is None and not getattr(entry.item, DONE_FIELD[entry.category], False):
             plain_adds.setdefault((entry.friend_id, entry.at.date()), []).append(entry)
         else:
@@ -228,6 +250,39 @@ def collect(db: Session, viewer_id: int, now: Optional[datetime] = None) -> tupl
             cards.extend(entries)
     cards.sort(key=lambda card: (card.at, card.friend_id), reverse=True)
     return cards, friends
+
+
+def _came_with_the_add(entry: Entry) -> bool:
+    if entry.kind == "added":
+        return True
+    added = getattr(entry.item, "added_at", None)
+    return added is not None and timedelta(0) <= entry.at - added <= RUN_GAP
+
+
+def _runs(entries: list[Entry]) -> tuple[list, list[Entry]]:
+    """Bursts for runs of adds close together, and every entry not in one."""
+    by_friend: dict[int, list[Entry]] = {}
+    rest = []
+    for entry in entries:
+        if _came_with_the_add(entry):
+            by_friend.setdefault(entry.friend_id, []).append(entry)
+        else:
+            rest.append(entry)
+    bursts = []
+    for friend_id, adds in by_friend.items():
+        adds.sort(key=lambda e: (e.at, e.item.id))
+        run = [adds[0]]
+        for entry in adds[1:] + [None]:
+            if entry is not None and entry.at - run[-1].at <= RUN_GAP:
+                run.append(entry)
+                continue
+            if len(run) >= RUN_MIN:
+                run.reverse()
+                bursts.append(Burst(friend_id, run[0].at, run, run=True))
+            else:
+                rest.extend(run)
+            run = [entry]
+    return bursts, rest
 
 
 def _title_paths(db: Session, entries: list[Entry]) -> dict[tuple, Optional[str]]:
@@ -279,8 +334,11 @@ def _friend(user) -> dict:
 
 
 def page(db: Session, viewer_id: int, before: Optional[datetime] = None, limit: int = PAGE_SIZE,
-         now: Optional[datetime] = None) -> dict:
+         now: Optional[datetime] = None, count_since: Optional[datetime] = None) -> dict:
+    """One page of feed cards. With ``count_since``, also "since_count": how many cards in the
+    whole window are that new, so the home card can show a few and count them all."""
     cards, friends = collect(db, viewer_id, now)
+    since_count = None if count_since is None else sum(1 for card in cards if card.at >= count_since)
     if before is not None:
         cards = [card for card in cards if card.at < before]
     shown, more = cards[:limit], len(cards) > limit
@@ -310,8 +368,9 @@ def page(db: Session, viewer_id: int, before: Optional[datetime] = None, limit: 
         friend = _friend(friends[card.friend_id])
         if isinstance(card, Burst):
             items.append({
-                "type": "burst", "id": f"burst-{card.friend_id}-{card.at.date().isoformat()}",
+                "type": "burst", "id": card.id,
                 "friend": friend, "at": card.at.isoformat(), "count": len(card.entries),
+                "finished": sum(1 for e in card.entries if getattr(e.item, DONE_FIELD[e.category], False)),
                 "titles": [{"title": e.item.title.strip(), "category": e.category,
                             "category_label": LABELS[e.category],
                             "image": title_pages._safe_image(getattr(e.item, IMAGE_FIELD[e.category], None)),
@@ -333,8 +392,11 @@ def page(db: Session, viewer_id: int, before: Optional[datetime] = None, limit: 
             "title_path": paths.get(key), "in_library": (category, item.title.strip().lower()) in owned,
             "cheers": cheers.get(key, 0), "cheered": key in mine,
         })
-    return {"items": items, "next_before": shown[-1].at.isoformat() if more and shown else None,
+    data = {"items": items, "next_before": shown[-1].at.isoformat() if more and shown else None,
             "friends": len(friends_of_viewer(db, viewer_id))}
+    if since_count is not None:
+        data["since_count"] = since_count
+    return data
 
 
 def friends_of_viewer(db: Session, viewer_id: int) -> set[int]:

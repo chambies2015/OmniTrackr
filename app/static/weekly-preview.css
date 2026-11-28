@@ -1,0 +1,97 @@
+/* "Your weekly email" peek (weekly-preview.js): a small inbox-style card showing what this member's weekly
+   email would say, in Settings, the For you invites and the home "stay posted" card. App-theme tokens. */
+.wk-peek-host { min-height: 1px; }
+.wk-peek-host[hidden] { display: none !important; }
+.wk-peek { --peek-tone: var(--accent, #8b5cf6); color: var(--fg); display: grid; gap: var(--space-3, 12px); }
+.wk-peek__mail {
+  background: var(--card-bg, #fff);
+  border: 1px solid color-mix(in srgb, var(--peek-tone) 28%, var(--border, #e5e7eb));
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 4%, transparent), 0 10px 24px -18px color-mix(in srgb, var(--peek-tone) 60%, transparent);
+  overflow: hidden;
+  padding: var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px);
+}
+.wk-peek__from { align-items: center; color: var(--fg-secondary, #6b7280); display: flex; font-size: var(--text-xs, .75rem); gap: 8px; min-width: 0; }
+.wk-peek__who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-peek__who strong { color: var(--fg); font-weight: 700; }
+.wk-peek__badge {
+  align-items: center;
+  background: linear-gradient(135deg, var(--peek-tone), #14b8a6);
+  border-radius: 50%;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  height: 24px;
+  justify-content: center;
+  letter-spacing: .02em;
+  width: 24px;
+}
+.wk-peek__subject { font-size: var(--text-md, 1rem); font-weight: 700; line-height: 1.35; margin: 8px 0 4px; overflow-wrap: anywhere; }
+.wk-peek__items { display: grid; gap: 0; list-style: none; margin: 6px 0 0; padding: 0; }
+.wk-peek__item {
+  align-items: center;
+  border-top: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding: 8px 0;
+}
+.wk-peek__item:first-child { border-top: 0; }
+.wk-peek__poster { aspect-ratio: 2 / 3; background: color-mix(in srgb, var(--fg) 8%, transparent); border-radius: 6px; display: block; height: auto; object-fit: cover; width: 34px; }
+.wk-peek__dot {
+  background: color-mix(in srgb, var(--peek-tone) 16%, transparent);
+  border-radius: 8px;
+  display: block;
+  height: 34px;
+  position: relative;
+  width: 34px;
+}
+.wk-peek__dot::after { background: var(--peek-tone); border-radius: 50%; content: ""; height: 8px; left: 13px; position: absolute; top: 13px; width: 8px; }
+.wk-peek__item--episodes .wk-peek__dot::after { background: #14b8a6; }
+.wk-peek__item--friends .wk-peek__dot::after { background: #f59e0b; }
+.wk-peek__line { display: grid; gap: 1px; min-width: 0; }
+.wk-peek__kicker { color: color-mix(in srgb, var(--peek-tone) 70%, var(--fg)); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.wk-peek__title { color: var(--fg); font-size: var(--text-sm, .875rem); font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; text-decoration: none; }
+a.wk-peek__title:hover, a.wk-peek__title:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.wk-peek__detail { color: var(--fg-secondary, #6b7280); font-size: var(--text-xs, .75rem); line-height: 1.4; overflow-wrap: anywhere; }
+.wk-peek__more, .wk-peek__empty { color: var(--fg-secondary, #6b7280); font-size: var(--text-xs, .75rem); line-height: 1.5; margin: 6px 0 0; }
+.wk-peek__empty { font-size: var(--text-sm, .875rem); }
+.wk-peek__lead { color: var(--fg-secondary, #6b7280); font-size: var(--text-sm, .875rem); line-height: 1.5; margin: 0; max-width: 62ch; }
+.wk-peek__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.wk-peek__yes, .wk-peek__copy {
+  border-radius: var(--radius-pill, 999px);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm, .875rem);
+  font-weight: 700;
+  min-height: var(--control-sm, 36px);
+  padding: 7px 16px;
+}
+.wk-peek__yes { background: var(--peek-tone); border: 1px solid var(--peek-tone); color: #fff; }
+.wk-peek__yes:hover:not(:disabled) { filter: brightness(1.08); }
+.wk-peek__copy { background: transparent; border: 1px solid color-mix(in srgb, var(--peek-tone) 45%, var(--border, #e5e7eb)); color: var(--fg); }
+.wk-peek__copy:hover:not(:disabled) { background: color-mix(in srgb, var(--peek-tone) 10%, transparent); }
+.wk-peek__yes:disabled, .wk-peek__copy:disabled { cursor: default; opacity: .6; }
+.wk-peek__yes:focus-visible, .wk-peek__copy:focus-visible, .wk-peek__full:focus-visible { box-shadow: var(--ring, 0 0 0 3px rgba(139, 92, 246, .35)); outline: none; }
+.wk-peek__full { color: var(--fg); font-size: var(--text-sm, .875rem); text-decoration: underline; text-underline-offset: 3px; }
+.wk-peek__status { color: var(--fg-secondary, #6b7280); font-size: var(--text-sm, .875rem); line-height: 1.5; margin: 0; }
+.wk-peek__status:empty { display: none; }
+.wk-peek__status--error { color: var(--danger, #dc2626); }
+
+/* Where it sits */
+.privacy-toggle-item:has(.wk-peek) #weeklyEmailPreviewLink { display: none; }  /* the peek has its own link */
+.toggle-peek { margin: 12px 0 4px; }
+.weekly-invite .wk-peek-host { flex: 1 1 100%; }
+.stay-posted__peek { margin: var(--space-4, 16px) 0 0; }
+
+@media (max-width: 520px) {
+  .wk-peek__mail { padding: 10px 12px 12px; }
+  .wk-peek__who { white-space: normal; }
+  .wk-peek__item { gap: 10px; grid-template-columns: 30px minmax(0, 1fr); }
+  .wk-peek__poster, .wk-peek__dot { width: 30px; }
+  .wk-peek__dot { height: 30px; }
+  .wk-peek__dot::after { left: 11px; top: 11px; }
+  .wk-peek__actions > button { flex: 1 1 auto; }
+}

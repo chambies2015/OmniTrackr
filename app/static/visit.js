@@ -29,9 +29,29 @@
     });
   }
 
+  // A visitor who came from a web search gets a one-day cookie naming only the first
+  // part of the page they landed on (say "in-order"), so Site stats can count how many
+  // search visitors go on to save a title or sign up (app/search_journey.py). The
+  // first landing of the day wins. Hosts mirror SEARCH_HOST in that file.
+  var SEARCH_HOST = /(?:^|\.)(?:google\.[a-z.]{2,8}|bing\.com|duckduckgo\.com|yahoo\.[a-z.]{2,8}|ecosia\.org|search\.brave\.com|yandex\.[a-z.]{2,8}|baidu\.com|startpage\.com|qwant\.com|kagi\.com)$/;
+  var SEARCH_COOKIE = 'omnitrackr_from_search';
+
+  function markSearchLanding() {
+    try {
+      if (!document.referrer || document.cookie.indexOf(SEARCH_COOKIE + '=') !== -1) return;
+      var host = new URL(document.referrer).hostname.toLowerCase().replace(/^www\./, '');
+      if (!SEARCH_HOST.test(host)) return;
+      var part = window.location.pathname.split('/')[1] || 'home';
+      if (!/^[a-z0-9-]{1,40}$/.test(part)) part = 'other';
+      document.cookie = SEARCH_COOKIE + '=' + part + '; Max-Age=86400; Path=/; SameSite=Lax'
+        + (window.location.protocol === 'https:' ? '; Secure' : '');
+    } catch (error) { /* analytics only */ }
+  }
+
   function send() {
     if (sent || document.visibilityState !== 'visible') return;
     sent = true;
+    markSearchLanding();
     var body = payload();
     try {
       if (navigator.sendBeacon && typeof Blob === 'function'

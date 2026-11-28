@@ -4,8 +4,9 @@ These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from . import text_limits
 from .integer_bounds import SQL_INTEGER_MAX
 
 
@@ -84,6 +85,12 @@ class UsernameChange(BaseModel):
     """Schema for changing username."""
     new_username: str = Field(..., min_length=3, max_length=50, description="New username")
     password: str = Field("", description="Current password (not needed while an account made with Google has none)")
+
+
+class SignupCode(BaseModel):
+    """The 6-digit code from the confirm-your-email message, typed on the sign-up card."""
+    email: str = Field(..., min_length=3, max_length=320)
+    code: str = Field(..., min_length=1, max_length=20)
 
 
 class TwoFactorLogin(BaseModel):
@@ -309,6 +316,23 @@ class MediaWriteValidation(BaseModel):
         return value
 
 
+class LibraryTextLimits(BaseModel):
+    """New library entries keep titles, names, reviews and links within text_limits.
+
+    Only create schemas use this. Edits are checked against the stored entry instead
+    (text_limits.check_update), so text saved before the limits stays editable, and
+    imports shorten long text rather than refusing it.
+    """
+
+    @model_validator(mode="after")
+    def text_within_limits(self):
+        message = text_limits.first_problem(
+            {field: getattr(self, field) for field in text_limits.LIMITS if field in type(self).model_fields})
+        if message:
+            raise ValueError(message)
+        return self
+
+
 class RequiredUpdateValues(BaseModel):
     @field_validator("name", "source_type", "allow_uploads", "fields", "field_values", check_fields=False)
     @classmethod
@@ -333,7 +357,7 @@ class MovieBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class MovieCreate(MovieBase, MediaWriteValidation):
+class MovieCreate(MovieBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -374,7 +398,7 @@ class TVShowBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class TVShowCreate(TVShowBase, MediaWriteValidation):
+class TVShowCreate(TVShowBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
     seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
@@ -416,7 +440,7 @@ class AnimeBase(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class AnimeCreate(AnimeBase, MediaWriteValidation):
+class AnimeCreate(AnimeBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
     seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
@@ -459,7 +483,7 @@ class VideoGameBase(BaseModel):
     _validate_rawg_link = field_validator("rawg_link")(validate_public_url)
 
 
-class VideoGameCreate(VideoGameBase, MediaWriteValidation):
+class VideoGameCreate(VideoGameBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -499,7 +523,7 @@ class MusicBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class MusicCreate(MusicBase, MediaWriteValidation):
+class MusicCreate(MusicBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -540,7 +564,7 @@ class BookBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class BookCreate(BookBase, MediaWriteValidation):
+class BookCreate(BookBase, MediaWriteValidation, LibraryTextLimits):
     year: int = Field(..., ge=0, le=9999)
 
 
@@ -583,7 +607,7 @@ class MangaBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class MangaCreate(MangaBase, MediaWriteValidation):
+class MangaCreate(MangaBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -625,7 +649,7 @@ class PodcastBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class PodcastCreate(PodcastBase, MediaWriteValidation):
+class PodcastCreate(PodcastBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -667,7 +691,7 @@ class AudiobookBase(BaseModel):
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class AudiobookCreate(AudiobookBase, MediaWriteValidation):
+class AudiobookCreate(AudiobookBase, MediaWriteValidation, LibraryTextLimits):
     pass
 
 
@@ -769,7 +793,10 @@ class ActivityEntry(BaseModel):
 class ActivityEntryImport(BaseModel):
     category: str
     item_id: Optional[int] = Field(None, ge=1, le=SQL_INTEGER_MAX)
-    title: str = Field(..., min_length=1, max_length=500)
+    # Journal titles copy the library title, which had no limit before text_limits, so a
+    # backup can hold longer ones. The import keeps them (shortening only past the restore
+    # ceiling) instead of refusing the whole file.
+    title: str = Field(..., min_length=1)
     action: str
     note: Optional[str] = Field(None, max_length=500)
     rating: Optional[float] = Field(None, ge=0, le=10)
@@ -813,7 +840,7 @@ class BookImport(BookBase, MediaWriteValidation, LibraryImportAddedAt):
     year: Optional[int] = Field(..., ge=0, le=9999)
 
 
-class VideoGameImport(VideoGameCreate, LibraryImportAddedAt):
+class VideoGameImport(VideoGameBase, MediaWriteValidation, LibraryImportAddedAt):
     pass
 
 
@@ -850,6 +877,7 @@ class ExportData(BaseModel):
     library_tags: List[dict] = Field(default_factory=list, description="Private tags, one entry per tagged title")
     saved_views: List[dict] = Field(default_factory=list, description="Saved shelf views: name and filters")
     game_playtimes: List[dict] = Field(default_factory=list, description="Minutes played per game, from Steam imports")
+    episode_notes: List[dict] = Field(default_factory=list, description="Private episode ratings and notes, one entry per show")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 # Far above any real library, but keeps one request from queueing millions of row writes.
@@ -877,6 +905,7 @@ class ImportData(BaseModel):
     library_tags: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Tags added to matching titles alongside the ones they have")
     saved_views: List[dict] = Field(default_factory=list, max_length=200, description="Saved shelf views, restored when the name is free")
     game_playtimes: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Minutes played per game, restored on games that have none")
+    episode_notes: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Episode ratings and notes, added beside the ones a show already has")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -916,6 +945,9 @@ class ImportResult(BaseModel):
     views_skipped: int = Field(default=0, description="Saved views with a name already in use, over the limit or invalid")
     playtimes_created: int = Field(default=0, description="Games given their backed-up playtime")
     playtimes_skipped: int = Field(default=0, description="Playtime rows with no single matching game, or a game that already has playtime")
+    episode_notes_created: int = Field(default=0, description="Episode ratings and notes restored")
+    episode_notes_skipped: int = Field(default=0, description="Episode entries already saved, unmatched, over the limit or invalid")
+    shortened: int = Field(default=0, description="Titles, names and reviews shortened (or links left out) to fit the length limits")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas
@@ -1337,6 +1369,16 @@ class NextUpItem(BaseModel):
     episode_progress: Optional[dict] = None
     finished: bool = False
     image: Optional[str] = None
+    started_at: Optional[str] = None
+    now_label: Optional[str] = None
+
+
+class NextUpSuggestion(BaseModel):
+    category: str
+    item_id: int
+    title: str
+    category_label: str
+    image: Optional[str] = None
 
 
 class NextUpFinished(BaseModel):
@@ -1451,11 +1493,13 @@ class CompletionMoment(BaseModel):
     # Whether the library entry already has a written review (the finish modal then
     # skips its "share a review" step instead of offering to overwrite it).
     has_review: Optional[bool] = None
+    # The title's discussion board, when its title page exists: {"url", "count"} (Nov 2026).
+    talk: Optional[dict] = None
 
 
 class CompletionReview(BaseModel):
     """A review written from the finish modal, saved onto the finished library entry."""
-    review: str = Field(..., min_length=1, max_length=10000)
+    review: str = Field(..., min_length=1)
     public: bool = False
     spoilers: bool = False
 
@@ -1467,6 +1511,14 @@ class CompletionReview(BaseModel):
             raise ValueError("Write a few words first")
         return value
 
+    @model_validator(mode="after")
+    def review_within_limit(self):
+        # Only ever a new review (an existing one is never replaced from here).
+        message = text_limits.problem("review", self.review)
+        if message:
+            raise ValueError(message)
+        return self
+
 
 # ============================================================================
 # Cross-media Collection Schemas
@@ -1476,6 +1528,7 @@ class CollectionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=80, description="Collection name")
     description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
     cover_url: Optional[str] = Field(None, max_length=1000, description="Optional public collection artwork URL")
+    ranked: bool = Field(False, description="Show the list as a ranking (#1, #2, #3) when shared")
 
     @field_validator("name")
     @classmethod
@@ -1498,6 +1551,7 @@ class CollectionUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     cover_url: Optional[str] = Field(None, max_length=1000)
     is_public: Optional[bool] = None
+    ranked: Optional[bool] = None
 
     _validate_cover_url = field_validator("cover_url")(validate_public_url)
 
@@ -1546,6 +1600,7 @@ class CollectionItem(BaseModel):
 
 class CollectionReadiness(BaseModel):
     share_ready: bool = False
+    link_ready: bool = False
     discover_ready: bool = False
     character_count: int = 0
     word_count: int = 0
@@ -1561,6 +1616,8 @@ class Collection(BaseModel):
     is_public: bool = False
     moderation_status: str = "pending"
     public_url: Optional[str] = None
+    ranked: bool = False
+    link_url: Optional[str] = None
     view_count: int = 0
     helpful_count: int = 0
     report_count: int = 0

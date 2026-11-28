@@ -71,7 +71,8 @@ def test_worker_keeps_push_and_its_static_cache_name():
     assert "navigationPreload.enable()" in source and "event.preloadResponse" in source
     assert "self.addEventListener('push'" in source and "self.addEventListener('notificationclick'" in source
     assert "url.pathname.startsWith('/static/fonts/')" in source
-    assert "VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js'])" in source
+    # /dashboard.css (Nov 15 2026) is the dashboard's stylesheets as one versioned file.
+    assert "VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js', '/dashboard.css'])" in source
 
 
 def test_worker_route_still_serves_and_revalidates(client):

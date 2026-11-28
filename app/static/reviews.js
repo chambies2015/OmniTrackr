@@ -147,8 +147,10 @@ function supporterChip(badge) {
   const chip = reviewText('a', 'supporter-chip', '');
   if (SUPPORTER_ACCENTS.has(badge.accent)) chip.classList.add(`supporter-chip--${badge.accent}`);
   chip.href = '/supporters';
-  const who = badge.founding ? 'Founding supporter of OmniTrackr' : 'Supporting OmniTrackr';
-  chip.title = badge.since ? `${who} on Ko-fi since ${badge.since}` : 'Supports OmniTrackr on Ko-fi';
+  const number = Number.isInteger(badge.number) && badge.number > 0 ? ` #${badge.number}` : '';
+  let who = badge.founding ? 'Founding supporter of OmniTrackr' : 'Supporting OmniTrackr';
+  if (number) who = `${badge.founding ? 'Founding supporter' : 'Supporter'}${number} of OmniTrackr`;
+  chip.title = badge.since ? `${who} on Ko-fi since ${badge.since}` : `${who} on Ko-fi`;
   const heart = reviewText('span', '', '♥');
   heart.setAttribute('aria-hidden', 'true');
   chip.append(heart, ' Supporter');
@@ -239,12 +241,12 @@ function createReviewCard(review) {
   const save = reviewText('a', 'review-save-link', 'Save to my library');
   save.rel = 'nofollow';
   save.href = `/reviews/${encodeURIComponent(review.id)}/save?category=${encodeURIComponent(review.category)}`;
-  save.setAttribute('aria-label', `Save ${review.title} to my library`);
+  save.setAttribute('aria-label', `Save to my library: ${review.title}`);
   actions.appendChild(save);
   if (isStandalone) {
     const read = reviewText('a', 'review-detail-link', 'Read full review');
     read.href = reviewUrl;
-    read.setAttribute('aria-label', `Read the full review of ${review.title}`);
+    read.setAttribute('aria-label', `Read full review of ${review.title}`);
     actions.appendChild(read);
   }
   card.appendChild(actions);

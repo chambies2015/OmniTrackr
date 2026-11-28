@@ -84,6 +84,8 @@ def register(payload: schemas.PasskeyRegistration, request: Request, background_
         raise HTTPException(status_code=400, detail=str(problem))
     if passkeys.find_by_credential_id(db, made["credential_id"]) is not None:
         raise HTTPException(status_code=400, detail="That passkey is already registered. If it isn't on your list, remove it from the device and make a new one.")
+    if not passkeys.consume_challenge(db, challenge):
+        raise HTTPException(status_code=400, detail="That passkey prompt expired. Start again from Add a passkey.")
 
     name = passkeys.clean_name(payload.name) or passkeys.suggested_name(
         made["transports"], made["backed_up"], [row.name for row in rows])

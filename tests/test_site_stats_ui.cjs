@@ -76,7 +76,7 @@ test('the copied report lists the growth features with their numbers', () => {
   const data = sample();
   assert.doesNotMatch(stats.buildReport(data), /Growth features/);
   data.growth = {
-    invites: { links: 9, new_links: 4, signups: 3, friends_made: 2, awaiting_verification: 1 },
+    invites: { links: 9, new_links: 4, signups: 3, friends_made: 2, awaiting_verification: 1, taste_tests: 2 },
     supporters: { active: 5, monthly: 2, all_time: 7, new: 3, payments: 6, unlinked_payments: 1 },
     weekly_email: { subscribers: 30, new: 8 },
     takes: { asked: 11, answered: 4 },
@@ -88,7 +88,8 @@ test('the copied report lists the growth features with their numbers', () => {
   assert.match(report, /- Weekly email: Subscribers \(now\) 30; New opt-ins 8/);
   assert.match(report, /- Ask a friend for their take: Links shared 11; Friends who answered 4/);
   assert.doesNotMatch(report, /undefined|NaN/);
-  assert.equal(stats.growthRows(data.growth).growthInvites.length, 5);
+  assert.equal(stats.growthRows(data.growth).growthInvites.length, 6);
+  assert.match(report, /Links that open on a taste test \(now\) 2/);
 });
 
 test('Ko-fi payments to link read as name, amount, kind and day', () => {
@@ -106,4 +107,17 @@ test('Ko-fi card summary counts what is waiting and says when only the newest ar
   assert.doesNotMatch(one, /newest/);
   assert.match(stats.kofiSummary([{ message_id: 'a' }], 60), /^60 payments came in.*The newest 1 are shown/);
   assert.match(stats.kofiSummary([], 0, 4), /linked to a member.* 4 Ko-fi test payments left out\.$/);
+});
+
+test('remove-account preview says what goes and what stays', () => {
+  const text = stats.removalRowsText({
+    total_rows: 3,
+    rows: [{ label: 'movies', count: 2 }, { label: 'friendships', count: 1 }, { label: 'books', count: 0 }],
+    kept_with_link_cleared: [{ label: 'kofi payments', count: 1 }],
+  });
+  assert.match(text, /^Deletes the account and 3 rows it owns: 2 movies, 1 friendships\./);
+  assert.doesNotMatch(text, /books/);
+  assert.match(text, /1 row elsewhere stays, with the link to this account cleared/);
+  assert.equal(stats.removalRowsText({ total_rows: 0, rows: [], kept_with_link_cleared: [] }),
+    'Deletes the account row only. It owns nothing else.');
 });

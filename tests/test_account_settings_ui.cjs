@@ -40,7 +40,7 @@ function load() {
     clearTimeout() {},
   });
   vm.runInContext(source, context);
-  return { window, el, elements, links, timers };
+  return { window, document, el, elements, links, timers };
 }
 
 test('links like /#settings-privacy name a group; anything else is ignored', () => {
@@ -54,17 +54,48 @@ test('links like /#settings-privacy name a group; anything else is ignored', () 
   assert.equal(groupFromHash('#settings-privacy<script>'), null);
 });
 
-test('jumping to a group marks it in the menu and scrolls only the settings column', () => {
+function classes() {
+  const names = new Set();
+  return {
+    names,
+    add(name) { names.add(name); },
+    toggle(name, on) { if (on) names.add(name); else names.delete(name); },
+    contains(name) { return names.has(name); },
+  };
+}
+
+test('choosing a group shows that section alone, from its top, and marks it in the menu', () => {
   const s = load();
   const scrolls = [];
-  s.el('accountSettingsPanels', { scrollTo: options => scrolls.push(options) });
+  const panels = s.el('accountSettingsPanels', { scrollTo: options => scrolls.push(options), classList: classes() });
   let focused = null;
-  s.el('settings-privacy', { offsetTop: 640, focus: options => { focused = options; } });
+  const profile = s.el('settings-profile', { dataset: { settingsGroup: 'profile' }, classList: classes() });
+  const privacy = s.el('settings-privacy', {
+    dataset: { settingsGroup: 'privacy' }, classList: classes(), focus: options => { focused = options; },
+  });
+  s.document.querySelectorAll = selector => {
+    if (selector === '[data-settings-link]') return s.links;
+    return selector === '[data-settings-group]' ? [profile, privacy] : [];
+  };
   s.window.OmniSettings.showGroup('privacy');
-  assert.deepEqual(scrolls.map(o => ({ ...o })), [{ top: 636, behavior: 'instant' }]);
+  assert.deepEqual(scrolls.map(o => ({ ...o })), [{ top: 0, behavior: 'instant' }]);
   assert.equal(focused.preventScroll, true);
+  assert.ok(privacy.classList.contains('is-current'));
+  assert.ok(!profile.classList.contains('is-current'));
+  assert.ok(panels.classList.contains('account-settings__panels--paged'));
   assert.equal(s.links[1].getAttribute('aria-current'), 'true');
   assert.equal(s.links[0].getAttribute('aria-current'), null);
+});
+
+test('a card in another section brings its section forward before anything scrolls to it', () => {
+  const s = load();
+  s.el('accountSettingsPanels', { classList: classes() });
+  const data = s.el('settings-data', { dataset: { settingsGroup: 'data' }, classList: classes() });
+  s.document.querySelectorAll = selector => (selector === '[data-settings-group]' ? [data] : []);
+  const card = s.el('importStudio', { closest: selector => (selector === '[data-settings-group]' ? data : null) });
+  assert.equal(s.window.OmniSettings.reveal('importStudio'), card);
+  assert.ok(data.classList.contains('is-current'));
+  assert.equal(s.window.OmniSettings.reveal('missing'), null);
 });
 
 test('the saved note shows, hides itself, and is silent when the message is already read out', () => {

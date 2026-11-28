@@ -89,7 +89,7 @@ def test_every_email_has_a_plain_text_part(monkeypatch):
     asyncio.run(email_utils.send_verification_email("x@example.com", "neo", "tok"))
     assert sent["subtype"].value == "plain" and sent["multipart_subtype"].value == "alternative"
     assert "<html" in sent["alternative_body"].lower()
-    assert "Verify Email Address" in sent["body"] and "<a " not in sent["body"]
+    assert "Confirm my email" in sent["body"] and "<a " not in sent["body"]
     assert "token=tok" in sent["body"]  # the link survives as text
 
 

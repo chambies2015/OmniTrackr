@@ -47,47 +47,85 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <script src="/static/visit.js?v=20261030-people-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261031-push-1" as="style">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- iPhone launch screens (scripts/make_app_images.py): the app's colour and icon instead of a white flash. -->
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-640x1136.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-750x1334.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1242x2208.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1125x2436.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/static/splash/launch-828x1792.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1242x2688.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1170x2532.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1284x2778.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1179x2556.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1290x2796.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1206x2622.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1320x2868.png?v=20261118-app-1">
+  <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/static/splash/launch-1260x2736.png?v=20261118-app-1">
+  <script src="/static/pwa.js?v=20261118-app-1" defer></script>
+  <script src="/static/visit.js?v=20261118-search-1" defer></script>
+  <link rel="preload" href="./styles.css?v=20261121-text-limits-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261031-push-1">
+  <link rel="stylesheet" href="./styles.css?v=20261121-text-limits-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
-  <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
-  <link rel="stylesheet" href="/static/app-theme.css?v=20261030-design-1">
+  <link rel="stylesheet" href="/static/episodes.css?v=20261121-sweep-1">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20261114-search-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/library-shelf.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/library-refresh.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
   <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
-  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
+  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261122-streaming-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261030-claim-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261114-profile-1">
+  <link rel="stylesheet" href="/static/app-themes.css?v=20261104-themes-1">
+  <link rel="stylesheet" href="/static/avatar-frames.css?v=20261104-frames-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
+  <link rel="stylesheet" href="/static/statistics.css?v=20261112-stats-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261030-steam-3">
-  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
+  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261121-valentines-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
-  <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
-  <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
+  <link rel="stylesheet" href="/static/friends-feed.css?v=20261118-talk-1">
+  <link rel="stylesheet" href="/static/follows.css?v=20261113-social-1">
+  <link rel="stylesheet" href="/static/find-people.css?v=20261120-find-people-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
-  <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261120-a11y-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261120-widgets-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
-  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
+  <link rel="stylesheet" href="/static/support-ask.css?v=20261123-founding-1">
+  <link rel="stylesheet" href="/static/stay-posted.css?v=20261116-stay-1">
+  <link rel="stylesheet" href="/static/streaming.css?v=20261122-tonight-share-1">
+  <link rel="stylesheet" href="/static/rankings.css?v=20261122-ranked-share-1">
+  <link rel="stylesheet" href="/static/together-home.css?v=20261122-together-1">
+  <link rel="stylesheet" href="/static/break-home.css?v=20261123-break-1">
+  <link rel="stylesheet" href="/static/pick-swap-home.css?v=20261123-swap-1">
+  <link rel="stylesheet" href="/static/yearbook-home.css?v=20261125-yearbook-1">
+  <link rel="stylesheet" href="/static/weekly-preview.css?v=20261118-peek-1">
+  <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
+  <link rel="stylesheet" href="/static/review-inbox.css?v=20261104-review-inbox-1">
+  <link rel="stylesheet" href="/static/share-intake.css?v=20261104-share-1">
+  <link rel="stylesheet" href="/static/install-app.css?v=20261118-app-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261123-friends-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
+  <link rel="stylesheet" href="/static/workspace-2026.css?v=20261117-phone-1">
+  <link rel="stylesheet" href="/static/library-view.css?v=20261120-sweep-1">
+  <link rel="stylesheet" href="/static/member-look.css?v=20261127-sweep-1">
+  <link rel="stylesheet" href="/static/member-phone.css?v=20261123-phone-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
-  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
+  <script src="./preauth.js?v=20261120-settle-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}
+    html.dashboard-settling :is(#homeHero,#homeFocus,#friendRecs,#yearInReviewBanner,#libraryLaunchpad,#returnDeck,.home-board,#movies-tab,#mainFooter){visibility:hidden}
     .dashboard-skeleton{display:none}
     .dashboard-skeleton-anchor{position:relative;height:0}
     html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -333,6 +371,7 @@
 </head>
 
 <body class="dark-mode app-shell" data-active-tab="movies">
+  <script src="/static/app-themes.js?v=20261104-themes-1"></script>
   <a class="skip-link" href="#mainContainer" id="skipToLibrary">Skip to your library</a>
   <div class="account-toolbar" role="region" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
@@ -341,8 +380,8 @@
     <span>Friends</span>
   </button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
-  <button id="notificationBell" class="notification-bell" aria-label="View notifications">
-    🔔
+  <button id="notificationBell" class="notification-bell" type="button" aria-label="View notifications">
+    <span aria-hidden="true">🔔</span>
     <span id="notificationDot" class="notification-dot" style="display: none;"></span>
   </button>
   <div id="notificationDropdown" class="notification-dropdown" style="display: none;">
@@ -362,10 +401,10 @@
       <form id="pushSettings" class="push-settings" aria-label="Notification settings" hidden></form>
     </div>
   </div>
-  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
-    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile"
+  <button id="userDisplay" class="user-display-btn" type="button">
+    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt=""
       data-fallback-src="/static/default-avatar.svg">
-    <span id="userDisplayText"></span>
+    <span class="sr-only">Account settings, </span><span id="userDisplayText"></span>
   </button>
   <a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>Site stats</a>
   <button type="button" id="installAppBtn" class="site-stats-link install-app-btn" hidden>Install app</button>
@@ -373,14 +412,30 @@
   </div>
 
   <dialog id="installAppDialog" class="install-app-dialog" aria-labelledby="installAppDialogTitle">
-    <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
-    <ol>
-      <li>Tap the <strong>Share</strong> button in Safari.</li>
-      <li>Choose <strong>Add to Home Screen</strong>.</li>
-      <li>Tap <strong>Add</strong>. OmniTrackr then opens full screen from its own icon.</li>
-    </ol>
-    <button id="installAppDialogClose" class="action-btn" type="button">Got it</button>
+    <div class="install-app-dialog__head">
+      <img src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="44" height="44" loading="lazy" decoding="async">
+      <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
+    </div>
+    <!--INSTALL_STEPS-->
+    <p class="install-app-dialog__why">It opens full screen from its own icon, starts faster, and on iPhone it can show the notifications you turn on from the bell.</p>
+    <div class="install-app-dialog__actions">
+      <button id="installAppDialogClose" class="action-btn" type="button" autofocus>Got it</button>
+      <a class="install-app-dialog__more" href="/app">More about the app</a>
+    </div>
   </dialog>
+
+  <!-- Phones: on a return visit, a short note at the bottom offers the app (static/pwa.js decides when). -->
+  <aside id="installAppSheet" class="install-sheet" aria-labelledby="installAppSheetTitle" hidden>
+    <img class="install-sheet__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="44" height="44" loading="lazy" decoding="async">
+    <div class="install-sheet__copy">
+      <h2 id="installAppSheetTitle">Put OmniTrackr on your home screen</h2>
+      <p id="installAppSheetSummary">One tap opens your library full screen, without the browser around it.</p>
+    </div>
+    <div class="install-sheet__actions">
+      <button id="installAppSheetInstall" type="button" class="action-btn">Install app</button>
+      <button id="installAppSheetDismiss" type="button" class="install-sheet__dismiss">Not now</button>
+    </div>
+  </aside>
 
   <!-- Friends panel overlays the workspace without changing its layout. -->
   <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
@@ -405,10 +460,10 @@
         <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
       </div>
       <div class="library-search" role="search">
-        <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
+        <label class="sr-only" for="librarySearchInput">Search your library, add titles or jump to a page</label>
         <div class="library-search__field">
           <span aria-hidden="true">⌕</span>
-          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Find anything in your library…" role="combobox" aria-autocomplete="list" aria-controls="librarySearchResults" aria-expanded="false">
+          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Search your library or add something new…" role="combobox" aria-autocomplete="list" aria-controls="librarySearchResults" aria-expanded="false">
           <kbd aria-hidden="true">Ctrl K</kbd>
         </div>
         <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
@@ -436,10 +491,12 @@
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="for-you">For you</button>
         <button class="tab" data-switch-tab="friends-feed">Friends feed<span id="friendsFeedDot" class="ffeed-dot" hidden><span class="sr-only"> (new updates)</span></span></button>
         <button class="tab" data-switch-tab="activity">Journal</button>
         <button class="tab" data-switch-tab="recommendations">Postcards</button>
         <button class="tab" data-switch-tab="collections">Collections</button>
+        <button class="tab" data-switch-tab="rankings">Rankings</button>
         <button class="tab" data-switch-tab="statistics">Statistics</button>
         <div id="customTabsContainer"></div>
         <button class="tab library-nav__manage" id="manageCustomTabsBtn" data-action="show-custom-tab-manager">Manage custom tabs</button>
@@ -462,6 +519,52 @@
       </div>
     </div>
 
+    <section id="homeHero" class="home-hero" aria-labelledby="homeHeroTitle" hidden>
+      <div class="home-hero__copy">
+        <p id="homeHeroDate" class="home-hero__date"></p>
+        <h2 id="homeHeroTitle" class="home-hero__title">Welcome back</h2>
+        <p id="homeHeroSummary" class="home-hero__summary"></p>
+        <p id="homeHeroNews" class="home-hero__news" hidden></p>
+        <dl id="homeHeroStats" class="home-hero__stats"></dl>
+        <div id="homeHeroMix" class="home-hero__mix" role="img" hidden></div>
+      </div>
+      <div id="homeHeroCovers" class="home-hero__covers" role="group" aria-label="Recently added" hidden></div>
+    </section>
+
+    <!-- Do this next: the first title from Continue (or the top of Next Up when nothing is on the go), with the
+         button that moves it forward. Continue lists the rest, so it isn't shown twice (home-layout.js). -->
+    <section id="homeFocus" class="home-focus" aria-labelledby="homeFocusTitle" hidden>
+      <span id="homeFocusCover" class="home-focus__cover" aria-hidden="true"></span>
+      <div class="home-focus__copy">
+        <p id="homeFocusEyebrow" class="home-focus__eyebrow">Pick up where you left off</p>
+        <h2 id="homeFocusTitle" class="home-focus__title"></h2>
+        <p id="homeFocusMeta" class="home-focus__meta"></p>
+        <div id="homeFocusProgress" class="home-focus__progress"></div>
+      </div>
+      <div id="homeFocusActions" class="home-focus__actions"></div>
+    </section>
+
+    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
+      <div class="return-deck__header">
+        <div>
+          <p class="return-deck__eyebrow">Welcome back</p>
+          <h2 id="returnDeckTitle">Pick up where you left off</h2>
+          <p id="returnDeckSummary" class="return-deck__summary"></p>
+        </div>
+        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
+      </div>
+      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckReleased" class="return-deck__released" hidden></div>
+      <div id="returnDeckRecap" class="return-deck__recap"></div>
+    </section>
+    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
+      <div>
+        <p class="recap-banner__eyebrow">Year in Review</p>
+        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
+        <p id="yearInReviewBannerText">Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
+      </div>
+      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
+    </section>
     <section id="friendRecs" class="friend-recs" aria-labelledby="friendRecsTitle" hidden>
       <div class="friend-recs__header">
         <div>
@@ -473,14 +576,13 @@
       </div>
       <ul id="friendRecsItems" class="friend-recs__items" aria-live="polite"></ul>
     </section>
-
     <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
       <div class="for-you-card__head">
         <div>
           <p class="for-you-card__eyebrow">Quick start</p>
           <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
           <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
-          <p class="starter-picks__quiz"><a href="/start">Go one title at a time</a>: seen it, want to or skip, in any of nine formats. Or <a href="/taste-quiz">take the 1-minute taste quiz</a> and get picks chosen for you.</p>
+          <p class="starter-picks__quiz"><a href="/start">Tap through a wall of posters</a> in any of nine formats, one tap per title. Or <a href="/taste-quiz">take the 1-minute taste quiz</a> and get picks chosen for you.</p>
         </div>
         <div class="for-you-card__side">
           <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
@@ -495,45 +597,12 @@
         <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
         <div class="weekly-invite__actions">
           <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
-          <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
+          <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See the whole email</a>
           <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
         </div>
+        <div class="wk-peek-host" data-weekly-preview="for_you" data-weekly-actions="copy"></div>
       </div>
     </section>
-
-    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
-      <div>
-        <p class="recap-banner__eyebrow">Year in Review</p>
-        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
-        <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
-      </div>
-      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
-    </section>
-
-    <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
-      <div class="year-so-far__head">
-        <div>
-          <p class="year-so-far__eyebrow">Year in Review preview</p>
-          <h2 id="yearSoFarTitle">Your year so far</h2>
-        </div>
-        <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
-      </div>
-      <dl class="year-so-far__stats">
-        <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
-        <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
-        <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
-      </dl>
-      <div class="year-so-far__meter-row">
-        <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
-        <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
-      </div>
-      <p id="yearSoFarHint" class="year-so-far__hint"></p>
-      <div class="year-so-far__foot">
-        <p id="yearSoFarNote" class="year-so-far__note"></p>
-        <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
-      </div>
-    </section>
-
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
       <div class="library-launchpad__copy">
         <p class="library-launchpad__eyebrow">Your library, your pace</p>
@@ -555,25 +624,50 @@
       </div>
     </section>
 
-
-    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
-      <div class="return-deck__header">
-        <div>
-          <p class="return-deck__eyebrow">Welcome back</p>
-          <h2 id="returnDeckTitle">Pick up where you left off</h2>
-          <p id="returnDeckSummary" class="return-deck__summary"></p>
-        </div>
-        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
-      </div>
-      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
-      <div id="returnDeckReleased" class="return-deck__released" hidden></div>
-      <div id="returnDeckRecap" class="return-deck__recap"></div>
-    </section>
-
     <!-- Home board: daily cards and badges in the main column, goals and extras in the rail.
          The rail turns into a swipeable row on phones (dashboard-home.css). -->
     <div class="home-board">
       <div class="home-board__main">
+        <!-- The main column runs in three groups, each under a small label: what the member is in the middle of,
+             what they share with friends, and everything else. home-layout.js lets each group show its first few
+             cards (the rest wait behind "Show more") and hides a label while none of its cards are on show.
+             A new card goes inside the group it belongs to; the labels are not cards (home refresh, Nov 27 2026). -->
+        <p class="home-board__group" data-home-group="going" hidden>Keep going</p>
+        <!-- A new member's first seven days: their week of episodes and releases, shows airing now, one reminder (week-one.js) -->
+        <section id="weekOne" class="week-one" aria-labelledby="weekOneTitle" hidden>
+          <div class="week-one__head">
+            <div>
+              <p id="weekOneEyebrow" class="week-one__eyebrow">Your first week</p>
+              <h2 id="weekOneTitle" class="week-one__title">Your week</h2>
+              <p id="weekOneSummary" class="week-one__summary"></p>
+            </div>
+            <ol id="weekOneDots" class="week-one__dots" aria-label="Days of your first week"></ol>
+          </div>
+          <ol id="weekOneDays" class="week-one__days" aria-label="This week, day by day" hidden></ol>
+          <div id="weekOneSuggest" class="week-one__suggest" hidden>
+            <h3 id="weekOneSuggestTitle" class="week-one__subhead">Watching something right now?</h3>
+            <p class="week-one__hint">Shows members follow that have a new episode this week. Save the ones you're watching and their episodes show up here, day by day.</p>
+            <ul id="weekOneSuggestList" class="week-one__picks" aria-labelledby="weekOneSuggestTitle"></ul>
+            <button type="button" class="week-one__link" data-action="open-quick-capture">Search for another show</button>
+          </div>
+          <div id="weekOneReleases" class="week-one__suggest" hidden>
+            <h3 id="weekOneReleasesTitle" class="week-one__subhead">Out this week</h3>
+            <p class="week-one__hint">New movies, games and premieres coming out in the next seven days. Save one and its release day goes on your week.</p>
+            <ul id="weekOneReleaseList" class="week-one__picks" aria-labelledby="weekOneReleasesTitle"></ul>
+          </div>
+          <div id="weekOneRemind" class="week-one__remind" hidden>
+            <p id="weekOneRemindText" class="week-one__remind-text"></p>
+            <div class="week-one__remind-actions">
+              <button type="button" id="weekOneEmail" class="week-one__btn week-one__btn--primary" hidden></button>
+              <button type="button" id="weekOnePush" class="week-one__btn" hidden>Notify me on this device</button>
+              <button type="button" id="weekOneCancel" class="week-one__quiet" hidden>Cancel the reminder</button>
+            </div>
+          </div>
+          <p id="weekOneStatus" class="week-one__status" role="status" aria-live="polite"></p>
+          <div class="week-one__foot">
+            <button type="button" id="weekOneHide" class="week-one__quiet">Hide this card</button>
+          </div>
+        </section>
         <div class="daily-dashboard">
         <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
           <div class="library-pulse__header">
@@ -621,19 +715,43 @@
           </div>
         </section>
         </div>
-
-        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
-          <div class="on-this-day__head">
-            <div>
-              <p class="on-this-day__eyebrow">On this day</p>
-              <h2 id="onThisDayTitle">From your past</h2>
+        <!-- Break planner: before a holiday it offers to plan the days off; with a plan it shows today's part of
+             it with ticks, and after the break how it went (break-home.js, app/break_plan.py). -->
+        <section id="breakHome" class="break-home" aria-labelledby="breakHomeTitle" hidden>
+          <div class="break-home__head">
+            <div class="break-home__intro">
+              <p id="breakHomeEyebrow" class="break-home__eyebrow">Break planner</p>
+              <h2 id="breakHomeTitle" class="break-home__title">Plan your break</h2>
+              <p id="breakHomeSummary" class="break-home__summary"></p>
             </div>
-            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
+            <a id="breakHomeMore" class="break-home__more" href="/break">Open the plan</a>
           </div>
-          <ul id="onThisDayList" class="on-this-day__list"></ul>
-          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
+          <ul id="breakHomeList" class="break-home__list" aria-live="polite"></ul>
+          <div id="breakHomeActions" class="break-home__actions"></div>
+          <p id="breakHomeStatus" class="break-home__status" role="status" aria-live="polite"></p>
         </section>
-
+        <!-- What's new since this device last showed home: episodes, releases, friends (home-today.js) -->
+        <section id="homeNews" class="home-news" aria-labelledby="homeNewsTitle" hidden>
+          <div class="home-news__head">
+            <div>
+              <p id="homeNewsEyebrow" class="home-news__eyebrow">This week</p>
+              <h2 id="homeNewsTitle">What's new</h2>
+              <p id="homeNewsSummary" class="home-news__summary"></p>
+            </div>
+          </div>
+          <div class="home-news__grid">
+            <div id="homeNewsShows" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Your shows</h3>
+              <ul id="homeNewsShowList" class="home-news__list"></ul>
+            </div>
+            <div id="homeNewsFriends" class="home-news__col" hidden>
+              <h3 class="home-news__subhead">Friends</h3>
+              <ul id="homeNewsFriendList" class="home-news__list"></ul>
+              <button id="homeNewsFriendsMore" type="button" class="home-news__link" data-switch-tab="friends-feed" hidden>Open the friends feed</button>
+            </div>
+          </div>
+          <p id="homeNewsStatus" class="home-news__status" role="status" aria-live="polite"></p>
+        </section>
         <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
           <div class="next-up-queue__header">
             <div>
@@ -643,12 +761,217 @@
             <div class="next-up-queue__actions">
               <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
               <a class="next-up-queue__toggle next-up-queue__poll" href="/tonight">Let friends vote</a>
+              <a class="next-up-queue__toggle next-up-queue__poll" href="/together">Watch with friends</a>
               <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
             </div>
           </div>
+          <div id="nextUpQueueFilters" class="next-up-queue__filters" role="group" aria-label="Show in Next Up" hidden></div>
           <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+          <p id="nextUpQueueStatus" class="sr-only" role="status" aria-live="polite"></p>
+          <div id="nextUpQueueSuggest" class="next-up-queue__suggest" hidden>
+            <h3 id="nextUpQueueSuggestTitle" class="next-up-queue__suggest-title">Line up more from your library</h3>
+            <ul id="nextUpQueueSuggestList" class="next-up-queue__suggest-list" aria-labelledby="nextUpQueueSuggestTitle"></ul>
+          </div>
         </section>
-
+        <!-- Your week: days logged Monday to Sunday, a pace the member picks, kept weeks in a row (your-week.js) -->
+        <section id="yourWeek" class="your-week" aria-labelledby="yourWeekTitle" hidden>
+          <div id="yourWeekRecap" class="your-week__recap" hidden>
+            <div class="your-week__recap-copy">
+              <p id="yourWeekRecapEyebrow" class="your-week__eyebrow">Last week</p>
+              <p id="yourWeekRecapTitle" class="your-week__recap-title"></p>
+              <p id="yourWeekRecapSummary" class="your-week__recap-summary"></p>
+            </div>
+            <ul id="yourWeekRecapCovers" class="your-week__covers" aria-label="Finished last week" hidden></ul>
+            <button type="button" id="yourWeekRecapDone" class="your-week__btn your-week__btn--primary">On to this week</button>
+          </div>
+          <div class="your-week__top">
+            <div class="your-week__copy">
+              <p id="yourWeekEyebrow" class="your-week__eyebrow">Your week</p>
+              <h2 id="yourWeekTitle" class="your-week__title">Your week</h2>
+              <p id="yourWeekSummary" class="your-week__summary"></p>
+            </div>
+            <div id="yourWeekRun" class="your-week__run">
+              <p id="yourWeekRunNumber" class="your-week__run-number" hidden></p>
+              <p id="yourWeekRunLabel" class="your-week__run-label"></p>
+              <ol id="yourWeekHistory" class="your-week__history" aria-label="The last eight weeks"></ol>
+            </div>
+          </div>
+          <ol id="yourWeekDays" class="your-week__days" aria-label="This week, Monday to Sunday"></ol>
+          <div id="yourWeekTouched" class="your-week__touched" hidden>
+            <p class="your-week__subhead">So far this week</p>
+            <ul id="yourWeekTouchedList" class="your-week__covers" aria-label="What you logged this week"></ul>
+          </div>
+          <div id="yourWeekPaces" class="your-week__paces" hidden>
+            <p id="yourWeekPacesTitle" class="your-week__subhead">Pick a pace</p>
+            <div id="yourWeekPaceList" class="your-week__pace-list" role="group" aria-labelledby="yourWeekPacesTitle"></div>
+            <p class="your-week__hint">Moving a show or book forward, finishing, rating, adding a title and journal notes all count. Change it whenever you like.</p>
+          </div>
+          <div id="yourWeekNudge" class="your-week__nudge" hidden>
+            <p id="yourWeekNudgeText" class="your-week__nudge-text"></p>
+            <div class="your-week__nudge-actions">
+              <button type="button" id="yourWeekEmail" class="your-week__btn" hidden>Email me on Sundays</button>
+              <button type="button" id="yourWeekPush" class="your-week__btn" hidden>Notify this device</button>
+              <button type="button" id="yourWeekNudgeOff" class="your-week__quiet" hidden>Turn the nudge off</button>
+            </div>
+          </div>
+          <p id="yourWeekStatus" class="your-week__status" role="status" aria-live="polite"></p>
+          <div class="your-week__foot">
+            <button type="button" id="yourWeekChange" class="your-week__quiet" aria-controls="yourWeekPaces" aria-expanded="false" hidden>Change pace</button>
+            <button type="button" id="yourWeekRest" class="your-week__quiet" hidden>Take this week off</button>
+            <button type="button" id="yourWeekUnrest" class="your-week__quiet" hidden>Count this week after all</button>
+            <button type="button" id="yourWeekStop" class="your-week__quiet" hidden>Stop keeping count</button>
+            <button type="button" id="yourWeekHide" class="your-week__quiet">Hide this card</button>
+          </div>
+        </section>
+        <!-- Draw from your backlog: deal three titles saved and never started, keep one, give it a night (backlog-draw.js) -->
+        <section id="backlogDraw" class="backlog-draw" aria-labelledby="backlogDrawTitle" hidden>
+          <div class="backlog-draw__head">
+            <div>
+              <p id="backlogDrawEyebrow" class="backlog-draw__eyebrow">From your backlog</p>
+              <h2 id="backlogDrawTitle" class="backlog-draw__title">Draw your next one</h2>
+              <p id="backlogDrawSummary" class="backlog-draw__summary"></p>
+            </div>
+            <button type="button" id="backlogDrawHide" class="backlog-draw__quiet" hidden>Hide for now</button>
+          </div>
+          <div id="backlogDrawBody" class="backlog-draw__body" aria-live="polite"></div>
+          <p id="backlogDrawStatus" class="backlog-draw__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Rankings: "which did you like more?" about two finished titles, so they fall into order (rankings.js) -->
+        <section id="rankDuel" class="rank-card" aria-labelledby="rankDuelTitle" hidden>
+          <div class="rank-card__head">
+            <div>
+              <p id="rankDuelEyebrow" class="rank-card__eyebrow">Rankings</p>
+              <h2 id="rankDuelTitle" class="rank-card__title">Which did you like more?</h2>
+              <p id="rankDuelSummary" class="rank-card__summary"></p>
+            </div>
+            <button type="button" id="rankDuelHide" class="rank-quiet">Hide for now</button>
+          </div>
+          <div id="rankDuelBody" class="rank-card__body"></div>
+          <p id="rankDuelStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <p class="home-board__group" data-home-group="friends" hidden>With friends</p>
+        <!-- Watch together: plans the member shares with friends, where everyone is this week, and a button
+             that moves them one episode or chapter on (together-home.js). Only shown with a plan running. -->
+        <section id="togetherHome" class="together-home" aria-labelledby="togetherHomeTitle" hidden>
+          <div class="together-home__head">
+            <div class="together-home__intro">
+              <p class="together-home__eyebrow">Watch together</p>
+              <h2 id="togetherHomeTitle" class="together-home__title">With friends this week</h2>
+            </div>
+            <a class="together-home__more" href="/together">All plans</a>
+          </div>
+          <ul id="togetherHomeList" class="together-home__list" aria-live="polite"></ul>
+          <p id="togetherHomeStatus" class="together-home__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Pick swap: swaps the member is in, where each one stands and the next thing to do: invite people,
+             pick for the person they drew, unwrap (pick-swap-home.js). Only shown while they're in one. -->
+        <section id="swapHome" class="swap-home" aria-labelledby="swapHomeTitle" hidden>
+          <div class="swap-home__head">
+            <div class="swap-home__intro">
+              <p class="swap-home__eyebrow">Pick swap</p>
+              <h2 id="swapHomeTitle" class="swap-home__title">Your swaps</h2>
+            </div>
+            <a class="swap-home__more" href="/swap">All swaps</a>
+          </div>
+          <ul id="swapHomeList" class="swap-home__list" aria-live="polite"></ul>
+        </section>
+        <!-- Yearbook: from late November until two weeks after signing closes. Start yours, notes waiting to be
+             let in, friends' yearbooks to sign, then the closed book in January (yearbook-home.js). -->
+        <section id="yearbookHome" class="yearbook-home" aria-labelledby="yearbookHomeTitle" hidden>
+          <div class="yearbook-home__head">
+            <div class="yearbook-home__intro">
+              <p class="yearbook-home__eyebrow">Yearbook</p>
+              <h2 id="yearbookHomeTitle" class="yearbook-home__title">Your yearbook</h2>
+            </div>
+            <span class="yearbook-home__badge" aria-hidden="true">Class<span>of '26</span></span>
+          </div>
+          <p id="yearbookHomeLine" class="yearbook-home__line"></p>
+          <ul id="yearbookHomeCounts" class="yearbook-home__counts" hidden></ul>
+          <div id="yearbookHomeActions" class="yearbook-home__actions"></div>
+          <div id="yearbookHomeFriends" class="yearbook-home__friends" hidden></div>
+        </section>
+        <p class="home-board__group" data-home-group="more" hidden>More for you</p>
+        <!-- On your services: films, shows and anime on the member's list that stream on services they picked,
+             newest arrivals first. Asks which services once, then lists them (streaming.js). -->
+        <section id="onYourServices" class="on-services" aria-labelledby="onYourServicesTitle" hidden>
+          <div class="on-services__head">
+            <div class="on-services__intro">
+              <p id="onYourServicesEyebrow" class="on-services__eyebrow">Streaming tonight</p>
+              <h2 id="onYourServicesTitle" class="on-services__title">On your services</h2>
+              <p id="onYourServicesSummary" class="on-services__summary"></p>
+            </div>
+            <button type="button" id="onYourServicesEdit" class="on-services__edit" aria-expanded="false" aria-controls="onYourServicesPicker" hidden>Edit services</button>
+          </div>
+          <form id="onYourServicesPicker" class="on-services__picker" hidden>
+            <fieldset class="on-services__group">
+              <legend>Subscriptions</legend>
+              <div class="on-services__chips" data-services="paid"></div>
+            </fieldset>
+            <fieldset class="on-services__group">
+              <legend>Free with ads or a library card</legend>
+              <div class="on-services__chips" data-services="free"></div>
+            </fieldset>
+            <label class="on-services__alerts">
+              <input type="checkbox" id="onYourServicesAlerts" checked>
+              <span>Tell me when something on my list starts streaming on one of these</span>
+            </label>
+            <div class="on-services__actions">
+              <button type="submit" id="onYourServicesSave" class="on-services__btn on-services__btn--primary">Show what I can watch</button>
+              <button type="button" id="onYourServicesCancel" class="on-services__quiet" hidden>Cancel</button>
+            </div>
+            <p id="onYourServicesPrivacy" class="on-services__privacy">Only you can see which services you pick.</p>
+          </form>
+          <div id="onYourServicesFilters" class="on-services__filters" role="group" aria-label="Show titles on" hidden></div>
+          <ul id="onYourServicesList" class="on-services__list" hidden></ul>
+          <p id="onYourServicesEmpty" class="on-services__empty" hidden></p>
+          <button type="button" id="onYourServicesMore" class="on-services__more" aria-controls="onYourServicesList" aria-expanded="false" hidden></button>
+          <!-- Share link for this list, /on-my-services/<token> (streaming.js, app/service_shares.py) -->
+          <div id="onYourServicesShare" class="on-services__share" hidden></div>
+          <div class="on-services__foot">
+            <p id="onYourServicesCredit" class="on-services__credit"></p>
+            <div class="on-services__foot-actions">
+              <button type="button" id="onYourServicesLater" class="on-services__quiet" hidden>Not now</button>
+              <button type="button" id="onYourServicesStop" class="on-services__quiet" hidden>No thanks</button>
+              <button type="button" id="onYourServicesHide" class="on-services__quiet" hidden>Hide this card</button>
+            </div>
+          </div>
+          <p id="onYourServicesStatus" class="on-services__status" role="status" aria-live="polite"></p>
+        </section>
+        <!-- Offered once in a while to members with no weekly email, notifications or calendar yet (stay-posted.js) -->
+        <section id="stayPosted" class="stay-posted" aria-labelledby="stayPostedTitle" hidden>
+          <div class="stay-posted__head">
+            <p id="stayPostedEyebrow" class="stay-posted__eyebrow">Stay posted</p>
+            <h2 id="stayPostedTitle" class="stay-posted__title"></h2>
+            <p id="stayPostedBody" class="stay-posted__body"></p>
+          </div>
+          <ul id="stayPostedItems" class="stay-posted__items" hidden></ul>
+          <div class="stay-posted__options" role="group" aria-label="Ways to hear about it">
+            <div class="stay-posted__option" data-channel="push" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="push">Notify me on this device</button>
+              <p class="stay-posted__hint">A notification on the day an episode or release is out, even with OmniTrackr closed.</p>
+            </div>
+            <div class="stay-posted__option" data-channel="email" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="email">Send me the weekly email</button>
+              <p class="stay-posted__hint">One email a week, only when there's news. <a id="stayPostedSample" href="/email/weekly/preview" target="_blank" rel="noopener" aria-controls="stayPostedPeek" aria-expanded="false">See what yours would say</a></p>
+            </div>
+            <div class="stay-posted__option" data-channel="calendar" hidden>
+              <button type="button" class="stay-posted__btn" data-stay-channel="calendar">Add to my calendar</button>
+              <p class="stay-posted__hint">Episodes and release days in Google, Apple or Outlook Calendar.</p>
+              <p id="stayPostedCalendarLinks" class="stay-posted__links" hidden>
+                <a id="stayPostedGoogle" href="#" target="_blank" rel="noopener noreferrer">Google Calendar</a>
+                <a id="stayPostedApple" href="#">Apple Calendar</a>
+                <a id="stayPostedOutlook" href="#" target="_blank" rel="noopener noreferrer">Outlook</a>
+                <button id="stayPostedCopy" type="button" class="stay-posted__copy">Copy address</button>
+              </p>
+            </div>
+          </div>
+          <div id="stayPostedPeek" class="wk-peek-host stay-posted__peek" data-weekly-preview="home_card" data-weekly-actions="copy" hidden></div>
+          <div class="stay-posted__foot">
+            <button id="stayPostedLater" type="button" class="stay-posted__quiet">Not now</button>
+            <button id="stayPostedStop" type="button" class="stay-posted__quiet">Don't ask again</button>
+          </div>
+          <p id="stayPostedStatus" class="stay-posted__status" role="status" aria-live="polite"></p>
+        </section>
         <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
           <div class="for-you-card__head">
             <div>
@@ -686,14 +1009,55 @@
             <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
             <div class="weekly-invite__actions">
               <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
-              <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
+              <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See the whole email</a>
               <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
             </div>
+            <div class="wk-peek-host" data-weekly-preview="for_you" data-weekly-actions="copy"></div>
           </div>
           <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
           <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
         </section>
-
+        <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">From members with your taste</p>
+              <h2 id="picksTeaserTitle">Picked for you</h2>
+              <p class="for-you-card__summary">Titles you haven't saved yet, chosen from what you rate highly.</p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" class="action-btn" data-switch-tab="for-you">See all picks</button>
+              <button type="button" id="picksTeaserHide" class="for-you-card__dismiss">Hide from home</button>
+            </div>
+          </div>
+          <div id="picksTeaserList" class="for-you-grid for-you-grid--wide"></div>
+        </section>
+        <!-- Share your reviews: private reviews that would show on title pages (review-inbox.js) -->
+        <section id="reviewInbox" class="for-you-card review-inbox" aria-labelledby="reviewInboxTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">Only you can see these</p>
+              <h2 id="reviewInboxTitle">Share your reviews</h2>
+              <p id="reviewInboxSummary" class="for-you-card__summary"></p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" id="reviewInboxHide" class="for-you-card__dismiss">Hide for now</button>
+            </div>
+          </div>
+          <ol id="reviewInboxList" class="review-inbox__list" aria-live="polite"></ol>
+          <button type="button" id="reviewInboxMore" class="review-inbox__more" aria-controls="reviewInboxList" hidden></button>
+          <p class="review-inbox__note">A shared review shows on its title's page and under <a href="/reviews">Reviews</a> with your username and rating. You can make it private again from the title in your library. Reviews you import from other sites always start private.</p>
+        </section>
+        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
+          <div class="on-this-day__head">
+            <div>
+              <p class="on-this-day__eyebrow">On this day</p>
+              <h2 id="onThisDayTitle">From your past</h2>
+            </div>
+            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
+          </div>
+          <ul id="onThisDayList" class="on-this-day__list"></ul>
+          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
+        </section>
         <section id="badgeCase" class="badge-case" aria-labelledby="badgeCaseTitle" hidden>
           <div class="badge-case__header">
             <div>
@@ -715,19 +1079,22 @@
       </div>
 
       <aside class="home-board__rail" aria-labelledby="homeBoardRailTitle">
-        <p id="homeBoardRailTitle" class="home-board__rail-title">Goals and extras</p>
+        <p id="homeBoardRailTitle" class="home-board__rail-title">This season</p>
         <div class="home-board__rail-cards">
-          <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
-            <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
-            <h2 id="seasonCardTitle">The seasonal hub is open</h2>
-            <p id="seasonCardSummary" class="season-card__summary"></p>
-            <nav id="seasonCardShelves" class="season-card__shelves" aria-label="Shelves"></nav>
-            <div class="season-card__actions">
-              <a id="seasonCardOpen" class="season-card__open" href="/halloween">Open the hub</a>
-              <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
+          <section id="adventCard" class="year-goals ny-pledge-card advent-card" aria-labelledby="adventCardTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="adventCardEyebrow" class="year-goals__eyebrow">Advent calendar</p>
+                <h2 id="adventCardTitle">Today's door is open</h2>
+                <p id="adventCardSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <ol id="adventCardDoors" class="advent-card__doors" aria-hidden="true"></ol>
+            <div class="year-goals__footer">
+              <a id="adventCardLink" class="action-btn ny-pledge-card__link" href="/holidays/advent-calendar">Open today's door</a>
+              <button id="adventCardDismiss" type="button" class="year-goals__dismiss">Hide</button>
             </div>
           </section>
-
           <section id="monthlyChallenge" class="month-challenge" aria-labelledby="monthlyChallengeTitle" hidden>
             <div class="month-challenge__header">
               <p id="monthlyChallengeEyebrow" class="month-challenge__eyebrow">Monthly challenge</p>
@@ -744,7 +1111,19 @@
               <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
             </div>
           </section>
-
+          <section id="newYearPledge" class="year-goals ny-pledge-card" aria-labelledby="newYearPledgeTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="newYearPledgeEyebrow" class="year-goals__eyebrow">New Year challenge</p>
+                <h2 id="newYearPledgeTitle">Pick what you'll finish next year</h2>
+                <p id="newYearPledgeSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <div class="year-goals__footer">
+              <a id="newYearPledgeLink" class="action-btn ny-pledge-card__link" href="/new-year-challenge">Make your pledge</a>
+              <button id="newYearPledgeDismiss" type="button" class="year-goals__dismiss">Hide</button>
+            </div>
+          </section>
           <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
             <div class="year-goals__header">
               <div>
@@ -763,7 +1142,71 @@
               <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
             </div>
           </section>
-
+          <section id="awardsBallot" class="year-goals ny-pledge-card" aria-labelledby="awardsBallotTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p id="awardsBallotEyebrow" class="year-goals__eyebrow">Awards season</p>
+                <h2 id="awardsBallotTitle">Pick the winners</h2>
+                <p id="awardsBallotSummary" class="year-goals__summary"></p>
+              </div>
+            </div>
+            <div class="year-goals__footer">
+              <a id="awardsBallotLink" class="action-btn ny-pledge-card__link" href="/awards">Fill in your ballot</a>
+              <button id="awardsBallotDismiss" type="button" class="year-goals__dismiss">Hide</button>
+            </div>
+          </section>
+          <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
+            <div class="year-so-far__head">
+              <div>
+                <p class="year-so-far__eyebrow">Year in Review preview</p>
+                <h2 id="yearSoFarTitle">Your year so far</h2>
+              </div>
+              <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
+            </div>
+            <dl class="year-so-far__stats">
+              <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
+              <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
+              <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
+            </dl>
+            <div class="year-so-far__meter-row">
+              <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
+              <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
+            </div>
+            <p id="yearSoFarHint" class="year-so-far__hint"></p>
+            <div class="year-so-far__foot">
+              <p id="yearSoFarNote" class="year-so-far__note"></p>
+              <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
+            </div>
+          </section>
+          <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
+            <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
+            <h2 id="seasonCardTitle">The seasonal hub is open</h2>
+            <p id="seasonCardSummary" class="season-card__summary"></p>
+            <nav id="seasonCardShelves" class="season-card__shelves" aria-label="Shelves"></nav>
+            <div class="season-card__actions">
+              <a id="seasonCardOpen" class="season-card__open" href="/halloween">Open the hub</a>
+              <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
+            </div>
+          </section>
+          <section id="supportAsk" class="support-ask" aria-labelledby="supportAskTitle" hidden>
+            <p id="supportAskEyebrow" class="support-ask__eyebrow"></p>
+            <h2 id="supportAskTitle" class="support-ask__title"></h2>
+            <p id="supportAskBody" class="support-ask__body"></p>
+            <div id="supportAskGoal" class="support-ask__goal" hidden>
+              <span class="support-ask__meter" aria-hidden="true"><span id="supportAskFill" class="support-ask__fill"></span></span>
+              <span id="supportAskGoalText" class="support-ask__goal-text"></span>
+            </div>
+            <div class="support-ask__actions">
+              <a id="supportAskKofi" class="action-btn support-ask__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Buy a $3 coffee ↗</a>
+              <a id="supportAskPerks" class="support-ask__link" href="/supporters?from=ask">What supporters get</a>
+            </div>
+            <p id="supportAskNote" class="support-ask__note"></p>
+            <div class="support-ask__foot">
+              <button id="supportAskLater" type="button" class="support-ask__quiet">Not now</button>
+              <button id="supportAskStop" type="button" class="support-ask__quiet">Don't ask again</button>
+            </div>
+            <p id="supportAskStatus" class="support-ask__status" role="status" aria-live="polite"></p>
+          </section>
           <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
             <img class="install-card__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="56" height="56" loading="lazy" decoding="async">
             <div class="install-card__copy">
@@ -778,6 +1221,13 @@
           </section>
         </div>
       </aside>
+      <!-- Cards past the first few in each column, and cards with nothing of the member's own in them yet,
+           wait behind this button (home-layout.js). They keep their own hide buttons and rules. -->
+      <div id="homeMore" class="home-board__more" hidden>
+        <button type="button" id="homeMoreToggle" class="home-board__more-toggle" aria-expanded="false">Show more on your home</button>
+        <p id="homeMoreNames" class="home-board__more-names" hidden></p>
+        <p id="homeMoreStatus" class="sr-only" role="status" aria-live="polite"></p>
+      </div>
     </div>
 
     <!-- Movies Tab Content -->
@@ -829,7 +1279,10 @@
           <input type="text" id="movieSearch" aria-label="Search this library" placeholder="Search by title or director"
             class="library-filter-search">
           <select id="movieSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -918,7 +1371,10 @@
           <input type="text" id="tvSearch" aria-label="Search this library" placeholder="Search by title"
             class="library-filter-search">
           <select id="tvSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1008,7 +1464,10 @@
           <input type="text" id="animeSearch" aria-label="Search this library" placeholder="Search by title"
             class="library-filter-search">
           <select id="animeSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1098,7 +1557,10 @@
           <input type="text" id="musicSearch" aria-label="Search this library" placeholder="Search by title, artist, or genre"
             class="library-filter-search">
           <select id="musicSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1187,7 +1649,10 @@
           <input type="text" id="bookSearch" aria-label="Search this library" placeholder="Search by title, author, or genre"
             class="library-filter-search">
           <select id="bookSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1284,7 +1749,10 @@
           <input type="text" id="mangaSearch" aria-label="Search this library" placeholder="Search by title, mangaka, or genre"
             class="library-filter-search">
           <select id="mangaSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1379,7 +1847,10 @@
           <input type="text" id="podcastSearch" aria-label="Search this library" placeholder="Search by title, host, or genre"
             class="library-filter-search">
           <select id="podcastSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1477,7 +1948,10 @@
           <input type="text" id="audiobookSearch" aria-label="Search this library" placeholder="Search by title, author, narrator, or genre"
             class="library-filter-search">
           <select id="audiobookSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
@@ -1562,7 +2036,10 @@
           <input type="text" id="videoGameSearch" aria-label="Search this library" placeholder="Search by title or genres"
             class="library-filter-search">
           <select id="videoGameSort" aria-label="Sort this library" class="library-sort">
-            <option value="">Sort by...</option>
+            <option value="">Date added (oldest first)</option>
+            <option value="added-desc">Date added (newest first)</option>
+            <option value="title-asc">Title (A → Z)</option>
+            <option value="title-desc">Title (Z → A)</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="release_date-asc">Release Date (Oldest → Newest)</option>
@@ -1599,50 +2076,118 @@
     </div>
 
     <!-- Friends Feed Tab Content -->
+    <!-- For you: picks from other members' libraries (picked-for-you.js) -->
+    <div id="for-you-tab" class="tab-content">
+      <section class="picks-hero" aria-labelledby="picksHeading">
+        <div>
+          <p class="picks-hero__eyebrow">Picked from members' libraries</p>
+          <h2 id="picksHeading">For you</h2>
+          <p id="picksSummary" class="picks-hero__summary"></p>
+        </div>
+        <div class="picks-hero__links">
+          <a href="/pick">Pick for me</a>
+          <a href="/trending">Trending</a>
+          <button type="button" id="picksRefresh" class="picks-hero__refresh">Refresh picks</button>
+        </div>
+      </section>
+      <div id="picksFilters" class="picks-filters" role="group" aria-label="Show picks for" hidden></div>
+      <div id="picksRows" class="picks-rows" hidden></div>
+      <section class="picks-all" aria-labelledby="picksAllTitle">
+        <h3 id="picksAllTitle" class="picks-all__title">Picks for you</h3>
+        <div id="picksGrid" class="picks-grid" aria-live="polite"></div>
+      </section>
+      <p id="picksStatus" class="picks-status" role="status" aria-live="polite"></p>
+      <div id="picksGuides" class="picks-guides" hidden></div>
+      <p class="picks-note">Picks are worked out from libraries only: what members track, finish and rate. Categories other members keep private are never used, and nobody else sees what you were shown or hid.</p>
+      <div id="picksUndo" class="picks-undo" role="status" hidden></div>
+    </div>
+
     <div id="friends-feed-tab" class="tab-content">
-      <section class="ffeed" aria-labelledby="friendsFeedTitle">
-        <header class="ffeed__head">
-          <div class="ffeed__intro">
-            <p class="ffeed__eyebrow">From your friends</p>
+      <div class="social" data-social-view="friends">
+        <header class="social-head">
+          <div class="social-head__copy">
+            <p class="social-head__eyebrow">Your people</p>
             <h2 id="friendsFeedTitle">Friends feed</h2>
-            <p class="ffeed__lede">What your friends added, finished, rated and reviewed in the last 30 days. Cheer them on, or put a title on your own Next Up in one tap.</p>
+            <p class="social-head__lede">What your friends added, finished, rated and reviewed in the last 30 days. Cheer them on, or put a title on your own Next Up in one tap.</p>
           </div>
-          <div class="ffeed__side">
-            <button id="friendsFeedAddFriend" type="button" class="action-btn">+ Add a friend</button>
-            <label class="ffeed__share">
-              <input type="checkbox" id="friendsFeedSharing" checked>
-              <span>Share my updates with friends</span>
-            </label>
-            <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
-          </div>
+          <button id="friendsFeedAddFriend" type="button" class="action-btn social-head__add">+ Add a friend</button>
         </header>
-        <section id="bestRecommenders" class="best-recs" aria-labelledby="bestRecommendersTitle" hidden>
-          <p class="best-recs__eyebrow">Only you see this</p>
-          <h3 id="bestRecommendersTitle">Your best recommenders</h3>
-          <p id="bestRecommendersSummary" class="best-recs__summary"></p>
-          <ol id="bestRecommendersList" class="best-recs__list"></ol>
-        </section>
-        <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
-        <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
-        <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
-        <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
-      </section>
-      <section id="followingFeed" class="ffollow" aria-labelledby="followingFeedTitle">
-        <header class="ffollow__head">
-          <div>
-            <p class="ffeed__eyebrow">From public profiles</p>
-            <h2 id="followingFeedTitle">People you follow</h2>
-            <p class="ffeed__lede">New public reviews, collections and diary entries from members you follow, friends or not. You only see what their profile already shows everyone.</p>
+        <div class="social-layout">
+          <div class="social-main">
+            <div class="social-bar">
+              <div class="social-switch" role="tablist" aria-label="Whose updates">
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabFriends" aria-controls="friendsFeedPanel" aria-selected="true" data-social-tab="friends">Friends</button>
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabFollowing" aria-controls="followingFeed" aria-selected="false" tabindex="-1" data-social-tab="following">Following<span id="followingCount" class="social-switch__count" hidden></span></button>
+                <button type="button" class="social-switch__btn" role="tab" id="socialTabPeople" aria-controls="peoplePanel" aria-selected="false" tabindex="-1" data-social-tab="people">Find people</button>
+              </div>
+              <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
+            </div>
+            <section id="friendsFeedPanel" class="ffeed" role="tabpanel" aria-labelledby="socialTabFriends">
+              <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
+              <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
+            </section>
+            <section id="followingFeed" class="ffollow" role="tabpanel" aria-labelledby="socialTabFollowing" hidden>
+              <header class="ffollow__head">
+                <div>
+                  <h3 id="followingFeedTitle">People you follow</h3>
+                  <p class="ffollow__lede">New public reviews, collections and diary entries from members you follow, friends or not. You only see what their profile already shows everyone.</p>
+                </div>
+                <button id="followingRefresh" type="button" class="ffeed-btn ffollow__refresh">Refresh</button>
+              </header>
+              <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <button id="followingFindPeople" type="button" class="action-btn people-find-btn" data-open-people hidden>Find people to follow</button>
+              <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
+            </section>
+            <section id="peoplePanel" class="people" role="tabpanel" aria-labelledby="socialTabPeople" hidden>
+              <header class="ffollow__head people__head">
+                <div>
+                  <h3 id="peopleTitle">People worth following</h3>
+                  <p class="ffollow__lede">Members whose taste lines up with yours, people who followed you, and profiles with something new on them. Following someone shows you what their public profile shows everyone, and nothing more.</p>
+                </div>
+                <button id="peopleRefresh" type="button" class="ffeed-btn ffollow__refresh">Refresh</button>
+              </header>
+              <div id="peopleYou" class="people-you" hidden></div>
+              <section id="peopleBack" class="people-back" aria-labelledby="peopleBackTitle" hidden>
+                <h4 id="peopleBackTitle" class="people-group__title">Followed you</h4>
+                <ul id="peopleBackList" class="people-back__list"></ul>
+              </section>
+              <div id="peopleGroups" class="people-groups" aria-live="polite"></div>
+              <p id="peopleStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+              <p id="peopleTasteHint" class="people-hint" hidden></p>
+              <p class="people-note">Suggestions only name titles a member's profile already shows anyone, and only members who made their profile public are suggested. Nobody is told you saw them, and "Not for me" stays between you and this page.</p>
+              <div id="peopleUndo" class="people-undo" role="status" hidden></div>
+            </section>
           </div>
-          <button id="followingRefresh" type="button" class="action-btn ffollow__refresh">Refresh</button>
-        </header>
-        <section id="followSuggestions" class="ffollow__suggest" aria-labelledby="followSuggestionsTitle" hidden>
-          <h3 id="followSuggestionsTitle">People you might follow</h3>
-          <ul id="followSuggestionsList" class="follow-people"></ul>
-        </section>
-        <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
-        <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
-      </section>
+          <aside class="social-rail" aria-label="Feed settings and people">
+            <section class="social-card ffeed-share" aria-labelledby="friendsFeedShareTitle">
+              <h3 id="friendsFeedShareTitle" class="social-card__title">Your updates</h3>
+              <label class="ffeed__share">
+                <input type="checkbox" id="friendsFeedSharing" role="switch" checked>
+                <span>Share my updates with friends</span>
+              </label>
+              <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
+            </section>
+            <section id="followSuggestions" class="ffollow__suggest social-card" aria-labelledby="followSuggestionsTitle" hidden>
+              <h3 id="followSuggestionsTitle" class="social-card__title">People you might follow</h3>
+              <ul id="followSuggestionsList" class="follow-people"></ul>
+              <button type="button" class="social-talk__link people-rail__more" data-open-people>See more people <span aria-hidden="true">→</span></button>
+            </section>
+            <section id="bestRecommenders" class="best-recs social-card" aria-labelledby="bestRecommendersTitle" hidden>
+              <p class="best-recs__eyebrow">Only you see this</p>
+              <h3 id="bestRecommendersTitle">Your best recommenders</h3>
+              <p id="bestRecommendersSummary" class="best-recs__summary"></p>
+              <ol id="bestRecommendersList" class="best-recs__list"></ol>
+            </section>
+            <section id="socialTalk" class="social-card social-talk" aria-labelledby="socialTalkTitle">
+              <h3 id="socialTalkTitle" class="social-card__title">Discussions</h3>
+              <p id="socialTalkSummary" class="social-talk__summary">Talk about what you're watching with every member, not just friends.</p>
+              <ul id="socialTalkList" class="social-talk__list" hidden></ul>
+              <a class="social-talk__link" href="/discussions">Open discussions <span aria-hidden="true">→</span></a>
+            </section>
+          </aside>
+        </div>
+      </div>
     </div>
 
     <!-- Private Activity Journal Tab Content -->
@@ -1804,17 +2349,66 @@
       </section>
     </div>
 
+    <!-- Rankings Tab Content: finished titles in order, two at a time (rankings.js) -->
+    <div id="rankings-tab" class="tab-content">
+      <section class="rank-hero" aria-labelledby="rankHeroTitle">
+        <div class="rank-hero__copy">
+          <p class="rank-hero__eyebrow">Private until you share it</p>
+          <h2 id="rankHeroTitle">Rankings</h2>
+          <p id="rankHeroSummary" class="rank-hero__summary">Pick the one you liked more, two at a time, and everything you've finished falls into order. Placing a title among a hundred others takes about seven picks.</p>
+        </div>
+        <ol class="rank-hero__art" aria-hidden="true"><li>1</li><li>2</li><li>3</li></ol>
+      </section>
+      <div id="rankFormats" class="rank-formats" role="group" aria-label="Rank which format"></div>
+      <div id="rankBoard" class="rank-board" aria-busy="false">
+        <section id="rankAsk" class="rank-panel rank-ask" aria-labelledby="rankAskTitle">
+          <h3 id="rankAskTitle" class="rank-panel__title">Which did you like more?</h3>
+          <div id="rankAskBody" class="rank-ask__body"></div>
+          <p id="rankAskStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <section id="rankList" class="rank-panel rank-list" aria-labelledby="rankListTitle">
+          <div class="rank-list__head">
+            <h3 id="rankListTitle" class="rank-panel__title">Your ranking</h3>
+            <div id="rankListTools" class="rank-list__tools"></div>
+          </div>
+          <div id="rankShare" class="rank-share" hidden></div>
+          <div id="rankListBody" class="rank-list__body"></div>
+          <p id="rankListStatus" class="rank-status" role="status" aria-live="polite"></p>
+        </section>
+        <section id="rankWaiting" class="rank-panel rank-waiting" aria-labelledby="rankWaitingTitle" hidden>
+          <h3 id="rankWaitingTitle" class="rank-panel__title">Waiting to be ranked</h3>
+          <p class="rank-panel__hint">Finished, not placed yet. Recent finishes come first.</p>
+          <ul id="rankWaitingList" class="rank-chips"></ul>
+          <button type="button" id="rankWaitingMore" class="rank-quiet" hidden>Show all</button>
+        </section>
+        <details id="rankLeftOut" class="rank-panel rank-left-out" hidden>
+          <summary id="rankLeftOutTitle">Left out</summary>
+          <p class="rank-panel__hint">You asked not to rank these. Put one back and it waits with the others.</p>
+          <ul id="rankLeftOutList" class="rank-chips"></ul>
+        </details>
+      </div>
+    </div>
+
     <!-- Collections Tab Content -->
     <div id="collections-tab" class="tab-content">
       <section class="collections-hero">
         <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
         <h2>Collections</h2>
-        <p>Bring together movies, TV shows, anime, games, music, books, manga, podcasts, and audiobooks around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
+        <p>Make a list of anything in your library: a ranked top 10, comfort rewatches, where a newcomer should start. Once it has three titles you can send it to anyone with a link. Write a short introduction and it can also go in the public gallery.</p>
       </section>
       <section class="card collections-create">
         <h3>Create a collection</h3>
         <form id="createCollectionForm" data-submit-action="create-collection">
-          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. My top 10 cozy anime">
+          <div class="collection-starters" role="group" aria-label="Ideas for a first list">
+            <span>Need an idea?</span>
+            <button type="button" data-action="collection-starter" data-starter-name="My all-time top 10" data-starter-ranked="1">All-time top 10</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Comfort rewatches">Comfort rewatches</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Where to start if you're new">Start here if you're new</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Best things I finished in 2026" data-starter-ranked="1">Best of my 2026</button>
+            <button type="button" data-action="collection-starter" data-starter-name="Perfect for a rainy weekend">Rainy weekend</button>
+          </div>
+          <input id="collectionRanked" type="hidden" value="">
           <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
           <button type="submit" class="action-btn">Create collection</button>
         </form>
@@ -1855,20 +2449,62 @@
 
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
-      <div class="card">
-        <div class="stats-page-heading">
-          <p class="stats-page-heading__eyebrow">Your numbers</p>
-          <h2>Statistics</h2>
+      <header class="stats-head">
+        <div class="stats-head__copy">
+          <p class="stats-head__eyebrow">Your numbers</p>
+          <h2 id="statsTitle">Statistics</h2>
+          <p class="stats-head__lede" id="statsLede">Everything you have saved, counted up.</p>
         </div>
-        <div id="statsLoading" style="text-align: center; padding: 40px;">
-          <div
-            style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
-          </div>
-          <p style="margin-top: 16px; color: var(--fg); font-size: 1.1rem;">Loading statistics...</p>
-        </div>
+        <nav class="stats-head__jump" aria-label="Sections on this page">
+          <button type="button" data-stats-jump="statsFormats">By format</button>
+          <button type="button" data-stats-jump="timeSpent">Time spent</button>
+          <button type="button" data-stats-jump="monthlyReplay" id="statsJumpReplay">This month</button>
+          <button type="button" data-stats-jump="tasteprint">Tasteprint</button>
+          <a href="/year-in-review">Year in review</a>
+        </nav>
+      </header>
+      <div id="statsLoading" class="stats-loading" role="status">
+        <span class="stats-spinner" aria-hidden="true"></span>
+        <span>Loading your statistics…</span>
       </div>
 
-      <div id="statsContent" style="display: none;">
+      <div id="statsContent" class="stats-page">
+        <section id="statsOverview" class="stats-panel stats-overview" aria-labelledby="statsOverviewTitle">
+          <h3 id="statsOverviewTitle" class="stats-panel__title">Your whole library</h3>
+          <div id="libraryInsightsStatsLoading" class="stats-loading" role="status" hidden>
+            <span class="stats-spinner" aria-hidden="true"></span>
+            <span>Counting your library…</span>
+          </div>
+          <div id="libraryInsightsStatsData"></div>
+        </section>
+
+        <section id="statsFormats" class="stats-panel stats-formats" aria-labelledby="statsFormatsTitle" tabindex="-1">
+          <div class="stats-panel__head">
+            <h3 id="statsFormatsTitle" class="stats-panel__title">One format at a time</h3>
+            <p class="stats-panel__hint">Ratings, release decades and the details that only make sense for one kind of title.</p>
+          </div>
+          <div id="statsFormatTabs" class="stats-tabs" role="tablist" aria-labelledby="statsFormatsTitle"></div>
+          <div id="statsFormatPanels" class="stats-format-panels"></div>
+        </section>
+
+        <section id="timeSpent" class="time-spent" aria-labelledby="timeSpentTitle">
+          <div class="time-spent__header">
+            <div>
+              <p class="time-spent__eyebrow">Estimated from your library</p>
+              <h3 id="timeSpentTitle">Time spent</h3>
+              <p>Roughly how long your finished titles took, plus what you've got through on the ones you're partway into.</p>
+            </div>
+            <div class="time-spent__actions">
+              <button type="button" class="action-btn" id="timeSpentDownload" data-action="time-spent-download" disabled>Download PNG</button>
+            </div>
+          </div>
+          <div id="timeSpentStatus" class="time-spent__status" role="status" aria-live="polite">Adding up your library…</div>
+          <div id="timeSpentContent"></div>
+          <details class="time-spent__method">
+            <summary>How this is counted</summary>
+            <div id="timeSpentMethod"></div>
+          </details>
+        </section>
         <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
           <div class="monthly-replay__header">
             <div>
@@ -1909,162 +2545,6 @@
           </article>
           <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
         </section>
-        <section id="timeSpent" class="time-spent" aria-labelledby="timeSpentTitle">
-          <div class="time-spent__header">
-            <div>
-              <p class="time-spent__eyebrow">Estimated from your library</p>
-              <h3 id="timeSpentTitle">Time spent</h3>
-              <p>Roughly how long your finished titles took, plus what you've got through on the ones you're partway into.</p>
-            </div>
-            <div class="time-spent__actions">
-              <button type="button" class="action-btn" id="timeSpentDownload" data-action="time-spent-download" disabled>Download PNG</button>
-            </div>
-          </div>
-          <div id="timeSpentStatus" class="time-spent__status" role="status" aria-live="polite">Adding up your library…</div>
-          <div id="timeSpentContent"></div>
-          <details class="time-spent__method">
-            <summary>How this is counted</summary>
-            <div id="timeSpentMethod"></div>
-          </details>
-        </section>
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="library-insights">
-            <h3>Library Insights</h3>
-            <span class="accordion-icon" id="libraryInsightsStatsIcon">&#9654;</span>
-          </div>
-          <div class="accordion-content" id="libraryInsightsStatsContent" style="display: none;">
-            <div id="libraryInsightsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="libraryInsightsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Movies Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="movies">
-            <h3>🎬 Movies</h3>
-            <span class="accordion-icon" id="moviesStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="moviesStatsContent" style="display: none;">
-            <div id="moviesStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="moviesStatsData"></div>
-          </div>
-        </div>
-
-        <!-- TV Shows Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="tv-shows">
-            <h3>📺 TV Shows</h3>
-            <span class="accordion-icon" id="tvShowsStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="tvShowsStatsContent" style="display: none;">
-            <div id="tvShowsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="tvShowsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Anime Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="anime">
-            <h3>🎌 Anime</h3>
-            <span class="accordion-icon" id="animeStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="animeStatsContent" style="display: none;">
-            <div id="animeStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="animeStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Video Games Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="video-games">
-            <h3>🎮 Video Games</h3>
-            <span class="accordion-icon" id="videoGamesStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="videoGamesStatsContent" style="display: none;">
-            <div id="videoGamesStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="videoGamesStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Music Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="music">
-            <h3>🎵 Music</h3>
-            <span class="accordion-icon" id="musicStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="musicStatsContent" style="display: none;">
-            <div id="musicStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="musicStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Books Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="books">
-            <h3>📚 Books</h3>
-            <span class="accordion-icon" id="booksStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="booksStatsContent" style="display: none;">
-            <div id="booksStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="booksStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Manga Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="manga">
-            <h3>🗯️ Manga</h3>
-            <span class="accordion-icon" id="mangaStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="mangaStatsContent" style="display: none;">
-            <div id="mangaStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="mangaStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Podcasts Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="podcasts">
-            <h3>🎙️ Podcasts</h3>
-            <span class="accordion-icon" id="podcastsStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="podcastsStatsContent" style="display: none;">
-            <div id="podcastsStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="podcastsStatsData"></div>
-          </div>
-        </div>
-
-        <!-- Audiobooks Accordion Section -->
-        <div class="accordion-section">
-          <div class="accordion-header" data-toggle-category-accordion="audiobooks">
-            <h3>🎧 Audiobooks</h3>
-            <span class="accordion-icon" id="audiobooksStatsIcon">▶</span>
-          </div>
-          <div class="accordion-content" id="audiobooksStatsContent" style="display: none;">
-            <div id="audiobooksStatsLoading" style="text-align: center; padding: 20px; display: none;">
-              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            </div>
-            <div id="audiobooksStatsData"></div>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -2112,15 +2592,32 @@
 
   <!-- Footer for Logged-in View -->
   <footer class="landing-footer app-footer" id="mainFooter">
-    <div class="app-footer__grid">
-      <div>
+    <div class="app-footer__top">
+      <div class="app-footer__intro">
         <a class="app-footer__brand" href="/"><img src="/vortex-still.webp" alt="" width="26" height="26">OmniTrackr</a>
         <p>A free, independent media tracker for everything you watch, play, read, and hear.</p>
-        <p><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support OmniTrackr on Ko-fi ↗</a></p>
+        <p class="app-footer__actions"><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">♥</span> Support OmniTrackr on Ko-fi</a></p>
       </div>
+      <nav class="app-footer__formats" aria-labelledby="appFooterLibrariesTitle">
+        <h2 id="appFooterLibrariesTitle">Your libraries</h2>
+        <ul>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="movies">Movies</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="tv-shows">TV shows</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="anime">Anime</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="video-games">Games</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="music">Music</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="books">Books</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="manga">Manga</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="podcasts">Podcasts</button></li>
+          <li><button type="button" class="app-footer__lib" data-switch-tab="audiobooks">Audiobooks</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="app-footer__grid">
       <nav aria-label="Explore">
         <h2>Explore</h2>
         <a href="/discover">Discover</a>
+        <a href="/essentials">The Essential 100</a>
         <a href="/best-of">Best of 2026</a>
         <a href="/new-this-week">New this week</a>
         <a href="/release-radar">Release Radar</a>
@@ -2163,12 +2660,21 @@
   <div id="landingPage" role="main">
     <!-- Authentication Section -->
     <section class="landing-auth" id="landing-auth" aria-labelledby="authTitle">
-      <div class="auth-container">
-        <h2 id="authTitle">Log in to OmniTrackr</h2>
-        <p class="auth-context">Create a free account, or sign in to continue building your collection.</p>
-        <div id="authError" role="alert"></div>
-        <div id="authSuccess" role="status"></div>
-
+      <div class="auth-container auth-card">
+          <div class="auth-head">
+            <h2 id="authTitle" tabindex="-1">Log in to OmniTrackr</h2>
+            <p class="auth-context">Create a free account, or sign in to continue building your collection.</p>
+          </div>
+          <div id="authError" role="alert"></div>
+          <div id="authSuccess" role="status"></div>
+          <div id="resendVerificationContainer" class="auth-resend auth-form">
+            <p>Didn't get the confirmation email? We can send a new link.</p>
+            <div class="auth-field" id="resendVerificationEmailField" hidden>
+              <label class="auth-field__label" for="resendVerificationEmail">Email you signed up with</label>
+              <input type="email" id="resendVerificationEmail" autocomplete="email" autocapitalize="none" spellcheck="false">
+            </div>
+            <button type="button" id="resendVerificationBtn" class="auth-ghost">Send a new link</button>
+          </div>
         <div id="loginForm" class="auth-form"><!--GOOGLE_SIGNIN:login-->
           <form id="loginFormElement" novalidate>
             <div class="auth-field">
@@ -2184,46 +2690,58 @@
             <button type="submit" class="auth-submit">Log in</button>
             <button type="button" class="auth-passkey" id="passkeyLoginButton" hidden><svg class="auth-passkey__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 9-5.2"/><circle cx="18" cy="16" r="2.5"/><path d="M18 18.5V22l1.5-1 1.5 1v-3.5"/></svg><span>Log in with a passkey</span></button>
           </form>
-          <div id="resendVerificationContainer" class="auth-resend">
-            <p>Didn't get the verification email? We can send a new link.</p>
-            <div class="auth-field" id="resendVerificationEmailField" hidden>
-              <label class="auth-field__label" for="resendVerificationEmail">Email you signed up with</label>
-              <input type="email" id="resendVerificationEmail" autocomplete="email" autocapitalize="none" spellcheck="false">
-            </div>
-            <button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">Resend verification email</button>
-          </div>
           <p class="auth-toggle">New here? <a id="showRegister" href="#signup">Create a free account</a></p>
         </div>
         <div id="registerForm" class="auth-form"><!--GOOGLE_SIGNIN:register-->
           <form id="registerFormElement" novalidate>
             <div class="auth-field">
               <label class="auth-field__label" for="registerEmail">Email</label>
-              <input type="email" id="registerEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="registerEmailHint registerEmailError">
-              <p class="auth-hint" id="registerEmailHint">We send one link to confirm it. No newsletters unless you turn them on.</p>
+              <input type="email" id="registerEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="registerEmailError registerEmailSuggest">
               <p class="auth-field__error" id="registerEmailError" hidden></p>
-            </div>
-            <div class="auth-field">
-              <label class="auth-field__label" for="registerUsername">Username</label>
-              <input type="text" id="registerUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="30" aria-describedby="registerUsernameHint registerUsernameError" required>
-              <p class="auth-hint" id="registerUsernameHint">Shown on anything you share. We suggest one from your email, and you can change it later.</p>
-              <p class="auth-field__error" id="registerUsernameError" hidden></p>
+              <p class="auth-suggest" id="registerEmailSuggest" hidden>Did you mean <button type="button" class="auth-linkbtn" id="registerEmailFix"></button>?</p>
             </div>
             <div class="auth-field">
               <label class="auth-field__label" for="registerPassword">Password</label>
               <div class="auth-password"><input type="password" id="registerPassword" autocomplete="new-password" minlength="8" aria-describedby="registerPasswordHint registerPasswordStrength registerPasswordError" data-password-strength="registerPasswordStrength" required><button type="button" class="auth-password__toggle" data-password-toggle="registerPassword" aria-controls="registerPassword" aria-pressed="false">Show</button></div>
-              <p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase is easy to remember and hard to guess.</p>
+              <p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase works well.</p>
               <p class="auth-strength" id="registerPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="registerPasswordError" hidden></p>
             </div>
-            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release. Quiet weeks are skipped, and one click turns it off.</span></label>
+            <p class="auth-handle" id="registerHandle" hidden><span id="registerHandleEmpty">Your username comes from your email.</span><span id="registerHandleFilled" hidden>Your username will be <strong id="registerHandleName"></strong>.</span> <button type="button" class="auth-linkbtn" id="registerHandleChange" aria-controls="registerUsernameField">Change</button></p>
+            <div class="auth-field" id="registerUsernameField">
+              <label class="auth-field__label" for="registerUsername">Username</label>
+              <input type="text" id="registerUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="30" aria-describedby="registerUsernameHint registerUsernameError" required>
+              <p class="auth-hint" id="registerUsernameHint">Shown on anything you share. You can change it later.</p>
+              <p class="auth-field__error" id="registerUsernameError" hidden></p>
+            </div>
+            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release.</span></label>
             <button type="submit" class="auth-submit">Create free account</button>
-            <p class="auth-fineprint">Free for good, and your library stays private until you share it. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
+            <p class="auth-fineprint">We email you a 6-digit code to confirm your address. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
           </form>
           <p class="auth-toggle">Already have an account? <a id="showLogin" href="#login">Log in</a></p>
         </div>
+        <div id="verifySentPanel" class="auth-form auth-panel">
+          <div class="auth-panel__icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7.5 8 6 8-6"/></svg></div>
+          <p class="auth-panel__lead" id="verifySentLead"><span id="verifySentBefore"></span><strong id="verifySentEmail"></strong><span id="verifySentAfter"></span></p>
+          <form id="verifyCodeForm" class="auth-code" novalidate>
+            <label class="auth-field__label" for="verifyCode">6-digit code</label>
+            <div class="auth-code__row"><input type="text" id="verifyCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="9" spellcheck="false" aria-describedby="verifySentLead verifyCodeError"><button type="submit" class="auth-submit auth-code__submit" id="verifyCodeSubmit">Confirm</button></div>
+            <p class="auth-field__error" id="verifyCodeError" hidden></p>
+          </form>
+          <a class="auth-ghost auth-inbox" id="verifySentInbox" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
+          <p class="auth-panel__note" id="verifySentNote"></p>
+          <p class="auth-panel__note auth-quiz-tip" id="verifySentQuiz" hidden>While you wait, <a href="/taste-quiz" target="_blank" rel="noopener">take the 1-minute taste quiz</a> (it opens in a new tab). Your answers are added to your library when you log in.</p>
+          <button type="button" class="auth-ghost" id="verifySentResend">Send the email again</button>
+          <p class="auth-panel__status" id="verifySentStatus" role="status"></p>
+          <p class="auth-toggle"><a id="verifySentLogin" href="#login">Already confirmed? Log in</a></p>
+          <p class="auth-toggle"><a id="verifySentRestart" href="#signup">Wrong address? Start again</a></p>
+        </div>
+        <div id="authStatusPanel" class="auth-form auth-panel">
+          <div class="auth-panel__spinner" aria-hidden="true"></div>
+          <p class="auth-panel__lead" id="authStatusText" role="status"></p>
+        </div>
         <div id="forgotPasswordForm" class="auth-form">
           <form id="forgotPasswordFormElement" novalidate>
-            <p class="auth-helper-text">Enter the email on your account and we'll send a link to choose a new password.</p>
             <div class="auth-field">
               <label class="auth-field__label" for="forgotPasswordEmail">Email</label>
               <input type="email" id="forgotPasswordEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="forgotPasswordEmailError">
@@ -2241,7 +2759,7 @@
               <input type="text" id="twoFactorCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" required aria-describedby="twoFactorCodeError">
               <p class="auth-field__error" id="twoFactorCodeError" hidden></p>
             </div>
-            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> Don't ask again on this browser for 30 days</label>
+            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> <span>Don't ask again on this browser for 30 days</span></label>
             <button type="submit" class="auth-submit">Continue</button>
           </form>
           <p class="auth-toggle"><a id="twoFactorUseRecovery" href="#recovery-code">Lost your phone? Use a recovery code</a></p>
@@ -2249,17 +2767,12 @@
         </div>
         <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement" novalidate>
-            <p class="auth-helper-text">Choose a new password for your account.</p>
             <div class="auth-field">
               <label class="auth-field__label" for="newPassword">New password</label>
-              <div class="auth-password"><input type="password" id="newPassword" autocomplete="new-password" required minlength="8" aria-describedby="newPasswordStrength newPasswordError" data-password-strength="newPasswordStrength"><button type="button" class="auth-password__toggle" data-password-toggle="newPassword" aria-controls="newPassword" aria-pressed="false">Show</button></div>
+              <div class="auth-password"><input type="password" id="newPassword" autocomplete="new-password" required minlength="8" aria-describedby="newPasswordHint newPasswordStrength newPasswordError" data-password-strength="newPasswordStrength"><button type="button" class="auth-password__toggle" data-password-toggle="newPassword" aria-controls="newPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-hint" id="newPasswordHint">At least 8 characters. A short phrase works well.</p>
               <p class="auth-strength" id="newPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="newPasswordError" hidden></p>
-            </div>
-            <div class="auth-field">
-              <label class="auth-field__label" for="confirmNewPassword">Type it again</label>
-              <div class="auth-password"><input type="password" id="confirmNewPassword" autocomplete="new-password" required minlength="8" aria-describedby="confirmNewPasswordError"><button type="button" class="auth-password__toggle" data-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-pressed="false">Show</button></div>
-              <p class="auth-field__error" id="confirmNewPasswordError" hidden></p>
             </div>
             <button type="submit" class="auth-submit">Save new password</button>
           </form>
@@ -2300,37 +2813,63 @@
       <p class="progress-dialog__hint">Closing keeps your draft in this tab until you leave or sign out. Changes are only saved when you choose Save progress.</p>
     </form>
   </dialog>
+  <!-- Starts the home cards' requests before the scripts below run (static/home-prefetch.js). -->
+  <script src="/static/home-prefetch.js?v=20261123-prefetch-sweep-1"></script>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261101-so-far-1"></script>
+  <script src="./auth.js?v=20261128-top-nine-1"></script>
   <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/episodes.js?v=20261031-episodes-2"></script>
+  <script src="/static/episodes.js?v=20261116-stay-1"></script>
+  <script src="/static/next-up-drag.js?v=20261109-queue-1" defer></script>
+  <script src="/static/library-quick.js?v=20261120-sweep-1"></script>
   <script src="./app.js"></script>
-  <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
-  <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
-  <script src="/static/for-you.js?v=20261101-speed-1"></script>
-  <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/public-profile.js?v=20261030-compare-1"></script>
-  <script src="/static/supporter.js?v=20261030-claim-1"></script>
-  <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
+  <script src="/static/library-tags.js?v=20261122-streaming-1"></script>
+  <script src="/static/title-origins.js?v=20261120-pass-it-on-1"></script>
+  <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/home-hero.js?v=20261122-member-look-1"></script>
+  <script src="/static/home-today.js?v=20261123-friends-1"></script>
+  <script src="/static/home-layout.js?v=20261128-december-rail-1"></script>
+  <script src="/static/for-you.js?v=20261120-streamline-1"></script>
+  <script src="/static/review-inbox.js?v=20261106-sweep-1"></script>
+  <script src="/static/title-links.js?v=20261122-streaming-1"></script>
+  <script src="/static/public-profile.js?v=20261120-widgets-1"></script>
+  <script src="/static/supporter.js?v=20261124-founding-1"></script>
+  <script src="/static/support-ask.js?v=20261123-founding-1" defer></script>
+  <script src="/static/account-settings.js?v=20261112-settings-1" defer></script>
   <script src="/static/two-factor.js?v=20261031-sweep-1" defer></script>
   <script src="/static/passkeys.js?v=20261031-sweep-1" defer></script>
-  <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
+  <script src="/static/profile-showcase.js?v=20261114-profile-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
-  <script src="/static/challenges.js?v=20261011-challenge-2"></script>
-  <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
+  <script src="/static/challenges.js?v=20261121-between-the-years-1"></script>
+  <script src="/static/new-year-challenge.js?v=20261128-card-status-1" defer></script>
+  <script src="/static/awards.js?v=20261112-awards-1" defer></script>
+  <script src="/static/advent-calendar.js?v=20261128-card-status-1" defer></script>
+  <script src="/static/seasonal-card.js?v=20261104-gifts-1"></script>
   <script src="/static/memories.js?v=20261030-audiobooks-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/follows.js?v=20261029-follows-1"></script>
-  <script src="/static/push.js?v=20261031-push-4" defer></script>
-  <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
-  <script src="/static/guest-list.js?v=20261031-browse-1"></script>
+  <script src="/static/friend-recs.js?v=20261121-sweep-f-1"></script>
+  <script src="/static/friends-feed.js?v=20261121-feed-runs-1"></script>
+  <script src="/static/follows.js?v=20261120-find-people-1"></script>
+  <script src="/static/find-people.js?v=20261120-find-people-1"></script>
+  <script src="/static/push.js?v=20261118-app-1" defer></script>
+  <script src="/static/stay-posted.js?v=20261118-peek-1" defer></script>
+  <script src="/static/weekly-preview.js?v=20261118-peek-1" defer></script>
+  <script src="/static/week-one.js?v=20261118-week-one-3" defer></script>
+  <script src="/static/backlog-draw.js?v=20261121-sweep-f-1" defer></script>
+  <script src="/static/your-week.js?v=20261120-your-week-2" defer></script>
+  <script src="/static/streaming.js?v=20261122-svc-sweep-1" defer></script>
+  <script src="/static/rankings.js?v=20261122-ranked-sweep-1" defer></script>
+  <script src="/static/together-home.js?v=20261122-together-1" defer></script>
+  <script src="/static/break-home.js?v=20261123-break-share-1" defer></script>
+  <script src="/static/pick-swap-home.js?v=20261123-swap-1" defer></script>
+  <script src="/static/yearbook-home.js?v=20261125-yearbook-1" defer></script>
+  <script src="/static/year-in-review-entry.js?v=20261126-fill-1" defer></script>
+  <script src="/static/guest-list.js?v=20261122-shelf-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
-  <script src="/static/taste-compare.js?v=20261030-compare-1" defer></script>
-  <script src="/static/app-nav.js?v=20261101-speed-1" defer></script>
+  <script src="/static/taste-compare.js?v=20261116-invite-test-1" defer></script>
+  <script src="/static/essentials-import.js?v=20261121-essentials-sweep-1" defer></script>
+  <script src="/static/app-nav.js?v=20261120-dock-1" defer></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2418,8 +2957,6 @@
             </div>
             <p class="profile-settings__link" id="profileLinkRow" hidden>Your page: <a id="profileLink" href="#" target="_blank" rel="noopener"></a>
               <button type="button" class="profile-settings__copy" id="profileCopyLink">Copy link</button></p>
-            <p class="profile-settings__link" id="profileWidgetsRow" hidden>Put it on your blog, forum or GitHub:
-              <a id="profileWidgetsLink" href="#" target="_blank" rel="noopener">Get profile widgets</a></p>
             <p class="profile-settings__link" id="profileMatchRow" hidden>Your compare-tastes link:
               <a id="profileMatchLink" href="#" target="_blank" rel="noopener">Open and share it</a></p>
             <div class="form-group">
@@ -2433,6 +2970,7 @@
               <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowDiary"> Diary: dates of your recent finishes and rewatches (your journal notes stay private)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowNow"> Right now: what you've started from your Up next queue and what's next in it (never how far along you are)</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowTasteMatch"> Let people compare tastes with me: a link where anyone can rate a few of your titles and see your ratings for them</label>
             </fieldset>
             <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
@@ -2440,9 +2978,23 @@
             <div id="profileError" class="error-message" role="alert"></div>
             <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
+          <div class="profile-widgets-settings" id="profileWidgetsRow" hidden>
+            <h5>Widgets for your forum, blog or README</h5>
+            <p class="info-text">A banner for forum signatures, plus cards for what you're on right now, recent finishes, favorites
+              and library counts. They follow the boxes you tick above and update as you track.</p>
+            <a class="profile-widgets-settings__preview" id="profileWidgetsPreviewLink" href="#" target="_blank" rel="noopener" hidden>
+              <img id="profileWidgetsPreview" alt="Your forum signature widget" width="540" height="136" loading="lazy"></a>
+            <p class="info-text profile-widgets-settings__loads" id="profileWidgetsLoads" hidden></p>
+            <div class="account-actions">
+              <a class="action-btn" id="profileWidgetsLink" href="#" target="_blank" rel="noopener">Get profile widgets</a>
+              <button type="button" class="action-btn" id="profileWidgetsCopy" hidden>Copy forum signature code</button>
+            </div>
+            <p class="success-message" id="profileWidgetsCopied" role="status"></p>
+          </div>
           <div class="profile-showcase-settings" id="profileShowcase">
             <h5>Showcase</h5>
             <p class="info-text" id="profileShowcaseHint">Pin up to 3 titles from your library to the top of your profile.</p>
+            <p class="info-text">Your first pin gets the big spot. Add a short note to any pin and it shows beside the title.</p>
             <ol class="showcase-picks" id="profileShowcaseList"></ol>
             <div class="form-group">
               <label for="profileShowcaseSearch">Add a title</label>
@@ -2457,6 +3009,8 @@
             <p class="info-text">Members can follow your public profile without being friends. Followers see only what your profile already shows everyone: never private categories, notes, progress or anything you share only with friends.</p>
             <label class="profile-settings__check"><input type="checkbox" id="followAllow" checked> Let people follow my profile</label>
             <label class="profile-settings__check"><input type="checkbox" id="followEmail" checked> Include people I follow in my weekly email</label>
+            <label class="profile-settings__check"><input type="checkbox" id="followSuggest" checked> Suggest my profile to members with similar taste</label>
+            <p class="info-text follow-settings__hint">Find people only names titles your profile already shows anyone. Nobody is told you were suggested to them.</p>
             <p class="info-text follow-settings__counts" id="followCounts"></p>
             <h6>Your followers</h6>
             <p class="info-text follow-settings__hint">Removing someone also stops them following you again.</p>
@@ -2854,6 +3408,7 @@
                 </div>
               </label>
               <p class="info-text toggle-note" id="weeklyEmailMeta" hidden><span id="weeklyEmailMetaText"></span> <a href="/email/weekly/preview" target="_blank" rel="noopener" id="weeklyEmailPreviewLink">See this week's email</a></p>
+              <div class="wk-peek-host toggle-peek" data-weekly-preview="settings"></div>
             </div>
             <div class="privacy-toggle-item">
               <label for="updatesEmailToggle" class="toggle-label">
@@ -3085,13 +3640,18 @@
           <h4>Your supporter perks</h4>
           <p class="account-honest">Every tracking feature is free and stays free. Support pays for hosting, and the thank-yous are cosmetic.</p>
           <ul class="supporter-tiers" id="supporterTiers" aria-label="Ways to support"></ul>
-          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
-            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
-            supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a numbered badge beside your public reviews, color
+            themes for your own app, an accent color, banner and avatar frame for your public profile, six showcase spots instead of three, and a spot on the supporter wall.<span id="supporterFoundingLine"> Support that starts before 2027 makes you a founding
+            supporter for good.</span> <a href="/supporters?from=settings" target="_blank" rel="noopener">What supporters get</a></p>
           <div class="supporter-membership" id="supporterMembership" hidden>
             <p id="supporterMembershipText"></p>
             <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
               rel="noopener noreferrer">See memberships ↗</a>
+          </div>
+          <div class="supporter-try" id="supporterTry" hidden>
+            <p class="supporter-try__title">Try a supporter theme</p>
+            <p class="info-text">Supporters can recolor their own OmniTrackr. Tap one to see it on this page. Nothing is saved, and a reload puts everything back.</p>
+            <div class="supporter-try__list" id="supporterTryList"></div>
           </div>
           <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
@@ -3100,6 +3660,8 @@
             paste this code into your Ko-fi message.</p>
           <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
               rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+          <p class="info-text supporter-gift-line">Want to give the perks to someone else? <a href="/supporters/gift">Buy a gift</a>.
+            Got a gift code? <a href="/gift">Open it here</a>.</p>
           <details class="supporter-claim" id="supporterClaim">
             <summary>Donated but don't see your badge?</summary>
             <p class="account-field__hint">Type the email you used on Ko-fi and we'll send that inbox a link to confirm it's yours.
@@ -3114,6 +3676,15 @@
             </form>
             <p class="supporter-claim__status" id="supporterClaimStatus" role="status" aria-live="polite"></p>
           </details>
+          <div class="privacy-toggle-item support-ask-setting" id="supportAskSetting">
+            <label for="supportAskOn" class="toggle-label">
+              <span>Now and then, show a short support note on my home screen (never while I support, and at most every two months)</span>
+              <div class="toggle-container">
+                <input type="checkbox" id="supportAskOn" class="toggle-switch" checked>
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
           <form id="supporterForm" novalidate hidden>
             <div class="privacy-toggle-item">
               <label for="supporterShowBadge" class="toggle-label">
@@ -3139,15 +3710,21 @@
             <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
               <legend>Profile banner</legend>
             </fieldset>
+            <fieldset class="profile-settings__parts supporter-frames" id="supporterFrames">
+              <legend>Avatar frame</legend>
+            </fieldset>
             <div class="privacy-toggle-item" id="supporterMotionItem">
               <label for="supporterMotion" class="toggle-label">
-                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
+                <span>Let my banner and frame move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
                 <div class="toggle-container">
                   <input type="checkbox" id="supporterMotion" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
+            <fieldset class="profile-settings__parts supporter-themes" id="supporterThemes">
+              <legend>App theme <small class="supporter-themes__hint">Colors for your own OmniTrackr, in light and night mode. Only you see it.</small></legend>
+            </fieldset>
             <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>
           <div id="supporterError" class="error-message" role="alert"></div>
@@ -3196,8 +3773,10 @@
       </form>
       <div class="friend-invite">
         <h3>Friend not on OmniTrackr yet?</h3>
-        <p>Send them your invite link. When they sign up through it, you become friends automatically.</p>
-        <button type="button" class="action-btn friend-invite__share" data-action="share-friend-invite">Share my invite link</button>
+        <p>Send them a taste test. They rate a few things you've rated and see how close your taste is, no account needed. If they sign up from it, you become friends automatically.</p>
+        <button type="button" class="action-btn friend-invite__share" data-action="share-friend-invite" data-invite-test="on">Send a taste test</button>
+        <button type="button" class="friend-invite__plain" data-action="share-friend-invite" data-invite-test="off">Just send an invite link</button>
+        <p class="friend-invite__fine">The test shows up to 12 titles you've rated. Your scores only show after they answer, and reviews, notes and private categories are never part of it.</p>
         <p id="friendInviteStatus" class="friend-invite__status" role="status" aria-live="polite"></p>
       </div>
     </div>
@@ -3543,6 +4122,7 @@
         <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
       </div>
       <div class="quick-capture-body">
+        <p id="quickCaptureShared" class="quick-capture-shared" tabindex="-1" hidden></p>
         <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
           <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
           <div class="quick-capture-search-field">
@@ -3576,6 +4156,17 @@
     </div>
   </div>
 
+  <!-- Rankings: place one title from the finish dialog without leaving the page (rankings.js) -->
+  <dialog id="rankDialog" class="rank-dialog" aria-labelledby="rankDialogTitle">
+    <div class="rank-dialog__head">
+      <p id="rankDialogEyebrow" class="rank-card__eyebrow">Rankings</p>
+      <h2 id="rankDialogTitle" class="rank-dialog__title">Where does it rank?</h2>
+      <button type="button" id="rankDialogClose" class="rank-dialog__close" aria-label="Close">×</button>
+    </div>
+    <div id="rankDialogBody" class="rank-dialog__body"></div>
+    <p id="rankDialogStatus" class="rank-status" role="status" aria-live="polite"></p>
+  </dialog>
+
   <!-- Finish Ritual Modal -->
   <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
     <div class="modal-content completion-ritual-modal" data-stop-propagation>
@@ -3593,7 +4184,7 @@
           <h4 id="completionReviewHeading">Want to write a review too?</h4>
           <p class="completion-ritual-modal__copy">Optional. A few sentences on what worked, what didn't and who would enjoy it helps other members decide what to try next.</p>
           <label class="sr-only" for="completionReviewText">Your review</label>
-          <textarea id="completionReviewText" class="review-textarea" maxlength="10000" rows="5" placeholder="What stood out, what didn't land, and who you'd recommend it to…"></textarea>
+          <textarea id="completionReviewText" class="review-textarea" maxlength="20000" rows="5" placeholder="What stood out, what didn't land, and who you'd recommend it to…"></textarea>
           <div class="completion-ritual-modal__review-meta">
             <span id="completionReviewCount" aria-live="polite"></span>
             <label><input type="checkbox" id="completionReviewPublic" checked> Public: show it on the reviews page with my username</label>
@@ -3601,6 +4192,18 @@
           </div>
         </section>
         <p id="completionReviewResult" class="completion-ritual-modal__result" role="status" hidden></p>
+        <div id="completionShare" class="completion-ritual-modal__share" hidden>
+          <p><strong>Know someone who'd like it?</strong> Send it to a friend with a note, or share a link. They don't need an account to open it.</p>
+          <button type="button" class="completion-ritual-modal__share-btn" id="completionShareBtn">Recommend it</button>
+        </div>
+        <div id="completionTalk" class="completion-ritual-modal__share completion-ritual-modal__talk" hidden>
+          <p><strong>Want to talk about it?</strong> <span id="completionTalkNote"></span></p>
+          <a class="completion-ritual-modal__share-btn" id="completionTalkLink" href="/discussions">Join the discussion</a>
+        </div>
+        <div id="completionRank" class="completion-ritual-modal__share completion-ritual-modal__rank" hidden>
+          <p><strong>Where does it rank?</strong> <span id="completionRankNote">A few quick picks put it in order with everything else you've finished.</span></p>
+          <button type="button" class="completion-ritual-modal__share-btn" id="completionRankBtn">Rank it</button>
+        </div>
         <div class="completion-ritual-modal__actions">
           <button type="button" class="action-btn" id="completionRitualSave" data-action="save-completion-ritual">Save reflection</button>
           <button type="button" class="completion-ritual-modal__skip" id="completionRitualSkip" data-action="close-completion-ritual">Not now</button>
@@ -3636,10 +4239,22 @@
           <label for="collectionStudioName">Collection title</label>
           <input id="collectionStudioName" type="text" maxlength="80" required>
           <label for="collectionStudioDescription">Your introduction</label>
-          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="5" aria-describedby="collectionStudioHint" placeholder="Optional for a share link. What ties these together, and who is the list for?"></textarea>
           <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
           <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
-          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. Published collections are checked automatically for useful original context, complete thoughts, varied language, safe sharing, and at least three available titles.</p>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioRanked" type="checkbox"> Ranked list <span class="content-muted">(the shared page shows #1, #2, #3 in your order)</span></label>
+          <fieldset class="collection-studio-add">
+            <legend>Add titles from your library</legend>
+            <input id="collectionStudioSearch" type="search" maxlength="200" autocomplete="off" placeholder="Search your library by title, creator or genre" aria-describedby="collectionStudioCount">
+            <div id="collectionStudioResults" class="collection-studio-add__results" aria-live="polite"></div>
+            <p id="collectionStudioCount" class="collection-studio-modal__hint"></p>
+          </fieldset>
+          <section class="collection-studio-link" aria-labelledby="collectionStudioLinkTitle">
+            <h3 id="collectionStudioLinkTitle">Share by link</h3>
+            <p class="collection-studio-modal__hint">Anyone with the link sees the titles, their order and your notes, never your ratings or progress. Link-only lists stay out of search and the public gallery. Three titles is all it needs.</p>
+            <div id="collectionStudioLink" class="collection-studio-link__body"></div>
+          </section>
+          <p id="collectionStudioHint" class="collection-studio-modal__hint"><strong>Public gallery.</strong> Publishing puts the list on its own public page and, once it passes the automatic checks (a real introduction of at least 300 characters, three titles, safe wording), in the gallery, on title pages and in search.</p>
           <ul id="collectionReadinessChecklist" class="collection-readiness-checklist" aria-live="polite"></ul>
           <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
           <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>

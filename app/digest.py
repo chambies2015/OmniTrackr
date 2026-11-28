@@ -67,6 +67,10 @@ SOURCES = {
     "dashboard": "the library home",
     "account": "Account settings",
     "email_link": "a link in an email",
+    "home_card": "the home screen card",
+    "after_save": "the note after saving a show",
+    "preview": "a preview of their own email",
+    "copy_email": "the copy they sent themselves",
 }
 OFF_SOURCES = {"account", "dashboard", "email_link"}
 
@@ -618,6 +622,39 @@ def _friends_section(activity: list | None, base: str) -> tuple[str, list[str]]:
     return html, text + [""]
 
 
+def _streaming_section(arrived: list | None, base: str) -> tuple[str, list[str]]:
+    """'New on your services' block: titles on the member's list that started streaming on a service they picked."""
+    if not arrived:
+        return "", []
+    rows, text = [], ["New on your services:"]
+    for item in arrived:
+        where = _and_list(item["services"])
+        rows.append('<tr><td style="padding:6px 0;border-bottom:1px solid #eee;color:#1f1640;font-size:14px">'
+                    f'<strong>{escape(item["title"])}</strong> <span style="color:#6f6a8a">({escape(item["label"])})</span>'
+                    f'<br><span style="color:#0f766e">Now on {escape(where)}</span></td></tr>')
+        text.append(f"- {item['title']} ({item['label']}) - now on {where}")
+    text += [f"See them all: {base}/#on-your-services", ""]
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">New on your services</h2>'
+            '<p style="color:#6f6a8a;font-size:13px;margin:0 0 6px">From your list, on services you picked in OmniTrackr.</p>'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{"".join(rows)}</table>'
+            f'<p style="margin:8px 0 0"><a href="{escape(base, quote=True)}/#on-your-services" style="color:#6d28d9;'
+            'font-size:14px">See everything you can stream</a></p>')
+    return html, text
+
+
+def _support_section(support: dict | None, base: str) -> tuple[str, list[str]]:
+    """A quiet line about Ko-fi support, about every six weeks for members who don't support yet; empty otherwise."""
+    if not support:
+        return "", []
+    url = f"{base}{support['path']}"
+    html = (
+        '<p style="color:#3b3557;font-size:13px;line-height:1.6;margin:24px 0 0;padding:12px 14px;background:#fff7ed;'
+        f'border-radius:10px">{escape(support["text"])} '
+        f'<a href="{escape(url, quote=True)}" style="color:#c2410c;font-weight:700">See what supporters get</a></p>'
+    )
+    return html, [f"{support['text']} See what supporters get: {url}", ""]
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
@@ -629,9 +666,12 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
                  badge: dict | None = None, recap: dict | None = None,
                  friends: list | None = None, episodes: list | None = None,
                  next_up: dict | None = None, past: list | None = None,
-                 following: list | None = None) -> tuple[str, str, str] | None:
+                 following: list | None = None, support: dict | None = None,
+                 copy_url: str | None = None, streaming: list | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
-    `challenge`, `badge`, `recap`, `next_up`, `past` and `following` never force a send; friend activity and episodes can."""
+    `challenge`, `badge`, `recap`, `next_up`, `past` and `following` never force a send; friend activity and episodes can.
+    `copy_url` marks a one-off copy the member asked for (app/weekly_preview.py): it adds a "want one every
+    week?" box and says in the footer that nothing else follows unless they say yes."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular and not friends and not episodes:
         return None
@@ -662,6 +702,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if episodes_html:
         sections.append(episodes_html)
         text += episodes_text
+    streaming_html, streaming_text = _streaming_section(streaming, base)
+    if streaming_html:
+        sections.append(streaming_html)
+        text += streaming_text
     next_up_html, next_up_text = _next_up_section(next_up, base)
     if next_up_html:
         sections.append(next_up_html)
@@ -708,15 +752,37 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if invite_html:
         sections.append(invite_html)
         text += invite_text
-    text += [f"See everything: {base}/release-radar", "",
-             "You get this because you turned on the weekly email in OmniTrackr.",
-             f"Unsubscribe with one click: {unsubscribe_url}"]
+    support_html, support_text = _support_section(support, base)
+    if support_html:
+        sections.append(support_html)
+        text += support_text
+    if copy_url:
+        text += [f"See everything: {base}/release-radar", "",
+                 "Want one like this every week? " + copy_url, "",
+                 "This is a one-off copy you asked for in OmniTrackr. You won't get another unless you turn the weekly email on."]
+    else:
+        text += [f"See everything: {base}/release-radar", "",
+                 "You get this because you turned on the weekly email in OmniTrackr.",
+                 f"Unsubscribe with one click: {unsubscribe_url}"]
     if matches or popular:
         intro = "here is what is on the way."
     elif episodes:
         intro = "here is what airs this week."
     else:
         intro = "here is what your friends added this week."
+    if copy_url:
+        link = escape(copy_url, quote=True)
+        offer = ('<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:14px 16px;margin:6px 0 4px">'
+                 '<div style="color:#1f1640;font-size:14px;line-height:1.5"><strong>This is the copy you asked for.</strong> '
+                 'It was built from your library today. Want one like it every week? Quiet weeks are skipped.</div>'
+                 f'<p style="margin:10px 0 0"><a href="{link}" style="background:#7c3aed;color:#fff;padding:9px 16px;'
+                 'border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Yes, every week</a></p></div>')
+        footer = ('<p style="color:#6f6a8a;font-size:12px;margin-top:24px">This is a one-off copy you asked for in OmniTrackr. '
+                  f'You won\'t get another unless you <a href="{link}" style="color:#6d28d9">turn the weekly email on</a>.</p>')
+    else:
+        offer = ""
+        footer = ('<p style="color:#6f6a8a;font-size:12px;margin-top:24px">You get this because you turned on the weekly email in OmniTrackr. '
+                  f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe</a> any time with one click.</p>')
     html = (
         '<html><body style="margin:0;background:#f4f2fb;font-family:Arial,Helvetica,sans-serif">'
         '<div style="max-width:560px;margin:0 auto;padding:24px">'
@@ -725,12 +791,11 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         '<div style="font-size:22px;font-weight:700;margin-top:6px">Coming up for you</div></div>'
         '<div style="background:#fff;border-radius:0 0 14px 14px;padding:8px 24px 24px">'
         f'<p style="color:#1f1640;font-size:15px">Hi {escape(username)}, {intro}</p>'
-        + "".join(sections) +
+        + offer + "".join(sections) +
         f'<p style="margin:26px 0 8px"><a href="{escape(base, quote=True)}/release-radar" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
         'Open Release Radar</a></p>'
-        '<p style="color:#6f6a8a;font-size:12px;margin-top:24px">You get this because you turned on the weekly email in OmniTrackr. '
-        f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe</a> any time with one click.</p>'
+        + footer +
         '</div></div></body></html>'
     )
     return subject, html, "\n".join(text)
@@ -770,14 +835,8 @@ async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
 QUIET_WEEK = "quiet-week"  # compose() result when the member would get nothing this week
 
 
-def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: date | None = None,
-            unsubscribe_url: str = "", client=None, quiet_ok: bool = True):
-    """Build this week's email for one member: (subject, html, text), None when there is nothing
-    at all to say, or QUIET_WEEK when a round-up went out recently and nothing new came up.
-    The member's weekly preview page calls this with quiet_ok=False so it always shows something."""
-    subscription = subscription_for(db, user.id)
-    if not unsubscribe_url and subscription:
-        unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
+def gather_core(db: Session, user, now: datetime, pool=None, today: date | None = None, client=None) -> dict:
+    """The parts that can make an email worth sending: library matches, friend activity, episodes."""
     if pool is None:
         from .for_you import radar_pool
         pool = radar_pool(today, client)
@@ -792,10 +851,11 @@ def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: 
     except Exception:
         db.rollback()
         episodes = []  # The weekly email never depends on it.
-    if quiet_ok and not report["matches"] and not friends and not episodes:
-        last_sent_at = subscription.last_sent_at if subscription else None
-        if last_sent_at and last_sent_at > now - ROUNDUP_EVERY:
-            return QUIET_WEEK
+    return {"report": report, "friends": friends, "episodes": episodes}
+
+
+def gather_extras(db: Session, user, now: datetime, today: date | None = None) -> dict:
+    """The optional parts: none of them forces a send, and any one failing is left out."""
     try:
         ask = recent_finish(db, user.id, now)
     except Exception:
@@ -845,9 +905,47 @@ def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: 
     except Exception:
         db.rollback()
         following = []  # Optional, like the ask above.
-    return build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                        member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past,
-                        following)
+    try:
+        from . import support_asks
+        support = support_asks.email_note(now) if support_asks.email_note_due(db, user, now) else None
+    except Exception:
+        db.rollback()
+        support = None  # Optional, like the ask above.
+    try:
+        from . import streaming_services
+        streaming = streaming_services.digest_line(db, user, now)
+    except Exception:
+        db.rollback()
+        streaming = []  # Optional, like the ask above.
+    return {"ask": ask, "invite": invite, "goals": member_goals, "goals_year": now.year, "challenge": challenge,
+            "badge": badge, "recap": recap, "next_up": next_up, "past": past, "following": following,
+            "support": support, "streaming": streaming}
+
+
+def build_from_parts(username: str, core: dict, extras: dict, unsubscribe_url: str, spotlight=None,
+                     copy_url: str | None = None):
+    return build_digest(username, core["report"], unsubscribe_url, spotlight, extras["ask"], extras["invite"],
+                        extras["goals"], extras["goals_year"], extras["challenge"], extras["badge"],
+                        extras["recap"], core["friends"], core["episodes"], extras["next_up"], extras["past"],
+                        extras["following"], extras["support"], copy_url=copy_url,
+                        streaming=extras.get("streaming"))
+
+
+def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: date | None = None,
+            unsubscribe_url: str = "", client=None, quiet_ok: bool = True):
+    """Build this week's email for one member: (subject, html, text), None when there is nothing
+    at all to say, or QUIET_WEEK when a round-up went out recently and nothing new came up.
+    The member's weekly preview page calls this with quiet_ok=False so it always shows something."""
+    subscription = subscription_for(db, user.id)
+    if not unsubscribe_url and subscription:
+        unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
+    core = gather_core(db, user, now, pool=pool, today=today, client=client)
+    if quiet_ok and not core["report"]["matches"] and not core["friends"] and not core["episodes"]:
+        last_sent_at = subscription.last_sent_at if subscription else None
+        if last_sent_at and last_sent_at > now - ROUNDUP_EVERY:
+            return QUIET_WEEK
+    extras = gather_extras(db, user, now, today=today)
+    return build_from_parts(user.username, core, extras, unsubscribe_url, spotlight)
 
 
 async def send_due_digests(session_factory, client=None, now: datetime | None = None, sender=_send,

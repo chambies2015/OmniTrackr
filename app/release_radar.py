@@ -56,9 +56,12 @@ USER_AGENT = "OmniTrackr/1.0 (https://omnitrackr.xyz; omnitrackr@gmail.com) Rele
 MIN_INDEXABLE_ITEMS = 8
 # Release lists are mostly data from Wikidata, TVmaze, AniList and RAWG with the same
 # explanatory text on every page. Useful to visitors, but thin for search and ads
-# (AdSense "low value content", Oct 2026): only the overview is indexed, and no
-# Release Radar page carries ads.
+# (AdSense "low value content", Oct 2026): no Release Radar page carries ads.
 INDEX_CATEGORY_PAGES = False
+# The overview is the same kind of page: live lists from those sources and a few lines of
+# fixed text. Taken out of search on Nov 20 2026 ahead of the December AdSense review; it
+# stays in the menu and keeps working. Set True to list it in search and the sitemap again.
+INDEX_OVERVIEW = False
 RADAR_ADS = False
 MAX_ITEMS = {"movies": 80, "tv": 120, "anime": 100, "games": 60}
 ALLOWED_IMAGE_HOSTS = (
@@ -633,6 +636,7 @@ class RadarCache:
     def __init__(self, cache_dir: Optional[Path] = None):
         self.entries: dict[str, dict] = {}
         self.tasks: dict[str, asyncio.Task] = {}
+        self.started: dict[str, float] = {}
         self.cache_dir = cache_dir
 
     def _disk_path(self, window: Window) -> Optional[Path]:
@@ -687,6 +691,9 @@ class RadarCache:
         except Exception as error:  # Keep serving the previous copy on failure.
             previous = self.entries.get(window.cache_key)
             reason = "unavailable" if isinstance(error, ProviderUnavailable) else "error"
+            if reason == "error":
+                print(f"Release Radar: {window.cache_key} fetch failed after "
+                      f"{time.time() - self.started.get(window.cache_key, time.time()):.0f}s: {type(error).__name__}: {error}")
             if previous:
                 previous = {**previous, "error": reason, "failed_at": time.time()}
                 self.entries[window.cache_key] = previous
@@ -700,6 +707,7 @@ class RadarCache:
         if task is None or task.done():
             task = asyncio.create_task(self._refresh(client, window))
             self.tasks[window.cache_key] = task
+            self.started[window.cache_key] = time.time()
         return task
 
     def warm(self, client: httpx.AsyncClient, window: Window) -> None:
@@ -732,6 +740,13 @@ class RadarCache:
         if entry and now - entry.get("failed_at", 0) < 300:
             return entry
         task = self._start_refresh(client, window)
+        # Every visitor shares one fetch, and waits only for what is left of the first
+        # visitor's wait. When a source is slow (RAWG can take 15 seconds a page), a
+        # fetch can run for half a minute; before this, every page view during that
+        # time sat through the full wait and still showed "Gathering".
+        # Background jobs ask for longer waits and still get them in full.
+        if wait <= FIRST_LOAD_WAIT_SECONDS:
+            wait = min(wait, self.started.get(window.cache_key, now) + wait - now)
         if wait <= 0:
             return None
         try:

@@ -15,13 +15,13 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261031-join-1"
-SITE_JS_VERSION = "20261028-nav-1"
-SITE_NAV_JS_VERSION = "20261031-join-1"
+SITE_CSS_VERSION = "20261121-refresh-1"
+SITE_JS_VERSION = "20261122-cwv-1"
+SITE_NAV_JS_VERSION = "20261121-phone-2"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
-VISIT_JS_VERSION = "20261030-people-1"
+VISIT_JS_VERSION = "20261118-search-1"
 
 # The header groups every public section into four menus. Each entry is
 # (key, label, href, one-line description); a page passes the key of its own
@@ -30,7 +30,9 @@ VISIT_JS_VERSION = "20261030-people-1"
 NAV_MENUS = (
     ("explore", "Explore", (
         ("discover", "Discover", "/discover", "Trails that connect film, TV, games, books and more"),
+        ("essentials", "The Essential 100", "/essentials", "The all-time titles worth knowing, as checklists"),
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
+        ("awards", "Awards season", "/awards", "Dates, nominees and a ballot for each big show"),
         ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
         ("new-releases", "Release guides", "/new-releases", "The month's new releases worth your time"),
         ("titles", "Popular & trending", "/titles", "Most tracked, trending now and top rated"),
@@ -41,19 +43,25 @@ NAV_MENUS = (
         ("pick", "Pick for me", "/pick", "One pick for you, or a vote with friends"),
         ("taste-quiz", "Taste quiz", "/taste-quiz", "Find out what kind of fan you are"),
         ("tier-list", "Tier list maker", "/tier-list", "Rank anything and share the image"),
+        ("top-nine", "Your top nine", "/top-nine", "Your year in a 3x3 grid, ready to post"),
         ("challenges", "Monthly challenge", "/challenges", "A themed goal that resets each month"),
+        ("break", "Break planner", "/break", "Fill your days off from your own list"),
     )),
     ("guides", "Guides", (
         ("in-order", "Franchises in order", "/in-order", "Watch and play the big series the right way"),
         ("if-you-liked", "If you liked…", "/if-you-liked", "What to try next after a favorite"),
-        ("guides", "All guides", "/guides", "How to track, import, review and more"),
+        ("guides", "All guides", "/guides", "Every guide by format and kind, plus how-tos"),
         ("switch", "Switch trackers", "/switch", "Bring your lists over from another site"),
         ("faq", "FAQ", "/faq", "Quick answers about accounts and features"),
     )),
     ("community", "Community", (
         ("reviews", "Member reviews", "/reviews", "Thoughtful reviews written by members"),
+        ("discussions", "Discussions", "/discussions", "Talk about what you're watching, playing and reading"),
         ("collections", "Collections", "/collections/explore", "Themed lists people put together"),
         ("lists", "Shared lists & clubs", "/lists", "Plan what to watch or read with friends"),
+        ("together", "Watch together", "/together", "A show or book with friends at the same weekly pace"),
+        ("swap", "Pick swap", "/swap", "Secret Santa where everyone gives a recommendation"),
+        ("yearbook", "Yearbook", "/yearbook", "Friends sign your year with a note and a vote"),
         ("supporters", "Supporters", "/supporters", "The people who keep the site running"),
     )),
 )
@@ -86,7 +94,9 @@ VIEW_SWITCHES = {
 FOOTER_GROUPS = (
     ("Explore", (
         ("Discover", "/discover"),
+        ("The Essential 100", "/essentials"),
         ("Best of 2026", "/best-of"),
+        ("Awards season", "/awards"),
         ("Release Radar", "/release-radar"),
         ("Release guides", "/new-releases"),
         ("New this week", "/new-this-week"),
@@ -102,13 +112,19 @@ FOOTER_GROUPS = (
         ("Group poll", "/tonight"),
         ("Taste quiz", "/taste-quiz"),
         ("Tier list maker", "/tier-list"),
+        ("Top nine of the year", "/top-nine"),
         ("Binge calculator", "/binge-calculator"),
+        ("Break planner", "/break"),
         ("Monthly challenge", "/challenges"),
     )),
     ("Community", (
         ("Member reviews", "/reviews"),
+        ("Discussions", "/discussions"),
         ("Collections", "/collections/explore"),
         ("Shared lists & clubs", "/lists"),
+        ("Watch together", "/together"),
+        ("Pick swap", "/swap"),
+        ("Yearbook", "/yearbook"),
         ("Supporters", "/supporters"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),
@@ -126,13 +142,22 @@ FOOTER_GROUPS = (
     ("OmniTrackr", (
         ("About", "/about"),
         ("What's new", "/changelog"),
+        ("Get the app", "/app"),
         ("Roadmap", "/roadmap"),
         ("Editorial standards", "/content-quality"),
+        ("Corrections", "/corrections"),
         ("Site map", "/site-map"),
     )),
 )
 # The legal links also sit on their own line under the columns, where people look for them.
 FOOTER_LEGAL = (("Privacy", "/privacy"), ("Terms", "/terms"), ("Ads & affiliates", "/advertising"), ("Contact", "/contact"))
+# The nine tracker guides, one chip per format in the footer's top band. (kind, label, href);
+# the kind picks the chip's dot colour from the --fmt-* tokens in site.css.
+FOOTER_FORMATS = (
+    ("movie", "Movies", "/movie-tracker"), ("tv", "TV shows", "/tv-show-tracker"), ("anime", "Anime", "/anime-tracker"),
+    ("game", "Games", "/game-tracker"), ("book", "Books", "/book-tracker"), ("album", "Music", "/music-tracker"),
+    ("manga", "Manga", "/manga-tracker"), ("podcast", "Podcasts", "/podcast-tracker"), ("audiobook", "Audiobooks", "/audiobook-tracker"),
+)
 
 # A short sign-up prompt above the footer for signed-out readers of the section
 # hubs most visitors arrive on from search. Pages that already ask in their own
@@ -201,7 +226,7 @@ _CHEVRON = ('<svg class="site-dd__chev" viewBox="0 0 12 12" width="10" height="1
 
 
 def _brand() -> str:
-    return '<a class="site-brand" href="/"><img src="/vortex-still.webp" alt="" width="28" height="28">OmniTrackr</a>'
+    return '<a class="site-brand" href="/"><img src="/vortex-mark.webp" alt="" width="28" height="28">OmniTrackr</a>'
 
 
 def _menu_items(items, active: str, *, with_blurb: bool) -> str:
@@ -249,8 +274,8 @@ def site_nav(active: str = "", *, login_action: bool = False, member: bool = Fal
         f'{_brand()}'
         f'<div class="site-nav__menus">{"".join(menus)}</div>'
         '<div class="site-nav__links">'
-        f'<a class="site-search" href="/titles" data-site-search aria-label="Search titles">{_SEARCH_ICON}'
-        '<span class="site-search__label">Search titles</span><kbd>/</kbd></a>'
+        f'<a class="site-search" href="/search" data-site-search aria-label="Search">{_SEARCH_ICON}'
+        '<span class="site-search__label">Search</span><kbd>/</kbd></a>'
         f'{signup_buttons}'
         f'<a class="site-nav__library site-btn site-btn--primary site-btn--sm" href="/"{library_hidden}>My library</a>'
         '<details class="site-menu"><summary aria-label="Open menu"><span></span><span></span><span></span></summary>'
@@ -304,25 +329,35 @@ def app_sheet_explore() -> str:
 
 def apply_app_chrome(html: str) -> str:
     """Fill the dashboard's Explore menu and phone sheet from NAV_MENUS."""
+    from .app_install import STEPS_MARKER, steps_markup
     return (html.replace(APP_EXPLORE_MARKER, app_explore_menu(), 1)
-                .replace(APP_SHEET_EXPLORE_MARKER, app_sheet_explore(), 1))
+                .replace(APP_SHEET_EXPLORE_MARKER, app_sheet_explore(), 1)
+                .replace(STEPS_MARKER, steps_markup(), 1))
 
 
 def site_footer() -> str:
+    # On phones site.js turns each column heading into a button that opens its links.
     columns = "".join(
         f'<nav class="site-footer__col" aria-label="{escape(title)}"><h2>{escape(title)}</h2>'
+        f'<div class="site-footer__links" id="site-footer-{index}">'
         + "".join(f'<a href="{href}">{escape(label)}</a>' for label, href in links)
-        + "</nav>"
-        for title, links in FOOTER_GROUPS
+        + "</div></nav>"
+        for index, (title, links) in enumerate(FOOTER_GROUPS)
     )
+    formats = "".join(f'<li><a href="{href}" data-kind="{kind}">{escape(label)}</a></li>' for kind, label, href in FOOTER_FORMATS)
     legal = "".join(f'<a href="{href}">{escape(label)}</a>' for label, href in FOOTER_LEGAL)
     return (
-        '<footer class="site-footer"><div class="site-wrap site-footer__grid">'
+        '<footer class="site-footer"><div class="site-wrap site-footer__top">'
         f'<div class="site-footer__brand">{_brand()}'
         '<p>A free, independent media tracker for everything you watch, play, read, and hear.</p>'
-        '<a class="site-footer__cta" href="/#signup">Start your library <span aria-hidden="true">→</span></a>'
-        '<a class="site-footer__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>'
-        f'</div>{columns}</div>'
+        '<div class="site-footer__actions">'
+        '<a class="site-footer__cta site-btn site-btn--primary site-btn--sm" href="/#signup" data-guest-only>Start your library</a>'
+        '<a class="site-footer__kofi site-btn site-btn--ghost site-btn--sm" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">'
+        '<span aria-hidden="true">♥</span>Support on Ko-fi</a>'
+        '</div></div>'
+        f'<nav class="site-footer__formats" aria-label="Trackers by format"><h2>One library for all nine</h2><ul>{formats}</ul></nav>'
+        '</div>'
+        f'<div class="site-wrap site-footer__grid">{columns}</div>'
         '<div class="site-wrap site-footer__base">'
         f'<p>© {date.today().year} OmniTrackr. An independent project run by one person.</p>'
         f'<nav aria-label="Legal">{legal}</nav>'
@@ -333,6 +368,7 @@ def site_footer() -> str:
 def site_assets(*, sandbox: bool = False) -> str:
     extras = "" if sandbox else f'<script src="/static/site-nav.js?v={SITE_NAV_JS_VERSION}" defer></script>'
     return (f'<link rel="stylesheet" href="/static/site.css?v={SITE_CSS_VERSION}">'
+            '<link rel="search" type="application/opensearchdescription+xml" title="OmniTrackr" href="/opensearch.xml">'
             f'<script src="/static/site.js?v={SITE_JS_VERSION}" defer></script>{extras}'
             f'<script src="/static/visit.js?v={VISIT_JS_VERSION}" defer></script>')
 
@@ -376,7 +412,7 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">\n'
         '  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
         '  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
-        '  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">\n'
+        '  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">\n'
         '</head>\n<body class="site site-message-page">\n  <!--SITE_NAV:-->\n'
         '  <main class="site-message site-wrap">\n'
         '    <div class="site-message__orb" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="160" height="160"></div>\n'

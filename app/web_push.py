@@ -86,12 +86,40 @@ TITLES = {
     "club_due_soon": "Club pick due soon",
     "discussion_reply": "New reply in a discussion",
     "discussion_report": "A discussion post was reported",
+    "discussion_mention": "Someone mentioned you",
+    "discussion_started": "New talk about a title you track",
     "friend_feed_cheer": "A friend cheered you on",
     "push_enabled": "Notifications are on",
     "held": "While you were away",
     "memory": "On this day",
     "year_so_far": "Your year so far",
     "new_follower": "New follower",
+    "awards_ballot_open": "The nominees are in",
+    "awards_results": "The winners are in",
+    "advent_door": "A new door is open",
+    "your_week": "Your week",
+    "service_arrival": "Now on your services",
+    "together_invite": "Watch it together?",
+    "together_joined": "Someone joined your plan",
+    "together_note": "A note is waiting",
+    "together_ahead": "Done with this week",
+    "together_done": "Finished it",
+    "together_week": "A new week together",
+    "swap_invite": "Join a pick swap?",
+    "swap_joined": "Someone joined your swap",
+    "swap_short": "Draw day",
+    "swap_drawn": "Names are drawn",
+    "swap_wrapped": "A pick is wrapped for you",
+    "swap_reminder": "Still time to pick",
+    "swap_unwrap": "It's unwrap day",
+    "swap_late": "Someone is waiting on your pick",
+    "swap_added": "Your pick went down well",
+    "swap_thanks": "A reaction to your pick",
+    "swap_off": "A swap was called off",
+    "yearbook_signed": "Someone signed your yearbook",
+    "yearbook_waiting": "A note is waiting in your yearbook",
+    "yearbook_friend": "Sign a friend's yearbook?",
+    "yearbook_closed": "Your yearbook is closed",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -102,20 +130,38 @@ TOPICS = (
      ("release_day",)),
     ("episodes", "New episodes", "The moment a new episode of a show or anime you're watching is out.", True,
      ("episode_today",)),
+    ("streaming", "On your services", "When a film, show or anime on your list starts streaming on a service you "
+     "picked on your home screen.", True,
+     ("service_arrival",)),
     ("clubs", "Watch club picks", "A new pick on your shared lists, and a nudge two days before it's due.", True,
      ("club_pick", "club_due_soon", "shared_list_added")),
+    ("together", "Watch together", "When a friend asks you in, joins, leaves a note you can read, or gets "
+     "through the week before you, and when a new week starts.", True,
+     ("together_invite", "together_joined", "together_note", "together_ahead", "together_done", "together_week")),
+    ("swaps", "Pick swaps", "When names are drawn, a pick is wrapped for you, unwrap day comes, someone joins your "
+     "swap or reacts to your pick, and a reminder if you haven't picked.", True,
+     ("swap_invite", "swap_joined", "swap_short", "swap_drawn", "swap_wrapped", "swap_reminder", "swap_unwrap",
+      "swap_late", "swap_added", "swap_thanks", "swap_off")),
+    ("yearbook", "Yearbook", "When someone signs your yearbook or leaves a note for you to let in, when a friend opens "
+     "theirs, and when signing closes.", True,
+     ("yearbook_signed", "yearbook_waiting", "yearbook_friend", "yearbook_closed")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
      ("friend_recommendation", "friend_recommendation_added", "recommendation_received",
       "recommendation_invitation", "take_received")),
     ("friends", "Friend requests", "New requests, and friends who accept or join from your invite.", True,
      ("friend_request_received", "friend_request_accepted", "friend_invite_accepted")),
-    ("discussions", "Discussion replies", "Replies in title discussions you started or joined.", True,
-     ("discussion_reply", "discussion_report")),
+    ("discussions", "Discussion replies", "Replies in title discussions you started or joined, and posts that "
+     "mention you by @name.", True,
+     ("discussion_reply", "discussion_report", "discussion_mention")),
+    ("shelf_talk", "Talk about your titles", "When someone starts a discussion about a title on your list. "
+     "At most one a day.", False,
+     ("discussion_started",)),
     ("club_talk", "Club talk and list updates", "New posts about a club pick, people joining and titles added.", False,
      ("club_post", "shared_list_joined", "shared_list_item")),
     ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges, "
-     "plus one look at your year so far each November.", False,
-     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete", "year_so_far")),
+     "your awards ballot score, plus one look at your year so far each November.", False,
+     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete", "year_so_far",
+      "awards_results")),
     ("memories", "On this day", "Once a day, something you finished or started on this date in an earlier year.", False,
      ("memory",)),
     ("followers", "New followers", "When someone starts following your public profile.", False,
@@ -127,7 +173,11 @@ TOPICS = (
 TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
 # Pushed whatever the switches say: the confirmation that push works, and notices about the member's own content.
-ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted"}
+# "awards_ballot_open" goes only to members who pressed "Tell me when the ballot opens".
+# "advent_door" goes only to members who pressed "Remind me each morning" on the advent calendar.
+# "your_week" goes only to members who turned on the Sunday nudge on their Your week card.
+ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted", "awards_ballot_open", "advent_door",
+                 "your_week"}
 # Anything new that isn't listed above follows the quietest switch until it's given a home.
 FALLBACK_TOPIC = "milestones"
 TIME_ZONE = re.compile(r"^[A-Za-z][A-Za-z0-9_+\-]*(/[A-Za-z0-9_+\-]+){0,2}$")
@@ -456,6 +506,35 @@ def record_sent(kind: str, count: int) -> bool:
         return False
 
 
+# Where a device was turned on from, for Site stats (kind "push", keys on_<place>).
+SOURCES = {
+    "bell": "the bell",
+    "account": "Settings → Notifications",
+    "episode_guide": "the episode guide",
+    "home_card": "the home screen card",
+    "after_save": "the note after saving a show",
+    "week_one": "the first-week card",
+    "your_week": "the Your week card",
+}
+
+
+def record_turned_on(source: Optional[str]) -> bool:
+    """Count one newly turned-on device by the place it was turned on from. Never raises."""
+    if source not in SOURCES:
+        return False
+    try:
+        from .site_traffic import RECORDER
+        if not RECORDER.enabled:
+            return False
+        day = datetime.utcnow().date()
+        with RECORDER._lock:
+            RECORDER._pending[(day, "push", f"on_{source}")] += 1
+            RECORDER._events += 1
+        return True
+    except Exception:
+        return False
+
+
 def safe_link(link: Optional[str]) -> str:
     """Only same-site paths open from a notification."""
     if isinstance(link, str) and link.startswith("/") and not link.startswith("//") and "\\" not in link \
@@ -658,7 +737,7 @@ FIRST_CHECK_DELAY_SECONDS = 240
 def _hourly_jobs(session_factory) -> dict:
     """Catch-ups after quiet hours, club finish-by nudges, On this day (which reach the bell too), away reminders
     and the November year-so-far push."""
-    from . import clubs, memories, push_nudges, year_so_far
+    from . import awards, clubs, memories, push_nudges, year_so_far
     db = session_factory()
     try:
         nudged = clubs.send_due_reminders(db)
@@ -681,8 +760,21 @@ def _hourly_jobs(session_factory) -> dict:
             db.rollback()
             logger.exception("Year so far pushes failed")
             so_far = 0
+        try:
+            ballots = sum(awards.send_notices(db).values())
+        except Exception:
+            db.rollback()
+            logger.exception("Awards ballot notes failed")
+            ballots = 0
+        try:
+            from . import advent_calendar
+            doors = advent_calendar.send_reminders(db)["members"]
+        except Exception:
+            db.rollback()
+            logger.exception("Advent calendar reminders failed")
+            doors = 0
         return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away,
-                "year_so_far": so_far}
+                "year_so_far": so_far, "awards": ballots, "advent": doors}
     finally:
         db.close()
 

@@ -22,6 +22,14 @@ TIERS = ("S", "A", "B", "C", "D")
 RATING_TIERS = ((9.0, "S"), (8.0, "A"), (7.0, "B"), (5.5, "C"), (0.0, "D"))
 TEMPLATE_MIN_ITEMS = 6
 TEMPLATE_MAX_ITEMS = 30
+FRANCHISE_MAX_ITEMS = 50
+# Starting sets shown first on /tier-list, in this order, when they exist.
+FEATURED = ("anime-season", "franchise-marvel-cinematic-universe", "franchise-star-wars", "franchise-zelda",
+            "franchise-harry-potter", "popular-movie", "franchise-james-bond", "franchise-dragon-ball",
+            "popular-anime", "popular-game", "franchise-resident-evil", "franchise-star-trek")
+FEATURED_SHOWN = 8
+GROUPS = (("franchise", "Whole franchises"), ("season", "This season"), ("popular", "Most tracked on OmniTrackr"),
+          ("editors", "Editors' picks"))
 LIBRARY_MAX_ITEMS = 120
 CACHE_SECONDS = 600
 KIND_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "video games",
@@ -44,6 +52,8 @@ IMAGE_HOSTS = (
     "books.google.com",
     "books.googleusercontent.com",
 )
+# TMDB's poster CDN (title facts and where-to-watch use it): only this exact host, and only over https.
+HTTPS_IMAGE_HOSTS = ("image.tmdb.org",)
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif")
 IMAGE_MAX_BYTES = 4 * 1024 * 1024
 
@@ -77,6 +87,8 @@ def image_allowed(url) -> bool:
     if parts.scheme not in ("http", "https") or parts.username or parts.password or port not in (None, 80, 443):
         return False
     host = (parts.hostname or "").lower().rstrip(".")
+    if host in HTTPS_IMAGE_HOSTS:
+        return parts.scheme == "https"
     return any(host == allowed or host.endswith("." + allowed) for allowed in IMAGE_HOSTS)
 
 
@@ -92,8 +104,9 @@ def _popular_templates(db: Session) -> list[dict]:
         if len(items) < TEMPLATE_MIN_ITEMS:
             continue
         result.append({
-            "key": f"popular-{kind}", "kind": kind,
+            "key": f"popular-{kind}", "kind": kind, "group": "popular",
             "name": f"Most tracked {KIND_PLURALS[kind]} on OmniTrackr",
+            "board": f"Most tracked {KIND_PLURALS[kind]}, ranked",
             "blurb": f"The {KIND_PLURALS[kind]} members save most often.",
             "items": [_entry(kind, item["title"], item["year"], item.get("image"), item["url"].rsplit("/", 1)[1])
                       for item in items],
@@ -109,8 +122,9 @@ def _editor_templates(db: Session) -> list[dict]:
         if len(entries) < TEMPLATE_MIN_ITEMS:
             continue
         result.append({
-            "key": f"editors-{kind}", "kind": kind,
+            "key": f"editors-{kind}", "kind": kind, "group": "editors",
             "name": f"Editors' {KIND_PLURALS[kind]}",
+            "board": f"Editors' {KIND_PLURALS[kind]}, ranked",
             "blurb": "Picks from OmniTrackr's Discover trails and editors' collections.",
             "items": [_entry(kind, entry["title"], entry["year"], details.get(entry["id"], {}).get("image"), entry["slug"])
                       for entry in entries],
@@ -132,11 +146,49 @@ def _season_template() -> Optional[dict]:
         return None
     label = getattr(window, "label", None) or "This season"
     return {
-        "key": "anime-season", "kind": "anime",
+        "key": "anime-season", "kind": "anime", "group": "season",
         "name": f"{label} anime season",
+        "board": f"{label} anime, ranked",
         "blurb": "The most-followed new anime this season, from Release Radar.",
         "items": [_entry("anime", item["title"], None, item.get("image")) for item in items],
     }
+
+
+def _formats(kinds: list[str]) -> str:
+    names = [KIND_PLURALS[kind] for kind in kinds]
+    if len(names) <= 2:
+        return " and ".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _franchise_templates(db: Session) -> list[dict]:
+    """One set per "In order" guide: every film, series, game or book in the franchise."""
+    from . import in_order
+    from .in_order_guides import GUIDES
+    details = in_order.title_details(title_search.index(db))
+    result = []
+    for slug, guide in GUIDES.items():
+        entries = guide["entries"][:FRANCHISE_MAX_ITEMS]
+        if len(entries) < TEMPLATE_MIN_ITEMS:
+            continue
+        kinds = list(dict.fromkeys(entry["kind"] for entry in entries))
+        items = []
+        for entry in entries:
+            fields = in_order.saveable(entry)
+            items.append(_entry(entry["kind"], entry["title"], entry["year"],
+                                details.get(fields["id"], {}).get("image"), fields["slug"]))
+        result.append({
+            "key": f"franchise-{slug}", "kind": kinds[0], "group": "franchise",
+            "name": guide["name"], "board": f"{guide['name']} tier list",
+            "blurb": f"{_formats(kinds).capitalize()}, from our in order guide.",
+            "guide": f"/in-order/{slug}", "items": items,
+        })
+    return result
+
+
+def featured(all_templates: list[dict]) -> list[dict]:
+    by_key = {template["key"]: template for template in all_templates}
+    return [by_key[key] for key in FEATURED if key in by_key][:FEATURED_SHOWN]
 
 
 def build_templates(db: Session) -> list[dict]:
@@ -144,6 +196,7 @@ def build_templates(db: Session) -> list[dict]:
     season = _season_template()
     if season:
         templates.append(season)
+    templates.extend(_franchise_templates(db))
     templates.extend(_popular_templates(db))
     templates.extend(_editor_templates(db))
     return templates

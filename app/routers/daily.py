@@ -18,7 +18,7 @@ from .discover import page
 router = APIRouter(tags=["daily"])
 CSS_VERSION = "20261017-daily-2"
 JS_VERSION = "20261015-daily-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"
 DESCRIPTION = ("OmniTrackr Daily is a free guessing game: one movie, TV show, anime, video game, book or album a day, "
                "six clues that get easier, and six guesses. Share your score and keep your streak going.")
 SITE = "https://omnitrackr.xyz"
@@ -224,7 +224,8 @@ def daily_archive(request: Request):
     )
     return _respond(page("OmniTrackr Daily archive: every past puzzle", "Every past OmniTrackr Daily puzzle, playable "
                          "again, with its answer, six clues and a note from the editors.", "/daily/archive", content,
-                         indexable=bool(numbers), head=f'<link rel="stylesheet" href="/static/daily.css?v={CSS_VERSION}">'))
+                         indexable=bool(numbers) and daily.archive_indexable(),
+                         head=f'<link rel="stylesheet" href="/static/daily.css?v={CSS_VERSION}">'))
 
 
 @router.get("/daily/{number}", include_in_schema=False)
@@ -266,7 +267,8 @@ def daily_past(number: int, request: Request, db: Session = Depends(get_db)):
     path = f"/daily/{canonical}"
     response = page(f"OmniTrackr Daily #{number}: guess {view['kind_label']} from six clues",
                     f"Daily puzzle #{number} from {_day(number)}: guess {view['kind_label']} from six clues, then read "
-                    "the answer and the editors' note.", path, content, indexable=canonical == number,
+                    "the answer and the editors' note.", path, content,
+                    indexable=daily.INDEX_PAST_PUZZLES and canonical == number,
                     head=_head(signed_in))
     return _respond(response)
 

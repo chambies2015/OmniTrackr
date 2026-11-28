@@ -24,8 +24,8 @@
   <meta name="twitter:description" content="Get support, send feedback, report issues, or contribute to OmniTrackr.">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+  <link rel="stylesheet" href="/static/fonts.css?v=20261122-cwv-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261120-a11y-1">
 
   <script type="application/ld+json">
   {
@@ -34,13 +34,21 @@
     "name": "Contact OmniTrackr",
     "description": "Contact OmniTrackr for support, feedback, or contributions.",
     "url": "https://omnitrackr.xyz/contact",
-    "dateModified": "2026-07-06",
+    "dateModified": "2026-11-22",
     "inLanguage": "en-US",
     "mainEntity": {
       "@type": "Organization",
+      "@id": "https://omnitrackr.xyz/#organization",
       "name": "OmniTrackr",
-      "url": "https://omnitrackr.xyz",
-      "email": "omnitrackr@gmail.com"
+      "url": "https://omnitrackr.xyz/",
+      "email": "omnitrackr@gmail.com",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "omnitrackr@gmail.com",
+        "url": "https://omnitrackr.xyz/contact",
+        "availableLanguage": "English"
+      }
     },
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -91,6 +99,11 @@
         </ul>
       </section>
 
+      <section class="privacy-section" aria-labelledby="guide-mistake-heading">
+        <h2 id="guide-mistake-heading">A mistake in a guide</h2>
+        <p>If a guide has a wrong date or count, leaves out an entry, links a dead source or gives away an ending, email <a href="mailto:omnitrackr@gmail.com?subject=Correction">omnitrackr@gmail.com</a> with the page address, what it says and what it should say. A link to an official source helps most. The <a href="/corrections">corrections page</a> explains what happens next and lists every correction and update made to the guides, with dates.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="report-heading">
         <h2 id="report-heading">Report issues</h2>
         <p>If you find a bug or security concern, please email us or open an issue on GitHub with a clear description and steps to reproduce. For security-sensitive issues, we prefer email so we can address them before public disclosure.</p>
@@ -109,7 +122,7 @@
         <h2 id="data-requests-heading">Privacy and data requests</h2>
         <p>You can contact OmniTrackr about account deletion, data export questions, privacy settings, advertising disclosures, or concerns about public review visibility. The app includes account controls and export tools, but email is available when you need help with a request that is not covered by the in-app settings.</p>
         <p>Before requesting deletion, consider exporting a backup from your account if you want a personal copy of your media history. Account deletion and deactivation requests should come from the email address associated with the account so ownership can be verified.</p>
-        <p>If your concern involves a public review, include whether the review is a movie, TV show, anime, video game, music, or book entry. Public review visibility is set per entry, so it's quickest if you name the exact item and whether you want it updated, made private, or removed.</p>
+        <p>If your concern involves a public review, say which shelf it is on: movies, TV shows, anime, games, music, books, manga, podcasts or audiobooks. Public review visibility is set per entry, so it's quickest if you name the exact item and whether you want it updated, made private, or removed.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="faq-contact-heading">

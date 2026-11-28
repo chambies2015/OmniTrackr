@@ -22,6 +22,9 @@ from . import title_pages
 CHART_MIN_RATINGS = title_pages.MIN_RATINGS_SHOWN  # Same floor as the average on a title page.
 CHART_LIMIT = 50
 CHART_INDEX_MIN = 10  # Fewer ranked titles than this is a thin page: noindex, not in the sitemap.
+# Fewer different members behind the ranked titles than this, and the chart describes a few people's
+# taste, not the site's, so it stays out of search as well.
+INDEX_MIN_RATERS = 10
 TRACKED_LIMIT = 18
 QUOTE_CHARS = 220
 CACHE_SECONDS = 600
@@ -78,7 +81,7 @@ def _scan(db: Session, kind: str) -> list[dict]:
             "members": len(group["members"]), "finished": len(group["finished"]), "rated": len(ratings),
             "average": round(sum(ratings) / len(ratings), 1) if ratings else None, "_sum": sum(ratings),
             "image": group["image"], "creator": group["creators"].most_common(1)[0][0] if group["creators"] else None,
-            "_ids": group["ids"],
+            "_ids": group["ids"], "_raters": set(group["ratings"]),
         })
     return entries
 
@@ -108,7 +111,8 @@ def _quotes(db: Session, kind: str, ranked: list[dict]) -> None:
             if len(text) > QUOTE_CHARS:
                 text = text[:QUOTE_CHARS].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
             entry["quote"] = {"text": text, "username": review["username"], "url": review["url"],
-                              "profile_url": review.get("profile_url"), "rating": review["rating"]}
+                              "profile_url": review.get("profile_url"), "rating": review["rating"],
+                              "standalone": bool(review.get("search_ready"))}
 
 
 def build(db: Session, kind: str) -> dict:
@@ -124,10 +128,12 @@ def build(db: Session, kind: str) -> dict:
     for position, entry in enumerate(ranked, start=1):
         entry["rank"] = position
     _quotes(db, kind, ranked)
+    raters = set().union(*(entry["_raters"] for entry in ranked))
     tracked = sorted((entry for entry in entries if entry["members"] >= 2),
                      key=lambda entry: (-entry["members"], entry["title"].casefold()))[:TRACKED_LIMIT]
     for entry in entries:
         entry.pop("_sum", None)
+        entry.pop("_raters", None)
     clean = lambda items: [{k: v for k, v in entry.items() if k != "_ids"} for entry in items]
     return {
         "kind": kind,
@@ -136,7 +142,7 @@ def build(db: Session, kind: str) -> dict:
         "titles": len(entries),
         "ratings": total,
         "mean": round(mean, 1) if total else None,
-        "indexable": len(ranked) >= CHART_INDEX_MIN,
+        "indexable": len(ranked) >= CHART_INDEX_MIN and len(raters) >= INDEX_MIN_RATERS,
     }
 
 

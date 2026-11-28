@@ -101,3 +101,83 @@
   }, { rootMargin: '-90px 0px -55% 0px' });
   targets.forEach(target => observer.observe(target));
 })();
+
+/* The header firms up once the page scrolls (site.css .site-header.is-scrolled). */
+(function () {
+  const header = document.querySelector('.site-header');
+  if (!header) return;
+  let queued = false;
+  const update = function () {
+    queued = false;
+    header.classList.toggle('is-scrolled', window.scrollY > 8);
+  };
+  window.addEventListener('scroll', function () {
+    if (!queued) { queued = true; window.requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+})();
+
+/* Phones: each footer column folds into its heading, which becomes a button that
+   opens the links. Wider screens (and pages without scripts) show every column. */
+(function () {
+  const footer = document.querySelector('.site-footer');
+  if (!footer || !window.matchMedia) return;
+  const narrow = window.matchMedia('(max-width: 640px)');
+  const columns = Array.from(footer.querySelectorAll('.site-footer__col'));
+
+  const fold = function () {
+    columns.forEach(function (column) {
+      const heading = column.querySelector('h2');
+      const links = column.querySelector('.site-footer__links');
+      if (!heading || !links || heading.querySelector('button')) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'site-footer__toggle';
+      button.setAttribute('aria-expanded', 'false');
+      if (links.id) button.setAttribute('aria-controls', links.id);
+      button.textContent = heading.textContent;
+      heading.textContent = '';
+      heading.appendChild(button);
+      button.addEventListener('click', function () {
+        const open = button.getAttribute('aria-expanded') !== 'true';
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        column.classList.toggle('is-open', open);
+      });
+    });
+    footer.classList.add('is-folding');
+  };
+
+  const unfold = function () {
+    columns.forEach(function (column) {
+      const heading = column.querySelector('h2');
+      const button = heading && heading.querySelector('button');
+      if (!button) return;
+      heading.textContent = button.textContent;
+      column.classList.remove('is-open');
+    });
+    footer.classList.remove('is-folding');
+  };
+
+  const sync = function () { if (narrow.matches) fold(); else unfold(); };
+  sync();
+  if (narrow.addEventListener) narrow.addEventListener('change', sync);
+})();
+
+/* Wikipedia posters arrive as Wikimedia thumbnails (app/image_sizes.py). If one
+   fails to load, show the original upload instead. */
+(function () {
+  const THUMB = /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/[a-z]+\/)thumb\/([0-9a-f]\/[0-9a-f]{2}\/[^/?#]+)\/\d+px-[^/?#]+$/;
+  const restore = function (img) {
+    if (!img || img.tagName !== 'IMG' || img.dataset.thumbFailed) return;
+    const match = THUMB.exec(img.getAttribute('src') || '');
+    if (!match) return;
+    img.dataset.thumbFailed = '1';
+    img.src = match[1] + match[2];
+  };
+  // "error" does not bubble, so listen in the capture phase; images that failed
+  // before this script ran are picked up by the check below.
+  document.addEventListener('error', function (event) { restore(event.target); }, true);
+  document.querySelectorAll('img[src*="upload.wikimedia.org/wikipedia/"][src*="/thumb/"]').forEach(function (img) {
+    if (img.complete && img.naturalWidth === 0 && img.currentSrc) restore(img);
+  });
+})();

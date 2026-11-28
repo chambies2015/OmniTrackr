@@ -68,11 +68,11 @@ function setup() {
   return { context, get, tabs, rows, requests, loads, alerts, categories, buttons, action, Element, refreshPick };
 }
 
-test('Continue shows two recent titles, preserves all collapsed reflections, and never duplicates Next Up', () => {
+test('Continue shows four recent titles, preserves all collapsed reflections, and never duplicates Next Up', () => {
   const s = setup();
   const items = queue(6).map(item => ({ ...item, id: item.item_id, status_label: 'Not read' }));
   s.context.renderLibraryPulse({ continue_items: items, reflection_items: items, next_up_items: items });
-  assert.equal(s.get('libraryPulseContinue').children.length, 2);
+  assert.equal(s.get('libraryPulseContinue').children.length, 4);
   assert.equal(s.get('libraryPulseReflect').children.length, 6);
   assert.equal(s.get('libraryPulseReflections').hidden, false);
   assert.equal(s.get('libraryPulseReflections').open, undefined);
@@ -185,7 +185,7 @@ test('pending moves serialize writes and prevent a stale queue read from replaci
   s.context.authenticatedFetch = (url, options) => { s.requests.push({ url, options }); return options?.method === 'PUT' ? move.promise : read.promise; };
   const moving = s.context.moveNextUp(601, 0);
   await s.context.removeNextUp(602);
-  assert.equal(s.requests.length, 1);
+  assert.equal(s.requests.filter(request => !request.url.includes('/suggestions')).length, 1);
   const reading = s.context.refreshNextUpQueue();
   move.resolve(response([items[1], items[0], items[2], items[3]])); await moving;
   read.resolve(response(items)); await reading;
@@ -250,12 +250,12 @@ test('an addition completed during a pending move or removal appears after that 
       };
       const mutation = operation === 'move' ? s.context.moveNextUp(601, 0) : s.context.removeNextUp(603);
       await s.context.addToNextUp('books', added.item_id);
-      assert.equal(s.requests.filter(request => !request.options?.method).length, 0);
+      assert.equal(s.requests.filter(request => !request.options?.method && !request.url.includes('/suggestions')).length, 0);
       pending.resolve(response(beforeAddition, succeeds ? 200 : 500));
       await mutation;
       assert.deepEqual(s.get('nextUpQueueItems').children.map(row => row.dataset.nextUpRowId), server.map(item => String(item.id)), `${operation}, success=${succeeds}`);
       assert.equal(s.get('nextUpQueueToggle').attributes['aria-expanded'], 'true');
-      assert.equal(s.requests.filter(request => !request.options?.method).length, 1);
+      assert.equal(s.requests.filter(request => !request.options?.method && !request.url.includes('/suggestions')).length, 1);
     }
   }
 });
@@ -365,10 +365,11 @@ test('Next Up rows offer Done for unfinished titles, mark finished ones, and cou
   items[1].finished = true;
   s.context.renderNextUpQueue(items);
   const rows = s.get('nextUpQueueItems').children;
-  assert.equal(rows[0].children[1].tagName, 'img');
-  assert.equal(rows[0].children[1].src, 'https://img.example/cover.jpg');
-  assert.equal(rows[2].children[1].textContent, 'T');
-  assert.deepEqual(rows[0].querySelectorAll('button').map(button => button.dataset.action), ['finish-next-up', 'pulse-open-item', 'remove-next-up']);
+  const cover = row => row.children.find(child => child.className === 'next-up-queue__cover');
+  assert.equal(cover(rows[0]).tagName, 'img');
+  assert.equal(cover(rows[0]).src, 'https://img.example/cover.jpg');
+  assert.equal(cover(rows[2]).textContent, 'T');
+  assert.deepEqual(rows[0].querySelectorAll('button').map(button => button.dataset.action), ['start-next-up', 'finish-next-up', 'pulse-open-item', 'remove-next-up']);
   assert.deepEqual(rows[1].querySelectorAll('button').map(button => button.dataset.action), ['pulse-open-item', 'remove-next-up']);
   assert.match(rows[1].textContent, /Finished/);
   assert.equal(s.get('nextUpQueueClearFinished').hidden, false);
@@ -404,4 +405,96 @@ test('Done takes the title off the queue and opens the completion reflection onc
   await s.context.finishNextUp(602);
   assert.match(s.alerts.at(-1), /Could not mark that title finished/);
   assert.equal(vm.runInContext('dailyDashboardState.mutationPending', s.context), false);
+});
+
+function mixedQueue() {
+  return [
+    { id: 700, item_id: 1, title: 'Dune', category: 'books', category_label: 'Book', available: true, now_label: 'Reading' },
+    { id: 701, item_id: 2, title: 'Arrival', category: 'movies', category_label: 'Movie', available: true, now_label: 'Watching' },
+    { id: 702, item_id: 3, title: 'Hades', category: 'video-games', category_label: 'Game', available: true, now_label: 'Playing' },
+  ];
+}
+const settle = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+
+test('Next Up rows carry a drag handle, and the format filters narrow the list without it', () => {
+  const s = setup(), items = mixedQueue();
+  s.context.renderNextUpQueue(items);
+  const rows = () => s.get('nextUpQueueItems').children;
+  assert.equal(rows()[0].children[0].dataset.nextUpHandle, '');
+  assert.equal(rows()[2].children[0].dataset.nextUpIndex, '2');
+  assert.match(rows()[0].children[0].attributes['aria-label'], /number 1 of 3/);
+  assert.deepEqual(s.get('nextUpQueueFilters').children.map(chip => chip.dataset.nextUpFilter), ['', 'watch', 'read', 'play']);
+  assert.equal(s.get('nextUpQueueFilters').hidden, false);
+
+  s.context.filterNextUp('read');
+  assert.deepEqual(rows().map(row => row.dataset.nextUpRowId), ['700']);
+  assert.equal(rows()[0].children[0].dataset.nextUpHandle, undefined);
+  assert.match(s.get('nextUpQueueSummary').textContent, /1 of 1 to read · 3 in your queue/);
+  s.context.toggleNextUpQueue();
+  assert.equal(s.action('move-next-up', 700, 'up'), undefined);
+  s.context.toggleNextUpQueue();
+  // Pressing the same chip again shows everything.
+  s.context.filterNextUp('read');
+  assert.equal(rows().length, 3);
+  // One format alone doesn't need filters.
+  s.context.renderNextUpQueue(queue(4));
+  assert.equal(s.get('nextUpQueueFilters').hidden, true);
+});
+
+test('Start moves the title up as started, and Not started only appears while managing', async () => {
+  const s = setup(), items = mixedQueue();
+  s.context.renderNextUpQueue(items);
+  assert.equal(s.action('start-next-up', 701).textContent, 'Start watching');
+  assert.equal(s.action('start-next-up', 702).textContent, 'Start playing');
+  const started = [{ ...items[1], started_at: '2026-11-08T10:00:00' }, items[0], items[2]];
+  s.context.authenticatedFetch = async (url, options) => { s.requests.push({ url, options }); return response(started); };
+  await s.context.startNextUp(701);
+  assert.deepEqual(s.requests.map(request => [request.url, request.options?.method]), [['/next-up/701/start', 'POST']]);
+  const first = s.get('nextUpQueueItems').children[0];
+  assert.equal(first.dataset.nextUpRowId, '701');
+  assert.match(first.className, /is-started/);
+  assert.match(first.textContent, /Watching since/);
+  assert.equal(s.action('start-next-up', 701), undefined);
+  assert.equal(s.action('unstart-next-up', 701), undefined);
+  assert.match(s.alerts.at(-1), /Started “Arrival”/);
+
+  s.context.toggleNextUpQueue();
+  assert.equal(s.action('unstart-next-up', 701).textContent, 'Not started');
+  s.context.authenticatedFetch = async (url, options) => { s.requests.push({ url, options }); return response(items); };
+  await s.context.unstartNextUp(701);
+  assert.ok(s.requests.some(request => request.url === '/next-up/701/start' && request.options?.method === 'DELETE'));
+  assert.equal(s.action('unstart-next-up', 701), undefined);
+});
+
+test('Titles with saved progress skip Start, since they are already under way', () => {
+  const s = setup(), items = mixedQueue();
+  items[0].progress = { unit: 'page', position: 40 };
+  s.context.renderNextUpQueue(items);
+  assert.equal(s.action('start-next-up', 700), undefined);
+  assert.ok(s.action('finish-next-up', 700));
+});
+
+test('An empty queue offers titles from the library, and stays hidden when there are none', async () => {
+  const s = setup();
+  let suggestions = [{ category: 'books', item_id: 9, title: 'Piranesi', category_label: 'Book', image: null }];
+  s.context.authenticatedFetch = async url => { s.requests.push({ url }); return response(url.includes('/suggestions') ? suggestions : []); };
+  s.context.renderNextUpQueue([]);
+  await settle();
+  assert.equal(s.get('nextUpQueue').hidden, false);
+  assert.equal(s.get('nextUpQueueSuggest').hidden, false);
+  const add = s.get('nextUpQueueSuggestList').children[0].children[2];
+  assert.equal(add.dataset.action, 'add-next-up-suggestion');
+  assert.equal(add.dataset.nextUpItemId, '9');
+  assert.match(s.get('nextUpQueueSummary').textContent, /Nothing lined up yet/);
+  // The same empty queue doesn't ask again.
+  s.context.renderNextUpQueue([]);
+  await settle();
+  assert.equal(s.requests.filter(request => request.url.includes('/suggestions')).length, 1);
+
+  const fresh = setup();
+  fresh.context.authenticatedFetch = async url => { fresh.requests.push({ url }); return response([]); };
+  fresh.context.renderNextUpQueue([]);
+  await settle();
+  assert.equal(fresh.get('nextUpQueue').hidden, true);
+  assert.equal(fresh.get('nextUpQueueSuggest').hidden, true);
 });

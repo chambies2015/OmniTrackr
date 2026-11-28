@@ -490,18 +490,21 @@ def member_keys(db: Session, user_id: int, kind: str, chart: Optional[dict] = No
     return keys
 
 
-def add_to_library(db: Session, user, kind: str, entry: dict, image: Optional[str] = None) -> tuple[str, object]:
+def add_to_library(db: Session, user, kind: str, entry: dict, image: Optional[str] = None,
+                   finished: bool = False, checked: bool = False) -> tuple[str, object]:
     """Add a shelf or chart entry to the member's library, unfinished and unrated. Does not commit.
 
     Returns ("existing" | "created", record). A title the member already has (same name,
-    any case) is left exactly as it is.
+    any case) is left exactly as it is. ``finished`` saves a new record already finished;
+    ``checked`` means the caller already looked for the title (essentials.add).
     """
     config = KINDS[kind]
     model = config["model"]
-    normalized = title_pages.normalize(entry["title"])
-    existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
-    if existing is not None:
-        return "existing", existing
+    if not checked:
+        normalized = title_pages.normalize(entry["title"])
+        existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
+        if existing is not None:
+            return "existing", existing
     extra = entry.get("extra") or {}
     fields = {"user_id": user.id, "title": entry["title"], "year": entry.get("year"), "genre": entry.get("genre"),
               config["creator_field"]: entry.get("creator") or None}
@@ -515,6 +518,8 @@ def add_to_library(db: Session, user, kind: str, entry: dict, image: Optional[st
     cover = title_pages._safe_image(image) or title_pages._safe_image(entry.get("image"))
     if cover:
         fields["cover_art_url"] = cover
+    if finished:
+        fields[title_pages.COMPLETE_FIELD[config["title_kind"]]] = True
     record = model(**fields)
     db.add(record)
     db.flush()

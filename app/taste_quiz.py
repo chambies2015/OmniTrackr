@@ -11,12 +11,13 @@ moves them into the new library. A title the member already has is never changed
 """
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from typing import Iterable, Optional
 
 from sqlalchemy.orm import Session
 
-from . import if_you_liked, pick, title_metadata, title_pages
+from . import if_you_liked, models, pick, title_metadata, title_pages
 
 KINDS = ("movie", "tv", "anime", "game")
 FORMAT_LABELS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games"}
@@ -112,6 +113,38 @@ def cached_art(db: Session, card: dict, art: Optional[dict] = None) -> Optional[
         db.rollback()
         return None
     return title_pages._safe_image((data or {}).get("poster"))
+
+
+def cached_art_many(db: Session, cards: Iterable[dict]) -> dict[str, str]:
+    """card id -> cached cover, the same answer cached_art gives for each card, read in one query
+    per 500 cards instead of one per card (the start page wall asks for up to 72 at once)."""
+    keys: dict[str, str] = {}
+    for card in cards:
+        keys[card["id"]] = title_metadata.cache_key(card["kind"], title_pages.normalize(card["title"]), card["year"])
+    wanted = sorted(set(keys.values()))
+    data_by_key: dict[str, Optional[str]] = {}
+    try:
+        for start in range(0, len(wanted), 500):
+            rows = (db.query(models.TitleMetadata.key, models.TitleMetadata.data)
+                    .filter(models.TitleMetadata.key.in_(wanted[start:start + 500]),
+                            models.TitleMetadata.status == "ok").all())
+            data_by_key.update({key: data for key, data in rows})
+    except Exception:
+        db.rollback()
+        return {}
+    images: dict[str, str] = {}
+    for card_id, key in keys.items():
+        raw = data_by_key.get(key)
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            continue
+        image = title_pages._safe_image(data.get("poster")) if isinstance(data, dict) else None
+        if image:
+            images[card_id] = image
+    return images
 
 
 def deck() -> list[dict]:

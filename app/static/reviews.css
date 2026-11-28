@@ -13,8 +13,8 @@
 .review-filters :is(input, select):focus { border-color: var(--site-violet); box-shadow: 0 0 0 3px rgba(139, 92, 246, .25); outline: none; }
 .review-filters input::placeholder { color: #807ca3; opacity: 1; }
 .reviews-page button { border: 1px solid transparent; border-radius: 999px; cursor: pointer; font: 600 .95rem var(--site-font); min-height: 50px; padding: 0 24px; }
-.review-filters button { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); box-shadow: 0 10px 26px rgba(139, 92, 246, .35); color: #fff; margin: 0; }
-.review-filters button:hover { filter: brightness(1.08); }
+.review-filters button { background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); box-shadow: 0 10px 26px rgba(139, 92, 246, .35); color: #fff; margin: 0; }
+.review-filters button:hover { filter: brightness(1.04); }
 .reviews-page button:disabled { cursor: wait; opacity: .65; }
 .reviews-category-nav { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .reviews-category-nav span { color: var(--site-muted); font-size: .85rem; font-weight: 600; margin-right: 4px; }
@@ -47,8 +47,8 @@
 .review-author { font-weight: 600; }
 .review-rating { background: rgba(251, 191, 36, .13); border-radius: 999px; color: var(--site-amber); font-size: .82rem; font-weight: 700; padding: 4px 11px; }
 .review-card-actions { align-items: center; border-top: 1px solid var(--site-border); display: flex; flex-wrap: wrap; gap: 10px 18px; padding-top: 18px; }
-.review-card-actions .review-save-link { align-items: center; background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border: 0; border-radius: 999px; color: #fff !important; display: inline-flex; font-size: .85rem; font-weight: 600; min-height: 42px; padding: 0 18px; text-decoration: none; }
-.review-card-actions .review-save-link:hover { filter: brightness(1.08); }
+.review-card-actions .review-save-link { align-items: center; background: linear-gradient(135deg, var(--site-cta, #7f4ef0), var(--site-cta-2, #963cf0)); border: 0; border-radius: 999px; color: #fff !important; display: inline-flex; font-size: .85rem; font-weight: 600; min-height: 42px; padding: 0 18px; text-decoration: none; }
+.review-card-actions .review-save-link:hover { filter: brightness(1.04); }
 .review-detail-link { font-size: .88rem; font-weight: 600; padding: 10px 0; text-decoration: none; }
 .review-card .review-report { border-color: var(--site-border); color: var(--site-muted); font-size: .8rem; margin-top: 16px; }
 .review-card .review-report summary { min-height: 30px; }

@@ -15,6 +15,8 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
+from ..page_hints import SPECULATION_RULES, SPECULATION_RULES_PATH
+from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
@@ -60,13 +62,25 @@ CORE_SITEMAP_PATHS = (
     ("/sample-library", "monthly", "0.8"),
     ("/pick", "weekly", "0.7"),
     ("/tonight", "monthly", "0.6"),
+    ("/together", "monthly", "0.6"),
+    ("/break", "monthly", "0.6"),
+    ("/swap", "monthly", "0.6"),
+    ("/yearbook", "monthly", "0.6"),
     ("/tier-list", "monthly", "0.7"),
+    ("/top-nine", "monthly", "0.7"),
     ("/binge-calculator", "monthly", "0.7"),
     ("/if-you-liked", "monthly", "0.75"),
     ("/best-of", "weekly", "0.75"),
+    ("/essentials", "monthly", "0.8"),
     ("/in-order", "monthly", "0.75"),
     ("/halloween", "weekly", "0.75"),
     ("/holidays", "weekly", "0.75"),
+    ("/holidays/gifts", "weekly", "0.75"),
+    ("/holidays/black-friday", "weekly", "0.75"),
+    ("/holidays/christmas", "weekly", "0.75"),
+    ("/holidays/thanksgiving", "weekly", "0.75"),
+    ("/holidays/reading-and-listening", "weekly", "0.75"),
+    ("/valentines-day", "weekly", "0.75"),
     ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
@@ -84,7 +98,6 @@ CORE_SITEMAP_PATHS = (
 def _database_parts(db: Session) -> list[str]:
     """Sitemap entries that come from member data: reviews, collections, guides, title pages, profiles."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
-    today = datetime.now().strftime('%Y-%m-%d')
     sitemap_parts = []
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
@@ -96,6 +109,8 @@ def _database_parts(db: Session) -> list[str]:
             model_cls.user_id.in_(user_query)
         )
 
+        review_changed = {}
+
         def visible_search_ready(category, candidates):
             item_ids = [item.id for item in candidates]
             state_map = {
@@ -105,6 +120,9 @@ def _database_parts(db: Session) -> list[str]:
                     models.PublicReviewState.item_id.in_(item_ids),
                 ).all()
             } if item_ids else {}
+            for item_id, state in state_map.items():
+                if state.updated_at:
+                    review_changed[(category, item_id)] = state.updated_at
             return [
                 item for item in candidates
                 if (item.title or "").strip() and evaluate_public_review(
@@ -122,131 +140,34 @@ def _database_parts(db: Session) -> list[str]:
             category_candidates = db.query(model_cls).filter(
                 public_detail_review_filter(model_cls)
             ).limit(200).all()
-            ready_count = len(visible_search_ready(category, category_candidates))
+            ready = visible_search_ready(category, category_candidates)
+            ready_count = len(ready)
             search_ready_total += ready_count
-            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
+            if ready_count >= review_quality.MIN_INDEXED_CATEGORY_REVIEWS:
+                # The listing changes when one of its reviews does.
+                newest = max((review_changed[(category, item.id)] for item in ready
+                              if (category, item.id) in review_changed), default=None)
+                lastmod = f"\n    <lastmod>{newest.date().isoformat()}</lastmod>" if newest else ""
                 sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews?category={category}</loc>
-    <lastmod>{today}</lastmod>
+    <loc>{base_url}/reviews?category={category}</loc>{lastmod}
     <changefreq>daily</changefreq>
     <priority>0.72</priority>
   </url>""")
         
+        # One loop per media type; lastmod is when the public review last changed
+        # (PublicReviewState.updated_at). With no record of that the entry has no
+        # lastmod at all, since a date that always says "today" teaches Google to
+        # ignore every lastmod in the file.
         review_limit = 600
-        
-        movie_reviews = db.query(models.Movie).filter(
-            public_detail_review_filter(models.Movie)
-        ).limit(review_limit // 6).all()
-        movie_reviews = page_worthy(visible_search_ready("movie", movie_reviews))
-        
-        tv_reviews = db.query(models.TVShow).filter(
-            public_detail_review_filter(models.TVShow)
-        ).limit(review_limit // 6).all()
-        tv_reviews = page_worthy(visible_search_ready("tv_show", tv_reviews))
-        
-        anime_reviews = db.query(models.Anime).filter(
-            public_detail_review_filter(models.Anime)
-        ).limit(review_limit // 6).all()
-        anime_reviews = page_worthy(visible_search_ready("anime", anime_reviews))
-        
-        vg_reviews = db.query(models.VideoGame).filter(
-            public_detail_review_filter(models.VideoGame)
-        ).limit(review_limit // 6).all()
-        vg_reviews = page_worthy(visible_search_ready("video_game", vg_reviews))
-
-        music_reviews = db.query(models.Music).filter(
-            public_detail_review_filter(models.Music)
-        ).limit(review_limit // 6).all()
-        music_reviews = page_worthy(visible_search_ready("music", music_reviews))
-
-        book_reviews = db.query(models.Book).filter(
-            public_detail_review_filter(models.Book)
-        ).limit(review_limit // 6).all()
-        book_reviews = page_worthy(visible_search_ready("book", book_reviews))
-
-        manga_reviews = db.query(models.Manga).filter(
-            public_detail_review_filter(models.Manga)
-        ).limit(review_limit // 6).all()
-        manga_reviews = page_worthy(visible_search_ready("manga", manga_reviews))
-
-        podcast_reviews = db.query(models.Podcast).filter(
-            public_detail_review_filter(models.Podcast)
-        ).limit(review_limit // 6).all()
-        podcast_reviews = page_worthy(visible_search_ready("podcast", podcast_reviews))
-
-        audiobook_reviews = db.query(models.Audiobook).filter(
-            public_detail_review_filter(models.Audiobook)
-        ).limit(review_limit // 6).all()
-        audiobook_reviews = page_worthy(visible_search_ready("audiobook", audiobook_reviews))
-        
-        for review in movie_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=movie</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in tv_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=tv_show</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in anime_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=anime</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-        
-        for review in vg_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=video_game</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in music_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=music</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in book_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=book</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in manga_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=manga</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in podcast_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=podcast</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
-        for review in audiobook_reviews:
-            sitemap_parts.append(f"""  <url>
-    <loc>{base_url}/reviews/{review.id}?category=audiobook</loc>
-    <lastmod>{today}</lastmod>
+        for category, model_cls in REVIEW_CATEGORY_MODELS:
+            candidates = db.query(model_cls).filter(
+                public_detail_review_filter(model_cls)
+            ).limit(review_limit // 6).all()
+            for review in page_worthy(visible_search_ready(category, candidates)):
+                changed = review_changed.get((category, review.id))
+                lastmod = f"\n    <lastmod>{changed.date().isoformat()}</lastmod>" if changed else ""
+                sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category={category}</loc>{lastmod}
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>""")
@@ -276,9 +197,13 @@ def _database_parts(db: Session) -> list[str]:
             )
             if available_count >= 3:
                 eligible_collection_count += 1
+                # The list's own dates; it is re-approved whenever its content changes.
+                changed = max((moment for moment in (collection.approved_at, collection.published_at, collection.created_at)
+                               if moment), default=None)
+                lastmod = f"<lastmod>{changed.date().isoformat()}</lastmod>" if changed else ""
                 sitemap_parts.append(
                     f"  <url><loc>{base_url}/collections/public/{collection.id}</loc>"
-                    f"<lastmod>{today}</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>"
+                    f"{lastmod}<changefreq>monthly</changefreq><priority>0.65</priority></url>"
                 )
         if eligible_collection_count >= 3:
             sitemap_parts.append(
@@ -297,7 +222,7 @@ def _database_parts(db: Session) -> list[str]:
     for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
-            f"<lastmod>{edition['published_date']}</lastmod>"
+            f"<lastmod>{edition.get('reviewed', edition['published_date'])}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
     # Monthly challenge guides that have started; future months stay unpublished.
@@ -311,12 +236,42 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
-    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    # New Year challenge guides from their opening day (December 1 of the year before).
+    from .. import new_year_challenge
+    for year, edition in new_year_challenge.EDITIONS.items():
+        if new_year_challenge.is_public(year):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{new_year_challenge.path(year)}</loc>"
+                f"<lastmod>{edition['published']}</lastmod>"
+                "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+            )
+    # The December advent calendar from opening day; the one-door share pages are never listed.
+    from .. import advent_calendar
+    advent_year = advent_calendar.current_year()
+    if advent_year is not None:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{advent_calendar.BASE_PATH}</loc>"
+            f"<lastmod>{max(advent_calendar.edition(advent_year)['published'], advent_calendar.edition(advent_year)['reviewed'])}</lastmod>"
+            "<changefreq>daily</changefreq><priority>0.8</priority></url>"
+        )
+    # Awards season: the calendar and one written page per show. Shared ballots are never listed.
+    from .. import awards, awards_data
+    sitemap_parts.append(
+        f"<url><loc>{base_url}{awards.BASE_PATH}</loc><lastmod>{awards_data.SEASON['reviewed']}</lastmod>"
+        "<changefreq>weekly</changefreq><priority>0.8</priority></url>"
+    )
+    for awards_slug, awards_show in awards.ordered():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{awards.path(awards_slug)}</loc><lastmod>{awards_show['reviewed']}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
+    # OmniTrackr Daily: the archive and each finished puzzle, only if past puzzles are indexed
+    # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
     daily_numbers = daily.archive_numbers()
-    if daily_numbers:
+    if daily_numbers and daily.archive_indexable():
         sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
-    for number in daily_numbers:
+    for number in (daily_numbers if daily.INDEX_PAST_PUZZLES else []):
         sitemap_parts.append(
             f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
             "<changefreq>yearly</changefreq><priority>0.5</priority></url>"
@@ -347,6 +302,14 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
         )
+    # The Essential 100: one hand-written canon list per format (shared counts under it are noindex).
+    from .. import essentials
+    for fmt, data in essentials.lists().items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{essentials.path(fmt)}</loc>"
+            f"<lastmod>{data['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.8</priority></url>"
+        )
     # Release guides: hand-written picks from a month's (or a season's) new releases, live from their publish date.
     from .. import new_releases
     release_guides = new_releases.published()
@@ -375,6 +338,16 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # "How long does it take" guides: hand-written, with a checked part-by-part breakdown.
+    from .. import binge_calculator
+    from ..binge_guides import GUIDES as BINGE_GUIDES
+    for slug, guide in BINGE_GUIDES.items():
+        if binge_calculator.is_indexable(guide):
+            sitemap_parts.append(
+                f"<url><loc>{base_url}{binge_calculator.path(slug)}</loc>"
+                f"<lastmod>{guide['reviewed']}</lastmod>"
+                "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+            )
     # Title pages join only when they have real substance (see title_pages.is_indexable).
     try:
         from .titles import sitemap_entries
@@ -517,7 +490,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
                     f"  <url><loc>{base_url}{path}</loc><lastmod>{today}</lastmod>"
                     f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
                 )
-    if featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
+    if release_radar.INDEX_OVERVIEW and featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
         sitemap_parts.append(f"  <url><loc>{base_url}/release-radar</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>0.85</priority></url>")
     sitemap_parts.extend(radar_parts)
 
@@ -527,6 +500,14 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
     sitemap = "\n".join(sitemap_parts)
     
     return Response(content=sitemap, media_type="application/xml")
+
+
+@router.get(SPECULATION_RULES_PATH, include_in_schema=False)
+async def speculation_rules():
+    """The prefetch rules public pages point to in their Speculation-Rules header (page_hints.py)."""
+    return Response(content=json.dumps(SPECULATION_RULES, separators=(",", ":")),
+                     media_type="application/speculationrules+json",
+                     headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/robots.txt")
@@ -548,6 +529,7 @@ Allow: /ads.txt
 Allow: /sellers.json
 Disallow: /auth/
 Disallow: /api/
+Disallow: /share
 Disallow: /account/
 Disallow: /friends
 Disallow: /movies/
@@ -625,6 +607,27 @@ async def get_llms_txt():
     """Serve llms.txt/ai.txt for AI model discovery and site understanding."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     
+    from .. import new_year_challenge
+    new_year = new_year_challenge.current_year()
+    new_year_line = (
+        f"The New Year challenge at {base_url}{new_year_challenge.path(new_year)} lets members pledge how many titles in "
+        "each format they want to finish that year, with advice on picking a number and a table of what each format "
+        "typically costs in hours a week.\n" if new_year else ""
+    )
+    from .. import advent_calendar
+    advent_line = (
+        f"The December advent calendar at {base_url}{advent_calendar.BASE_PATH} opens one door a day from December 1 "
+        "to 24, each with one written pick across the nine formats, how long it takes and a caveat.\n"
+        if advent_calendar.current_year() else ""
+    )
+    from .. import new_releases
+    release_examples = [f"{base_url}{new_releases.path(slug)}" for slug in list(new_releases.published())[:2]]
+    release_line = (
+        f"Release guides at {base_url}{new_releases.BASE_PATH} pick the new movies, TV, games, anime and books worth "
+        f"your time each month or season (for example {' and '.join(release_examples)}), with when and where each one "
+        "comes out, why it made the list, what to catch up on first and one thing to know before committing.\n"
+        if release_examples else ""
+    )
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
@@ -662,6 +665,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Privacy Policy: {base_url}/privacy
 - Advertising Policy: {base_url}/advertising
 - Editorial Standards: {base_url}/content-quality
+- Corrections and Updates: {base_url}/corrections
 - HTML Site Map: {base_url}/site-map
 - Public Reviews: {base_url}/reviews
 - Community Collections: {base_url}/collections/explore
@@ -688,19 +692,21 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Audiobooks: Reviews and ratings for audiobooks, including the narrator
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, editorial standards at {base_url}/content-quality, and a log of corrections to the guides at {base_url}/corrections.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
 "If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
-Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
+Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel. The Christmas 2026 guide at {base_url}/holidays/christmas lists every new Christmas film, TV special and album of 2026 with its date and where to find it, then has twenty picks: five of the new films, five Christmas episodes of long-running shows (The Simpsons, Seinfeld, The Office, Community and The Bear), and ten older picks for Christmas Eve and the week after in films, books, an audiobook, albums and games. The Thanksgiving weekend guide at {base_url}/holidays/thanksgiving has twenty picks across all nine formats for the four days of the long weekend, from audiobooks for the drive to party games for after dinner. The December reading and listening guide at {base_url}/holidays/reading-and-listening has twenty books, audiobooks, podcasts, manga and albums for wrapping, travelling, the week after Christmas and late at night. The holiday gift guide at {base_url}/holidays/gifts has four gift ideas for each kind of fan (movies, TV, anime, games, music, books, manga, podcasts and audiobooks), each with what to check before buying, and members can turn their library into a gift list to share with family. The Valentine's Day picks at {base_url}/valentines-day have thirty-six picks for four kinds of Valentine's night (a night in as a couple, Galentine's with friends, a night on your own and a long-distance night apart), one in each of the nine formats on every shelf, each with a romance level from one to five and a caveat, plus a dated calendar of the new love stories around Valentine's Day 2027. The Black Friday guide at {base_url}/holidays/black-friday says, format by format, which box sets, games, manga, records, books and audiobooks tend to get cheaper on Black Friday and Cyber Monday and which rarely do, with the 2026 dates and five checks to make before buying.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
-Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
+{release_line}Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
-Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games and books of each year (for example {base_url}/best-of/2026/movies), with release details, why each pick made the list, a caveat and the sources checked.
-Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+The Essential 100 at {base_url}/essentials has nine hand-written lists of 100 all-time essential titles each (films, TV shows, anime, games, books, albums, manga, podcasts and audiobooks, for example {base_url}/essentials/movies or {base_url}/essentials/anime), in date order, with why each title matters, where to start and how long it takes. Each list is also a checklist: visitors can tick what they have finished and share the count.
+Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games, books, albums, manga, podcasts and audiobooks of each year (for example {base_url}/best-of/2026/movies or {base_url}/best-of/2026/audiobooks), with release details, why each pick made the list, a caveat and the sources checked.
+{new_year_line}{advent_line}Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
-The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime or book series takes and the finish date at a chosen pace, with worked examples for long series.
+The top nine maker at {base_url}/top-nine turns the nine films, shows, games, albums, books and other titles someone loved most in a year into a 3x3 grid, with a 1080x1440 picture for a feed post, a 1080x1920 story picture and a link where friends tap the squares they have seen too. It works without an account.
+The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime, film series, book series, audiobook or game takes, and either the finish date at a chosen pace or the daily time needed to finish by a chosen date. "How long does it take" guides (for example {base_url}/binge-calculator/breaking-bad and {base_url}/binge-calculator/harry-potter) give hand-checked lengths season by season, book by book or film by film, with what the total leaves out. The break planner at {base_url}/break fills days off (Thanksgiving weekend, Christmas to New Year's, the US long weekends or any dates up to sixteen days) from a member's own library, day by day, with how much time each day has; its guide explains how to plan a long weekend of shows, films, books and games, and visitors can try it on a sample list.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 

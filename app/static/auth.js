@@ -22,7 +22,14 @@ const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 // Keep a visitor's chosen Discover, review, title, or collection page through
 // same-tab registration and email verification. Returning only opens a preview;
 // saving always requires the visitor's explicit confirmation on that page.
+// A link or text shared from another app (see /share) waits for sign-in too.
+const SHARE_RETURN = /^\/\?share=1(?:&q=[A-Za-z0-9%._~-]{1,400})?(?:&kind=(?:movies|tv-shows|anime|video-games|music|books|manga|podcasts|audiobooks|screen))?(?:&year=(?:19|20)\d{2})?(?:&via=[a-z]{2,20})?$/;
+
 function validateDiscoverAuthReturn(value) {
+    if (typeof value === 'string' && value.length <= 520) {
+        const shared = value.match(SHARE_RETURN);
+        if (shared && shared[0] === value) return value;
+    }
     if (typeof value !== 'string' || value.length > 180) return null;
     const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
     // Compare the entire match as JavaScript's $ can precede a final newline.
@@ -41,9 +48,40 @@ function validateDiscoverAuthReturn(value) {
     // Group polls: the poll page and the page that makes them.
     const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
     if (poll && poll[0] === value) return value;
-    // Daily, Pick for me, the start page, tier lists, "If you liked" and "In order" guides and the dashboard cards they link to.
-    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    // Daily, Pick for me, the start page, tier lists, the gift guide, "If you liked" and "In order" guides and the dashboard cards they link to.
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/top-nine|\/holidays\/(?:gifts|black-friday)|\/holidays\/advent-calendar|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;
+    // The New Year challenge guide, back at the pledge form.
+    const pledge = value.match(/^\/new-year-challenge\/20\d{2}#pledge$/);
+    if (pledge && pledge[0] === value) return value;
+    // An awards show's page, back at the ballot.
+    const ballot = value.match(/^\/awards\/[a-z0-9-]{1,60}#ballot$/);
+    if (ballot && ballot[0] === value) return value;
+    // The Essential 100 hub or one list, back at the count, where ticks from before signing up move in.
+    const essential = value.match(/^\/essentials(?:\/(?:movies|tv|anime|games|books|music|manga|podcasts|audiobooks)(?:#your-count)?)?$/);
+    if (essential && essential[0] === value) return value;
+    // A list someone shared: its public page or its share link, so signing in from a
+    // "+ Add to my library" button comes back to the list.
+    const sharedCollection = value.match(/^\/collections\/(?:public\/([1-9]\d{0,9})|link\/[A-Za-z0-9_-]{16,32})$/);
+    if (sharedCollection && sharedCollection[0] === value
+        && (sharedCollection[1] === undefined || Number(sharedCollection[1]) <= 2147483647)) return value;
+    // A top ten someone shared from Rankings, back where a ranking made before signing up is kept.
+    const ranked = value.match(/^\/ranked\/[A-Za-z0-9_-]{16,32}$/);
+    if (ranked && ranked[0] === value) return value;
+    // Watch together: the guide, an invite link (where joining happens) and one plan.
+    const together = value.match(/^\/together(?:\/join\/[A-Za-z0-9_-]{16,40}|\/([1-9]\d{0,9}))?$/);
+    if (together && together[0] === value && (together[1] === undefined || Number(together[1]) <= 2147483647)) return value;
+    // Pick swap: the guide, an invite link (where joining happens) and one swap.
+    const swap = value.match(/^\/swap(?:\/join\/[A-Za-z0-9_-]{16,40}|\/([1-9]\d{0,9}))?$/);
+    if (swap && swap[0] === value && (swap[1] === undefined || Number(swap[1]) <= 2147483647)) return value;
+    // Yearbook: the member page, a yearbook link (where signing happens) and the class page.
+    if (/^\/yearbook(?:\/[A-Za-z0-9_-]{16,40}|\/class\/20\d\d)?$/.test(value)) return value;
+    // A supporter gift someone sent (opened once signed in), or the page for buying one.
+    const gift = value.match(/^\/(?:gift\/[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}|supporters\/gift)$/);
+    if (gift && gift[0] === value) return value;
+    // The break planner guide, or a plan someone shared.
+    const breakPlan = value.match(/^\/break(?:\/s\/[A-Za-z0-9_-]{16,40})?$/);
+    if (breakPlan && breakPlan[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
@@ -96,12 +134,28 @@ function captureDiscoverAuthReturn() {
     }
 }
 
+// A group poll shortlist built before signing up waits in this browser (tonight.js). The
+// email confirmation link opens a new tab, where the ?next= return is gone, so a draft the
+// visitor asked the link for still brings them back to finish it.
+function pendingPollDraft() {
+    try {
+        const draft = JSON.parse(localStorage.getItem('omnitrackr_poll_draft'));
+        const now = Date.now();
+        return Boolean(draft && draft.waiting === true && Array.isArray(draft.options) && draft.options.length >= 2
+            && Number.isFinite(draft.at) && draft.at <= now && now - draft.at < DISCOVER_AUTH_RETURN_TTL);
+    } catch (error) {
+        return false;
+    }
+}
+
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
     const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (start ? `/?start=${start}` : '/');
+    if (path) return path;
+    if (start) return `/?start=${start}`;
+    return pendingPollDraft() ? '/tonight' : '/';
 }
 
 function clearDemoStartIntent() {
@@ -210,6 +264,7 @@ function saveAuthData(token, user) {
     try { localStorage.removeItem(TOKEN_KEY); } catch (_) { needsFallback = true; }
     try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { needsFallback = true; }
     try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (_) { /* optional */ }
+    clearSignupWaiting();
     if (!needsFallback) delete getUser.current;
     try {
         if (needsFallback) sessionStorage.setItem('omnitrackr_session_user', JSON.stringify(user));
@@ -272,6 +327,10 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetSeasonCard?.();
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
+    window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
+    window.resetAdventCard?.();
+    window.resetSupportAsk?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -410,7 +469,10 @@ function authErrorMessage(body, fallback) {
 // Funnel steps count once per visit (this tab's session), not once per page, so a
 // guest who opens sign-up on three pages is still one person starting to sign up.
 const reportedFunnelEvents = new Set();
-const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup']);
+const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup',
+    'signup_email_opened', 'signup_email_typed', 'signup_email_password', 'signup_email_pressed', 'signup_inbox_opened',
+    'signup_check_email', 'signup_check_password', 'signup_check_username', 'signup_request_failed',
+    'signup_waiting_resumed', 'signup_waiting_confirmed', 'signup_restart_clicked']);
 const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
 function funnelSentThisVisit(event) {
     if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
@@ -475,6 +537,7 @@ function showFieldError(fieldId, message, { focus = true } = {}) {
     const field = document.getElementById(fieldId);
     const slot = document.getElementById(`${fieldId}Error`);
     if (!field || !slot) return false;
+    if (fieldId === 'registerUsername') openUsernameField();
     slot.textContent = message;
     slot.hidden = false;
     if (typeof field.setAttribute === 'function') field.setAttribute('aria-invalid', 'true');
@@ -554,6 +617,7 @@ function setupPasswordHelpers() {
         if (!field || !field.id) return;
         if (field.getAttribute && field.getAttribute('aria-invalid') === 'true') clearFieldError(field.id);
         if (field.dataset && field.dataset.passwordStrength) updatePasswordStrength(field);
+        if (field.id === 'registerPassword' && field.value) reportFunnelEvent('signup_email_password');
     });
 }
 
@@ -570,11 +634,124 @@ function setupUsernameSuggestion() {
     const email = document.getElementById('registerEmail');
     const username = document.getElementById('registerUsername');
     if (!email || !username) return;
-    username.addEventListener('input', () => { username.dataset.edited = username.value ? 'true' : ''; });
+    username.addEventListener('input', () => {
+        username.dataset.edited = username.value ? 'true' : '';
+        username.dataset.suggested = '';
+    });
     email.addEventListener('input', () => {
+        hideEmailFix();
+        if (EMAIL_PATTERN.test(email.value.trim())) reportFunnelEvent('signup_email_typed');
         if (username.dataset.edited === 'true') return;
         username.value = suggestUsername(email.value);
+        username.dataset.suggested = username.value ? 'true' : '';
+        updateUsernameLine();
     });
+    email.addEventListener('blur', () => offerEmailFix());
+    const fix = document.getElementById('registerEmailFix');
+    if (fix && typeof fix.addEventListener === 'function') {
+        fix.addEventListener('click', () => {
+            if (!fix.dataset.email) return;
+            email.value = fix.dataset.email;
+            hideEmailFix();
+            clearFieldError('registerEmail');
+            if (username.dataset.edited !== 'true') {
+                username.value = suggestUsername(email.value);
+                username.dataset.suggested = username.value ? 'true' : '';
+                updateUsernameLine();
+            }
+        });
+    }
+    const change = document.getElementById('registerHandleChange');
+    if (change && typeof change.addEventListener === 'function') {
+        change.addEventListener('click', () => {
+            openUsernameField();
+            if (typeof username.focus === 'function') username.focus();
+            if (typeof username.select === 'function') username.select();
+        });
+    }
+    foldUsernameField();
+}
+
+// The sign-up form asks for an email and a password. The username box stays folded
+// behind one line ("Your username will be sam. Change") until someone wants to pick
+// their own or the suggested one has a problem. Without this script the box just shows.
+function foldUsernameField() {
+    const line = document.getElementById('registerHandle');
+    const box = document.getElementById('registerUsernameField');
+    const username = document.getElementById('registerUsername');
+    if (!line || !box || !username) return;
+    if (username.dataset.edited === 'true' || (typeof username.getAttribute === 'function' && username.getAttribute('aria-invalid') === 'true')) return;
+    box.hidden = true;
+    line.hidden = false;
+    updateUsernameLine();
+}
+
+function openUsernameField() {
+    const line = document.getElementById('registerHandle');
+    const box = document.getElementById('registerUsernameField');
+    if (box) box.hidden = false;
+    if (line) line.hidden = true;
+}
+
+function updateUsernameLine() {
+    const username = document.getElementById('registerUsername');
+    const name = document.getElementById('registerHandleName');
+    const empty = document.getElementById('registerHandleEmpty');
+    const filled = document.getElementById('registerHandleFilled');
+    if (!username || !name || !empty || !filled) return;
+    name.textContent = username.value;
+    empty.hidden = Boolean(username.value);
+    filled.hidden = !username.value;
+}
+
+// "sam is taken": when the name was our suggestion, put the next free-looking one in
+// the box so the visitor can press the button again instead of inventing a name.
+function offerAnotherUsername(message) {
+    const username = document.getElementById('registerUsername');
+    if (!username || !username.dataset || username.dataset.suggested !== 'true' || !/taken|reserved/i.test(message)) return message;
+    const taken = username.value;
+    const next = `${taken.slice(0, 28)}${10 + Math.floor(Math.random() * 90)}`;
+    username.value = next;
+    updateUsernameLine();
+    return `${taken} is taken, so we changed it to ${next}. Keep it or type your own, then create your account.`;
+}
+
+// Slips of the finger in the best-known mail domains. Only exact matches, so a real
+// address such as name@yahoo.co.uk is never questioned.
+const EMAIL_DOMAIN_FIXES = {
+    'gmail.com': ['gmial.com', 'gmai.com', 'gmal.com', 'gamil.com', 'gnail.com', 'gmail.co', 'gmail.con', 'gmail.cm', 'gmaill.com', 'gmail.comm', 'gmail.cmo', 'gmail.vom'],
+    'hotmail.com': ['hotmial.com', 'hotmai.com', 'hotmal.com', 'hotmail.co', 'hotmail.con', 'hotmail.cm', 'hotmail.comm', 'hotmil.com'],
+    'outlook.com': ['outlok.com', 'outloo.com', 'outlook.co', 'outlook.con', 'outlook.cm', 'outlook.comm', 'outllook.com'],
+    'yahoo.com': ['yaho.com', 'yahooo.com', 'yahoo.co', 'yahoo.con', 'yahoo.cm', 'yahoo.comm', 'yhoo.com'],
+    'icloud.com': ['iclod.com', 'icoud.com', 'icloud.co', 'icloud.con', 'icloud.cm', 'icloud.comm', 'iclould.com'],
+};
+
+// The corrected address when the part after "@" is a known slip, otherwise ''.
+function emailTypoFix(email) {
+    const text = String(email || '').trim();
+    const at = text.lastIndexOf('@');
+    if (at < 1) return '';
+    const domain = text.slice(at + 1).toLowerCase();
+    for (const [right, wrong] of Object.entries(EMAIL_DOMAIN_FIXES)) {
+        if (wrong.includes(domain)) return `${text.slice(0, at + 1)}${right}`;
+    }
+    return '';
+}
+
+function offerEmailFix() {
+    const email = document.getElementById('registerEmail');
+    const slot = document.getElementById('registerEmailSuggest');
+    const fix = document.getElementById('registerEmailFix');
+    if (!email || !slot || !fix) return;
+    const better = emailTypoFix(email.value);
+    fix.textContent = better;
+    if (fix.dataset) fix.dataset.email = better;
+    slot.hidden = !better;
+}
+
+function hideEmailFix() {
+    const slot = document.getElementById('registerEmailSuggest');
+    if (slot) slot.hidden = true;
 }
 
 async function register(email, username, password) {
@@ -583,48 +760,437 @@ async function register(email, username, password) {
     const payload = { email, username, password };
     if (invite) payload.invite = invite;
     if (weeklyBox && weeklyBox.checked) payload.weekly_email = true;
-    const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    let response;
+    try {
+        response = await fetch(`${AUTH_API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (_) {
+        // Nothing reached us, so the server can't count it: the browser says so instead.
+        reportFunnelEvent('signup_request_failed');
+        throw new Error("We couldn't reach OmniTrackr. Check your connection, then press Create free account again.");
+    }
 
     if (!response.ok) {
+        if (response.status >= 500) reportFunnelEvent('signup_request_failed');
         const error = await response.json().catch(() => ({}));
+        // Signed up before and never confirmed: offer a code for that account, not a dead end.
+        if (error && error.unverified === true && typeof error.email === 'string' && showInboxPanel('pending', error.email)) return;
         throw new Error(authErrorMessage(error, 'Something went wrong creating your account. Please try again.'));
     }
 
     await response.json();
     clearFriendInvite();
     document.getElementById('registerFormElement').reset();
-    showVerificationSent(email);
+    const headers = response.headers;
+    const delivery = headers && typeof headers.get === 'function' ? headers.get('X-Verification-Email') : null;
+    showVerificationSent(email, { emailFailed: delivery === 'failed', emailSlow: delivery === 'sending' });
 }
 
-// After sign-up: switch to the log-in form with the email filled in and the resend button ready.
-function showVerificationSent(email) {
-    showLoginForm(false);
-    document.getElementById('authTitle').textContent = 'Check your inbox';
-    setAuthContext('One last step before your library opens.');
+// Mail services we can open for the visitor, matched on the part after "@". The
+// Gmail and Yahoo links search for our email, spam folder included.
+const INBOX_LINKS = [
+    [/^(gmail|googlemail)\.com$/, 'Gmail', 'https://mail.google.com/mail/u/0/#search/omnitrackr+in%3Aanywhere+newer_than%3A2d'],
+    [/^(outlook|hotmail|live|msn)\.[a-z.]{2,6}$/, 'Outlook', 'https://outlook.live.com/mail/0/'],
+    [/^(yahoo|ymail|rocketmail)\.[a-z.]{2,6}$/, 'Yahoo Mail', 'https://mail.yahoo.com/d/search/keyword=omnitrackr'],
+    [/^(icloud|me|mac)\.com$/, 'iCloud Mail', 'https://www.icloud.com/mail'],
+    [/^(proton\.me|protonmail\.com|pm\.me)$/, 'Proton Mail', 'https://mail.proton.me/u/0/inbox'],
+    [/^aol\.com$/, 'AOL Mail', 'https://mail.aol.com/'],
+];
+
+function inboxLinkFor(email) {
+    const domain = String(email || '').split('@').pop().toLowerCase();
+    const match = INBOX_LINKS.find(([pattern]) => pattern.test(domain));
+    return match ? { name: match[1], url: match[2] } : null;
+}
+
+// The views that are not one of the four classic forms: the "check your inbox"
+// step, the short "confirming" wait, and the two-factor code.
+function hideAuthPanels() {
+    hideTwoFactorForm();
+    ['verifySentPanel', 'authStatusPanel'].forEach(id => {
+        const panel = document.getElementById(id);
+        if (panel) panel.style.display = 'none';
+    });
+}
+
+function hideAuthForms() {
+    ['loginForm', 'registerForm', 'forgotPasswordForm', 'resetPasswordForm', 'resendVerificationContainer'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+}
+
+// A short wait with a spinner ("Confirming your email").
+function showAuthStatus(title, text) {
+    const panel = document.getElementById('authStatusPanel');
+    if (!panel) return false;
+    hideAuthForms();
+    hideAuthPanels();
+    document.getElementById('authTitle').textContent = title;
+    setAuthContext('');
+    const line = document.getElementById('authStatusText');
+    if (line) line.textContent = text;
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+    panel.style.display = 'block';
+    return true;
+}
+
+// "Check your inbox": after sign-up ('verify') or after asking for a reset link ('reset').
+// 'pending' is an account that signed up earlier and still waits for its email to be
+// confirmed (a log-in, or signing up again with the same address).
+let inboxPanelState = null;
+const INBOX_PANEL_TEXT = {
+    verify: { title: 'Check your inbox', context: 'One more step and your library opens.',
+        lead: ['We sent a 6-digit code to ', '. Type it here to open your library.'] },
+    pending: { title: 'Confirm your email', context: 'Your account is waiting for this one step.',
+        lead: ['Type the code we emailed to ', ". Can't find it? Send a new one below."] },
+    reset: { title: 'Check your inbox', context: 'Your reset link is on its way.',
+        lead: ['If ', ' has an account, we sent it a link to choose a new password.'] },
+};
+function showInboxPanel(mode, email, { emailFailed = false, emailSlow = false } = {}) {
+    const panel = document.getElementById('verifySentPanel');
+    const lead = document.getElementById('verifySentLead');
+    if (!panel || !lead) return false;
+    hideAuthForms();
+    hideAuthPanels();
+    inboxPanelState = { mode, email };
+    const confirming = mode === 'verify' || mode === 'pending';
+    // Kept for a reload or a new tab, and for a sign-up button pressed again in this one.
+    if (confirming) {
+        signupWaiting = { mode, email };
+        markSignupWaiting();
+    }
+    const text = INBOX_PANEL_TEXT[mode] || INBOX_PANEL_TEXT.reset;
+    document.getElementById('authTitle').textContent = text.title;
+    setAuthContext(text.context);
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+    const parts = text.lead;
+    const before = document.getElementById('verifySentBefore');
+    const address = document.getElementById('verifySentEmail');
+    const after = document.getElementById('verifySentAfter');
+    if (before && address && after) {
+        before.textContent = parts[0];
+        address.textContent = email;
+        after.textContent = parts[1];
+    } else {
+        lead.textContent = `${parts[0]}${email}${parts[1]}`;
+    }
+    // The code box is the main way on: it keeps this tab (and a guest's saved titles).
+    const codeForm = document.getElementById('verifyCodeForm');
+    if (codeForm) codeForm.hidden = !confirming;
+    const codeField = document.getElementById('verifyCode');
+    if (codeField) codeField.value = '';
+    clearFieldError('verifyCode');
+    const inbox = document.getElementById('verifySentInbox');
+    const service = inboxLinkFor(email);
+    if (inbox) {
+        inbox.hidden = !service;
+        // For a reset the mail app is the only way on; for a code it sits under the box.
+        inbox.className = confirming ? 'auth-ghost auth-inbox' : 'auth-submit auth-inbox';
+        if (typeof inbox.setAttribute === 'function') inbox.setAttribute('target', '_blank');
+        if (service) { inbox.textContent = `Open ${service.name}`; inbox.href = service.url; }
+    }
+    const note = document.getElementById('verifySentNote');
+    if (note) {
+        const saved = confirming ? savedGuestTitles() : 0;
+        const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be in your library when you log in.` : '';
+        note.textContent = confirming
+            ? `Or open the link in that email on this device. The code and link work for 48 hours. Nothing after a few minutes? Look in spam.${keep}`
+            : 'The link works for one hour. Nothing after a few minutes? Look in spam.';
+    }
+    const quiz = document.getElementById('verifySentQuiz');
+    if (quiz) quiz.hidden = mode !== 'verify';
+    const resend = document.getElementById('verifySentResend');
+    if (resend) {
+        resend.hidden = !confirming;
+        resend.disabled = false;
+        resend.textContent = mode === 'pending' ? 'Send me a new code' : 'Send the email again';
+    }
+    const status = document.getElementById('verifySentStatus');
+    if (status) {
+        status.textContent = emailFailed ? "We couldn't send the email just now. Press Send the email again in a minute."
+            : emailSlow ? 'Our mail server is slow right now, so the email may take a minute or two.' : '';
+    }
+    const login = document.getElementById('verifySentLogin');
+    if (login) login.textContent = confirming ? 'Already confirmed? Log in' : 'Back to log in';
+    const restart = document.getElementById('verifySentRestart');
+    if (restart) restart.textContent = mode === 'verify' ? 'Wrong address? Start again' : 'Try a different email';
+    panel.style.display = 'block';
+    // The button that led here is gone. With a mouse, the cursor goes in the code box,
+    // ready for a paste (the box reads the line above it to a screen reader). On a touch
+    // screen the heading takes it, so the keyboard doesn't cover the Open Gmail button.
+    const focusCode = confirming && codeField && finePointer();
+    const target = focusCode ? codeField : document.getElementById('authTitle');
+    if (target && typeof target.focus === 'function') target.focus();
+    return true;
+}
+
+function finePointer() {
+    try {
+        return typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    } catch (_) {
+        return false;
+    }
+}
+
+// A sign-up that waits for its code (Nov 23 2026). People leave the code step to read the
+// email; coming back, a phone often reloads the tab, or they open the site in a new one,
+// and the homepage used to look as if they had never signed up. localStorage keeps only
+// the time (never the address): the server says which address, from the HttpOnly
+// pending-signup cookie that only the browser that signed up has.
+let signupWaiting = null;
+const SIGNUP_WAITING_KEY = 'omnitrackr_signup_waiting';
+const SIGNUP_WAITING_MAX_MS = 48 * 3600 * 1000;  // Same as the code, the link and the cookie.
+const SIGNUP_WAITING_CLOSED_KEY = 'omnitrackr_signup_waiting_closed';
+
+function markSignupWaiting() {
+    try { localStorage.setItem(SIGNUP_WAITING_KEY, String(Date.now())); } catch (_) { /* optional */ }
+}
+
+function clearSignupWaiting() {
+    signupWaiting = null;
+    try { localStorage.removeItem(SIGNUP_WAITING_KEY); } catch (_) { /* optional */ }
+}
+
+function signupWaitingMarked() {
+    try {
+        const at = Number(localStorage.getItem(SIGNUP_WAITING_KEY));
+        if (!at) return false;
+        const age = Date.now() - at;
+        if (age >= 0 && age < SIGNUP_WAITING_MAX_MS) return true;
+        localStorage.removeItem(SIGNUP_WAITING_KEY);
+    } catch (_) { /* storage blocked */ }
+    return false;
+}
+
+// Closing the pop-up on the code step means "not now": later pages in this tab keep the
+// step ready under the sign-up buttons instead of opening it on their own.
+function signupWaitingClosedThisVisit() {
+    try { return sessionStorage.getItem(SIGNUP_WAITING_CLOSED_KEY) === '1'; } catch (_) { return false; }
+}
+
+function watchAuthDialogClose() {
+    const dialog = document.getElementById('authDialog');
+    if (!dialog || typeof dialog.addEventListener !== 'function') return;
+    dialog.addEventListener('close', () => {
+        if (!signupWaiting || !inboxPanelState || inboxPanelState.mode === 'reset') return;
+        try { sessionStorage.setItem(SIGNUP_WAITING_CLOSED_KEY, '1'); } catch (_) { /* optional */ }
+    });
+}
+
+// Back on the homepage with a sign-up waiting: open the code step again, or, when the
+// email was confirmed meanwhile in another browser, the log-in form with the address in.
+// Resolves false when there is nothing to pick up, so the page opens as usual.
+async function resumeWaitingSignup() {
+    let data = null;
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/auth/pending-signup`, { credentials: 'same-origin', cache: 'no-store' });
+        if (!response.ok) return false;  // Rate limited or offline: keep the mark and try next time.
+        data = await response.json().catch(() => null);
+    } catch (_) {
+        return false;
+    }
+    if (data && data.waiting === true && typeof data.email === 'string' && data.email) {
+        if (!showInboxPanel('pending', data.email)) return false;
+        reportFunnelEvent('signup_waiting_resumed');
+        if (!signupWaitingClosedThisVisit()) revealAuthCard();
+        return true;
+    }
+    clearSignupWaiting();
+    if (!data || data.confirmed !== true) return false;
+    reportFunnelEvent('signup_waiting_confirmed');
+    showLoginForm();
+    displayAuthSuccess('Your email is confirmed. Log in to open your library.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField && typeof data.login_hint === 'string') loginField.value = data.login_hint;
+    const passwordField = document.getElementById('loginPassword');
+    if (passwordField && typeof passwordField.focus === 'function') passwordField.focus();
+    return true;
+}
+
+function setupInboxPanel() {
+    const resend = document.getElementById('verifySentResend');
+    if (resend && typeof resend.addEventListener === 'function') {
+        resend.addEventListener('click', async () => {
+            if (!inboxPanelState || (inboxPanelState.mode !== 'verify' && inboxPanelState.mode !== 'pending')) return;
+            const label = resend.textContent;
+            const status = document.getElementById('verifySentStatus');
+            resend.disabled = true;
+            resend.textContent = 'Sending…';
+            let message = "We couldn't send it. Check your connection and try again.";
+            let sent = false;
+            try {
+                const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(inboxPanelState.email)}`, { method: 'POST' });
+                sent = response.ok;
+                if (sent) message = 'Sent. It has a new code and replaces the first email, so use the newest one.';
+                else if (response.status === 429) message = "That's a few tries in a row. Give it some minutes, and look in your spam folder.";
+            } catch (_) { /* The message above covers it. */ }
+            if (status) status.textContent = message;
+            resend.textContent = label;
+            // One click a minute is plenty; the server allows three an hour.
+            if (sent && typeof setTimeout === 'function') setTimeout(() => { resend.disabled = false; }, 60000);
+            else resend.disabled = false;
+        });
+    }
+    const login = document.getElementById('verifySentLogin');
+    if (login && typeof login.addEventListener === 'function') {
+        login.addEventListener('click', event => {
+            event.preventDefault();
+            const email = inboxPanelState ? inboxPanelState.email : '';
+            showLoginForm();
+            const field = document.getElementById('loginUsername');
+            if (field && email) field.value = email;
+        });
+    }
+    const restart = document.getElementById('verifySentRestart');
+    if (restart && typeof restart.addEventListener === 'function') {
+        restart.addEventListener('click', event => {
+            event.preventDefault();
+            if (inboxPanelState && inboxPanelState.mode === 'reset') {
+                showForgotPasswordForm();
+                return;
+            }
+            reportFunnelEvent('signup_restart_clicked');
+            clearSignupWaiting();
+            showRegisterForm(true, { report: false });
+        });
+    }
+    const inbox = document.getElementById('verifySentInbox');
+    if (inbox && typeof inbox.addEventListener === 'function') {
+        inbox.addEventListener('click', () => {
+            if (inboxPanelState && inboxPanelState.mode !== 'reset') reportFunnelEvent('signup_inbox_opened');
+        });
+    }
+    setupCodeForm();
+}
+
+// Digits only, however the code arrives: typed, pasted as "123 456", or filled in by
+// the phone from the email ("one-time-code").
+function signupCodeDigits(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 6);
+}
+
+let codeCheckRunning = false;
+async function submitSignupCode() {
+    const field = document.getElementById('verifyCode');
+    if (!field || !inboxPanelState || inboxPanelState.mode === 'reset' || codeCheckRunning) return;
+    const code = signupCodeDigits(field.value);
+    clearFieldError('verifyCode');
+    if (code.length !== 6) {
+        showFieldError('verifyCode', 'Enter the 6 digits from the email.');
+        return;
+    }
+    const button = document.getElementById('verifyCodeSubmit');
+    codeCheckRunning = true;
+    if (button) { button.disabled = true; button.textContent = 'Checking…'; }
+    let data = {};
+    let ok = false;
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ email: inboxPanelState.email, code }),
+        });
+        ok = response.ok;
+        data = await response.json().catch(() => ({}));
+        if (!ok) {
+            const message = response.status === 429 && !/code/i.test(String(data.detail || ''))
+                ? 'Too many tries in a row. Wait a minute, then try again.'
+                : authErrorMessage(data, "That code didn't work. Check the newest email from us.");
+            showFieldError('verifyCode', message);
+            if (typeof field.select === 'function') field.select();
+        }
+    } catch (_) {
+        showFieldError('verifyCode', "We couldn't check the code. Check your connection and try again.");
+    } finally {
+        codeCheckRunning = false;
+        if (button) { button.disabled = false; button.textContent = 'Confirm'; }
+    }
+    if (!ok) return;
+    const email = inboxPanelState.email;
+    inboxPanelState = null;
+    clearSignupWaiting();
+    if (data.signed_in && data.user) {
+        // Same as the link opened in this browser: the server set the session cookie.
+        saveAuthData(null, data.user);
+        if (!showAuthStatus('Your email is confirmed', 'Opening your library…')) displayAuthSuccess('Email confirmed. Opening your library…');
+        window.location.assign(consumeDiscoverAuthReturn());
+        return;
+    }
+    showLoginForm();
+    displayAuthSuccess('Your email is confirmed. Log in to open your library.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField) loginField.value = data.login_hint || email;
+}
+
+function setupCodeForm() {
+    const form = document.getElementById('verifyCodeForm');
+    const field = document.getElementById('verifyCode');
+    if (form && typeof form.addEventListener === 'function') {
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            submitSignupCode();
+        });
+    }
+    if (field && typeof field.addEventListener === 'function') {
+        // Six digits in the box is the whole answer, so check it without a button press.
+        field.addEventListener('input', () => {
+            const digits = signupCodeDigits(field.value);
+            if (digits.length === 6) {
+                field.value = digits;
+                submitSignupCode();
+            }
+        });
+    }
+}
+
+// The confirmation link was opened in another tab of this browser, which signed the
+// member in. Say so here instead of still asking them to check their inbox.
+function inboxPanelConfirmed() {
+    const panel = document.getElementById('verifySentPanel');
+    if (!panel || !inboxPanelState || inboxPanelState.mode === 'reset' || panel.style.display !== 'block') return;
+    inboxPanelState = null;
+    signupWaiting = null;
+    document.getElementById('authTitle').textContent = 'Your email is confirmed';
+    setAuthContext('Your library is open in the other tab.');
+    const lead = document.getElementById('verifySentLead');
+    if (lead) lead.textContent = 'You can close this tab, or carry on here.';
+    const inbox = document.getElementById('verifySentInbox');
+    if (inbox) {
+        inbox.hidden = false;
+        inbox.className = 'auth-submit auth-inbox';
+        inbox.textContent = 'Open my library';
+        inbox.href = '/';
+        if (typeof inbox.removeAttribute === 'function') inbox.removeAttribute('target');
+    }
+    ['verifyCodeForm', 'verifySentNote', 'verifySentQuiz', 'verifySentResend', 'verifySentLogin', 'verifySentRestart'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.hidden = true;
+    });
+    const status = document.getElementById('verifySentStatus');
+    if (status) status.textContent = '';
+}
+
+// After sign-up: the "check your inbox" step. The log-in form keeps the email, so
+// "Already confirmed? Log in" only needs the password.
+function showVerificationSent(email, { emailFailed = false, emailSlow = false } = {}) {
     const loginField = document.getElementById('loginUsername');
     if (loginField) loginField.value = email;
-    let saved = 0;
-    try { saved = (JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length; } catch (error) { saved = 0; }
-    const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be added to your library when you log in.` : '';
-    displayAuthSuccess(`Almost there! We sent a link to ${email}. Open it to activate your account (it works for 48 hours), then log in here.${keep} No email after a few minutes? Check spam, or resend it below.`);
+    if (showInboxPanel('verify', email, { emailFailed, emailSlow })) return;
+    // Pages without the inbox step: the log-in form with the message and resend button.
+    showLoginForm(false);
+    document.getElementById('authTitle').textContent = 'Check your inbox';
+    setAuthContext('One more step and your library opens.');
+    if (loginField) loginField.value = email;
+    displayAuthSuccess(`We sent a link to ${email}. Open it to confirm your account (it works for 48 hours), then log in here. Nothing after a few minutes? Look in spam, or send it again below.`);
     const resend = document.getElementById('resendVerificationContainer');
     if (resend) resend.style.display = 'block';
-    // Waiting for the email is a good minute to start the library: quiz answers move in at first log-in.
-    const success = document.getElementById('authSuccess');
-    if (success && typeof document.createElement === 'function' && typeof success.appendChild === 'function') {
-        const tip = document.createElement('p');
-        tip.className = 'auth-quiz-tip';
-        tip.append('While you wait: ');
-        const link = document.createElement('a');
-        link.href = '/taste-quiz';
-        link.textContent = 'take the 1-minute taste quiz';
-        tip.append(link, '. Your answers are added to your library when you log in.');
-        success.appendChild(tip);
-    }
 }
 
 async function login(username, password) {
@@ -644,11 +1210,13 @@ async function login(username, password) {
         if (response.status === 429) throw new Error(authErrorMessage(error, 'Too many attempts. Please wait a minute and try again.'));
         // Check if it's an email verification error (403)
         if (response.status === 403) {
+            // Right password, email not confirmed yet: take the emailed code right here.
+            if (error && error.unverified === true && typeof error.email === 'string' && showInboxPanel('pending', error.email)) return;
             const errorMsg = error.detail || 'Please verify your email address before logging in.';
             // Check if it's a deactivated account error
             if (errorMsg.toLowerCase().includes('deactivated') || errorMsg.toLowerCase().includes('reactivate')) {
                 // Show reactivation option
-                displayAuthError(errorMsg + ' Click "Reactivate Account" below to reactivate.');
+                displayAuthError(errorMsg + ' Type your password, then press "Reactivate account" below.');
                 // Show reactivation button
                 showReactivateOption(username);
                 throw new Error(errorMsg);
@@ -755,6 +1323,10 @@ function showAuthModal() {
     window.resetSeasonCard?.();
     window.resetOnThisDay?.();
     window.resetYearSoFar?.();
+    window.resetNewYearPledge?.();
+    window.resetAwardsBallot?.();
+    window.resetAdventCard?.();
+    window.resetSupportAsk?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -807,10 +1379,15 @@ function showMainUI() {
     const homeCards = [window.refreshForYou?.(), window.refreshYearGoals?.()];
     window.refreshFriendRecs?.();
     window.refreshFriendFeed?.();
+    window.refreshReviewInbox?.();
     homeCards.push(window.refreshMonthlyChallenge?.(), window.refreshSeasonCard?.(), window.refreshBadges?.(),
         window.refreshOnThisDay?.());
     window.dashboardHomeCards = homeCards;
     window.refreshYearSoFar?.();
+    window.refreshNewYearPledge?.();
+    window.refreshAwardsBallot?.();
+    window.refreshAdventCard?.();
+    window.refreshSupportAsk?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
@@ -825,7 +1402,7 @@ function showMainUI() {
 }
 
 function showLoginForm(scroll = true) {
-    hideTwoFactorForm();
+    hideAuthPanels();
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -887,32 +1464,49 @@ function reportSignupStart() {
     if (savedGuestTitles()) reportFunnelEvent('guest_list_signup');
 }
 
+// The email form's own steps (Site stats, "Email sign-up form"), so a report can show
+// where people who chose email stopped: opened, typed an address, a password, pressed Create.
+function reportEmailFormOpened() {
+    reportSignupStart();
+    reportFunnelEvent('signup_email_opened');
+}
+
 function showRegisterForm(scroll = true, { report = true } = {}) {
-    hideTwoFactorForm();
-    if (report) reportSignupStart();
+    // A sign-up already waits for its code here (the pop-up was closed, or this is a
+    // "Start tracking" button pressed again): the code step, not an empty form. "Try a
+    // different email" clears the waiting sign-up first, so it still gets the form.
+    if (signupWaiting && showInboxPanel(signupWaiting.mode, signupWaiting.email)) {
+        if (scroll) revealAuthCard();
+        return;
+    }
+    hideAuthPanels();
+    if (report) reportEmailFormOpened();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
     const saved = savedGuestTitles();
-    setAuthContext(saved
+    setAuthContext(pendingPollDraft()
+        ? 'Your shortlist is saved. Make a free account and the poll link is yours.'
+        : saved
         ? `Free and private by default. The ${saved === 1 ? 'title' : `${saved} titles`} you saved move${saved === 1 ? 's' : ''} into your library when you log in.`
-        : 'Free, private by default, and ready in under a minute.');
+        : 'Free, private by default, ready in a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     clearAuthFormErrors();
+    foldUsernameField();
     if (scroll) revealAuthCard();
 }
 
 function showForgotPasswordForm(scroll = true) {
-    hideTwoFactorForm();
+    hideAuthPanels();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'block';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Reset your password';
-    setAuthContext('It happens. We\'ll email you a link.');
+    setAuthContext("Enter the email on your account and we'll send a link to choose a new one.");
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     clearAuthFormErrors();
@@ -920,7 +1514,7 @@ function showForgotPasswordForm(scroll = true) {
 }
 
 function showResetPasswordForm(resetToken = null, scroll = true) {
-    hideTwoFactorForm();
+    hideAuthPanels();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -980,9 +1574,7 @@ function showReactivateOption(usernameOrEmail) {
     }
     
     reactivateContainer.innerHTML = `
-        <button type="button" id="reactivateBtn" class="action-btn action-btn-full">
-            Reactivate Account
-        </button>
+        <button type="button" id="reactivateBtn" class="auth-ghost">Reactivate account</button>
     `;
     
     document.getElementById('reactivateBtn').onclick = () => {
@@ -1001,7 +1593,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     const reactivateBtn = document.getElementById('reactivateBtn');
     const originalText = reactivateBtn.textContent;
     reactivateBtn.disabled = true;
-    reactivateBtn.textContent = 'Reactivating...';
+    reactivateBtn.textContent = 'Reactivating…';
     
     try {
         const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
@@ -1015,7 +1607,7 @@ async function reactivateAccount(usernameOrEmail, password) {
         
         if (response.ok) {
             const user = await response.json();
-            displayAuthSuccess('Account reactivated successfully! You can now log in.');
+            displayAuthSuccess('Your account is active again. Log in to open your library.');
             // Hide reactivate button
             document.getElementById('reactivateContainer').style.display = 'none';
             // Clear password field for security
@@ -1100,7 +1692,7 @@ function setupAuthHandlers() {
         // Disable button while sending
         const btn = document.getElementById('resendVerificationBtn');
         btn.disabled = true;
-        btn.textContent = 'Sending...';
+        btn.textContent = 'Sending…';
 
         try {
             const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
@@ -1108,7 +1700,7 @@ function setupAuthHandlers() {
             });
 
             if (response.ok) {
-                displayAuthSuccess('Verification email sent! Please check your inbox (and spam folder).');
+                displayAuthSuccess('Sent. Open the newest email from us, and look in spam if it is not in your inbox.');
                 document.getElementById('resendVerificationContainer').style.display = 'none';
             } else {
                 const error = await response.json();
@@ -1119,18 +1711,26 @@ function setupAuthHandlers() {
         } finally {
             // Re-enable button
             btn.disabled = false;
-            btn.textContent = 'Resend verification email';
+            btn.textContent = 'Send a new link';
         }
     });
 
-    document.getElementById('registerFormElement').addEventListener('focusin', () => reportSignupStart());
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportEmailFormOpened());
     setupUsernameSuggestion();
 
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
+        reportFunnelEvent('signup_email_pressed');
         const email = document.getElementById('registerEmail').value.trim();
-        const username = document.getElementById('registerUsername').value.trim();
+        const usernameField = document.getElementById('registerUsername');
+        // Autofill can set the email without the events that fill the folded username box.
+        if (!usernameField.value.trim() && usernameField.dataset && usernameField.dataset.edited !== 'true') {
+            usernameField.value = suggestUsername(email);
+            if (usernameField.value) usernameField.dataset.suggested = 'true';
+            updateUsernameLine();
+        }
+        const username = usernameField.value.trim();
         const password = document.getElementById('registerPassword').value;
         // The homepage form has a show-password button instead of a second password box.
         const confirmField = document.getElementById('registerConfirmPassword');
@@ -1140,6 +1740,8 @@ function setupAuthHandlers() {
         const problem = signupFieldProblem(email, username, password, confirmPassword);
         if (problem) {
             reportFunnelEvent('signup_rejected_invalid');
+            const box = { registerEmail: 'email', registerUsername: 'username' }[problem.field] || 'password';
+            reportFunnelEvent(`signup_check_${box}`);
             if (!showFieldError(problem.field, problem.message)) displayAuthError(problem.message);
             return;
         }
@@ -1152,7 +1754,8 @@ function setupAuthHandlers() {
         } catch (error) {
             // "That username is taken" belongs under the username box, and so on.
             const field = signupFieldFor(error.message);
-            if (!field || !showFieldError(field, error.message)) displayAuthError(error.message);
+            const message = field === 'registerUsername' ? offerAnotherUsername(error.message) : error.message;
+            if (!field || !showFieldError(field, message)) displayAuthError(message);
         } finally {
             if (button) { button.disabled = false; button.textContent = label; }
         }
@@ -1201,8 +1804,10 @@ function setupAuthHandlers() {
             });
 
             if (response.ok) {
-                displayAuthSuccess(`If ${email} has an account, a reset link is on its way. It can take a few minutes, so check spam too.`);
                 document.getElementById('forgotPasswordFormElement').reset();
+                if (!showInboxPanel('reset', email)) {
+                    displayAuthSuccess(`If ${email} has an account, a reset link is on its way. It can take a few minutes, so check spam too.`);
+                }
             } else {
                 const error = await response.json().catch(() => ({}));
                 displayAuthError(authErrorMessage(error, "We couldn't send the reset link. Please try again."));
@@ -1218,7 +1823,9 @@ function setupAuthHandlers() {
     document.getElementById('resetPasswordFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
         const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmNewPassword').value;
+        // The form has a Show button instead of a second box; older pages still have both.
+        const confirmField = document.getElementById('confirmNewPassword');
+        const confirmPassword = confirmField ? confirmField.value : newPassword;
 
         clearFormErrors(e.target);
         if (newPassword.length < 8) {
@@ -1242,6 +1849,9 @@ function setupAuthHandlers() {
             return;
         }
 
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Saving…'; }
         try {
             const response = await fetch(`${AUTH_API_BASE}/auth/reset-password`, {
                 method: 'POST',
@@ -1250,22 +1860,21 @@ function setupAuthHandlers() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                displayAuthSuccess(data.message);
-                
-                // Clear URL parameters and show login form after 2 seconds
-                setTimeout(() => {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    showLoginForm();
-                    displayAuthSuccess(data.message);
-                }, 2000);
+                await response.json().catch(() => ({}));
+                e.target.reset();
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showLoginForm();
+                displayAuthSuccess('Your new password is saved. Log in with it below.');
             } else {
                 const error = await response.json().catch(() => ({}));
                 const message = authErrorMessage(error, "We couldn't save that password. The link may have expired, so ask for a new one if this keeps happening.");
-                if (!/password/i.test(message) || !showFieldError('newPassword', message)) displayAuthError(message);
+                if (/expired|invalid/i.test(message)) displayAuthError('This reset link has expired or was already used. Ask for a new one from "Forgot password?" on the log-in form.');
+                else if (!/password/i.test(message) || !showFieldError('newPassword', message)) displayAuthError(message);
             }
         } catch (error) {
             displayAuthError("We couldn't save that password. Check your connection and try again.");
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -1321,10 +1930,8 @@ function setTwoFactorMode(recovery) {
 }
 
 function showTwoFactorForm(scroll = true) {
-    ['loginForm', 'registerForm', 'forgotPasswordForm', 'resetPasswordForm', 'resendVerificationContainer'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.style.display = 'none';
-    });
+    hideAuthForms();
+    hideAuthPanels();
     const form = document.getElementById('twoFactorForm');
     if (!form) return;
     form.style.display = 'block';
@@ -1433,7 +2040,7 @@ const GOOGLE_ERRORS = {
     cancelled: 'Google sign-in was cancelled. Try again, or use your email below.',
     expired: 'That Google sign-in took too long or was opened in another tab. Please try again.',
     failed: "Google sign-in didn't work this time. Please try again, or use your email below.",
-    unverified: "Google hasn't verified that email address yet, so it can't be used. Use your email below instead.",
+    unverified: "Google couldn't confirm current ownership of this address. Use the email form below to sign up or log in.",
     deactivated: 'This account is deactivated. Log in with your password to reactivate it, or reset your password first.',
     unavailable: "Google sign-in isn't available right now. Use your email below.",
 };
@@ -1482,6 +2089,8 @@ function initAuth() {
     setupPasswordHelpers();
     setupGoogleSignIn();
     setupTwoFactorHandlers();
+    setupInboxPanel();
+    watchAuthDialogClose();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
@@ -1520,8 +2129,8 @@ function initAuth() {
     if (emailVerified === 'true' && !verifyToken) {
         showAuthModal();
         revealAuthCard();
-        displayAuthSuccess('✅ Email verified successfully! You can now log in.');
         showLoginForm();
+        displayAuthSuccess('Your email is confirmed. Log in to open your library.');
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
         return;
@@ -1531,8 +2140,8 @@ function initAuth() {
     if (passwordReset === 'true') {
         showAuthModal();
         revealAuthCard();
-        displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
         showLoginForm();
+        displayAuthSuccess('Your new password is saved. Log in with it below.');
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
         return;
@@ -1558,28 +2167,41 @@ function initAuth() {
             revealAuthCard();
             return;
         }
-        if (window.location.hash === '#signup') {
-            showRegisterForm();
-            return;
-        }
         // "I have an account" buttons: open the log-in form even on a browser that hasn't signed in before.
         if (window.location.hash === '#login') {
             showLoginForm();
             return;
         }
-        if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
-            && getDemoStartIntent() && !getDiscoverAuthReturn()) {
-            showRegisterForm();
+        if (signupWaitingMarked()) {
+            resumeWaitingSignup().then(resumed => { if (!resumed) openPublicAuthCard(urlParams); });
             return;
         }
-        // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
-        // Counted as "opened" only once they start filling it in.
-        // "Log in" links from other pages arrive as /#landing-auth (without a return path).
-        if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
-        if (!knownMember()) showRegisterForm(false, { report: false });
+        openPublicAuthCard(urlParams);
         return;
     }
+    return openSignedInPage();
+}
 
+// The homepage's sign-in card when nothing else (a link from an email, Google, a waiting
+// sign-up) decides what it shows.
+function openPublicAuthCard(urlParams) {
+    if (window.location.hash === '#signup') {
+        showRegisterForm();
+        return;
+    }
+    if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
+        && getDemoStartIntent() && !getDiscoverAuthReturn()) {
+        showRegisterForm();
+        return;
+    }
+    // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
+    // Counted as "opened" only once they start filling it in.
+    // "Log in" links from other pages arrive as /#landing-auth (without a return path).
+    if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
+    if (!knownMember()) showRegisterForm(false, { report: false });
+}
+
+function openSignedInPage() {
     if (!isAuthenticated()) {
         if (canRecoverCookieSession()) {
             return recoverCookieSession().then(recovered => {
@@ -1639,7 +2261,7 @@ async function handleEmailChangeVerification(token) {
             const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
             const data = await response.json().catch(() => ({}));
             if (response.ok) {
-                displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+                displayAuthSuccess('Your email address is changed. Log in with the new one.');
             } else {
                 displayAuthError(typeof data.detail === 'string' ? data.detail : 'Email change verification failed');
             }
@@ -1653,13 +2275,10 @@ async function handleEmailChangeVerification(token) {
 async function handleEmailVerification(token) {
     showAuthModal();
     revealAuthCard();
-    document.getElementById('authTitle').textContent = 'Email Verification';
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('forgotPasswordForm').style.display = 'none';
-    document.getElementById('resetPasswordForm').style.display = 'none';
-    
-    displayAuthSuccess('Verifying your email...');
+    if (!showAuthStatus('Confirming your email', 'This takes a second.')) {
+        document.getElementById('authTitle').textContent = 'Confirming your email';
+        hideAuthForms();
+    }
     
     try {
         const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
@@ -1667,10 +2286,11 @@ async function handleEmailVerification(token) {
         
         if (response.ok) {
             window.history.replaceState({}, document.title, window.location.pathname);
+            clearSignupWaiting();
             if (data.signed_in && data.user) {
                 // Same browser that signed up: the server already set the session cookie.
                 saveAuthData(null, data.user);
-                displayAuthSuccess('Email verified. Opening your library…');
+                if (!showAuthStatus('Your email is confirmed', 'Opening your library…')) displayAuthSuccess('Email verified. Opening your library…');
                 window.location.assign(consumeDiscoverAuthReturn());
                 return;
             }
@@ -1688,23 +2308,21 @@ async function handleEmailVerification(token) {
             const passwordField = document.getElementById('loginPassword');
             if (passwordField) passwordField.focus();
         } else {
-            const message = data.detail || 'Email verification failed';
+            const message = typeof data.detail === 'string' ? data.detail : "That link didn't work. Ask for a new one below.";
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Straight to the way out: the reason, and a button for a fresh link.
+            showLoginForm();
             displayAuthError(message);
-            setTimeout(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showLoginForm();
-                // showLoginForm clears messages; keep the reason and offer a fresh link.
-                displayAuthError(message);
-                const resend = document.getElementById('resendVerificationContainer');
-                if (resend) resend.style.display = 'block';
-            }, 3000);
+            const resend = document.getElementById('resendVerificationContainer');
+            if (resend) resend.style.display = 'block';
+            // The log-in form is empty here, so ask for the address straight away.
+            const emailBox = document.getElementById('resendVerificationEmailField');
+            if (emailBox) emailBox.hidden = false;
         }
     } catch (error) {
-        displayAuthError('Failed to verify email. Please try again.');
-        setTimeout(() => {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            showLoginForm();
-        }, 3000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showLoginForm();
+        displayAuthError("We couldn't confirm your email just now. Check your connection, then open the link again.");
     }
 }
 
@@ -1726,6 +2344,7 @@ if (typeof window.addEventListener === 'function') window.addEventListener('hash
 // of retaining this tab's fallback user after a cross-tab sign-in or logout.
 if (typeof window.addEventListener === 'function') window.addEventListener('storage', event => {
     if (event.key !== null && event.key !== USER_KEY && event.key !== TOKEN_KEY) return;
+    if (event.key === USER_KEY && event.newValue) inboxPanelConfirmed();
     delete getUser.current;
     getUser.storageBlocked = false;
     recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;

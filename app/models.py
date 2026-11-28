@@ -91,6 +91,7 @@ class User(Base):
     title_origins = relationship("TitleOrigin", back_populates="owner", cascade="all, delete-orphan",
                                  foreign_keys="TitleOrigin.user_id")
     game_playtimes = relationship("GamePlaytime", back_populates="owner", cascade="all, delete-orphan")
+    episode_notes = relationship("EpisodeNote", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -384,6 +385,9 @@ class NextUpItem(Base):
     item_id = Column(Integer, nullable=False)
     position = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Set by Start on the queue. NULL means not started yet, which is every row
+    # that existed before the column did.
+    started_at = Column(DateTime, nullable=True)
 
     owner = relationship("User", back_populates="next_up_items")
 
@@ -502,6 +506,10 @@ class Collection(Base):
     report_content_hash = Column(String, nullable=True)
     suspended_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Nov 2026: a list can be shared by an unguessable link before it is ready for the
+    # gallery (never indexed), and can be marked as ranked so pages show #1, #2, #3.
+    link_token = Column(String(32), nullable=True, unique=True, index=True)
+    ranked = Column(Boolean, nullable=False, default=False)
 
     owner = relationship("User", back_populates="collections")
     items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan", order_by="CollectionItem.position")
@@ -829,6 +837,9 @@ class FriendInvite(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     token = Column(String(32), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # The member chose to send a taste test: /join/<token> lets visitors rate a few of their
+    # rated titles first. Off for every link until the member presses "Send a taste test".
+    taste_test = Column(Boolean, nullable=False, default=False)
 
 
 class FriendInviteSignup(Base):
@@ -995,8 +1006,28 @@ class PublicProfile(Base):
     show_diary = Column(Boolean, nullable=False, default=False)
     # Opt-in "compare tastes with me" link at /u/<name>/match (added Oct 2026, default off).
     show_taste_match = Column(Boolean, nullable=False, default=False)
+    # Opt-in "Right now" shelf: what the member started from their Up next queue and what's next (Nov 2026, default off).
+    show_now = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ProfileWidgetLoad(Base):
+    """How many times a member's embedded widgets were loaded on a day, per widget and site (Nov 2026).
+
+    ``host`` is only the host name of the page showing the widget ("myanimelist.net"),
+    a known image proxy ("github.com" for GitHub's image cache), "" when the request
+    named no page, or "other". No page address, IP address or browser is stored.
+    """
+    __tablename__ = "profile_widget_loads"
+    __table_args__ = (UniqueConstraint("user_id", "day", "kind", "host", name="uq_profile_widget_load"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = Column(Date, nullable=False, index=True)
+    kind = Column(String(16), nullable=False)
+    host = Column(String(64), nullable=False, default="")
+    loads = Column(Integer, nullable=False, default=0)
 
 
 class EmailCampaign(Base):
@@ -1046,6 +1077,8 @@ class ProfileShowcaseItem(Base):
     item_id = Column(Integer, nullable=False)
     position = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # A line from the member on why this title is pinned (Nov 2026). NULL for every older pin.
+    note = Column(String(140), nullable=True)
 
 
 class Supporter(Base):
@@ -1074,6 +1107,14 @@ class Supporter(Base):
     member_until = Column(DateTime, nullable=True)
     # Season Pass and up can let their banner move. Off by default.
     banner_motion = Column(Boolean, nullable=False, default=False)
+    # Nov 2026: a color theme for the member's own app and a frame around their profile picture.
+    # Both NULL by default, so nothing changes until a supporter picks one.
+    app_theme = Column(String(24), nullable=True)
+    avatar_frame = Column(String(24), nullable=True)
+    # Nov 23 2026: the supporter's number, in the order members first supported (#1 is the first).
+    # Given once when the row is made and never changed, so a badge's number stays put. NULL only
+    # until the startup migration numbers older rows.
+    number = Column(Integer, nullable=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -1129,6 +1170,39 @@ class KofiPayment(Base):
     # A member who matched this payment's transaction id and asked for it; the owner confirms with one click.
     claimed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     claimed_at = Column(DateTime, nullable=True)
+    # Nov 23 2026: the payer wrote OT-GIFT in their message, so the payment bought perks for someone else
+    # (a GiftMembership) instead of switching on the payer's own. Off for every older payment.
+    gift = Column(Boolean, nullable=False, default=False)
+
+
+class GiftMembership(Base):
+    """Supporter perks bought on Ko-fi for somebody else, opened with a code (Nov 23 2026). A new table only.
+
+    The gift's code and the giver's private link are worked out from ``salt`` and the app's secret key,
+    so neither is stored. Only a keyed hash of the code is kept, for looking a typed code up. A gift
+    counts as opened once ``redeemed_at`` is set, even if the account that opened it is later removed.
+    """
+    __tablename__ = "gift_memberships"
+
+    id = Column(Integer, primary_key=True, index=True)
+    salt = Column(String(32), nullable=False)
+    code_hash = Column(String(64), nullable=False, unique=True, index=True)
+    months = Column(Integer, nullable=False)
+    # "kofi" for a paid gift, "owner" for one the site owner made by hand (a giveaway, a missed OT-GIFT).
+    source = Column(String(16), nullable=False, default="kofi")
+    payment_id = Column(Integer, ForeignKey("kofi_payments.id", ondelete="SET NULL"), nullable=True, unique=True)
+    giver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    paid_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # What the card says. All optional and written by the giver.
+    to_name = Column(String(40), nullable=True)
+    from_name = Column(String(40), nullable=True)
+    note = Column(String(280), nullable=True)
+    redeemed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    redeemed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    # Times someone other than the giver opened the gift's page.
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class YearlyGoal(Base):
@@ -1189,6 +1263,66 @@ class MonthlyChallengeEntry(Base):
     share_token = Column(String(32), nullable=True, unique=True, index=True)
 
     __table_args__ = (UniqueConstraint("user_id", "month", name="uq_monthly_challenge_entry"),)
+
+
+class YearPledge(Base):
+    """A member who signed up for a New Year challenge, e.g. the 2027 challenge (Nov 2026).
+
+    A new table only. The targets themselves are ordinary ``YearlyGoal`` rows, so
+    leaving the challenge keeps the goals. ``share_token`` exists only while the
+    member shares their pledge card.
+    """
+    __tablename__ = "year_pledges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_year_pledge"),)
+
+
+class AwardBallot(Base):
+    """A member's picks for one awards show, e.g. The Game Awards 2026 (Nov 2026).
+
+    A new table only. ``picks`` is a JSON object of category key to nominee key,
+    checked against the show's data (app/awards_data.py) on every save. A row with
+    no picks is a member who asked to hear when the nominees are in.
+    ``share_token`` exists only while the member shares the ballot.
+    """
+    __tablename__ = "award_ballots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    show = Column(String(60), nullable=False, index=True)
+    picks = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+    # Set once each, when the "nominees are in" and "winners are in" notes go out.
+    opened_notice_at = Column(DateTime, nullable=True)
+    results_notice_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "show", name="uq_award_ballot"),)
+
+
+class AwardResult(Base):
+    """The winner of one category of an awards show, entered by a site admin on the night.
+
+    A new table only. A winner written into the show's data wins over a row here.
+    """
+    __tablename__ = "award_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    show = Column(String(60), nullable=False, index=True)
+    category = Column(String(80), nullable=False)
+    nominee = Column(String(120), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("show", "category", name="uq_award_result"),)
 
 
 class YearInReviewShare(Base):
@@ -1627,6 +1761,8 @@ class TonightPoll(Base):
     # Set when the poll closes, early by the owner or on the first look after closes_at.
     closed_at = Column(DateTime, nullable=True)
     winner_id = Column(Integer, nullable=True)
+    # Nov 2026: the poll this one is another round of. Polls made before then keep NULL.
+    previous_id = Column(Integer, nullable=True, index=True)
 
     options = relationship("TonightPollOption", cascade="all, delete-orphan", order_by="TonightPollOption.position")
     votes = relationship("TonightPollVote", cascade="all, delete-orphan")
@@ -1662,6 +1798,37 @@ class TonightPollVote(Base):
 
     __table_args__ = (UniqueConstraint("poll_id", "user_id", name="uq_tonight_vote_member"),
                       UniqueConstraint("poll_id", "visitor", name="uq_tonight_vote_visitor"))
+
+
+class TierListShare(Base):
+    """A tier list someone turned into a link (Nov 2026). New table only.
+
+    The board is a copy of what the maker ranked (titles, years, art), so nothing here
+    reads or changes anyone's library. A member's links belong to their account; links
+    made without an account have no owner, are edited with a key kept in the maker's
+    browser and stop working at ``expires_at`` unless a new account claims them.
+    """
+    __tablename__ = "tier_list_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Keyed hash of the maker's browser cookie, only for capping links made without an account.
+    visitor = Column(String(64), nullable=True, index=True)
+    # SHA-256 of the edit key the maker's browser holds.
+    key_hash = Column(String(64), nullable=False)
+    name = Column(String(80), nullable=False)
+    board = Column(Text, nullable=False)  # JSON: {"labels": {...}, "tiers": {"S": [item, ...], ...}}
+    item_count = Column(Integer, nullable=False, default=0)
+    template_key = Column(String(60), nullable=True)
+    # The shared list this one ranks the same titles as. No foreign key: deleting the
+    # original leaves the copies standing.
+    source_id = Column(Integer, nullable=True, index=True)
+    views = Column(Integer, nullable=False, default=0)
+    remixes = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)
 
 
 class TitleOrigin(Base):
@@ -1720,6 +1887,38 @@ class GamePlaytime(Base):
     )
 
 
+class EpisodeNote(Base):
+    """A member's private rating and note for one episode of a show or anime (Nov 2026).
+
+    A new table only: the show's own rating, review and progress checkpoint are
+    never read or changed by it. It points at the library record the way
+    ProgressCheckpoint does. ``episode_key`` names the episode as the episode
+    guide numbers it: ``s2e4`` inside a season, ``e12`` for a show numbered
+    straight through, ``s0e3`` for a special.
+    """
+    __tablename__ = "episode_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    episode_key = Column(String(24), nullable=False)
+    season = Column(Integer, nullable=True)
+    episode = Column(Integer, nullable=False)
+    rating = Column(Integer, nullable=True)
+    note = Column(String(1000), nullable=True)
+    spoiler = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="episode_notes")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", "episode_key", name="uq_episode_note"),
+        Index("ix_episode_notes_item", "user_id", "category", "item_id"),
+    )
+
+
 class MemberFollow(Base):
     """One member following another member's public profile (Oct 2026).
 
@@ -1749,6 +1948,9 @@ class FollowSetting(Base):
     allow_followers = Column(Boolean, nullable=False, default=True)
     # The "From people you follow" section of the weekly email.
     email_following = Column(Boolean, nullable=False, default=True)
+    # Whether Find people may suggest this profile to members with similar taste (Nov 2026).
+    # Only ever matters while the public profile is on and followers are allowed.
+    suggest_me = Column(Boolean, nullable=False, default=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -1763,6 +1965,24 @@ class FollowBar(Base):
 
     __table_args__ = (
         UniqueConstraint("owner_id", "barred_id", name="uq_follow_bar"),
+    )
+
+
+class PeopleSuggestionDismissal(Base):
+    """Someone a member pressed "Not for me" on in Find people (Nov 2026). Private to the member.
+
+    A new table only. It hides that person from the member's suggestions and nothing else:
+    the other member is never told, and following them from their profile still works.
+    """
+    __tablename__ = "people_suggestion_dismissals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    dismissed_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "dismissed_id", name="uq_people_suggestion_dismissal"),
     )
 
 
@@ -1788,6 +2008,23 @@ class UserTwoFactor(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class SignupCodeAttempt(Base):
+    """Wrong confirmation codes typed for one new account (Nov 2026).
+
+    A new table only; accounts without a row never typed a wrong code. The emailed
+    6-digit code (email.signup_code) works until ``failures`` reaches
+    routers.auth.SIGNUP_CODE_MAX_FAILURES; after that only the link in the email
+    confirms the account. Never reset by a new email, so guesses can't be spread
+    over many codes.
+    """
+    __tablename__ = "signup_code_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    failures = Column(Integer, nullable=False, default=0)
+    last_failed_at = Column(DateTime, nullable=True)
+
+
 class MemberStart(Base):
     """How a new member used the start page (/start) in their first session (Oct 2026).
 
@@ -1808,6 +2045,14 @@ class MemberStart(Base):
     reached_five_at = Column(DateTime, nullable=True)
     next_step_at = Column(DateTime, nullable=True)
     skipped_at = Column(DateTime, nullable=True)
+
+
+class UsedPasskeyChallenge(Base):
+    """Successful ceremonies retain a replay marker until their signed cookie expires."""
+    __tablename__ = "used_passkey_challenges"
+
+    digest = Column(String(64), primary_key=True)
+    used_at = Column(DateTime, nullable=False, index=True)
 
 
 class UserPasskey(Base):
@@ -1832,3 +2077,898 @@ class UserPasskey(Base):
     backed_up = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_used_at = Column(DateTime, nullable=True)
+
+
+class ForYouDismissal(Base):
+    """A title a member marked "Not for me" in their For you picks, so it stops coming back.
+
+    Keyed by the pick id ("movie/interstellar-2014"); touches nothing in the library.
+    """
+    __tablename__ = "for_you_dismissals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title_key = Column(String(160), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "title_key", name="uq_for_you_dismissal"),
+    )
+
+
+class GiftList(Base):
+    """A member's holiday gift list, shared with family through one link (Nov 2026).
+
+    New tables only. Items are copies of a title or a typed idea, never library rows,
+    so the list never reads or changes the library once an item is on it. ``token``
+    is the share link; replacing it retires the old link, and ``shared`` turns it off.
+    """
+    __tablename__ = "gift_lists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), unique=True, nullable=False, index=True)
+    message = Column(String(200), nullable=True)
+    shared = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    items = relationship("GiftListItem", cascade="all, delete-orphan", back_populates="gift_list",
+                         order_by="GiftListItem.id")
+
+
+class GiftListItem(Base):
+    """One wish on a gift list: a title (kind is a title kind) or a typed idea (kind "other").
+
+    ``claim_hash`` is the SHA-256 of a key held by whoever marked it as theirs to buy,
+    so they can undo it. The list's owner is never shown claims.
+    """
+    __tablename__ = "gift_list_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("gift_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    normalized = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    creator = Column(String(120), nullable=True)
+    image = Column(String(500), nullable=True)
+    # Amazon search words and department for gifts from the guide; None means "use the title".
+    search = Column(String(150), nullable=True)
+    store = Column(String(20), nullable=True)
+    note = Column(String(120), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    claimed_at = Column(DateTime, nullable=True)
+    claim_hash = Column(String(64), nullable=True)
+
+    gift_list = relationship("GiftList", back_populates="items")
+
+    __table_args__ = (UniqueConstraint("list_id", "kind", "normalized", name="uq_gift_list_item"),)
+
+
+class ReviewShareChoice(Base):
+    """A member's answer to the "Share your reviews" card for one private review (Nov 2026).
+
+    New table only. The library row changes only when the member presses Share, which sets
+    review_public exactly as the library editor's Public switch does. "kept" means the member
+    chose to keep that review private, so the card stops asking until the review is rewritten
+    (content_hash is the review text the member was shown).
+    """
+    __tablename__ = "review_share_choices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    choice = Column(String(8), nullable=False)  # shared, kept
+    content_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "category", "item_id", name="uq_review_share_choice_item"),)
+
+
+class AdventDoor(Base):
+    """A door a member opened on the December advent calendar (Nov 2026). A new table only.
+
+    One row per member, year and day. Rows are only ever added, so the Door Opener
+    badge counts them straight from here.
+    """
+    __tablename__ = "advent_doors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    day = Column(Integer, nullable=False)
+    opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "day", name="uq_advent_door"),)
+
+
+class AdventReminder(Base):
+    """A member who asked for a morning notification when each advent door opens. A new table only.
+
+    ``last_day`` is the last door they were told about, so each door is announced once.
+    Turning the reminder off deletes the row.
+    """
+    __tablename__ = "advent_reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_day = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_advent_reminder"),)
+
+
+class DataFix(Base):
+    """A one-time repair of stored rows that has already run (Nov 2026). A new table only.
+
+    Startup migrations run on every boot. A repair that must not run twice, such as
+    moving badge rows between keys, writes its name here in the same transaction.
+    """
+    __tablename__ = "data_fixes"
+
+    name = Column(String(64), primary_key=True)
+    ran_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class SupportAsk(Base):
+    """When a member last saw a "support OmniTrackr" note on the dashboard, and how they answered (Nov 2026).
+
+    A new table only, one row per member, made the first time a note is shown. The ``*_done`` columns
+    are the highest milestone already asked about, so the same moment never asks twice. ``kofi_at`` and
+    ``kofi_from`` remember a press of a Ko-fi button for two weeks, so Site stats can tell which places
+    lead to support. Nothing here is shown to anyone else.
+    """
+    __tablename__ = "support_asks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    moment = Column(String(24), nullable=True)
+    ask_key = Column(String(48), nullable=True)
+    shown_at = Column(DateTime, nullable=True)
+    shown_count = Column(Integer, nullable=False, default=0)
+    answer = Column(String(8), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
+    snoozed_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    titles_done = Column(Integer, nullable=False, default=0)
+    days_done = Column(Integer, nullable=False, default=0)
+    years_done = Column(Integer, nullable=False, default=0)
+    goal_done = Column(Integer, nullable=False, default=0)
+    lapse_done = Column(DateTime, nullable=True)
+    kofi_at = Column(DateTime, nullable=True)
+    kofi_from = Column(String(24), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class StayPostedAsk(Base):
+    """When a member was last asked how they'd like to hear about new episodes and releases (Nov 2026).
+
+    A new table only, one row per member, made the first time the home-screen card or the note after
+    saving a show reaches their screen. It records the asking and the answer, never a channel itself:
+    the weekly email, notifications and the calendar keep their own switches, and nothing is turned on
+    unless the member presses that button.
+    """
+    __tablename__ = "stay_posted_asks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    moment = Column(String(16), nullable=True)
+    shown_at = Column(DateTime, nullable=True)
+    shown_count = Column(Integer, nullable=False, default=0)
+    answer = Column(String(12), nullable=True)
+    answered_at = Column(DateTime, nullable=True)
+    snoozed_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    after_save_at = Column(DateTime, nullable=True)
+    after_save_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class WeekOnePlan(Base):
+    """A new member's first-week home card (Nov 2026): when they saw it, whether they came back on a later
+    day, and the one reminder email they may have asked for.
+
+    A new table only, one row per member, made the first time the card reaches their screen or a button
+    on it is pressed. Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "week_one_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    first_seen_on = Column(Date, nullable=True)
+    last_seen_on = Column(Date, nullable=True)
+    returned_at = Column(DateTime, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+    saved_count = Column(Integer, nullable=False, default=0)
+    push_at = Column(DateTime, nullable=True)
+    remind_on = Column(Date, nullable=True)
+    remind_at = Column(DateTime, nullable=True, index=True)
+    reminder_status = Column(String(12), nullable=True, index=True)  # set, sent, dropped, failed
+    reminder_set_at = Column(DateTime, nullable=True)
+    reminder_sent_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)
+    start_seen_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class InstalledAppOpen(Base):
+    """A member who opened OmniTrackr from its home-screen or desktop icon (Nov 2026).
+
+    A new table only, one row per member, made the first time the installed app reports an open and
+    touched at most once a day after that. It lets Site stats count members who actually keep the app,
+    which the anonymous counters can't. Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "installed_app_opens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    platforms = Column(String(32), nullable=True)  # "ios", "android", "desktop", comma-separated
+    first_opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_opened_on = Column(Date, nullable=True, index=True)
+    open_days = Column(Integer, nullable=False, default=0)
+
+
+class BacklogDraw(Base):
+    """One title a member drew from their own backlog on the home screen and kept (Nov 2026).
+
+    A new table only. One row per kept card: which library title, the night they picked for it, the
+    one reminder email they may have asked for, and how it ended (finished, put back, not for me).
+    The library row itself is never changed here; finishing and scoring go through the library's own
+    rules (check_in.answer). A "not_for_me" row keeps that title out of later deals.
+    """
+    __tablename__ = "backlog_draws"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    # picked (the one on the card now), finished, put_back, not_for_me, replaced, gone (deleted from the library)
+    status = Column(String(12), nullable=False, default="picked", index=True)
+    deal = Column(Integer, nullable=False, default=0)  # which deal of the day it came from (0 = the first)
+    night = Column(Date, nullable=True)  # the member's own date they picked for it
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    remind_at = Column(DateTime, nullable=True, index=True)
+    reminder_status = Column(String(12), nullable=True, index=True)  # set, sent, dropped, failed
+    reminder_set_at = Column(DateTime, nullable=True)
+    reminder_sent_at = Column(DateTime, nullable=True)
+    calendar_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)  # first home screen visit after the night
+    picked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_backlog_draws_user_status", "user_id", "status"),
+    )
+
+
+class YourWeekPlan(Base):
+    """A member's "Your week" home card (Nov 2026): the weekly pace they picked and the Sunday nudge.
+
+    A new table only, one row per member, made the first time the card reaches their screen or a
+    button on it is pressed. ``goal`` is a key from your_week.GOALS, empty until they pick one (or
+    after "Stop keeping count"). Nothing in a member's library is read from or written to it.
+    """
+    __tablename__ = "your_week_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    goal = Column(String(8), nullable=True)
+    goal_set_at = Column(DateTime, nullable=True)
+    started_week = Column(Date, nullable=True)  # the Monday of the week they first picked a pace
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    remind_email = Column(Boolean, nullable=False, default=False)
+    remind_push = Column(Boolean, nullable=False, default=False)
+    remind_set_at = Column(DateTime, nullable=True)
+    next_remind_at = Column(DateTime, nullable=True, index=True)
+    first_seen_on = Column(Date, nullable=True)
+    last_seen_on = Column(Date, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class YourWeekWeek(Base):
+    """One week of a member's "Your week" card, Monday to Sunday in their time zone (Nov 2026).
+
+    A new table only. Days and finishes are counted from the member's own activity and only ever
+    grow, so a kept week stays kept even if a title is later deleted. A week is ``final`` once it has
+    ended and been counted after the fact; it never changes after that.
+    """
+    __tablename__ = "your_week_weeks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    week_start = Column(Date, nullable=False)
+    goal = Column(String(8), nullable=True)  # the pace that week was counted against
+    day_mask = Column(Integer, nullable=False, default=0)  # bit 0 = Monday ... bit 6 = Sunday
+    finishes = Column(Integer, nullable=False, default=0)
+    kept_at = Column(DateTime, nullable=True)
+    rest_at = Column(DateTime, nullable=True)
+    final = Column(Boolean, nullable=False, default=False)
+    recap_seen_at = Column(DateTime, nullable=True)
+    nudged_at = Column(DateTime, nullable=True)
+    back_at = Column(DateTime, nullable=True)  # first home screen visit after that week's nudge
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "week_start", name="uq_your_week_weeks_user_week"),
+    )
+
+
+class ProgressMark(Base):
+    """When a member moved a saved place forward (Nov 2026), so "Your week" can count the day.
+
+    A new table only. A progress checkpoint keeps just its latest time, so an episode marked on
+    Monday and the next one on Thursday would leave only Thursday behind. One row per member at
+    most every half hour; it holds a time and nothing about the title.
+    """
+    __tablename__ = "progress_marks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_progress_marks_user_at", "user_id", "at"),
+    )
+
+
+class StreamingChoice(Base):
+    """The streaming services one member says they have (Nov 2026), for the "On your services" card.
+
+    A new table only, one row per member. ``services`` is JSON: {service id: when it was picked},
+    so an arrival on a service picked later than the arrival isn't news. ``alerts`` is the member's
+    "tell me when something arrives" switch. The choice is private: nothing shows it to anyone else.
+    Before anything is picked, ``hidden_until`` is "Not now" and ``stopped_at`` is "No thanks";
+    after, ``hidden_until`` is "Hide this card".
+    """
+    __tablename__ = "streaming_choices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    services = Column(Text, nullable=True)
+    alerts = Column(Boolean, nullable=False, default=True)
+    hidden_until = Column(DateTime, nullable=True)
+    stopped_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class ServiceSighting(Base):
+    """One title seen streaming on one service, shared by every member (Nov 2026).
+
+    Never linked to a member. ``title_key`` is the title's where-to-watch cache key. ``baseline``
+    rows were already there the first time the title was checked, so they are not news;
+    ``first_seen_at`` on any other row is when the title arrived. ``gone_at`` is set while the
+    title is no longer listed there.
+    """
+    __tablename__ = "service_sightings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title_key = Column(String(300), nullable=False, index=True)
+    service = Column(String(24), nullable=False)
+    first_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    gone_at = Column(DateTime, nullable=True)
+    baseline = Column(Boolean, nullable=False, default=False)
+
+    __table_args__ = (
+        UniqueConstraint("title_key", "service", name="uq_service_sightings_title_service"),
+    )
+
+
+class ServiceTitleCheck(Base):
+    """When the streaming check last read one title's where-to-watch cache row (Nov 2026).
+
+    ``source_fetched_at`` is that row's ``fetched_at``, so a title is only compared again after its
+    cache row was refreshed. Never linked to a member.
+    """
+    __tablename__ = "service_title_checks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title_key = Column(String(300), nullable=False, unique=True, index=True)
+    first_checked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    checked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    source_fetched_at = Column(DateTime, nullable=True)
+
+
+class ServiceAlert(Base):
+    """A member was told that a title on their list arrived on one of their services (Nov 2026).
+
+    One row per member, title and service, so nobody hears about the same arrival twice. If the
+    title leaves and comes back weeks later, the row's ``created_at`` moves forward instead.
+    """
+    __tablename__ = "service_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title_key = Column(String(300), nullable=False)
+    service = Column(String(24), nullable=False)
+    title = Column(String(200), nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "title_key", "service", name="uq_service_alerts_member_title_service"),
+    )
+
+
+class Ranking(Base):
+    """One member's ranking of the titles they finished in one format (Nov 2026), for "Rankings".
+
+    A new table only, one row per member and format. ``ranked`` is a JSON list of that format's
+    library ids, best first. A title is placed by answering "which did you like more?" a few times:
+    ``placing_id`` is the title being placed and ``low``/``high`` the stretch of the list it can still
+    land in (a binary search, so a list of 100 takes about seven answers). ``left_out`` holds titles the
+    member asked never to be offered, ``later`` the ones skipped for now. Library rows are never
+    changed here. ``public`` puts the top ten on the member's public profile (off until they say so).
+    """
+    __tablename__ = "rankings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    ranked = Column(Text, nullable=False, default="[]")
+    left_out = Column(Text, nullable=True)
+    later = Column(Text, nullable=True)
+    placing_id = Column(Integer, nullable=True)
+    low = Column(Integer, nullable=False, default=0)
+    high = Column(Integer, nullable=False, default=0)
+    steps = Column(Integer, nullable=False, default=0)
+    public = Column(Boolean, nullable=False, default=False)
+    placed_total = Column(Integer, nullable=False, default=0)  # placements ever made, re-placements included
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", name="uq_rankings_member_category"),
+    )
+
+
+class RankingShare(Base):
+    """A member's share link for the top ten of one ranking (Nov 2026): /ranked/<token>.
+
+    A new table only. The link shows the ranking as it is when someone opens it, never the
+    scores, and only while the format stays visible and not private. Deleting the row ends the
+    link. ``opened`` counts opens by people other than the member (not bots or prefetches).
+    """
+    __tablename__ = "ranking_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", name="uq_ranking_shares_member_category"),
+    )
+
+
+class ServiceShare(Base):
+    """A member's share link for their "On your services" list (Nov 2026): /on-my-services/<token>.
+
+    A new table only, one row per member. The page reads the list when someone opens it: films,
+    shows and anime the member hasn't finished that stream on the services they picked, from
+    shelves that aren't hidden or private. It never shows scores, notes or the rest of the
+    library. Deleting the row ends the link. ``opened`` counts opens by other people (not bots
+    or prefetches).
+    """
+    __tablename__ = "service_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    opened = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TogetherPlan(Base):
+    """Watch or read one title together at a weekly pace (Nov 2026): /together/<id>.
+
+    New tables only. A plan covers one run of parts of one title: a season of a show, an
+    anime, a book or manga by chapter, a podcast or audiobook. The title is copied in when
+    the plan starts, so nobody's library is read for it later. ``token`` is the invite link
+    (/together/join/<token>); a new link retires the old one. ``week_sent`` is the last week
+    whose "this week" notice went out, so each week is announced once.
+    """
+    __tablename__ = "together_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    category = Column(String(16), nullable=False)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    image = Column(String(500), nullable=True)
+    unit = Column(String(8), nullable=False)  # episode, chapter
+    season = Column(Integer, nullable=True)
+    total = Column(Integer, nullable=False)
+    pace = Column(Integer, nullable=False)  # parts a week
+    starts_on = Column(Date, nullable=False)
+    week_sent = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+
+    members = relationship("TogetherMember", cascade="all, delete-orphan", back_populates="plan")
+    notes = relationship("TogetherNote", cascade="all, delete-orphan")
+    removals = relationship("TogetherRemoval", cascade="all, delete-orphan")
+
+
+class TogetherMember(Base):
+    """One person in a together plan and how far they've got.
+
+    ``position`` is the last part they finished (0 before the first). It follows their own
+    library checkpoint while ``follow_library`` is on and ``item_id`` points at their copy of
+    the title, but only checkpoints saved after ``moved_at`` count, so joining with an old
+    checkpoint (a rewatch) never jumps anyone ahead. ``done_week`` and ``emailed_week`` keep
+    the "done for the week" notice and the reminder email to once a week each. ``seen_at`` and
+    ``seen_position`` are when and where the member last had the plan open, so a note counts as
+    new when it was written since then or sits past the place they had reached.
+    """
+    __tablename__ = "together_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    position = Column(Integer, nullable=False, default=0)
+    moved_at = Column(DateTime, nullable=True)
+    item_id = Column(Integer, nullable=True)
+    follow_library = Column(Boolean, nullable=False, default=True)
+    done_week = Column(Integer, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    seen_at = Column(DateTime, nullable=True)
+    seen_position = Column(Integer, nullable=True)
+    remind_email = Column(Boolean, nullable=False, default=True)
+    emailed_week = Column(Integer, nullable=True)
+
+    plan = relationship("TogetherPlan", back_populates="members")
+
+    __table_args__ = (UniqueConstraint("plan_id", "user_id", name="uq_together_member"),)
+
+
+class TogetherNote(Base):
+    """A note left at one part of a together plan. Others read it once they reach that part.
+
+    Part 0 means "before we start" and everyone can read it.
+    """
+    __tablename__ = "together_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    part = Column(Integer, nullable=False)
+    body = Column(String(500), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (Index("ix_together_notes_plan_part", "plan_id", "part"),)
+
+
+class TogetherRemoval(Base):
+    """Someone the person running a together plan took out of it (Nov 22 2026 sweep).
+
+    The invite link would otherwise let them straight back in. The row goes when the person
+    running the plan asks them in again from their friends list. New table only.
+    """
+    __tablename__ = "together_removals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("together_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("plan_id", "user_id", name="uq_together_removal"),)
+
+
+class PickSwap(Base):
+    """A pick swap (Nov 2026): Secret Santa where everyone gives one recommendation. /swap/<id>.
+
+    New tables only. People join with the invite link (/swap/join/<token>) until names are
+    drawn, by the host or on ``draw_on``. Each person then picks one title for the person
+    they drew, and everything opens on ``reveal_on``. ``draw_at`` and ``reveal_at`` are those
+    days at 8 a.m. in the host's time zone (``tz``, minutes east of UTC), stored in UTC.
+    ``kinds`` is a comma-separated list of title kinds a pick may be (empty means any).
+    """
+    __tablename__ = "pick_swaps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    name = Column(String(60), nullable=False)
+    note = Column(String(300), nullable=True)
+    kinds = Column(String(120), nullable=False, default="")
+    tz = Column(Integer, nullable=False, default=0)
+    draw_on = Column(Date, nullable=True)
+    draw_at = Column(DateTime, nullable=True)
+    reveal_on = Column(Date, nullable=False)
+    reveal_at = Column(DateTime, nullable=False)
+    drawn_at = Column(DateTime, nullable=True)
+    revealed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    reminded_at = Column(DateTime, nullable=True)
+    short_at = Column(DateTime, nullable=True)  # the host was told there weren't enough people to draw
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    members = relationship("PickSwapMember", cascade="all, delete-orphan", back_populates="swap")
+    removals = relationship("PickSwapRemoval", cascade="all, delete-orphan")
+
+
+class PickSwapMember(Base):
+    """One person in a pick swap, who they drew, and the pick they wrapped for them.
+
+    ``gives_to`` is the user id of the person they drew (set at the draw, never shown to anyone
+    else before unwrap day). The ``gift_*`` columns are the pick itself, copied in as public
+    title facts. ``gift_opened_at``, ``gift_added_at`` and ``gift_thanks`` record what the
+    person who received it did with it.
+    """
+    __tablename__ = "pick_swap_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    swap_id = Column(Integer, ForeignKey("pick_swaps.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    wish = Column(String(160), nullable=True)
+    gives_to = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    gift_kind = Column(String(10), nullable=True)
+    gift_title = Column(String(200), nullable=True)
+    gift_year = Column(Integer, nullable=True)
+    gift_image = Column(String(500), nullable=True)
+    gift_slug = Column(String(140), nullable=True)
+    gift_creator = Column(String(200), nullable=True)
+    gift_note = Column(String(500), nullable=True)
+    picked_at = Column(DateTime, nullable=True)
+    gift_opened_at = Column(DateTime, nullable=True)
+    gift_added_at = Column(DateTime, nullable=True)
+    gift_thanks = Column(String(12), nullable=True)
+    thanked_at = Column(DateTime, nullable=True)
+
+    swap = relationship("PickSwap", back_populates="members")
+
+    __table_args__ = (UniqueConstraint("swap_id", "user_id", name="uq_pick_swap_member"),)
+
+
+class PickSwapRemoval(Base):
+    """Someone the host took out of a pick swap, so the invite link can't add them back."""
+    __tablename__ = "pick_swap_removals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    swap_id = Column(Integer, ForeignKey("pick_swaps.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("swap_id", "user_id", name="uq_pick_swap_removal"),)
+
+
+class BreakPlan(Base):
+    """A member's plan for a stretch of days off, filled from their own library (Nov 2026): /break.
+
+    New tables only. ``day_minutes`` is JSON ({"2026-11-26": 60, ...}): the time the member says
+    they have on each day of the break, 0 for a busy day. ``seed`` changes with "Try another mix"
+    so the same plan always fills the same way until then. ``left_out`` is JSON, a list of
+    "category:id" titles the member took off this break. Library rows are never changed here
+    except through the library's own rules (check_in.answer, progress._write_progress) when the
+    member ticks something off.
+    """
+    __tablename__ = "break_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(60), nullable=False)
+    preset = Column(String(32), nullable=True)
+    starts_on = Column(Date, nullable=False)
+    ends_on = Column(Date, nullable=False)
+    tz_minutes = Column(Integer, nullable=False, default=0)  # minutes east of UTC, from the browser
+    day_minutes = Column(Text, nullable=False, default="{}")
+    games = Column(Boolean, nullable=False, default=True)  # fill with a game too
+    seed = Column(Integer, nullable=False, default=0)
+    left_out = Column(Text, nullable=False, default="[]")
+    status = Column(String(12), nullable=False, default="active", index=True)  # active, cancelled, replaced (a newer plan took over; its link still works)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+    share_opened = Column(Integer, nullable=False, default=0)
+    emails = Column(Boolean, nullable=False, default=False)  # the morning it starts and the day after it ends
+    start_email = Column(String(12), nullable=True)  # sent, skipped, dropped, failed
+    wrap_email = Column(String(12), nullable=True)
+    last_seen_on = Column(Date, nullable=True)  # the member's last day of the break that they opened it
+    days_opened = Column(Integer, nullable=False, default=0)
+    wrap_hidden_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    items = relationship("BreakPlanItem", cascade="all, delete-orphan", back_populates="plan")
+
+    __table_args__ = (Index("ix_break_plans_user_status", "user_id", "status"),)
+
+
+class BreakPlanItem(Base):
+    """One stretch of one library title on one day of a break plan: "Episodes 4-7", "Pages 1-120".
+
+    ``unit`` is whole (a film or album), episode, page, chapter or block (half hours, for games,
+    audiobooks and books without a page count). ``first``/``last`` count units from the start of
+    the title, ``total`` is how many it has, so the last stretch is the one with last == total.
+    The title, cover and label are copied in so a share page never reads the library.
+    """
+    __tablename__ = "break_plan_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("break_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    day = Column(Date, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    image = Column(String(500), nullable=True)
+    unit = Column(String(8), nullable=False)
+    first = Column(Integer, nullable=False, default=1)
+    last = Column(Integer, nullable=False, default=1)
+    total = Column(Integer, nullable=False, default=1)
+    minutes = Column(Integer, nullable=False, default=0)
+    label = Column(String(80), nullable=False, default="")
+    guessed = Column(Boolean, nullable=False, default=False)
+    added = Column(Boolean, nullable=False, default=False)  # the member put it here themselves
+    done_at = Column(DateTime, nullable=True)
+    finished_title = Column(Boolean, nullable=False, default=False)  # ticking this finished the title
+    # JSON: the library checkpoint before this tick moved it, and the revision the tick wrote, so an
+    # untick can put it back while nobody has changed it since. Empty when the tick didn't move it.
+    undo_progress = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    plan = relationship("BreakPlan", back_populates="items")
+
+    __table_args__ = (Index("ix_break_plan_items_plan_day", "plan_id", "day"),)
+
+
+class Yearbook(Base):
+    """A member's yearbook for one year (Nov 2026): /yearbook, shared at /yearbook/<token>.
+
+    New tables only. The owner writes a cover name and a quote, picks up to four titles of the
+    year, and sends the link. Friends and anyone with the link sign it with a short note and,
+    if they like, a "most likely to" vote (yearbook_signatures). Signing closes after New
+    Year's Day; the book stays readable while the link is on. ``token`` is None while the link
+    is off. ``picks`` is JSON: [{"category", "id"}] pointing at the owner's library rows.
+    ``seen_at`` is when the owner last looked at their notes, for the home card and email.
+    """
+    __tablename__ = "yearbooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    token = Column(String(32), nullable=True, unique=True, index=True)
+    cover_name = Column(String(40), nullable=False, default="")
+    quote = Column(String(140), nullable=True)
+    picks = Column(Text, nullable=True)
+    show_numbers = Column(Boolean, nullable=False, default=True)
+    listed = Column(Boolean, nullable=False, default=False)  # on the members-only class page
+    opened = Column(Integer, nullable=False, default=0)       # link opens by people other than the owner
+    seen_at = Column(DateTime, nullable=True)
+    friends_told_at = Column(DateTime, nullable=True)
+    closed_told_at = Column(DateTime, nullable=True)          # the bell note that signing closed
+    last_email_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    signatures = relationship("YearbookSignature", cascade="all, delete-orphan", back_populates="yearbook")
+
+    __table_args__ = (UniqueConstraint("user_id", "year", name="uq_yearbook_user_year"),)
+
+
+class YearbookSignature(Base):
+    """One note in a yearbook. A member signs once per book (``signer_id``); someone without an
+    account signs with a name they type (``guest_name``). ``status`` is "shown", "waiting" (for
+    the owner to let it in: guests and members who aren't the owner's friends) or "hidden".
+    ``superlative`` is a key from yearbook.SUPERLATIVES. ``guest_mark`` is a keyed hash of the
+    guest's address and the book, only used to cap how many notes one address leaves in it.
+    """
+    __tablename__ = "yearbook_signatures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    yearbook_id = Column(Integer, ForeignKey("yearbooks.id", ondelete="CASCADE"), nullable=False, index=True)
+    signer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    guest_name = Column(String(40), nullable=True)
+    note = Column(String(300), nullable=False)
+    superlative = Column(String(24), nullable=True)
+    status = Column(String(10), nullable=False, default="waiting")
+    guest_mark = Column(String(32), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    yearbook = relationship("Yearbook", back_populates="signatures")
+
+    __table_args__ = (UniqueConstraint("yearbook_id", "signer_id", name="uq_yearbook_signer"),
+                      Index("ix_yearbook_signatures_book_status", "yearbook_id", "status"))
+
+
+class YearFillAnswer(Base):
+    """One answer on the "Fill in your year" page (app/year_fill.py): when a member finished a title that had no
+    finish date (``kind`` "undated"), or whether they finished one still on their list that year ("open").
+
+    ``answer`` is "month" (``month`` 1-12; ``entry_id`` is the journal finish it made), "before" (finished before
+    ``year``) or "skip" (not sure / not yet). ``ticked`` means the answer ticked an "open" title off, so taking it
+    back unticks it. Library rows are referenced without a foreign key, like the journal does.
+    """
+    __tablename__ = "year_fill_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    category = Column(String(20), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    kind = Column(String(10), nullable=False, default="undated")
+    answer = Column(String(10), nullable=False)
+    month = Column(Integer, nullable=True)
+    entry_id = Column(Integer, nullable=True)
+    ticked = Column(Boolean, nullable=False, default=False)
+    source = Column(String(10), nullable=False, default="page")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "category", "item_id", name="uq_year_fill_answer"),
+                      Index("ix_year_fill_answers_user_year", "user_id", "year"))
+
+
+class YearCatchupAnswer(Base):
+    """One answer on the "big ones" grid of "Fill in your year" (app/year_catchup.py): a member said they got to
+    one of the year's big releases (``answer`` "month", ``month`` 1-12), want to ("want") or not ("no").
+
+    ``entry_id`` is the title's id in app/year_catchup_data.py ("movie/toy-story-5-2026"). A "month" or "want"
+    answer saved the title to the library: ``category``/``item_id`` name that row, and ``created_row`` says this
+    answer made it (taking the answer back soon after removes it again). Library rows are referenced without a
+    foreign key, like the journal does.
+    """
+    __tablename__ = "year_catchup_answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    entry_id = Column(String(160), nullable=False)
+    answer = Column(String(10), nullable=False)
+    month = Column(Integer, nullable=True)
+    category = Column(String(20), nullable=True)
+    item_id = Column(Integer, nullable=True)
+    created_row = Column(Boolean, nullable=False, default=False)
+    source = Column(String(10), nullable=False, default="page")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "entry_id", name="uq_year_catchup_answer"),
+                      Index("ix_year_catchup_answers_user_year", "user_id", "year"))
+
+
+class TopNine(Base):
+    """A "top nine of the year" grid someone made at /top-nine (Nov 2026). New table only.
+
+    ``tiles`` is a JSON copy of the nine squares (title, kind, year, creator, an allowlisted
+    poster URL, or null for an empty square), so a top nine never reads or changes anyone's
+    library. Grids made without an account have no owner: the browser that made one holds an
+    edit key, the link stops working at ``expires_at``, and signing up claims it.
+    """
+    __tablename__ = "top_nines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Keyed hash of the maker's browser cookie, only for capping grids made without an account.
+    visitor = Column(String(64), nullable=True, index=True)
+    # SHA-256 of the edit key the maker's browser holds.
+    key_hash = Column(String(64), nullable=False)
+    year = Column(Integer, nullable=False)
+    name = Column(String(40), nullable=False)
+    theme = Column(String(12), nullable=False, default="night")
+    tiles = Column(Text, nullable=False)
+    tile_count = Column(Integer, nullable=False, default=0)
+    # The top nine whose "make your own" link this one started from. No foreign key: deleting
+    # the original leaves the copies standing.
+    source_id = Column(Integer, nullable=True, index=True)
+    views = Column(Integer, nullable=False, default=0)
+    remixes = Column(Integer, nullable=False, default=0)
+    # People who said how many of the nine they've seen too.
+    answers = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)

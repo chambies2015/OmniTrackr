@@ -1,511 +1,449 @@
-function categoryToId(category) {
-  const idMap = {
-    'movies': 'movies',
-    'tv-shows': 'tvShows',
-    'anime': 'anime',
-    'video-games': 'videoGames',
-    'library-insights': 'libraryInsights',
-    'music': 'music',
-    'books': 'books',
-    'manga': 'manga',
-    'podcasts': 'podcasts',
-    'audiobooks': 'audiobooks'
-  };
-  return idMap[category] || category;
+// Statistics tab: an overview of the whole library, then one format at a time.
+// The numbers come from the same /statistics/ endpoints as before; this file only
+// decides how they are laid out. Bar and column sizes are set through the CSSOM
+// (applyStatsSizes) because the dashboard CSP blocks style attributes.
+
+const STATS_FORMATS = [
+  { category: 'movies', id: 'movies', api: 'movies', insights: 'movies', label: 'Movies', one: 'movie', many: 'movies', done: 'Watched', left: 'Not watched yet' },
+  { category: 'tv-shows', id: 'tvShows', api: 'tv-shows', insights: 'tv_shows', label: 'TV shows', one: 'show', many: 'shows', done: 'Watched', left: 'Not watched yet' },
+  { category: 'anime', id: 'anime', api: 'anime', insights: 'anime', label: 'Anime', one: 'anime', many: 'anime', done: 'Watched', left: 'Not watched yet' },
+  { category: 'video-games', id: 'videoGames', api: 'video-games', insights: 'video_games', label: 'Games', one: 'game', many: 'games', done: 'Played', left: 'Not played yet' },
+  { category: 'music', id: 'music', api: 'music', insights: 'music', label: 'Music', one: 'album', many: 'albums', done: 'Listened to', left: 'Not heard yet' },
+  { category: 'books', id: 'books', api: 'books', insights: 'books', label: 'Books', one: 'book', many: 'books', done: 'Read', left: 'Not read yet' },
+  { category: 'manga', id: 'manga', api: 'manga', insights: 'manga', label: 'Manga', one: 'series', many: 'series', done: 'Read', left: 'Not read yet' },
+  { category: 'podcasts', id: 'podcasts', api: 'podcasts', insights: 'podcasts', label: 'Podcasts', one: 'podcast', many: 'podcasts', done: 'Listened to', left: 'Not heard yet' },
+  { category: 'audiobooks', id: 'audiobooks', api: 'audiobooks', insights: 'audiobooks', label: 'Audiobooks', one: 'audiobook', many: 'audiobooks', done: 'Listened to', left: 'Not heard yet' },
+];
+
+let statsSelectedFormat = null;
+let statsLibraryTotal = 0;
+let statsListenersBound = false;
+let statsPageRequest = 0;
+
+function statsFormat(category) {
+  return STATS_FORMATS.find(format => format.category === category) || null;
 }
 
-function toggleCategoryAccordion(category) {
-  const idPrefix = categoryToId(category);
-  const contentId = `${idPrefix}StatsContent`;
-  const iconId = `${idPrefix}StatsIcon`;
-  const content = document.getElementById(contentId);
-  const icon = document.getElementById(iconId);
-  
-  if (!content || !icon) {
-    console.error(`Could not find elements for category ${category}: contentId=${contentId}, iconId=${iconId}`);
+function statsCount(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function statsPlural(count, one, many) {
+  return `${statsCount(count)} ${Number(count) === 1 ? one : many}`;
+}
+
+function statsPercent(value) {
+  return `${Math.round(Number(value || 0))}%`;
+}
+
+// Widths and heights arrive as data attributes and are applied here, one custom property each.
+function applyStatsSizes(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-stats-w]').forEach((element) => {
+    const value = Math.max(0, Math.min(100, Number(element.dataset.statsW) || 0));
+    element.style.setProperty('--w', `${value}%`);
+  });
+  root.querySelectorAll('[data-stats-h]').forEach((element) => {
+    const value = Math.max(0, Math.min(100, Number(element.dataset.statsH) || 0));
+    element.style.setProperty('--h', `${value}%`);
+  });
+}
+
+function statsTile(label, value, note = '') {
+  return `<div class="stats-tile"><dt>${escapeHtml(label)}</dt><dd class="stats-tile__value">${escapeHtml(String(value))}</dd>${note ? `<dd class="stats-tile__note">${escapeHtml(note)}</dd>` : ''}</div>`;
+}
+
+function statsEmpty(message) {
+  return `<p class="stats-empty">${escapeHtml(message)}</p>`;
+}
+
+// One column per rating, 1 to 10. Ratings under 0.5 land in a 0 bucket, shown only when used.
+function statsHistogram(distribution, many) {
+  const counts = distribution || {};
+  const total = Object.values(counts).reduce((sum, count) => sum + Number(count || 0), 0);
+  if (!total) return statsEmpty(`No ratings yet. Rate a few ${many} and the spread shows up here.`);
+  const largest = Math.max(...Object.values(counts).map(Number), 1);
+  let columns = '';
+  for (let rating = counts['0'] ? 0 : 1; rating <= 10; rating += 1) {
+    const count = Number(counts[String(rating)] || 0);
+    const sentence = `Rated ${rating}: ${statsPlural(count, 'title', 'titles')}`;
+    const height = count ? Math.max(4, (count / largest) * 100).toFixed(1) : 0;
+    columns += `<li class="stats-hist__col" title="${escapeHtml(sentence)}">
+      <span class="stats-hist__plot" aria-hidden="true">${count ? `<span class="stats-hist__count" data-stats-h="${height}">${statsCount(count)}</span>` : ''}<span class="stats-hist__bar" data-stats-h="${height}"></span></span>
+      <span class="stats-hist__label" aria-hidden="true">${rating}</span>
+      <span class="sr-only">${escapeHtml(sentence)}</span>
+    </li>`;
+  }
+  return `<ol class="stats-hist" aria-label="How many titles got each rating, lowest to highest">${columns}</ol>`;
+}
+
+// Horizontal bars with the name on the left and the count on the right.
+function statsBars(rows, label) {
+  if (!rows.length) return '';
+  const largest = Math.max(...rows.map(row => row.count), 1);
+  const items = rows.map(row => `<li class="stats-bars__row">
+      <span class="stats-bars__label">${escapeHtml(String(row.name))}</span>
+      <span class="stats-bars__track" aria-hidden="true"><span class="stats-bars__fill" data-stats-w="${((row.count / largest) * 100).toFixed(1)}"></span></span>
+      <span class="stats-bars__value">${statsCount(row.count)}</span>
+    </li>`).join('');
+  return `<ol class="stats-bars" aria-label="${escapeHtml(label)}">${items}</ol>`;
+}
+
+function statsRank(rows, emptyMessage) {
+  if (!rows.length) return statsEmpty(emptyMessage);
+  const items = rows.map(row => `<li><span class="stats-rank__name">${escapeHtml(String(row.name ?? ''))}</span><span class="stats-rank__value">${escapeHtml(String(row.value))}${row.note ? ` <small>${escapeHtml(String(row.note))}</small>` : ''}</span></li>`).join('');
+  return `<ol class="stats-rank">${items}</ol>`;
+}
+
+function statsDecadeRows(decadeStats) {
+  return Object.keys(decadeStats || {}).sort().map((decade) => {
+    const value = decadeStats[decade];
+    const count = typeof value === 'number' ? value : Object.values(value || {}).reduce((sum, part) => sum + Number(part || 0), 0);
+    return { name: decade, count };
+  }).filter(row => row.count > 0);
+}
+
+function statsYearSpan(yearStats) {
+  if (!yearStats || !yearStats.oldest_year || !yearStats.newest_year) return '';
+  return yearStats.oldest_year === yearStats.newest_year
+    ? `Everything here came out in ${yearStats.oldest_year}.`
+    : `From ${yearStats.oldest_year} to ${yearStats.newest_year}.`;
+}
+
+// Titles tied at one end of the member's ratings. The overview adds the format as a note.
+function statsRatedTitles(items, emptyMessage, withType = false) {
+  const rows = (items || []).map(item => ({ name: item.title, value: `${parseFloat(item.rating).toFixed(1)}/10`, note: withType ? item.type : '' }));
+  return statsRank(rows, emptyMessage);
+}
+
+function statsCard(title, body, extraClass = '') {
+  return `<section class="stats-card${extraClass ? ` ${extraClass}` : ''}"><h4 class="stats-card__title">${escapeHtml(title)}</h4>${body}</section>`;
+}
+
+/* ---------- The page ---------- */
+
+function bindStatsListeners() {
+  if (statsListenersBound) return;
+  const tab = document.getElementById('statistics-tab');
+  if (!tab || typeof tab.addEventListener !== 'function') return;
+  statsListenersBound = true;
+  tab.addEventListener('click', (event) => {
+    const formatTarget = event.target.closest('[data-stats-format]');
+    if (formatTarget) {
+      // The overview rows jump down to the format's panel; the tabs are already there.
+      showStatsFormat(formatTarget.dataset.statsFormat, { focus: formatTarget.getAttribute('role') !== 'tab' });
+      return;
+    }
+    const jump = event.target.closest('[data-stats-jump]');
+    if (jump) jumpToStatsSection(jump.dataset.statsJump);
+  });
+  tab.addEventListener('keydown', (event) => {
+    const current = event.target.closest('[role="tab"][data-stats-format]');
+    if (!current) return;
+    const tabs = Array.from(document.querySelectorAll('#statsFormatTabs [role="tab"]'));
+    const index = tabs.indexOf(current);
+    let next = -1;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    if (next < 0) return;
+    event.preventDefault();
+    showStatsFormat(tabs[next].dataset.statsFormat);
+    tabs[next].focus();
+  });
+}
+
+function jumpToStatsSection(id) {
+  const section = document.getElementById(id);
+  if (!section || !isElementShown(section)) return;
+  if (!section.hasAttribute('tabindex')) section.tabIndex = -1;
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  section.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' });
+  section.focus({ preventScroll: true });
+}
+
+async function renderStatsPage() {
+  bindStatsListeners();
+  const request = ++statsPageRequest;
+  const loading = document.getElementById('libraryInsightsStatsLoading');
+  const container = document.getElementById('libraryInsightsStatsData');
+  if (!container) return;
+  if (loading && !container.children.length) loading.hidden = false;
+  try {
+    // Only the ratings and release years are needed next to the counts. /statistics/ would also
+    // recount every shelf and rank directors, a third more database work for nothing shown.
+    const [insightsResponse, ratingsResponse, yearsResponse] = await Promise.all([
+      authenticatedFetch(`${API_BASE}/statistics/insights/`),
+      authenticatedFetch(`${API_BASE}/statistics/ratings/`),
+      authenticatedFetch(`${API_BASE}/statistics/years/`),
+    ]);
+    if (!insightsResponse.ok) throw new Error('Failed to load library insights');
+    const stats = await insightsResponse.json();
+    // The ratings and decades are a bonus on the overview; the counts stand without them.
+    const overall = {
+      rating_stats: ratingsResponse.ok ? await ratingsResponse.json().catch(() => null) : null,
+      year_stats: yearsResponse.ok ? await yearsResponse.json().catch(() => null) : null,
+    };
+    if (request !== statsPageRequest) return;
+    displayLibraryInsights(stats, overall);
+    renderStatsFormatTabs(stats);
+  } catch (error) {
+    if (request !== statsPageRequest) return;
+    console.error('Error loading library statistics:', error);
+    container.innerHTML = '<p class="content-error" role="alert">Your statistics did not load. Check your connection and open this tab again.</p>';
+  } finally {
+    if (loading && request === statsPageRequest) loading.hidden = true;
+  }
+}
+
+function displayLibraryInsights(stats, overall = null) {
+  const container = document.getElementById('libraryInsightsStatsData');
+  if (!container) return;
+  const lede = document.getElementById('statsLede');
+  const formatsSection = document.getElementById('statsFormats');
+  const categories = Array.isArray(stats.categories) ? stats.categories : [];
+  const used = categories.filter(category => category.total > 0);
+
+  statsLibraryTotal = Number(stats.total_items) || 0;
+  if (!stats.total_items) {
+    if (lede) lede.textContent = 'Nothing to count yet.';
+    if (formatsSection) formatsSection.hidden = true;
+    container.innerHTML = `<div class="stats-blank">
+      <p class="stats-blank__title">Your numbers start with the first title you save</p>
+      <p>Add something you have watched, played, read or listened to. Ratings, decades and time spent fill in from there.</p>
+      <button type="button" class="action-btn" data-action="open-quick-capture">Add a title</button>
+    </div>`;
     return;
   }
-  
-  const isExpanded = isElementShown(content);
-  
-  if (isExpanded) {
-    content.style.display = 'none';
-    icon.textContent = '▶';
-  } else {
-    content.style.display = 'block';
-    icon.textContent = '▼';
-    
-    if (!categoryStatsCache[category]) {
-      loadCategoryStatistics(category);
-    } else {
-      displayCategoryStatistics(categoryStatsCache[category], category);
-    }
+  if (formatsSection) formatsSection.hidden = false;
+  if (lede) {
+    lede.textContent = `${statsPlural(stats.total_items, 'title', 'titles')} across ${statsPlural(used.length, 'format', 'formats')}. `
+      + `${statsCount(stats.completed_items)} finished, ${statsCount(stats.backlog_items)} still to go.`;
   }
+
+  const rating = overall?.rating_stats || null;
+  const mostComplete = stats.most_complete_category;
+  const tiles = [
+    statsTile('Titles saved', statsCount(stats.total_items), stats.top_category?.total ? `Biggest shelf: ${stats.top_category.label}` : ''),
+    statsTile('Finished', statsCount(stats.completed_items), `${statsPercent(stats.completion_percentage)} of your library`),
+    statsTile('Still to go', statsCount(stats.backlog_items), mostComplete?.completed ? `Furthest along: ${mostComplete.label}, ${statsPercent(mostComplete.completion_percentage)}` : ''),
+    statsTile('Average rating', rating && rating.total_rated_items ? Number(rating.average_rating).toFixed(1) : 'None yet', `${statsPlural(stats.rated_items, 'title', 'titles')} rated`),
+    statsTile('Reviews written', statsCount(stats.reviewed_items), stats.reviewed_items ? `${statsCount(stats.public_reviews)} public` : 'Notes on a title count here'),
+  ].join('');
+
+  const largest = Math.max(...categories.map(category => category.total), 1);
+  const mixRows = STATS_FORMATS.map((format) => {
+    const category = categories.find(entry => entry.key === format.insights);
+    if (!category || !category.total) return '';
+    const share = category.total ? (category.completed / category.total) * 100 : 0;
+    return `<li><button type="button" class="stats-mix__row" data-stats-format="${format.category}" data-format="${format.category}">
+        <span class="stats-mix__label"><span class="stats-mix__dot" aria-hidden="true"></span>${escapeHtml(format.label)}</span>
+        <span class="stats-mix__track" aria-hidden="true"><span class="stats-mix__total" data-stats-w="${Math.max(3, (category.total / largest) * 100).toFixed(1)}"><span class="stats-mix__done" data-stats-w="${share.toFixed(1)}"></span></span></span>
+        <span class="stats-mix__value"><strong>${statsCount(category.completed)}</strong> of ${statsCount(category.total)}<span class="sr-only"> finished. Show ${escapeHtml(format.label)} statistics</span></span>
+      </button></li>`;
+  }).join('');
+
+  const decadeRows = statsDecadeRows(overall?.year_stats?.decade_stats);
+  const ratedExtremes = rating && rating.total_rated_items ? `<div class="stats-pair">
+      <div><h5>Highest rated</h5>${statsRatedTitles(rating.highest_rated, 'Nothing rated yet.', true)}</div>
+      <div><h5>Lowest rated</h5>${statsRatedTitles(rating.lowest_rated, 'Nothing rated yet.', true)}</div>
+    </div>` : '';
+
+  container.innerHTML = `
+    <dl class="stats-tiles">${tiles}</dl>
+    <div class="stats-cards stats-cards--overview">
+      ${statsCard('Finished, by format', `
+        <p class="stats-legend" aria-hidden="true"><span class="stats-legend__key stats-legend__key--done"></span>Finished<span class="stats-legend__key stats-legend__key--left"></span>Still to go</p>
+        <ul class="stats-mix">${mixRows}</ul>
+        <p class="stats-card__note">Pick a format to see its ratings and details below.</p>`, 'stats-card--mix')}
+      ${statsCard('How you rate', `
+        ${statsHistogram(rating?.rating_distribution, 'titles')}
+        ${ratedExtremes}`, 'stats-card--stacked')}
+      ${statsCard('When it came out', decadeRows.length
+        ? `${statsBars(decadeRows, 'Titles in your library by release decade')}<p class="stats-card__note">${escapeHtml(statsYearSpan(overall?.year_stats))}</p>`
+        : statsEmpty('No release years saved yet.'))}
+    </div>`;
+  applyStatsSizes(container);
+}
+
+/* ---------- One format at a time ---------- */
+
+function renderStatsFormatTabs(stats) {
+  const tablist = document.getElementById('statsFormatTabs');
+  const panels = document.getElementById('statsFormatPanels');
+  if (!tablist || !panels) return;
+  const categories = Array.isArray(stats.categories) ? stats.categories : [];
+  const totals = new Map(categories.map(category => [category.key, category.total]));
+  // A format the member hid from their tabs only shows here when it still holds titles.
+  const shown = STATS_FORMATS.filter((format) => {
+    if (totals.get(format.insights) > 0) return true;
+    const tabButton = typeof getTabButton === 'function' ? getTabButton(format.category) : null;
+    return !tabButton || tabButton.style.display !== 'none';
+  });
+  if (!shown.length) return;
+
+  tablist.innerHTML = shown.map(format => `<button type="button" role="tab" class="stats-tab" id="statsTab-${format.id}" data-stats-format="${format.category}" data-format="${format.category}" aria-controls="${format.id}StatsContent" aria-selected="false" tabindex="-1">
+      <span class="stats-tab__dot" aria-hidden="true"></span>${escapeHtml(format.label)}<span class="stats-tab__count">${statsCount(totals.get(format.insights))}<span class="sr-only"> titles</span></span>
+    </button>`).join('');
+
+  shown.forEach((format) => {
+    if (document.getElementById(`${format.id}StatsContent`)) return;
+    const panel = document.createElement('div');
+    panel.id = `${format.id}StatsContent`;
+    panel.className = 'stats-format';
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', `statsTab-${format.id}`);
+    panel.dataset.format = format.category;
+    panel.tabIndex = 0;
+    panel.hidden = true;
+    panel.innerHTML = `<div id="${format.id}StatsLoading" class="stats-loading" role="status" hidden><span class="stats-spinner" aria-hidden="true"></span><span>Loading ${escapeHtml(format.label.toLowerCase())}…</span></div><div id="${format.id}StatsData"></div>`;
+    panels.appendChild(panel);
+  });
+  // Panels for formats that have since been hidden and emptied go away with their tab.
+  STATS_FORMATS.filter(format => !shown.includes(format)).forEach(format => document.getElementById(`${format.id}StatsContent`)?.remove());
+
+  const keep = shown.find(format => format.category === statsSelectedFormat);
+  const biggest = shown.reduce((best, format) => ((totals.get(format.insights) || 0) > (totals.get(best.insights) || 0) ? format : best), shown[0]);
+  showStatsFormat((keep || biggest).category, { reload: true });
+}
+
+function showStatsFormat(category, options = {}) {
+  const format = statsFormat(category);
+  const tab = format && document.getElementById(`statsTab-${format.id}`);
+  const panel = format && document.getElementById(`${format.id}StatsContent`);
+  if (!format || !tab || !panel) return;
+  statsSelectedFormat = category;
+  document.querySelectorAll('#statsFormatTabs [role="tab"]').forEach((button) => {
+    const selected = button === tab;
+    button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    button.tabIndex = selected ? 0 : -1;
+  });
+  document.querySelectorAll('#statsFormatPanels > [role="tabpanel"]').forEach((other) => { other.hidden = other !== panel; });
+  if (typeof tab.scrollIntoView === 'function' && !options.reload) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (categoryStatsCache[category] && !options.reload) displayCategoryStatistics(categoryStatsCache[category], category);
+  else loadCategoryStatistics(category);
+  if (options.focus) jumpToStatsSection('statsFormats');
 }
 
 async function loadCategoryStatistics(category) {
-  const idPrefix = categoryToId(category);
-  const loadingId = `${idPrefix}StatsLoading`;
-  const dataId = `${idPrefix}StatsData`;
-  const loading = document.getElementById(loadingId);
-  const dataContainer = document.getElementById(dataId);
-  
-  if (!loading || !dataContainer) {
-    console.error(`Could not find elements for loading stats: loadingId=${loadingId}, dataId=${dataId}`);
-    return;
-  }
-  
+  const format = statsFormat(category);
+  if (!format) return;
+  const loading = document.getElementById(`${format.id}StatsLoading`);
+  const dataContainer = document.getElementById(`${format.id}StatsData`);
+  if (!loading || !dataContainer) return;
+
   try {
-    loading.style.display = 'block';
-    dataContainer.innerHTML = '';
-    
-    const categoryMap = {
-      'movies': 'movies',
-      'tv-shows': 'tv-shows',
-      'anime': 'anime',
-      'video-games': 'video-games',
-      'library-insights': 'insights',
-      'music': 'music',
-      'books': 'books',
-      'manga': 'manga',
-      'podcasts': 'podcasts',
-      'audiobooks': 'audiobooks'
-    };
-    
-    const endpoint = categoryMap[category];
-    if (!endpoint) return;
-    
-    const response = await authenticatedFetch(`${API_BASE}/statistics/${endpoint}/`);
-    if (!response.ok) {
-      throw new Error('Failed to load category statistics');
-    }
-    
+    if (!dataContainer.children.length) loading.hidden = false;
+    const response = await authenticatedFetch(`${API_BASE}/statistics/${format.api}/`);
+    if (!response.ok) throw new Error('Failed to load category statistics');
     const stats = await response.json();
     categoryStatsCache[category] = stats;
     displayCategoryStatistics(stats, category);
-    
-    loading.style.display = 'none';
   } catch (error) {
     console.error(`Error loading ${category} statistics:`, error);
-    loading.style.display = 'none';
-    dataContainer.innerHTML = `<p class="content-error">Error loading statistics: ${escapeHtml(error.message)}</p>`;
+    dataContainer.innerHTML = `<p class="content-error" role="alert">The ${escapeHtml(format.label.toLowerCase())} numbers did not load. Pick the format again to retry.</p>`;
+  } finally {
+    loading.hidden = true;
   }
 }
 
 function displayCategoryStatistics(stats, category) {
-  if (category === 'library-insights') {
-    displayLibraryInsights(stats);
+  const format = statsFormat(category);
+  const dataContainer = format && document.getElementById(`${format.id}StatsData`);
+  if (!dataContainer) return;
+
+  const watch = stats.watch_stats || {};
+  if (!watch.total_items) {
+    dataContainer.innerHTML = `<div class="stats-blank">
+      <p class="stats-blank__title">No ${escapeHtml(format.many)} yet</p>
+      <p>Save one and its numbers show up here.</p>
+      <button type="button" class="action-btn" data-switch-tab="${format.category}">Open ${escapeHtml(format.label)}</button>
+    </div>`;
     return;
   }
 
-  const idPrefix = categoryToId(category);
-  const dataContainer = document.getElementById(`${idPrefix}StatsData`);
-  if (!dataContainer) {
-    console.error(`Could not find data container for category ${category}: ${idPrefix}StatsData`);
-    return;
-  }
-  
-  let html = '';
-  
-  html += '<div class="stats-subsection">';
-  const progressLabel = category === 'video-games' ? 'Play Progress' : (category === 'music' || category === 'podcasts' || category === 'audiobooks') ? 'Listen Progress' : (category === 'books' || category === 'manga') ? 'Read Progress' : 'Watch Progress';
-  html += `<h4>📈 ${progressLabel}</h4>`;
-  html += '<div class="stats-grid">';
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
-  let watchedLabel = 'Watched';
-  let unwatchedLabel = 'Unwatched';
-  if (category === 'video-games') {
-    watchedLabel = 'Played';
-    unwatchedLabel = 'Unplayed';
-  } else if (category === 'music' || category === 'podcasts' || category === 'audiobooks') {
-    watchedLabel = 'Listened';
-    unwatchedLabel = 'Unlistened';
-  } else if (category === 'books' || category === 'manga') {
-    watchedLabel = 'Read';
-    unwatchedLabel = 'Unread';
-  }
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${watchedLabel}</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${unwatchedLabel}</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.completion_percentage.toFixed(1)}%</div><div class="stat-label">Completion</div></div>`;
-  html += '</div>';
-  html += `<div class="progress-bar"><div class="progress-fill" data-fill-width="${stats.watch_stats.completion_percentage}"></div></div>`;
-  html += '</div>';
-  
-  html += '<div class="stats-subsection">';
-  html += '<h4>⭐ Rating Analysis</h4>';
-  html += '<div class="stats-grid">';
-  html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.average_rating.toFixed(1)}</div><div class="stat-label">Average Rating</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.total_rated_items}</div><div class="stat-label">Rated Items</div></div>`;
-  html += '</div>';
-  html += '<div class="rating-distribution"><h5>Rating Distribution</h5><div id="ratingBars' + idPrefix + '"></div></div>';
-  html += '<div class="top-rated"><h5>🏆 Highest Rated</h5><div id="highestRatedList' + idPrefix + '"></div></div>';
-  html += '</div>';
-  
-  html += '<div class="stats-subsection">';
-  html += '<h4>📅 Year Analysis</h4>';
-  html += '<div class="stats-grid">';
-  html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.oldest_year || '-'}</div><div class="stat-label">Oldest Year</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.newest_year || '-'}</div><div class="stat-label">Newest Year</div></div>`;
-  html += '</div>';
-  html += '<div class="decade-stats"><h5>Decade Breakdown</h5><div id="decadeBars' + idPrefix + '"></div></div>';
-  html += '</div>';
-  
+  const rating = stats.rating_stats || {};
+  const tiles = [
+    statsTile('In your library', statsCount(watch.total_items), statsLibraryTotal >= watch.total_items ? `${statsPercent((watch.total_items / statsLibraryTotal) * 100)} of everything you saved` : ''),
+    statsTile(format.done, statsCount(watch.watched_items), `${statsPercent(watch.completion_percentage)} of your ${format.many}`),
+    statsTile(format.left, statsCount(watch.unwatched_items), watch.unwatched_items ? '' : 'All caught up'),
+    statsTile('Average rating', rating.total_rated_items ? Number(rating.average_rating).toFixed(1) : 'None yet', `${statsPlural(rating.total_rated_items, 'rating', 'ratings')}`),
+  ].join('');
+
+  const decadeRows = statsDecadeRows(stats.year_stats?.decade_stats);
+  const ratingsBody = `${statsHistogram(rating.rating_distribution, format.many)}${rating.total_rated_items ? `<div class="stats-pair">
+      <div><h5>Highest rated</h5>${statsRatedTitles(rating.highest_rated, 'Nothing rated yet.')}</div>
+      <div><h5>Lowest rated</h5>${statsRatedTitles(rating.lowest_rated, 'Nothing rated yet.')}</div>
+    </div>` : ''}`;
+
+  let cards = statsCard('Ratings', ratingsBody);
+  cards += statsCard('Release decades', decadeRows.length
+    ? `${statsBars(decadeRows, `${format.label} by release decade`)}<p class="stats-card__note">${escapeHtml(statsYearSpan(stats.year_stats))}</p>`
+    : statsEmpty('No release years saved yet.'));
+
   if (category === 'movies' && stats.director_stats) {
-    html += '<div class="stats-subsection">';
-    html += '<h4>🎬 Director Analysis</h4>';
-    html += '<div class="director-stats">';
-    html += '<div class="director-column"><h5>Most Prolific Directors</h5><div id="topDirectorsList' + idPrefix + '"></div></div>';
-    html += '<div class="director-column"><h5>Highest Rated Directors</h5><div id="highestRatedDirectorsList' + idPrefix + '"></div></div>';
-    html += '</div>';
-    html += '</div>';
+    const most = (stats.director_stats.top_directors || []).map(director => ({ name: director.director, value: statsPlural(director.count, 'movie', 'movies') }));
+    const best = (stats.director_stats.highest_rated_directors || []).map(director => ({ name: director.director, value: `${Number(director.avg_rating).toFixed(1)}/10`, note: statsPlural(director.count, 'movie', 'movies') }));
+    cards += statsCard('Directors', `<div class="stats-pair">
+        <div><h5>Most movies in your library</h5>${statsRank(most, 'No directors saved yet.')}</div>
+        <div><h5>Highest average rating</h5>${statsRank(best, 'Rate a few movies to rank their directors.')}</div>
+      </div>`, 'stats-card--wide');
   }
-  
+
   if ((category === 'tv-shows' || category === 'anime') && stats.seasons_episodes_stats) {
-    html += '<div class="stats-subsection">';
-    html += '<h4>📺 Seasons & Episodes</h4>';
-    html += '<div class="stats-grid">';
-    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.total_seasons}</div><div class="stat-label">Total Seasons</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.total_episodes}</div><div class="stat-label">Total Episodes</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_seasons.toFixed(1)}</div><div class="stat-label">Avg Seasons</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_episodes.toFixed(1)}</div><div class="stat-label">Avg Episodes</div></div>`;
-    html += '</div>';
-    html += '<div class="stats-grid-two">';
-    html += '<div><h5>Most Seasons</h5><div id="mostSeasonsList' + idPrefix + '"></div></div>';
-    html += '<div><h5>Most Episodes</h5><div id="mostEpisodesList' + idPrefix + '"></div></div>';
-    html += '</div>';
-    html += '</div>';
+    const lengths = stats.seasons_episodes_stats;
+    const seasons = (lengths.shows_with_most_seasons || []).map(show => ({ name: show.title, value: statsPlural(show.seasons, 'season', 'seasons') }));
+    const episodes = (lengths.shows_with_most_episodes || []).map(show => ({ name: show.title, value: statsPlural(show.episodes, 'episode', 'episodes') }));
+    cards += statsCard('Seasons and episodes', `<dl class="stats-tiles stats-tiles--inset">
+        ${statsTile('Seasons', statsCount(lengths.total_seasons), `${Number(lengths.average_seasons).toFixed(1)} a title on average`)}
+        ${statsTile('Episodes', statsCount(lengths.total_episodes), `${Number(lengths.average_episodes).toFixed(1)} a title on average`)}
+      </dl>
+      <div class="stats-pair">
+        <div><h5>Most seasons</h5>${statsRank(seasons, 'No season counts saved yet.')}</div>
+        <div><h5>Most episodes</h5>${statsRank(episodes, 'No episode counts saved yet.')}</div>
+      </div>`, 'stats-card--wide');
   }
-  
+
   if (category === 'manga') {
-    html += '<div class="stats-subsection">';
-    html += '<h4>📚 Volumes & Chapters</h4>';
-    html += '<div class="stats-grid">';
-    html += `<div class="stat-card"><div class="stat-number">${stats.volumes_read || 0}</div><div class="stat-label">Volumes in finished series</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.chapters_read || 0}</div><div class="stat-label">Chapters in finished series</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.total_volumes || 0}</div><div class="stat-label">Volumes on your shelf</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.total_chapters || 0}</div><div class="stat-label">Chapters on your shelf</div></div>`;
-    html += '</div>';
-    html += '</div>';
+    cards += statsCard('Volumes and chapters', `<dl class="stats-tiles stats-tiles--inset">
+        ${statsTile('Volumes read', statsCount(stats.volumes_read), `of ${statsCount(stats.total_volumes)} on your shelf`)}
+        ${statsTile('Chapters read', statsCount(stats.chapters_read), `of ${statsCount(stats.total_chapters)} on your shelf`)}
+      </dl>
+      <p class="stats-card__note">Read counts come from series you marked as read.</p>`);
   }
 
   if (category === 'podcasts') {
-    html += '<div class="stats-subsection">';
-    html += '<h4>🎧 Episodes</h4>';
-    html += '<div class="stats-grid">';
-    html += `<div class="stat-card"><div class="stat-number">${stats.episodes_listened || 0}</div><div class="stat-label">Episodes in shows marked listened</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${stats.total_episodes || 0}</div><div class="stat-label">Episodes on your shelf</div></div>`;
-    html += '</div>';
-    html += '</div>';
+    cards += statsCard('Episodes', `<dl class="stats-tiles stats-tiles--inset">
+        ${statsTile('Episodes heard', statsCount(stats.episodes_listened), `of ${statsCount(stats.total_episodes)} on your shelf`)}
+      </dl>
+      <p class="stats-card__note">Heard counts come from shows you marked as listened to.</p>`);
   }
 
   if (category === 'audiobooks') {
     const hours = value => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
-    html += '<div class="stats-subsection">';
-    html += '<h4>⏱️ Listening Hours</h4>';
-    html += '<div class="stats-grid">';
-    html += `<div class="stat-card"><div class="stat-number">${hours(stats.hours_listened)}</div><div class="stat-label">Hours in audiobooks you finished</div></div>`;
-    html += `<div class="stat-card"><div class="stat-number">${hours(stats.total_hours)}</div><div class="stat-label">Hours on your shelf</div></div>`;
-    html += '</div>';
-    html += '</div>';
+    cards += statsCard('Listening hours', `<dl class="stats-tiles stats-tiles--inset">
+        ${statsTile('Hours finished', hours(stats.hours_listened), `of ${hours(stats.total_hours)} on your shelf`)}
+      </dl>
+      <p class="stats-card__note">Finished hours come from audiobooks you marked as listened to.</p>`);
   }
 
-  if ((category === 'video-games' || category === 'manga' || category === 'podcasts' || category === 'audiobooks') && stats.genre_stats) {
-    html += '<div class="stats-subsection">';
-    html += `<h4>${{ manga: '🗯️', podcasts: '🎙️', audiobooks: '🎧' }[category] || '🎮'} Genre Analysis</h4>`;
-    html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
-    html += '<div class="stats-grid-two">';
-    html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
-    html += `<div><h5>Most ${{ manga: 'Read', podcasts: 'Listened', audiobooks: 'Listened' }[category] || 'Played'} Genres</h5><div id="mostPlayedGenresList${idPrefix}"></div></div>`;
-    html += '</div>';
-    html += '</div>';
+  if (stats.genre_stats) {
+    const verb = { manga: 'read', podcasts: 'heard', audiobooks: 'heard' }[category] || 'played';
+    const shelf = Object.entries(stats.genre_stats.genre_distribution || {})
+      .map(([name, count]) => ({ name, count: Number(count) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    const finished = (stats.genre_stats.most_played_genres || []).map(genre => ({ name: genre.genre, value: statsPlural(genre.count, format.one, format.many) }));
+    cards += statsCard('Genres', shelf.length ? `<div class="stats-pair stats-pair--bars">
+        <div><h5>On your shelf</h5>${statsBars(shelf, `${format.label} by genre`)}</div>
+        <div><h5>The ones you have ${verb}</h5>${statsRank(finished, `Nothing ${verb} yet.`)}</div>
+      </div>` : statsEmpty('No genres saved yet.'), category === 'video-games' ? 'stats-card--wide' : 'stats-card--stacked');
   }
-  
-  dataContainer.innerHTML = html;
-  applyDataFillWidths(dataContainer);
-  
-  displayCategoryRatingDistribution(stats.rating_stats.rating_distribution, idPrefix);
-  displayCategoryHighestRated(stats.rating_stats.highest_rated, idPrefix);
-  displayCategoryDecadeStats(stats.year_stats.decade_stats, idPrefix);
-  
-  if (category === 'movies' && stats.director_stats) {
-    displayCategoryTopDirectors(stats.director_stats.top_directors, idPrefix);
-    displayCategoryHighestRatedDirectors(stats.director_stats.highest_rated_directors, idPrefix);
-  }
-  
-  if ((category === 'tv-shows' || category === 'anime') && stats.seasons_episodes_stats) {
-    displaySeasonsEpisodesStats(stats.seasons_episodes_stats, idPrefix);
-  }
-  
-  if ((category === 'video-games' || category === 'manga' || category === 'podcasts' || category === 'audiobooks') && stats.genre_stats) {
-    displayGenreStats(stats.genre_stats, idPrefix);
-  }
+
+  dataContainer.innerHTML = `
+    <dl class="stats-tiles stats-tiles--format">${tiles}</dl>
+    <div class="stats-meter" role="img" aria-label="${escapeHtml(`${statsPercent(watch.completion_percentage)} of your ${format.many} finished`)}"><span class="stats-meter__fill" data-stats-w="${Number(watch.completion_percentage) || 0}"></span></div>
+    <div class="stats-cards">${cards}</div>`;
+  applyStatsSizes(dataContainer);
 }
-
-function displayLibraryInsights(stats) {
-  const container = document.getElementById('libraryInsightsStatsData');
-  if (!container) return;
-
-  const topCategory = stats.top_category?.label || 'None yet';
-  const mostComplete = stats.most_complete_category?.label || 'None yet';
-  const publicReviewText = stats.public_reviews === 1 ? '1 public review' : `${stats.public_reviews} public reviews`;
-  const categoryRows = (stats.categories || []).map((category) => `
-    <div class="rated-item">
-      <div class="rated-item-title">${escapeHtml(category.label)}</div>
-      <div class="rated-item-rating">${category.completed}/${category.total} complete (${Number(category.completion_percentage).toFixed(1)}%)</div>
-    </div>
-  `).join('');
-
-  container.innerHTML = `
-    <div class="stats-subsection">
-      <h4>Library Snapshot</h4>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number">${stats.total_items}</div><div class="stat-label">Total Items</div></div>
-        <div class="stat-card"><div class="stat-number">${stats.backlog_items}</div><div class="stat-label">Backlog Items</div></div>
-        <div class="stat-card"><div class="stat-number">${Number(stats.completion_percentage).toFixed(1)}%</div><div class="stat-label">Complete</div></div>
-        <div class="stat-card"><div class="stat-number">${Number(stats.rating_coverage_percentage).toFixed(1)}%</div><div class="stat-label">Rated</div></div>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" data-fill-width="${stats.completion_percentage}"></div></div>
-    </div>
-    <div class="stats-subsection">
-      <h4>Quality Signals</h4>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number">${stats.reviewed_items}</div><div class="stat-label">Written Reviews</div></div>
-        <div class="stat-card"><div class="stat-number">${stats.public_reviews}</div><div class="stat-label">Public Reviews</div></div>
-        <div class="stat-card"><div class="stat-number">${Number(stats.review_coverage_percentage).toFixed(1)}%</div><div class="stat-label">Review Coverage</div></div>
-        <div class="stat-card"><div class="stat-number">${stats.rated_items}</div><div class="stat-label">Rated Items</div></div>
-      </div>
-      <p class="content-muted">Your largest category is ${escapeHtml(topCategory)}. Your most complete category is ${escapeHtml(mostComplete)}. You currently have ${escapeHtml(publicReviewText)}.</p>
-    </div>
-    <div class="stats-subsection">
-      <h4>Category Progress</h4>
-      <div>${categoryRows || '<p class="content-muted">Add items to start building category insights.</p>'}</div>
-    </div>
-  `;
-  applyDataFillWidths(container);
-}
-
-function displayCategoryRatingDistribution(distribution, idPrefix) {
-  const container = document.getElementById(`ratingBars${idPrefix}`);
-  if (!container) return;
-  container.innerHTML = '';
-  
-  const counts = Object.values(distribution).map(Number);
-  const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
-  
-  // Ratings under 0.5 land in the 0 bucket; show that bar only when it is used.
-  for (let rating = distribution['0'] ? 0 : 1; rating <= 10; rating++) {
-    const count = distribution[rating.toString()] || 0;
-    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
-    
-    const barDiv = document.createElement('div');
-    barDiv.className = 'rating-bar';
-    barDiv.innerHTML = `
-      <div class="rating-bar-label">${rating}</div>
-      <div class="bar-track-flex">
-        <div class="rating-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
-      </div>
-      <div class="rating-bar-count">${count}</div>
-    `;
-    applyDataFillWidths(barDiv);
-    container.appendChild(barDiv);
-  }
-}
-
-function displayCategoryHighestRated(items, idPrefix) {
-  const container = document.getElementById(`highestRatedList${idPrefix}`);
-  if (!container) return;
-  container.innerHTML = '';
-  
-  if (items.length === 0) {
-    container.innerHTML = '<p class="content-muted">No rated items found.</p>';
-    return;
-  }
-  
-  items.forEach((item) => {
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'rated-item';
-    itemDiv.innerHTML = `
-      <div class="rated-item-title">${escapeHtml(item.title ?? '')}</div>
-      <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
-    `;
-    container.appendChild(itemDiv);
-  });
-}
-
-function displayCategoryDecadeStats(decadeStats, idPrefix) {
-  const container = document.getElementById(`decadeBars${idPrefix}`);
-  if (!container) return;
-  container.innerHTML = '';
-  
-  const decades = Object.keys(decadeStats).sort();
-  const totals = decades.map(decade => {
-    const val = decadeStats[decade];
-    return typeof val === 'number' ? val : (val.movies || 0) + (val.tv_shows || 0) + (val.anime || 0) + (val.video_games || 0);
-  });
-  const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
-  
-  decades.forEach((decade) => {
-    const val = decadeStats[decade];
-    const total = typeof val === 'number' ? val : (val.movies || 0) + (val.tv_shows || 0) + (val.anime || 0) + (val.video_games || 0);
-    const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
-    
-    const barDiv = document.createElement('div');
-    barDiv.className = 'decade-bar';
-    barDiv.innerHTML = `
-      <div class="decade-bar-label">${decade}</div>
-      <div class="bar-track-flex">
-        <div class="decade-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
-      </div>
-      <div class="decade-bar-count">${total}</div>
-    `;
-    applyDataFillWidths(barDiv);
-    container.appendChild(barDiv);
-  });
-}
-
-function displayCategoryTopDirectors(directors, idPrefix) {
-  const container = document.getElementById(`topDirectorsList${idPrefix}`);
-  if (!container) return;
-  container.innerHTML = '';
-  
-  if (directors.length === 0) {
-    container.innerHTML = '<p class="content-muted">No directors found.</p>';
-    return;
-  }
-  
-  directors.forEach((director) => {
-    const directorDiv = document.createElement('div');
-    directorDiv.className = 'director-item';
-    directorDiv.innerHTML = `
-      <div class="director-name">${escapeHtml(director.director ?? '')}</div>
-      <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
-    `;
-    container.appendChild(directorDiv);
-  });
-}
-
-function displayCategoryHighestRatedDirectors(directors, idPrefix) {
-  const container = document.getElementById(`highestRatedDirectorsList${idPrefix}`);
-  if (!container) return;
-  container.innerHTML = '';
-  
-  if (directors.length === 0) {
-    container.innerHTML = '<p class="content-muted">No rated directors found.</p>';
-    return;
-  }
-  
-  directors.forEach((director) => {
-    const directorDiv = document.createElement('div');
-    directorDiv.className = 'director-item';
-    directorDiv.innerHTML = `
-      <div class="director-name">${escapeHtml(director.director ?? '')}</div>
-      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span class="director-count-muted">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
-    `;
-    container.appendChild(directorDiv);
-  });
-}
-
-function displaySeasonsEpisodesStats(stats, idPrefix) {
-  const mostSeasonsContainer = document.getElementById(`mostSeasonsList${idPrefix}`);
-  const mostEpisodesContainer = document.getElementById(`mostEpisodesList${idPrefix}`);
-  
-  if (mostSeasonsContainer) {
-    mostSeasonsContainer.innerHTML = '';
-    if (stats.shows_with_most_seasons.length === 0) {
-      mostSeasonsContainer.innerHTML = '<p class="content-muted-compact">No data available.</p>';
-    } else {
-      stats.shows_with_most_seasons.forEach((show) => {
-        const showDiv = document.createElement('div');
-        showDiv.className = 'rated-item';
-        showDiv.innerHTML = `
-          <div class="rated-item-title">${escapeHtml(show.title ?? '')}</div>
-          <div class="rated-item-rating">${show.seasons} ${show.seasons === 1 ? 'season' : 'seasons'}</div>
-        `;
-        mostSeasonsContainer.appendChild(showDiv);
-      });
-    }
-  }
-  
-  if (mostEpisodesContainer) {
-    mostEpisodesContainer.innerHTML = '';
-    if (stats.shows_with_most_episodes.length === 0) {
-      mostEpisodesContainer.innerHTML = '<p class="content-muted-compact">No data available.</p>';
-    } else {
-      stats.shows_with_most_episodes.forEach((show) => {
-        const showDiv = document.createElement('div');
-        showDiv.className = 'rated-item';
-        showDiv.innerHTML = `
-          <div class="rated-item-title">${escapeHtml(show.title ?? '')}</div>
-          <div class="rated-item-rating">${show.episodes} ${show.episodes === 1 ? 'episode' : 'episodes'}</div>
-        `;
-        mostEpisodesContainer.appendChild(showDiv);
-      });
-    }
-  }
-}
-
-function displayGenreStats(stats, idPrefix) {
-  const [one, many] = { manga: ['series', 'series'], podcasts: ['podcast', 'podcasts'], audiobooks: ['audiobook', 'audiobooks'] }[idPrefix] || ['game', 'games'];
-  const genreBarsContainer = document.getElementById(`genreBars${idPrefix}`);
-  const topGenresContainer = document.getElementById(`topGenresList${idPrefix}`);
-  const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${idPrefix}`);
-  
-  if (genreBarsContainer) {
-    genreBarsContainer.innerHTML = '';
-    const genres = Object.keys(stats.genre_distribution);
-    const counts = Object.values(stats.genre_distribution).map(Number);
-    const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
-    
-    genres.sort((a, b) => stats.genre_distribution[b] - stats.genre_distribution[a]).slice(0, 10).forEach((genre) => {
-      const count = stats.genre_distribution[genre];
-      const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
-      
-      const barDiv = document.createElement('div');
-      barDiv.className = 'rating-bar';
-      barDiv.innerHTML = `
-        <div class="rating-bar-label">${escapeHtml(genre)}</div>
-        <div class="bar-track-flex">
-          <div class="rating-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
-        </div>
-        <div class="rating-bar-count">${count}</div>
-      `;
-      applyDataFillWidths(barDiv);
-      genreBarsContainer.appendChild(barDiv);
-    });
-  }
-  
-  if (topGenresContainer) {
-    topGenresContainer.innerHTML = '';
-    if (stats.top_genres.length === 0) {
-      topGenresContainer.innerHTML = '<p class="content-muted-compact">No genres found.</p>';
-    } else {
-      stats.top_genres.forEach((genre) => {
-        const genreDiv = document.createElement('div');
-        genreDiv.className = 'rated-item';
-        genreDiv.innerHTML = `
-          <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
-          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? one : many}</div>
-        `;
-        topGenresContainer.appendChild(genreDiv);
-      });
-    }
-  }
-  
-  if (mostPlayedContainer) {
-    mostPlayedContainer.innerHTML = '';
-    if (stats.most_played_genres.length === 0) {
-      mostPlayedContainer.innerHTML = '<p class="content-muted-compact">No played genres found.</p>';
-    } else {
-      stats.most_played_genres.forEach((genre) => {
-        const genreDiv = document.createElement('div');
-        genreDiv.className = 'rated-item';
-        genreDiv.innerHTML = `
-          <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
-          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? one : many}</div>
-        `;
-        mostPlayedContainer.appendChild(genreDiv);
-      });
-    }
-  }
-}
-

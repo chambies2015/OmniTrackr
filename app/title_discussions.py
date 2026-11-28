@@ -54,6 +54,20 @@ REPORT_REASONS = {
     "other": "Something else",
 }
 LINK = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
+# "@name" tells that member about the post (Nov 2026). Same characters signup allows; an
+# email address isn't a mention because a letter or digit comes right before its "@".
+MENTION = re.compile(r"(?<![A-Za-z0-9_.@-])@([A-Za-z0-9][A-Za-z0-9_.-]{2,29})")
+MAX_MENTIONS = 3
+# When a thread starts, members with the title on a shared shelf hear about it (bell note;
+# push only if they turned on "Talk about your titles"). One such note per member a day.
+SHELF_NOTE_LIMIT = 40
+SHELF_NOTE_GAP = timedelta(hours=20)
+# An account younger than NEW_ACCOUNT_HOURS reaches only a few of them, so one throwaway sign-up
+# can't put its subject line in front of everyone who tracks a popular title (Nov 18 2026 sweep).
+NEW_ACCOUNT_SHELF_NOTES = 5
+# Notes that went to people who never joined the thread. Taken back while still unread when the
+# thread is hidden (reports or a moderator) or deleted outright, since they can't open it any more.
+WITHDRAWN_NOTES = ("discussion_started", "discussion_mention")
 INLINE_SPOILER = re.compile(r"\|\|([^|\n]{1,500})\|\|")
 
 
@@ -220,6 +234,10 @@ def start(db: Session, user, group, subject: str, body: str, spoiler: bool) -> m
                                     user_id=user.id, subject=subject, body=body, spoiler=bool(spoiler),
                                     created_at=now, last_activity_at=now)
     db.add(thread)
+    db.flush()
+    link = thread_path(thread)
+    mentioned = _notify_mentions(db, user, thread, subject + "\n" + body, link, skip=set())
+    _notify_shelf(db, user, group, thread, skip=mentioned)
     db.commit()
     return thread
 
@@ -240,19 +258,23 @@ def reply(db: Session, user, thread: models.TitleDiscussion, body: str, spoiler:
     thread.reply_count = (thread.reply_count or 0) + 1
     thread.last_activity_at = now
     db.flush()
-    _notify_reply(db, user, thread, post)
+    told = _notify_reply(db, user, thread, post)
+    _notify_mentions(db, user, thread, body, thread_path(thread), skip=told)
     db.commit()
     return post
 
 
-def _notify_reply(db: Session, author, thread: models.TitleDiscussion, post: models.TitleDiscussionReply) -> None:
-    """Tell the thread's starter and earlier repliers. One unread note per thread per person."""
+def _notify_reply(db: Session, author, thread: models.TitleDiscussion, post: models.TitleDiscussionReply) -> set:
+    """Tell the thread's starter and earlier repliers. One unread note per thread per person.
+
+    Gives everyone who follows the thread this way, so a mention doesn't tell them twice.
+    """
     link = thread_path(thread)
     earlier = {uid for uid, in db.query(models.TitleDiscussionReply.user_id).filter(
         models.TitleDiscussionReply.discussion_id == thread.id, models.TitleDiscussionReply.id != post.id).distinct()}
     people = ({thread.user_id} | earlier) - {author.id}
     if not people:
-        return
+        return set()
     waiting = {uid for uid, in db.query(models.Notification.user_id).filter(
         models.Notification.user_id.in_(people), models.Notification.type == "discussion_reply",
         models.Notification.link == link, models.Notification.read_at.is_(None))}
@@ -262,6 +284,97 @@ def _notify_reply(db: Session, author, thread: models.TitleDiscussion, post: mod
         whose = "your discussion" if uid == thread.user_id else "a discussion you joined"
         db.add(models.Notification(user_id=uid, type="discussion_reply", link=link,
                                    message=f'{author.username} replied to {whose} "{subject}" on {thread.title}.'))
+    return people
+
+
+def _short(text: str, size: int = 60) -> str:
+    return text if len(text) <= size else text[:size - 3].rstrip() + "…"
+
+
+def mentioned_names(text: str) -> list[str]:
+    """Up to MAX_MENTIONS distinct @names in the order written (trailing dots dropped: "@Postal." is Postal)."""
+    names: list[str] = []
+    for match in MENTION.finditer(text or ""):
+        name = match.group(1).rstrip(".-_")
+        if len(name) >= 3 and name.casefold() not in {n.casefold() for n in names}:
+            names.append(name)
+        if len(names) >= MAX_MENTIONS:
+            break
+    return names
+
+
+def _notify_mentions(db: Session, author, thread: models.TitleDiscussion, text: str, link: str, skip: set) -> set:
+    """A bell note (and push, under the Discussion replies switch) for each member named with @.
+
+    Never the writer, never someone the reply note already reaches, and one unread note per thread.
+    """
+    try:
+        names = [name.casefold() for name in mentioned_names(text)]
+        if not names:
+            return set()
+        found = {uid for uid, in db.query(models.User.id).filter(
+            func.lower(models.User.username).in_(names), models.User.is_active == True)}
+        people = found - set(skip) - {author.id}
+        if not people:
+            return found
+        waiting = {uid for uid, in db.query(models.Notification.user_id).filter(
+            models.Notification.user_id.in_(people), models.Notification.type == "discussion_mention",
+            models.Notification.link == link, models.Notification.read_at.is_(None))}
+        for uid in sorted(people - waiting):
+            db.add(models.Notification(user_id=uid, type="discussion_mention", link=link,
+                                       message=f'{author.username} mentioned you in "{_short(thread.subject)}" on {thread.title}.'))
+        return found
+    except Exception:
+        return set()  # A note is a nicety; the post itself must still go up.
+
+
+def _notify_shelf(db: Session, author, group, thread: models.TitleDiscussion, skip: set) -> None:
+    """Members who track this title (on a shelf other members can see) hear that a conversation started.
+
+    group.items only holds rows public pages may use, so a private shelf is never read. At most
+    SHELF_NOTE_LIMIT members, people who finished it first, and one such note per member a day.
+    """
+    try:
+        from .title_pages import COMPLETE_FIELD
+        done = COMPLETE_FIELD.get(group.kind, "watched")
+        ranked: dict[int, tuple] = {}
+        for item in group.items:
+            uid = getattr(item, "user_id", None)
+            if not uid or uid == author.id or uid in skip:
+                continue
+            key = (0 if getattr(item, done, False) else 1, -(item.id or 0))
+            if uid not in ranked or key < ranked[uid]:
+                ranked[uid] = key
+        if not ranked:
+            return
+        people = set(ranked)
+        active = {uid for uid, in db.query(models.User.id).filter(
+            models.User.id.in_(people), models.User.is_active == True, models.User.is_verified == True)}
+        recent = {uid for uid, in db.query(models.Notification.user_id).filter(
+            models.Notification.user_id.in_(people), models.Notification.type == "discussion_started",
+            models.Notification.created_at >= _now() - SHELF_NOTE_GAP)}
+        created = getattr(author, "created_at", None)
+        young = created is not None and _now() - created < timedelta(hours=NEW_ACCOUNT_HOURS)
+        limit = NEW_ACCOUNT_SHELF_NOTES if young else SHELF_NOTE_LIMIT
+        chosen = sorted(active - recent, key=lambda uid: ranked[uid])[:limit]
+        for uid in chosen:
+            db.add(models.Notification(
+                user_id=uid, type="discussion_started", link=thread_path(thread),
+                message=f'{author.username} started a discussion about {thread.title}, which is on your list: '
+                        f'"{_short(thread.subject)}"'))
+    except Exception:
+        return
+
+
+def withdraw_notes(db: Session, thread: models.TitleDiscussion) -> int:
+    """Delete unread "new discussion" and @mention notes that open this thread (see WITHDRAWN_NOTES).
+
+    Read notes stay: they are the member's own history. Reply notes stay too, since those went to
+    people already in the thread. Returns how many were taken back; the caller commits.
+    """
+    return (db.query(models.Notification).filter(
+        models.Notification.link == thread_path(thread), models.Notification.type.in_(WITHDRAWN_NOTES),
+        models.Notification.read_at.is_(None)).delete(synchronize_session=False))
 
 
 def _owned_reply(db: Session, thread, reply_id: int) -> models.TitleDiscussionReply:
@@ -283,6 +396,7 @@ def delete_thread(db: Session, user, thread: models.TitleDiscussion) -> str:
         db.commit()
         return "cleared"
     _drop_reports(db, "thread", [thread.id])
+    withdraw_notes(db, thread)  # Gone for good, so its notes would only open a missing page.
     db.delete(thread)
     db.commit()
     return "deleted"
@@ -359,6 +473,8 @@ def report(db: Session, user, thread: models.TitleDiscussion, reply_id: Optional
         post.spoiler = True
     if serious >= REPORT_HIDE_THRESHOLD and not post.hidden_at:
         post.hidden_at = _now()
+        if post is thread:
+            withdraw_notes(db, thread)
         _notify_moderators(db, thread, f'A post in "{thread.subject}" on {thread.title} was hidden after '
                                        f'{serious} reports. Have a look and restore or remove it.')
     elif len(open_reports) == 1:
@@ -391,6 +507,8 @@ def moderate(db: Session, user, thread: models.TitleDiscussion, reply_id: Option
         thread.locked_at = now if action == "lock" else None
     elif action == "hide":
         post.hidden_at = post.hidden_at or now
+        if post is thread:
+            withdraw_notes(db, thread)
     elif action == "restore":
         post.hidden_at = None
     else:
@@ -444,6 +562,7 @@ def body_html(text: str) -> str:
         if not paragraph:
             continue
         safe = escape(paragraph, quote=True)
+        safe = MENTION.sub(lambda m: f'<span class="disc-mention">@{m.group(1)}</span>', safe)
         safe = INLINE_SPOILER.sub(
             lambda m: f'<span class="disc-spoiler" tabindex="0" role="button" aria-pressed="false" '
                       f'title="Spoiler: select to show">{m.group(1)}</span>', safe)

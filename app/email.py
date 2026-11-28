@@ -2,6 +2,9 @@
 Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
+import asyncio
+import hashlib
+import hmac
 import os
 import secrets
 from html import escape as _escape_html, unescape as _unescape_html
@@ -10,6 +13,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi_mail.schemas import MultipartSubtypeEnum
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
+from .auth import SECRET_KEY
 
 load_dotenv()
 
@@ -28,14 +32,6 @@ conf = ConnectionConfig(
 )
 
 # Token serializer for generating secure tokens
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    if ENVIRONMENT == "production":
-        raise ValueError("SECRET_KEY must be set in production environment")
-    SECRET_KEY = "dev-secret-key-change-in-production"
-    import warnings
-    warnings.warn("Using default SECRET_KEY - not for production!")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Base URL for the application
@@ -321,74 +317,80 @@ def verify_email_change_token(token: str, max_age: int = 3600) -> tuple:
         raise
 
 
-async def send_verification_email(email: str, username: str, token: str):
+def signup_code(token: str) -> str:
+    """The 6-digit code that goes with one verification link (Nov 2026).
+
+    Typing it on the sign-up card confirms the address without leaving the tab, which
+    matters on phones, where the mail app opens links in its own browser (not signed
+    in, and without the titles a guest saved). It is derived from the stored token,
+    so it needs no column of its own and a new email (a new token) replaces it.
     """
-    Send email verification email to user.
-    
-    Args:
-        email: User's email address
-        username: User's username
-        token: Verification token
-    """
-    verification_url = f"{APP_URL}/?token={token}&email_verified=true"
-    
-    html = f"""
+    digest = hmac.new(SECRET_KEY.encode("utf-8"), f"omnitrackr-signup-code:{token}".encode("utf-8"), hashlib.sha256).digest()
+    return f"{int.from_bytes(digest[:8], 'big') % 1_000_000:06d}"
+
+
+def verification_email_html(username: str, code: str, verification_url: str) -> str:
+    """The confirm-your-email message: the code first, then the one-tap link."""
+    spaced = f"{code[:3]} {code[3:]}"
+    return f"""
     <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Welcome to OmniTrackr!</h1>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2333;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 26px 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Confirm your email</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-                <h2>Hi {_escape_html(username)},</h2>
-                <p>Thank you for registering with OmniTrackr! To complete your registration, please verify your email address by clicking the button below:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" 
-                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                        Verify Email Address
+                <p style="margin-top: 0;">Hi {_escape_html(username)},</p>
+                <p>Type this code on the OmniTrackr sign-up screen to open your library:</p>
+                <p style="font-size: 34px; font-weight: bold; letter-spacing: 6px; text-align: center; margin: 26px 0; color: #4c3bb5; font-family: 'Courier New', monospace;">{spaced}</p>
+                <p>Or confirm with one tap:</p>
+                <div style="text-align: center; margin: 24px 0;">
+                    <a href="{verification_url}"
+                       style="background-color: #667eea; color: white; padding: 14px 28px; text-decoration: none; border-radius: 999px; display: inline-block; font-weight: bold;">
+                        Confirm my email
                     </a>
                 </div>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
-                <p><strong>This link will expire in 48 hours.</strong></p>
+                <p style="color: #555; font-size: 14px;">Tap the button on the device you signed up on and you go straight into your library. The code and the button work for 48 hours.</p>
+                <p style="color: #555; font-size: 13px;">If the button doesn't work, copy this link into your browser:</p>
+                <p style="word-break: break-all; color: #667eea; font-size: 13px;">{verification_url}</p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="color: #666; font-size: 12px;">
-                    If you didn't create an account with OmniTrackr, you can safely ignore this email.
+                    If you didn't sign up for OmniTrackr, you can ignore this email. No account opens without this code or link.
                 </p>
             </div>
         </body>
     </html>
     """
+
+
+async def _deliver_credential_email(message: MessageSchema) -> bool:
+    """Send credentials only to the mailbox. SMTP errors may contain message content."""
+    if not (conf.MAIL_USERNAME and conf.MAIL_PASSWORD):
+        print("Credential email delivery skipped because SMTP is not configured.")
+        return False
+    try:
+        await asyncio.wait_for(FastMail(conf).send_message(message), timeout=30.0)
+    except Exception:
+        raise RuntimeError("Credential email delivery failed. Check SMTP configuration.") from None
+    return True
+
+
+async def send_verification_email(email: str, username: str, token: str):
+    """
+    Send the confirm-your-email message to a new member: a 6-digit code and a link.
+
+    Args:
+        email: User's email address
+        username: User's username
+        token: Verification token (the code is derived from it, see signup_code)
+    """
+    verification_url = f"{APP_URL}/?token={token}&email_verified=true"
+    code = signup_code(token)
+    html = verification_email_html(username, code, verification_url)
+
+    # The code leads the subject, so a phone's notification shows it without opening the mail.
+    message = html_message(f"{code} is your OmniTrackr code", [email], html)
     
-    message = html_message("Verify Your OmniTrackr Email", [email], html)
-    
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            # Add timeout to prevent hanging (30 seconds)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send verification email to {email}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send verification email to {email}")
-            print(f"Error: {error_msg}")
-            print(f"Verification URL (fallback): {verification_url}")
-            # Re-raise the exception so caller knows it failed
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
-    else:
-        # Development mode - just print the verification URL
-        print(f"\n{'='*60}")
-        print(f"Email Verification Required")
-        print(f"{'='*60}")
-        print(f"To: {email}")
-        print(f"Username: {username}")
-        print(f"Verification URL: {verification_url}")
-        print(f"{'='*60}\n")
+    return await _deliver_credential_email(message)
 
 
 async def send_password_reset_email(email: str, username: str, token: str):
@@ -431,34 +433,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
     
     message = html_message("Reset Your OmniTrackr Password", [email], html)
     
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            # Add timeout to prevent hanging (30 seconds)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send password reset email to {email}")
-            print(f"Reset URL (fallback): {reset_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send password reset email to {email}")
-            print(f"Error: {error_msg}")
-            print(f"Reset URL (fallback): {reset_url}")
-            # Re-raise the exception so caller knows it failed
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
-    else:
-        # Development mode - just print the reset URL
-        print(f"\n{'='*60}")
-        print(f"Password Reset Requested")
-        print(f"{'='*60}")
-        print(f"To: {email}")
-        print(f"Username: {username}")
-        print(f"Reset URL: {reset_url}")
-        print(f"{'='*60}\n")
+    return await _deliver_credential_email(message)
 
 
 async def send_email_change_verification_email(new_email: str, username: str, token: str):
@@ -501,33 +476,7 @@ async def send_email_change_verification_email(new_email: str, username: str, to
     
     message = html_message("Verify Your New OmniTrackr Email", [new_email], html)
     
-    # Only send if email credentials are configured
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        try:
-            import asyncio
-            fm = FastMail(conf)
-            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-        except asyncio.TimeoutError:
-            print(f"ERROR: Email sending timed out after 30 seconds")
-            print(f"Failed to send email change verification email to {new_email}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception("Email sending timed out. Check your email service configuration.")
-        except Exception as e:
-            error_msg = str(e)
-            print(f"ERROR: Failed to send email change verification email to {new_email}")
-            print(f"Error: {error_msg}")
-            print(f"Verification URL (fallback): {verification_url}")
-            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration.")
-    else:
-        # Development mode - just print the verification URL
-        print(f"\n{'='*60}")
-        print(f"Email Change Verification Required")
-        print(f"{'='*60}")
-        print(f"To: {new_email}")
-        print(f"Username: {username}")
-        print(f"Verification URL: {verification_url}")
-        print(f"{'='*60}\n")
-
+    return await _deliver_credential_email(message)
 
 
 async def send_two_factor_change_email(email: str, username: str, turned_on: bool):
@@ -576,6 +525,80 @@ async def send_two_factor_change_email(email: str, username: str, turned_on: boo
         print(f"INFO: Two-factor {'enabled' if turned_on else 'disabled'} notice for {email} (email not configured)")
 
 
+async def send_security_notice_email(email: str, username: str, subject: str, headline: str, body: str):
+    """Tell a member their password or sign-in email just changed, in case it wasn't them.
+
+    Sent to the address the account had before the change, so someone who took
+    over a session can't hide it by moving the email first.
+    """
+    reset_url = f"{APP_URL}/#landing-auth"
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">{_escape_html(headline)}</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hi {_escape_html(username)},</h2>
+                <p>{_escape_html(body)}</p>
+                <p>If this was you, there's nothing else to do.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}"
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Open OmniTrackr
+                    </a>
+                </div>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    If you didn't make this change, use "Forgot password" on the log-in form right away and email omnitrackr@gmail.com so we can help.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    message = html_message(subject, [email], html)
+    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
+        import asyncio
+        fm = FastMail(conf)
+        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+    else:
+        print(f"INFO: Security notice ({headline}) for {email} (email not configured)")
+
+
+async def send_security_notice_quietly(email: str, username: str, subject: str, headline: str, body: str) -> None:
+    """Background-task wrapper: the change already happened, so a failed email never undoes it."""
+    if not email:
+        return
+    try:
+        await send_security_notice_email(email, username, subject, headline, body)
+    except Exception as e:
+        print(f"Failed to send security notice: {e}")
+
+
+PASSWORD_CHANGED_NOTICE = (
+    "Your OmniTrackr password was changed",
+    "Your password was changed",
+    "The password for your OmniTrackr account was just changed. Every other browser and phone that was "
+    "signed in has been signed out.",
+)
+PASSWORD_RESET_NOTICE = (
+    "Your OmniTrackr password was reset",
+    "Your password was reset",
+    "The password for your OmniTrackr account was just reset with a link sent to this address. Every "
+    "browser and phone that was signed in has been signed out.",
+)
+
+
+def email_changed_notice(new_email: str) -> tuple[str, str, str]:
+    return (
+        "Your OmniTrackr sign-in email was changed",
+        "Your sign-in email was changed",
+        f"Your OmniTrackr account now signs in with {new_email}. Emails from OmniTrackr will go there from now on, "
+        "and this address will no longer get them.",
+    )
+
+
 async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
     """Ask the owner of a Ko-fi email to confirm that a payment from it belongs to this OmniTrackr account."""
     html = f"""
@@ -607,9 +630,56 @@ async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
     """
 
     message = html_message("Link your Ko-fi support to OmniTrackr", [email], html)
-    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        import asyncio
-        fm = FastMail(conf)
-        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
-    else:
-        print(f"INFO: Ko-fi claim link for @{username}: {confirm_url} (email not configured)")
+    await _deliver_credential_email(message)
+
+
+def gift_email_html(gifts: list, resend: bool = False) -> str:
+    """The Ko-fi gift email: each gift's link to pass on, its code, and the giver's own link for the card."""
+    blocks = []
+    for gift in gifts:
+        url = _escape_html(gift["url"])
+        manage = _escape_html(gift["manage_url"])
+        status = ("Opened already." if gift.get("state") == "opened"
+                  else "Not opened yet.") if resend else ""
+        blocks.append(f"""
+                <div style="background: #ffffff; border: 1px solid #e4e1f5; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                    <p style="margin: 0 0 6px; font-size: 18px;"><strong>{_escape_html(gift["months_label"].capitalize())} of supporter perks</strong></p>
+                    <p style="margin: 0 0 14px; color: #555;">Gift code <strong style="letter-spacing: 1px;">{_escape_html(gift["code"])}</strong>{f" · {status}" if status else ""}</p>
+                    <p style="margin: 0 0 8px;">The link to send:</p>
+                    <p style="word-break: break-all; margin: 0 0 16px;"><a href="{url}" style="color: #5b3fd6;">{url}</a></p>
+                    <a href="{manage}" style="background-color: #667eea; color: white; padding: 12px 22px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Write the card or print it</a>
+                </div>""")
+    lead = ("Here are the gifts bought from this Ko-fi email." if resend else
+            "Thank you for buying an OmniTrackr gift on Ko-fi. It's ready to give.")
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">Your gift is ready</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <p>Hi,</p>
+                <p>{lead} Send the link to the person it's for, or print the card and give it in person.
+                They open it with a free OmniTrackr account, and the perks start the day they do.</p>
+                {"".join(blocks)}
+                <p>The "Write the card" button is just for you. It lets you add who the gift is for, who it's from and a short
+                note, print a card with the code on it, and see when it's been opened. Keep that one to yourself.</p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    You're getting this because a Ko-fi payment to OmniTrackr with OT-GIFT in its message came from this
+                    address. If that wasn't you, reply and we'll sort it out.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    return html
+
+
+async def send_gift_email(email: str, gifts: list, resend: bool = False) -> bool:
+    """Send a Ko-fi gift's links to the address that paid for it."""
+    if not gifts:
+        return False
+    subject = "Your OmniTrackr gift links" if resend else "Your OmniTrackr gift is ready to give"
+    message = html_message(subject, [email], gift_email_html(gifts, resend=resend))
+    return await _deliver_credential_email(message)

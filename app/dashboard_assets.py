@@ -23,6 +23,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from . import minify
+
 DASHBOARD_DIR = Path(__file__).resolve().parent / "static" / "dashboard"
 LAZY_BASE_URL = "/static/dashboard/lazy/"
 
@@ -95,6 +97,8 @@ def bundle() -> tuple[str, str]:
     digest = hashlib.sha256()
     for relative in ("lazy-loader.js", *EAGER_MODULES, *(f"lazy/{name}" for name in lazy_files)):
         digest.update(relative.encode("utf-8") + b"\0" + _read(relative).encode("utf-8") + b"\0")
+    # Served minified (app/minify.py): switching that off, or changing the minifier, changes the URL.
+    digest.update(minify.version_tag().encode("utf-8"))
     version = digest.hexdigest()[:16]
     config = {
         "version": version,
@@ -110,3 +114,107 @@ def bundle() -> tuple[str, str]:
         *(_read(name) for name in EAGER_MODULES),
     ]
     return "".join(parts), version
+
+
+# ---------------------------------------------------------------- stylesheets
+#
+# The signed-in dashboard links 37 stylesheets in app/templates/index.html. Every
+# one of them blocks the first paint, so a phone on a cold cache waited for 37
+# round trips (about 170 KB, each file gzipped on its own) before drawing anything.
+# Signed-in pages get one bundled stylesheet instead: the same files, joined in the
+# template's order so the cascade is unchanged (about 100 KB gzipped as one file).
+# The template stays the list of record: adding or reordering a <link> there is all
+# it takes, and guests never see the bundle.
+
+TEMPLATE = Path(__file__).resolve().parent / "templates" / "index.html"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STYLESHEET_BUNDLE_PATH = "/dashboard.css"
+_STYLESHEET_LINK = re.compile(r'^[ \t]*<link rel="stylesheet" href="([^"]+)">[ \t]*\n', re.MULTILINE)
+_CSS_URL = re.compile(r"""url\(\s*(['"]?)([^'")]+)\1\s*\)""")
+
+
+def _served_path(href: str) -> str:
+    """The URL path a template href is served at ("./styles.css?v=1" -> "/styles.css")."""
+    path = href.split("?", 1)[0].split("#", 1)[0]
+    return "/" + path[2:] if path.startswith("./") else path
+
+
+def _stylesheet_file(href: str) -> Path:
+    path = _served_path(href)
+    if path == "/styles.css":
+        return STATIC_DIR / "styles.css"
+    if path.startswith("/static/"):
+        candidate = (STATIC_DIR / path[len("/static/"):]).resolve()
+        if candidate.is_file() and STATIC_DIR in candidate.parents:
+            return candidate
+    raise ValueError(f"Not a dashboard stylesheet: {href}")
+
+
+def _absolute_urls(css: str, served_at: str) -> str:
+    """Relative url()s resolved against the file's own address, so they still work from the bundle."""
+    from urllib.parse import urljoin
+
+    def absolute(match: re.Match) -> str:
+        quote, ref = match.group(1), match.group(2).strip()
+        if ref.startswith(("/", "data:", "http:", "https:", "#")):
+            return match.group(0)
+        return f"url({quote}{urljoin(served_at, ref)}{quote})"
+
+    return _CSS_URL.sub(absolute, css)
+
+
+def stylesheet_links(html: str) -> list[re.Match]:
+    """The template's run of stylesheet links: consecutive lines, in order."""
+    found: list[re.Match] = []
+    for match in _STYLESHEET_LINK.finditer(html):
+        if found and match.start() != found[-1].end():
+            break  # Only the first unbroken run; anything after it stays as written.
+        found.append(match)
+    return found
+
+
+@lru_cache(maxsize=1)
+def stylesheet_bundle() -> tuple[str, str, tuple[str, ...]]:
+    """Return (css, version, hrefs) for the dashboard's stylesheets as one file."""
+    hrefs = tuple(match.group(1) for match in stylesheet_links(TEMPLATE.read_text(encoding="utf-8")))
+    parts = []
+    for href in hrefs:
+        css = _stylesheet_file(href).read_text(encoding="utf-8")
+        parts.append(f"/* {_served_path(href)} */\n{_absolute_urls(css, _served_path(href))}\n")
+    css = "".join(parts)
+    version = hashlib.sha256((css + minify.version_tag()).encode("utf-8")).hexdigest()[:16]  # See bundle().
+    return css, version, hrefs
+
+
+def bundle_stylesheets(html: str) -> str:
+    """The dashboard page with its stylesheet links swapped for the one bundled link.
+
+    Leaves the page as it is if its links are not the ones the bundle was built from,
+    so a template edit can never drop a stylesheet.
+    """
+    links = stylesheet_links(html)
+    try:
+        _, version, hrefs = stylesheet_bundle()
+    except (OSError, ValueError):
+        return html
+    if not links or tuple(match.group(1) for match in links) != hrefs:
+        return html
+    indent = re.match(r"[ \t]*", links[0].group(0)).group(0)
+    bundled = f'{indent}<link rel="stylesheet" href="{STYLESHEET_BUNDLE_PATH}?v={version}">\n'
+    html = html[:links[0].start()] + bundled + html[links[-1].end():]
+    # The preload hint for styles.css would now fetch a file the page no longer uses.
+    styles = next((href for href in hrefs if _served_path(href) == "/styles.css"), None)
+    if styles:
+        html = re.sub(rf'^[ \t]*<link rel="preload" href="{re.escape(styles)}" as="style">[ \t]*\n', "", html,
+                      count=1, flags=re.MULTILINE)
+    return html
+
+
+def page_stylesheets(html: str) -> list[str]:
+    """The template stylesheets a served page loads, looking inside the bundle (used by tests)."""
+    hrefs = re.findall(r'<link rel="stylesheet" href="([^"]+)">', html)
+    _, version, bundled = stylesheet_bundle()
+    expanded: list[str] = []
+    for href in hrefs:
+        expanded.extend(bundled if href == f"{STYLESHEET_BUNDLE_PATH}?v={version}" else [href])
+    return expanded

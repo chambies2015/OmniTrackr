@@ -209,12 +209,13 @@ for (const kind of ['Music', 'Book']) {
     });
     context['save' + kind + 'Metadata'] = async () => {saves++;}; context['display' + kind + 'Poster'] = () => {};
     context['update' + kind + 'RowMetadata'] = () => {};
+    vm.runInContext(part('function normalizeCoverMatchText(', 'async function fetchMusicMetadata('), context);
     vm.runInContext(part('async function fetch' + kind + 'Metadata(', 'function update' + kind + 'RowMetadata('), context);
     const calls = [1, 2, 3].map(id => context['fetch' + kind + 'Metadata'](id, 'Title ' + id, 'Creator'));
     await settle(); assert.equal(responses.length, 1);
     for (let i=0; i<3; i++) {responses[i].resolve({ok:true, json:async()=>kind==='Music'
-      ? {results:[{artworkUrl100:'https://example.com/art.jpg',collectionName:'Album'}]}
-      : {docs:[{cover_i:10,title:'Book'}]}}); await settle();}
+      ? {results:[{artworkUrl100:'https://example.com/art.jpg',collectionName:'Title ' + (i + 1),artistName:'Creator'}]}
+      : {docs:[{cover_i:10,title:'Title ' + (i + 1),author_name:['Creator']}]}}); await settle();}
     await Promise.all(calls); assert.equal(peak, 1); assert.equal(saves, 3);
   });
   test(kind + ' delayed artwork skips an active editor', async () => {
@@ -226,20 +227,22 @@ for (const kind of ['Music', 'Book']) {
     });
     context['save' + kind + 'Metadata'] = async () => {saves++;}; context['display' + kind + 'Poster'] = () => {throw new Error('must not render');};
     context['update' + kind + 'RowMetadata'] = () => {throw new Error('must not replace inputs');};
+    vm.runInContext(part('function normalizeCoverMatchText(', 'async function fetchMusicMetadata('), context);
     vm.runInContext(part('async function fetch' + kind + 'Metadata(', 'function update' + kind + 'RowMetadata('), context);
     const loading = context['fetch' + kind + 'Metadata'](1,'Title','Creator'); await settle(); context.editingRowElement = row;
-    pending.resolve({ok:true, json:async()=>kind==='Music'?{results:[{artworkUrl100:'https://example.com/a.jpg'}]}:{docs:[{cover_i:1}]}});
+    pending.resolve({ok:true, json:async()=>kind==='Music'
+      ? {results:[{artworkUrl100:'https://example.com/a.jpg',collectionName:'Title',artistName:'Creator'}]}
+      : {docs:[{cover_i:1,title:'Title',author_name:['Creator']}]}});
     await loading; assert.equal(saves, 0);
   });
 }
 
-for (const kind of ['Movie', 'Music', 'Book']) test(kind + ' metadata updates preserve unsaved row inputs', () => {
+for (const kind of ['Music', 'Book']) test(kind + ' metadata updates preserve unsaved row inputs', () => {
   const row = {cells: Array.from({length:5}, () => ({textContent: 'Editor input'}))};
   const context = vm.createContext({editingRowElement: row, document: {querySelector: () => ({closest: () => row})}});
   const a = source.indexOf('function update' + kind + 'RowMetadata('), b = source.indexOf('\n}', a)+2;
   vm.runInContext(source.slice(a,b), context);
-  if (kind === 'Movie') context.updateMovieRowMetadata(1,'Changed');
-  else context['update' + kind + 'RowMetadata'](1,'Creator',2024,'Genre','Changed');
+  context['update' + kind + 'RowMetadata'](1,'Creator',2024,'Genre');
   assert.ok(row.cells.every(cell => cell.textContent === 'Editor input'));
 });
 
@@ -308,12 +311,12 @@ test('older collection reads cannot overwrite a later refreshed list or its erro
 });
 
 for (const [updater, posterPrefix, selector, args, expected] of [
-  ['updateVideoGameRowMetadata', 'video-game', '.edit-video-game-btn', ['RPG', null, '2020-05-01T00:00:00', 'Game'],
-    {gameTitle: 'Game', gameGenres: 'RPG', gameReleaseDate: '2020-05-01'}],
-  ['updateMusicRowMetadata', 'music', '.edit-music-btn', ['Artist', 1999, 'Rock', 'Album'],
-    {musicTitle: 'Album', musicArtist: 'Artist', musicYear: '1999', musicGenre: 'Rock'}],
-  ['updateBookRowMetadata', 'book', '.edit-book-btn', ['Author', 1950, 'Fantasy', 'Book'],
-    {bookTitle: 'Book', bookAuthor: 'Author', bookYear: '1950', bookGenre: 'Fantasy'}],
+  ['updateVideoGameRowMetadata', 'video-game', '.edit-video-game-btn', ['RPG', null, '2020-05-01T00:00:00'],
+    {gameGenres: 'RPG', gameReleaseDate: '2020-05-01'}],
+  ['updateMusicRowMetadata', 'music', '.edit-music-btn', ['Artist', 1999, 'Rock'],
+    {musicArtist: 'Artist', musicYear: '1999', musicGenre: 'Rock'}],
+  ['updateBookRowMetadata', 'book', '.edit-book-btn', ['Author', 1950, 'Fantasy'],
+    {bookAuthor: 'Author', bookYear: '1950', bookGenre: 'Fantasy'}],
 ]) {
   test(updater + ' keeps the Edit button in step with lookup metadata', () => {
     const btn = {dataset: {keep: 'yes'}};

@@ -1,4 +1,4 @@
-/* "Where to watch / play" dialog opened from a library row's More menu. */
+/* "Where to watch / play / listen / read" dialog opened from a library row's More menu. */
 .where-dialog__body { margin-top: 16px; }
 .where-dialog__group { margin-top: 16px; }
 .where-dialog__group:first-child { margin-top: 0; }
@@ -10,3 +10,26 @@ a.where-dialog__provider:hover, a.where-dialog__provider:focus-visible { border-
 .where-dialog__provider img { width: 28px; height: 28px; border-radius: 7px; }
 .where-dialog .where-dialog__more { display: inline-block; margin-top: 18px; color: #9ae2c6; font-weight: 600; }
 .where-dialog__note { margin: 14px 0 0; font-size: .8rem; }
+.where-dialog__search { margin-top: 18px; }
+.where-dialog__search h3 { margin: 0 0 6px; color: #bacfce; font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.where-dialog__search ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.where-dialog__search a { display: inline-block; padding: 6px 0; color: #9ae2c6; font-weight: 600; }
+/* Services the member picked on the "On your services" home card (streaming.js). */
+.where-dialog__provider--mine { border-color: #87e3c6; background: #1d4a45; box-shadow: 0 0 0 1px rgba(135, 227, 198, .35); }
+.where-dialog__mine { margin-left: 2px; padding: 2px 8px; border-radius: 999px; background: #87e3c6; color: #0b2a26; font-size: .7rem; font-weight: 700; letter-spacing: .02em; }
+@media (forced-colors: active) { .where-dialog__mine { border: 1px solid CanvasText; } }
+
+/* Signed in, the dialog takes the app's card colours (dialog-theme.css), which made the dark pills
+   above sit on a white card with violet link text. The pills follow the app theme instead. */
+body.app-shell .where-dialog__group h3,
+body.app-shell .where-dialog__search h3 { color: var(--fg-secondary); }
+body.app-shell .where-dialog__provider,
+body.app-shell .progress-dialog a.where-dialog__provider { border-color: var(--border); background: var(--surface-muted); color: var(--fg); }
+body.app-shell .progress-dialog a.where-dialog__provider:hover,
+body.app-shell .progress-dialog a.where-dialog__provider:focus-visible { border-color: var(--primary); }
+body.app-shell .where-dialog__provider--mine,
+body.app-shell .progress-dialog a.where-dialog__provider--mine { border-color: #0f766e; background: color-mix(in srgb, #0f766e 8%, var(--card-bg)); box-shadow: 0 0 0 1px rgb(15 118 110 / 25%); }
+body.app-shell .where-dialog__mine { background: #0f766e; color: #fff; }
+body.app-shell.dark-mode .where-dialog__provider--mine,
+body.app-shell.dark-mode .progress-dialog a.where-dialog__provider--mine { border-color: #87e3c6; background: color-mix(in srgb, #87e3c6 12%, var(--card-bg)); box-shadow: 0 0 0 1px rgb(135 227 198 / 30%); }
+body.app-shell.dark-mode .where-dialog__mine { background: #87e3c6; color: #0b2a26; }

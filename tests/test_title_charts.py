@@ -70,7 +70,7 @@ def test_chart_page_is_indexed_and_in_sitemap_with_enough_titles(client, db_sess
     db_session.commit()
     response = client.get("/titles/movie")
     assert "X-Robots-Tag" not in response.headers
-    assert '<meta name="robots" content="index, follow">' in response.text
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
     assert "/titles/movie</loc>" in client.get("/sitemap.xml").text
     assert "/titles/book</loc>" not in client.get("/sitemap.xml").text
 

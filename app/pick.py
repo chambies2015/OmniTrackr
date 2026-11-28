@@ -31,7 +31,9 @@ from .editorial_collections import COLLECTIONS, EDITOR_USERNAME
 # Display order of the format chips and the pool list.
 KIND_ORDER = ("movie", "tv", "anime", "game", "book", "album")
 FORMAT_LABELS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "book": "Books", "album": "Music"}
-CREATOR_FIELD = {"movie": "director", "album": "artist", "book": "author"}
+CREATOR_FIELD = {"movie": "director", "album": "artist", "book": "author",
+                 # Not in Pick for me, but a monthly edition's guest save lands here too (discover_catalog.find_guest_pick).
+                 "manga": "author", "podcast": "host", "audiobook": "author"}
 CREATOR_META = ("director", "author", "artist")
 
 _pool: Optional[list[dict]] = None
@@ -75,6 +77,9 @@ def _build() -> list[dict]:
                         item["why"], item.get("caveat"), trail["name"], f"/discover/{slug}"))
     for slug, edition in published_editions().items():
         for item in edition["items"]:
+            if title_pages.LIBRARY_TO_KIND[item["category"]] not in KIND_ORDER:
+                # Pick for me has six formats; an edition's manga, podcast or audiobook pick is saved from its own page.
+                continue
             creator = next((item["meta"][k] for k in CREATOR_META if item["meta"].get(k)), None)
             keep(_entry(title_pages.LIBRARY_TO_KIND[item["category"]], item["title"], item["meta"].get("year"), creator,
                         item["why"], item.get("caveat"), edition["name"], f"/discover/monthly/{slug}"))
@@ -86,7 +91,9 @@ def _build() -> list[dict]:
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
     from .seasonal import pool_sources as seasonal_sources
     for item, label, url in seasonal_sources():
-        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
+        # A new title in the Christmas guide carries its release date, so it isn't suggested before it is out.
+        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url,
+                    out=(item.get("release") or {}).get("date")))
     from .best_of import pool_sources as best_of_sources
     for item, label, url in best_of_sources():
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
@@ -200,18 +207,23 @@ def _build_title_details(index: list[dict]) -> dict[str, dict]:
 
 # ---------------------------------------------------------------- saving
 
-def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None) -> tuple[str, object]:
+def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None, finished: bool = False,
+                   checked: bool = False) -> tuple[str, object]:
     """Add a curated pick to the member's library as not yet started. Does not commit.
 
     Returns ("existing" | "created", record). A title the member already has (same
-    name, any case) is left exactly as it is.
+    name, any case) is left exactly as it is. With ``finished`` a new record is saved
+    already finished (the Essential 100's "Seen it"), so it reads as an add, not as a
+    finish that happened just now. ``checked`` means the caller already looked for the
+    title more carefully (essentials.add tells a remake from the original by year).
     """
     kind = pick["kind"]
     model, _, category, _, _ = title_pages.KINDS[kind]
-    normalized = title_pages.normalize(pick["title"])
-    existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
-    if existing is not None:
-        return "existing", existing
+    if not checked:
+        normalized = title_pages.normalize(pick["title"])
+        existing = db.query(model).filter(model.user_id == user.id, func.lower(func.trim(model.title)) == normalized).first()
+        if existing is not None:
+            return "existing", existing
     fields = {"user_id": user.id, "title": pick["title"]}
     if kind == "game":
         fields["release_date"] = datetime(pick["year"], 1, 1) if pick["year"] else None
@@ -222,6 +234,8 @@ def add_to_library(db: Session, user, pick: dict, image: Optional[str] = None) -
     safe = title_pages._safe_image(image)
     if safe:
         fields[title_pages.IMAGE_FIELD[kind]] = safe
+    if finished:
+        fields[title_pages.COMPLETE_FIELD[kind]] = True
     record = model(**fields)
     db.add(record)
     db.flush()
