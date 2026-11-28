@@ -6,7 +6,9 @@ with the title written on it, and an empty square stays a faint outline.
 """
 from __future__ import annotations
 
+import threading
 import zlib
+from functools import lru_cache
 from io import BytesIO
 from typing import Optional
 
@@ -36,6 +38,45 @@ KIND_WORD = {"movie": "FILM", "tv": "SHOW", "anime": "ANIME", "game": "GAME", "a
 def _fonts():
     from .routers.profiles import _fit, _font
     return _font, _fit
+
+
+# Pictures render on several threads; the shared probe font is used by one at a time.
+_probe_lock = threading.Lock()
+
+
+@lru_cache(maxsize=2)
+def _probe(bold: bool):
+    """(font, the mask it draws for a character it has no glyph for), or None when that can't be told."""
+    font, _ = _fonts()
+    probe = font(32, bold=bold)
+    try:
+        with _probe_lock:
+            missing = probe.getmask("\U0010fffd")
+        return probe, (missing.size, bytes(missing))
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=4096)
+def _has_glyph(char: str, bold: bool) -> bool:
+    found = _probe(bold)
+    if found is None or char.isspace():
+        return True
+    probe, missing = found
+    try:
+        with _probe_lock:
+            mask = probe.getmask(char)
+    except Exception:
+        return False
+    return (mask.size, bytes(mask)) != missing
+
+
+def _ink(text, bold: bool = True) -> str:
+    """The text as the pictures can draw it: no emoji or scripts the font lacks (they'd be empty boxes),
+    no control characters, direction overrides or stacked accents. May come back empty."""
+    from .top_nine import tidy
+    kept = "".join(char for char in tidy(text) if _has_glyph(char, bold))
+    return " ".join(kept.split())
 
 
 def _background(size: tuple[int, int], palette: dict):
@@ -136,7 +177,7 @@ def _text_square(size: tuple[int, int], tile: dict, scale: float):
               fill=tuple(min(255, int(value * 1.25)) for value in base))
     size_px = max(14, int(34 * scale))
     title_font = font(size_px, bold=True)
-    lines = _wrap(draw, tile["title"], title_font, width - pad * 2, 5)
+    lines = _wrap(draw, _ink(tile["title"]), title_font, width - pad * 2, 5)
     line_h = int(size_px * 1.18)
     y = height - pad - line_h * len(lines) - (int(22 * scale) if tile.get("year") else 0)
     for line in lines:
@@ -183,6 +224,10 @@ def _eyebrow(year: int) -> str:
     return f"TOP NINE · {year}"
 
 
+def _name(data: dict) -> str:
+    return _ink(data["name"]) or f"My {data['year']}"
+
+
 def render_post(data: dict, posters: dict) -> bytes:
     """1080x1440 (3:4, the shape Instagram's grid shows): the name, the nine squares, the address."""
     from PIL import ImageDraw
@@ -193,7 +238,7 @@ def render_post(data: dict, posters: dict) -> bytes:
     pad = 60
     draw.text((pad, 58), _eyebrow(data["year"]), font=font(28, bold=True), fill=palette["accent"])
     name_font = font(66, bold=True)
-    draw.text((pad, 96), fit(draw, data["name"], name_font, POST_W - pad * 2), font=name_font, fill=palette["text"])
+    draw.text((pad, 96), fit(draw, _name(data), name_font, POST_W - pad * 2), font=name_font, fill=palette["text"])
     gap = 16
     cell_w = (POST_W - pad * 2 - gap * 2) // 3
     top = 206
@@ -217,7 +262,7 @@ def render_story(data: dict, posters: dict) -> bytes:
     text = _eyebrow(data["year"])
     draw.text(((STORY_W - draw.textlength(text, font=eyebrow)) / 2, 236), text, font=eyebrow, fill=palette["accent"])
     name_font = font(76, bold=True)
-    name = fit(draw, data["name"], name_font, STORY_W - 120)
+    name = fit(draw, _name(data), name_font, STORY_W - 120)
     draw.text(((STORY_W - draw.textlength(name, font=name_font)) / 2, 282), name, font=name_font, fill=palette["text"])
     gap = 16
     cell_w, cell_h = 296, 386
@@ -248,7 +293,7 @@ def render_card(data: dict, posters: dict) -> bytes:
     width = left - pad - 40
     draw.text((pad, 58), _eyebrow(data["year"]), font=font(22, bold=True), fill=palette["accent"])
     name_font = font(54, bold=True)
-    lines = _wrap(draw, data["name"], name_font, width, 2)
+    lines = _wrap(draw, _name(data), name_font, width, 2)
     y = 92
     for line in lines:
         draw.text((pad, y), line, font=name_font, fill=palette["text"])
@@ -257,8 +302,8 @@ def render_card(data: dict, posters: dict) -> bytes:
     item_font = font(24)
     shown = [tile for tile in data["tiles"] if tile][:5]
     for number, tile in enumerate(shown, start=1):
-        draw.text((pad, y), fit(draw, f"{number}. {tile['title']}", item_font, width), font=item_font,
-                  fill=palette["soft"])
+        title = _ink(tile["title"], bold=False) or KIND_WORD.get(tile.get("kind"), "").capitalize()
+        draw.text((pad, y), fit(draw, f"{number}. {title}", item_font, width), font=item_font, fill=palette["soft"])
         y += 36
     rest = sum(1 for tile in data["tiles"] if tile) - len(shown)
     if rest > 0:

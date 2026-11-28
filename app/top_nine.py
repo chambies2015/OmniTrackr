@@ -23,12 +23,14 @@ import json
 import re
 import secrets
 import threading
+import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from . import models, tier_list, title_pages
+from .review_quality import PROMOTIONAL_PHRASES
 from .tier_list_shares import text_allowed
 
 SLOTS = 9
@@ -53,6 +55,11 @@ SEARCH_LIMIT = 12
 SUGGEST_LIMIT = 60
 MEMBER_OPTIONS_MAX = 36
 LOVED_RATING = 8
+# Combining marks allowed on one letter. Real text needs one or two (Vietnamese, Thai tone marks);
+# "zalgo" text stacks dozens, which climb out of the name and the squares in the pictures.
+MAX_MARKS = 2
+# Right-to-left overrides and isolates turn "evil" into "live" on the page and in the pictures.
+BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 
 
 class TopNineError(Exception):
@@ -123,8 +130,34 @@ def key_matches(grid: models.TopNine, key) -> bool:
     return isinstance(key, str) and 20 <= len(key) <= 80 and hmac.compare_digest(grid.key_hash, key_hash(key))
 
 
+def tidy(value) -> str:
+    """Text as people typed it, minus control characters, lone surrogates, direction overrides and stacked marks."""
+    out, marks = [], 0
+    for char in unicodedata.normalize("NFC", str(value or "")):
+        category = unicodedata.category(char)
+        if category in ("Mn", "Me"):
+            marks += 1
+            if marks > MAX_MARKS:
+                continue
+        else:
+            marks = 0
+        if char in BIDI_CONTROLS or category == "Cs" or (category == "Cc" and not char.isspace()):
+            continue
+        out.append(char)
+    return "".join(out)
+
+
 def _clean_text(value, limit: int) -> str:
-    return " ".join(str(value or "").split())[:limit]
+    return " ".join(tidy(value).split())[:limit]
+
+
+# The public reviews' list of ad phrases, less one that is also a hit song's title.
+AD_PHRASES = tuple(phrase for phrase in PROMOTIONAL_PHRASES if phrase != "work from home")
+
+
+def _promotional(text: str) -> bool:
+    folded = " ".join(text.casefold().split())
+    return any(phrase in folded for phrase in AD_PHRASES)
 
 
 # ---------------------------------------------------------------- the grid
@@ -172,6 +205,10 @@ def clean_grid(name, theme, tiles, year: int) -> tuple[str, str, list, int]:
     if not all(text_allowed(text) for text in texts if text):
         raise TopNineError("Links, email addresses and phone numbers can't go on a top nine. "
                            "Take them out of the name or the titles and try again.")
+    # Anyone can make one without an account, and the pictures carry the site's name.
+    if any(_promotional(text) for text in texts if text):
+        raise TopNineError("That reads like an ad, so it can't go on a top nine. Change the name or the titles "
+                           "and try again.")
     return name, theme, squares, filled
 
 

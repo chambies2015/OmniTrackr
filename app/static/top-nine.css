@@ -356,7 +356,9 @@ body.site .tn-frame input.tn-frame__name:hover, body.site .tn-frame input.tn-fra
 .tn-dock .tn-textbtn { background: var(--site-text); border-radius: 999px; color: #0b0a18; padding: 8px 14px; text-decoration: none; }
 
 /* ---- a shared grid */
-.tn-shared__by { color: var(--site-soft); }
+.tn-shared__by { color: var(--site-soft); overflow-wrap: anywhere; }
+/* A name or title with no spaces (a long run of letters) wraps instead of pushing the page sideways. */
+.tn-shared__head h1, .tn-list__items strong, .tn-list__items span, .tn-mine__text strong { overflow-wrap: anywhere; }
 .tn-shared .tn-cell { cursor: pointer; }
 .tn-cell__tick {
   align-items: center;
