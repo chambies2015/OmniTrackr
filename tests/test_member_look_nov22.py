@@ -26,7 +26,7 @@ def _luminance(hex_colour: str) -> float:
 
 
 def test_stylesheet_is_linked_once_with_a_version():
-    assert INDEX.count("/static/member-look.css?v=20261127-home-refresh-1") == 1
+    assert INDEX.count("/static/member-look.css?v=20261127-sweep-1") == 1
 
 
 def test_format_colours_and_spectrum_match_the_public_site():

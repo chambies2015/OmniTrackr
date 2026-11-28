@@ -28,7 +28,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import models, title_pages, year_fill
+from . import friend_feed, models, title_pages, year_fill
 from .year_catchup_data import EDITIONS
 
 ANSWERS = ("month", "want", "no")
@@ -258,18 +258,33 @@ def answer(db: Session, user: models.User, year: int, entry_id: str, choice: str
             return {**reply, "state": "already"}
         return {**reply, "state": "want"}
     # A finish: tick the new title off, then date it the way "Fill in your year" dates any other.
-    setattr(row, title_pages.COMPLETE_FIELD[kind], True)
-    db.add(record)
-    db.flush()
+    # An earlier month isn't news for friends: without the quiet flag the tick below would put a
+    # "finished" card on their feed today for something watched in August. The add itself still shows,
+    # as "added a film they've watched", the same as any title saved as already seen.
+    backdated = year_fill._fill_moment(year, month, now) is not None
+    if backdated:
+        db.info[friend_feed.QUIET_KEY] = True
     try:
+        setattr(row, title_pages.COMPLETE_FIELD[kind], True)
+        db.add(record)
+        db.flush()
         result = year_fill.answer(db, user, year, entry["category"], row.id, "month", month, source, now)
     except ValueError:
         db.rollback()
         raise
+    finally:
+        if backdated:
+            db.info.pop(friend_feed.QUIET_KEY, None)
     if result is None or result.get("state") != "month":
         db.rollback()
         return {**reply, "state": "already"}
     return {**reply, "state": "month"}
+
+
+def _untouched(row) -> bool:
+    """True while a row this page saved is still only what the page saved: no rating, no review.
+    Taking the answer back then removes the title; once the member has made it their own it stays."""
+    return getattr(row, "rating", None) is None and not (getattr(row, "review", None) or "").strip()
 
 
 def undo(db: Session, user: models.User, year: int, entry_id: str) -> bool:
@@ -297,7 +312,7 @@ def undo(db: Session, user: models.User, year: int, entry_id: str) -> bool:
             db.delete(filled)
         # added_at is stamped with the real clock when the row is made, so the window is judged by it too.
         added_at = getattr(row, "added_at", None) if row is not None else None
-        remove_row = bool(row is not None and record.created_row
+        remove_row = bool(row is not None and record.created_row and _untouched(row)
                           and (added_at is None or added_at >= datetime.utcnow() - UNDO_WINDOW))
     db.delete(record)
     db.commit()
