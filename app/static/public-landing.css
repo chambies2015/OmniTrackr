@@ -825,3 +825,31 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
 .lp-vg-week__track b:nth-of-type(3) { background: var(--lp-teal); color: #0b0a18; left: 72%; }
 .lp-vg-together .lp-vg-row { padding: 5px 10px; }
 .lp-vg-together .lp-vg-row em { white-space: nowrap; }
+
+/* Top nine (Nov 28 2026): two pills can share the news line; a wide tile opens the free tools in season. */
+.lp-hero__news { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-try-wide { grid-column: 1 / -1; }
+.lp-try--nine { display: grid; gap: 4px 22px; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto 1fr; padding: 18px 22px 18px 18px; }
+.lp-try--nine > .lp-nine { grid-row: 1 / span 3; }
+.lp-try--nine strong { font-size: 1.08rem; }
+.lp-try--nine > span:last-child { max-width: 60ch; }
+.lp-nine { display: grid; gap: 4px; grid-template-columns: repeat(3, 22px); grid-template-rows: repeat(3, 29px); transform: rotate(-4deg); }
+.lp-nine__sq { border-radius: 4px; display: block; }
+.lp-nine__sq--movie { background: var(--fmt-movie, #f472b6); }
+.lp-nine__sq--tv { background: var(--fmt-tv, #60a5fa); }
+.lp-nine__sq--anime { background: var(--fmt-anime, #f87171); }
+.lp-nine__sq--game { background: var(--fmt-game, #34d399); }
+.lp-nine__sq--album { background: var(--fmt-album, #a78bfa); }
+.lp-nine__sq--book { background: var(--fmt-book, #fbbf24); }
+.lp-nine__sq--manga { background: var(--fmt-manga, #fb923c); }
+.lp-nine__sq--podcast { background: var(--fmt-podcast, #2dd4bf); }
+.lp-nine__sq--audiobook { background: var(--fmt-audiobook, #e879f9); }
+.lp-try--nine:hover .lp-nine { transform: rotate(0deg); transition: transform .2s ease; }
+@media (max-width: 640px) {
+  .lp-try--nine { gap: 2px 14px; padding: 14px; }
+  .lp-nine { grid-template-columns: repeat(3, 14px); grid-template-rows: repeat(3, 19px); gap: 3px; }
+  .lp-tools__more .lp-try--nine > span:last-child { display: block; font-size: .82rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-nine, .lp-try--nine:hover .lp-nine { transform: none; transition: none; }
+}

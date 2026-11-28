@@ -2938,3 +2938,37 @@ class YearCatchupAnswer(Base):
 
     __table_args__ = (UniqueConstraint("user_id", "year", "entry_id", name="uq_year_catchup_answer"),
                       Index("ix_year_catchup_answers_user_year", "user_id", "year"))
+
+
+class TopNine(Base):
+    """A "top nine of the year" grid someone made at /top-nine (Nov 2026). New table only.
+
+    ``tiles`` is a JSON copy of the nine squares (title, kind, year, creator, an allowlisted
+    poster URL, or null for an empty square), so a top nine never reads or changes anyone's
+    library. Grids made without an account have no owner: the browser that made one holds an
+    edit key, the link stops working at ``expires_at``, and signing up claims it.
+    """
+    __tablename__ = "top_nines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Keyed hash of the maker's browser cookie, only for capping grids made without an account.
+    visitor = Column(String(64), nullable=True, index=True)
+    # SHA-256 of the edit key the maker's browser holds.
+    key_hash = Column(String(64), nullable=False)
+    year = Column(Integer, nullable=False)
+    name = Column(String(40), nullable=False)
+    theme = Column(String(12), nullable=False, default="night")
+    tiles = Column(Text, nullable=False)
+    tile_count = Column(Integer, nullable=False, default=0)
+    # The top nine whose "make your own" link this one started from. No foreign key: deleting
+    # the original leaves the copies standing.
+    source_id = Column(Integer, nullable=True, index=True)
+    views = Column(Integer, nullable=False, default=0)
+    remixes = Column(Integer, nullable=False, default=0)
+    # People who said how many of the nine they've seen too.
+    answers = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)

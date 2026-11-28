@@ -155,7 +155,13 @@ def tools_section(season_tile: str = "") -> str:
         '<a class="lp-tool__link" href="/in-order" data-home-tool="in-order">All the guides <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>'
         '</article>'
     )
+    try:
+        from . import top_nine
+        nine = top_nine.tools_tile_html()
+    except Exception:
+        nine = ""
     small = (
+        f'{nine}'
         '<li><a class="lp-try" href="/daily" data-home-tool="daily"><span class="lp-try__kicker">Daily game</span><strong>Guess the title</strong><span>A new puzzle every day, six guesses</span></a></li>'
         '<li><a class="lp-try" href="/tier-list" data-home-tool="tier-list"><span class="lp-try__kicker">Tool</span><strong>Tier list maker</strong><span>Rank anything and save the image</span></a></li>'
         '<li><a class="lp-try" href="/taste-quiz" data-home-tool="quiz"><span class="lp-try__kicker">One minute</span><strong>Taste quiz</strong><span>Answer a few and get picks across formats</span></a></li>'
