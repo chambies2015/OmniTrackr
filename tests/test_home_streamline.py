@@ -49,8 +49,10 @@ def test_main_column_runs_in_priority_order():
 
 def test_rail_puts_the_dated_cards_first_and_the_asks_last():
     rail = _between('<div class="home-board__rail-cards">', "</aside>")
-    order = _order(rail, ("adventCard", "monthlyChallenge", "yearGoals", "awardsBallot", "yearSoFar", "seasonCard",
-                          "newYearPledge", "supportAsk", "installAppCard"))
+    # The 2027 pledge sits right after the month's challenge (Nov 28 December walk): further down, the
+    # rail's three-card limit kept it behind "Show more" for the whole of December.
+    order = _order(rail, ("adventCard", "monthlyChallenge", "newYearPledge", "yearGoals", "awardsBallot", "yearSoFar",
+                          "seasonCard", "supportAsk", "installAppCard"))
     assert order == sorted(order)
 
 

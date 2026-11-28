@@ -346,6 +346,10 @@
       case 'badgeCase': return true;
       case 'rankDuel': return unit.dataset.status === 'more';
       case 'yearGoals': return !$('yearGoalsList') || $('yearGoalsList').hidden;
+      // December's rail is crowded (advent, the month's challenge, goals, the 2027 pledge, awards). The advent
+      // card steps back once today's door is open with none missed, and the pledge card once the member pledged.
+      case 'adventCard': return ['opened', 'done'].includes(unit.dataset.status);
+      case 'newYearPledge': return unit.dataset.status === 'pledged';
       default: return false;
     }
   }

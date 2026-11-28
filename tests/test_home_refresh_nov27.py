@@ -72,6 +72,6 @@ def test_today_panel_and_one_card_surface():
 
 def test_stylesheet_and_script_versions_and_changelog():
     assert INDEX.count("/static/member-look.css?v=20261127-sweep-1") == 1
-    assert INDEX.count("/static/home-layout.js?v=20261127-home-refresh-1") == 1
+    assert INDEX.count("/static/home-layout.js?v=20261128-december-rail-1") == 1
     assert 'id="home-refresh-nov27-2026-heading"' in CHANGELOG
     assert CHANGELOG.index("home-refresh-nov27-2026-heading") < CHANGELOG.index("security-nov26-signin-fill-2026-heading")

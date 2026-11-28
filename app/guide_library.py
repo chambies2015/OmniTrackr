@@ -109,8 +109,8 @@ SHELVES = (
      "the ones you've already seen, played, read or heard.",
      (("/essentials", "All nine lists"),)),
     ("best-of", "Best of the year",
-     "The standouts of 2026 in each format, with where each one came out, a few more worth a look "
-     "and the releases still due before the year ends. Nothing here is ranked by chart position.",
+     "The standouts of 2026 in each format, with where each one came out and a few more worth a "
+     "look. Nothing here is ranked by chart position.",
      (("/best-of", "Every best-of list"),)),
     ("new-releases", "Release guides",
      "Previews of what's coming out in a month or a season. Most of these titles aren't out when "

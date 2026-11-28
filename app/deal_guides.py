@@ -45,10 +45,17 @@ GUIDE = {
                "read, the week is less about televisions and more about the list: the series you want on disc, the "
                "manga box set you keep putting off, the game you skipped at launch. Those are the things that do get "
                "cheaper, but not all of them, and not always on the day."),
+              ("2027-01-01",
+               "Black Friday was on November 27 in 2026 and Cyber Monday on November 30. What gets cheaper changes very "
+               "little from one year to the next, so the guide stays up for the last days of the Steam Winter Sale, "
+               "which ends on January 4, and until it gets its 2027 dates. Black Friday 2027 is on November 26. For "
+               "anyone who tracks what they watch and read, the week is less about televisions and more about the "
+               "list: the series you want on disc, the manga box set you keep putting off, the game you skipped at "
+               "launch. Those are the things that do get cheaper, but not all of them, and not always on the day."),
               ("2027-01-05",
                "Black Friday was on November 27 in 2026 and Cyber Monday on November 30. What gets cheaper changes very "
-               "little from one year to the next, so the guide stays up until it gets its 2027 dates; next year Black "
-               "Friday falls on November 26. For anyone who tracks what they watch and read, the week is less about "
+               "little from one year to the next, so the guide stays up until it gets its 2027 dates. Black Friday "
+               "2027 is on November 26. For anyone who tracks what they watch and read, the week is less about "
                "televisions and more about the list: the series you want on disc, the manga box set you keep putting "
                "off, the game you skipped at launch. Those are the things that do get cheaper, but not all of them, and "
                "not always on the day.")),
@@ -94,6 +101,9 @@ GUIDE = {
                        "is the winter one, from December 17 to January 4.",
                        ("2026-12-17",
                         "Valve moved its Autumn Sale to the start of October this year, so the site-wide sale after Black "
+                        "Friday is the winter one, which runs from December 17 to January 4."),
+                       ("2027-01-01",
+                        "Valve moved its Autumn Sale to the start of October in 2026, so the site-wide sale after Black "
                         "Friday is the winter one, which runs from December 17 to January 4."),
                        ("2027-01-05",
                         "Valve moved its Autumn Sale to the start of October in 2026, so the site-wide sale after Black "
@@ -235,15 +245,32 @@ GUIDE = {
             "name": "Games",
             "tagline": "Last year's games and accessories drop. New hits and Nintendo's own games don't.",
             "intro": [
-                "Games have the most predictable sales of any format. A big release from the last two or three months "
-                "rarely drops much, and Grand Theft Auto VI, due on November 19, won't be the exception, though it "
-                "may turn up in a console bundle. Games from a year or more ago are a different story, and so are "
-                "controllers, headsets and storage.",
+                Dated("Games have the most predictable sales of any format. A big release from the last two or three "
+                      "months rarely drops much, and Grand Theft Auto VI, due on November 19, won't be the exception, "
+                      "though it may turn up in a console bundle. Games from a year or more ago are a different story, "
+                      "and so are controllers, headsets and storage.",
+                      ("2026-11-19",
+                       "Games have the most predictable sales of any format. A big release from the last two or three "
+                       "months rarely drops much, and Grand Theft Auto VI, out since November 19, is unlikely to be the "
+                       "exception, though it may turn up in a console bundle. Games from a year or more ago are a "
+                       "different story, and so are controllers, headsets and storage.")),
                 "Nintendo is the odd one out. Its own games, such as Mario and Zelda, keep their price for years and "
                 "only get small, short discounts. Third-party Switch games behave like everyone else's.",
-                "PC players should know that Steam's Autumn Sale moved to October 1 to 8 this year. Publishers can "
-                "still discount their own games in Thanksgiving week, but the next site-wide sale is the Winter Sale, "
-                "which starts on December 17.",
+                Dated("PC players should know that Steam's Autumn Sale moved to October 1 to 8 this year. Publishers "
+                      "can still discount their own games in Thanksgiving week, but the next site-wide sale is the "
+                      "Winter Sale, which starts on December 17.",
+                      ("2026-12-17",
+                       "PC players should know that Steam's Autumn Sale moved to October 1 to 8 this year. Publishers "
+                       "can still discount their own games in Thanksgiving week, but the site-wide sale after it is "
+                       "the Winter Sale, which runs from December 17 to January 4."),
+                      ("2027-01-01",
+                       "PC players should know that Steam's Autumn Sale moved to October 1 to 8 in 2026. Publishers "
+                       "could still discount their own games in Thanksgiving week, but the site-wide sale after it was "
+                       "the Winter Sale, which started on December 17 and ends on January 4."),
+                      ("2027-01-05",
+                       "PC players should know that Steam's Autumn Sale moved to October 1 to 8 in 2026. Publishers "
+                       "could still discount their own games in Thanksgiving week, but the site-wide sale after it was "
+                       "the Winter Sale, which ran from December 17 to January 4.")),
             ],
             "drops": [
                 "Games released a year or more ago, often to half their launch price",
@@ -539,7 +566,8 @@ GUIDE = {
                 "Black Friday was Friday, November 27, the day after Thanksgiving, and Cyber Monday was Monday, November "
                 "30. In 2027 they fall on November 26 and November 29, and many shops start their offers in the week "
                 "before, some in early November."))),
-        ("Is there a Steam sale on Black Friday this year?",
+        (Dated("Is there a Steam sale on Black Friday this year?",
+               ("2027-01-01", "Was there a Steam sale on Black Friday in 2026?")),
          Dated("Not a site-wide one. Valve moved its Autumn Sale to October 1 to 8 in 2026, and the Winter Sale runs from "
                "December 17 to January 4. Publishers can still discount their own games on Steam in Thanksgiving week, so "
                "it's worth checking a wishlist, but the bigger sale is in December.",

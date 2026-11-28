@@ -203,6 +203,8 @@ def mark_winner(slug: str, body: ResultBody, request: Request, response: Respons
 
 def _status_line(show: dict, state: str, today: date) -> str:
     """The small capital line above the heading."""
+    if state == "coming" and awards.is_locked(show):
+        return "THE SHOW IS OVER"
     if state == "coming" and awards.nominees_pending(show):
         return "NOMINEES OUT · BALLOT BEING CHECKED"
     if state == "coming":
@@ -339,6 +341,15 @@ def _ballot_section(slug: str, show: dict, *, member: Optional[dict], states: Op
     data = "".join(f' data-{name}="{_e(value)}"' for name, value in attrs.items())
     status = '<p class="aw-status" data-award-status role="status" aria-live="polite"></p>'
 
+    if state == "coming" and awards.is_locked(show):
+        # The show went ahead before its nominees were loaded here, so there is nothing to pick or score.
+        return (f'<section id="ballot" class="aw-ballot aw-ballot--coming" aria-labelledby="aw-ballot-heading"{data}>'
+                '<p class="aw-ballot__kicker">YOUR BALLOT</p>'
+                '<h2 id="aw-ballot-heading">There was no ballot for this show</h2>'
+                f'<p>Nominations were announced on {_e(show["nominees_label"])}, but the checked list didn\'t make it '
+                f'onto a ballot here before the ceremony, so there is nothing to score. The '
+                f'<a href="{awards.BASE_PATH}">awards calendar</a> has the next show.</p>'
+                f'{status}</section>')
     if state == "coming":
         if signed_in and member["following"]:
             action = ('<p class="aw-following"><strong>You\'re on the list.</strong> A notification will tell you '
@@ -495,11 +506,14 @@ def show_content(db: Session, slug: str, user=None, now: Optional[datetime] = No
     tallies = awards.tallies(db, slug, now)
     admin = user is not None and is_site_admin(user) and awards.has_nominees(show)
 
-    dates = "".join(f'<div><dt>{_e(label)}</dt><dd>{_e(value)}</dd></div>' for label, value in show["dates"])
+    # Key dates and sections can hold dated_text.Dated lines ("the opening act starts at 4:30") that turn
+    # to the past tense after the show.
+    dates = "".join(f'<div><dt>{_e(label)}</dt><dd>{_e(value)}</dd></div>'
+                    for label, value in dated_text.resolve(show["dates"], today))
     sections = "".join(
         f'<section id="{_e(anchor)}" class="editorial aw-prose" aria-labelledby="aw-{_e(anchor)}">'
         f'<h2 id="aw-{_e(anchor)}">{_e(heading)}</h2>{_paragraphs(paragraphs)}</section>'
-        for anchor, heading, paragraphs in show["sections"]
+        for anchor, heading, paragraphs in dated_text.resolve(show["sections"], today)
     )
     jump_links = [("#ballot", "Ballot"), ("#dates", "Key dates")]
     jump_links += [(f"#{anchor}", heading) for anchor, heading, _ in show["sections"]]
@@ -518,7 +532,7 @@ def show_content(db: Session, slug: str, user=None, now: Optional[datetime] = No
     return (
         f'<header class="hero hero--guide aw-hero"><a href="{awards.BASE_PATH}">← Awards season</a>'
         f'<p class="eyebrow">{_e(_status_line(show, state, today))}</p><h1>{_e(show["title"])}</h1>'
-        f'<p>{_e(awards.show_words(slug, show)["lead"])}</p>{_byline(show)}'
+        f'<p>{_e(awards.show_words(slug, show, now)["lead"])}</p>{_byline(show)}'
         f'<p class="aw-hero__facts"><span class="aw-hero__fact aw-hero__fact--when">{_e(_countdown(show, today))}</span>'
         f'<span class="aw-hero__fact">{_e(show["format"])}</span>{filled}</p>{jump}</header>'
         + admin_note
@@ -566,7 +580,9 @@ def _show_card(db: Session, slug: str, show: dict, user, now: datetime) -> str:
             mine = f'<p class="aw-card__mine">You called {marks["correct"]} of {marks["judged"]}</p>'
         elif chosen:
             mine = f'<p class="aw-card__mine">Your ballot: {len(chosen)} of {total} picked</p>'
-    if state == "coming" and awards.nominees_pending(show, now):
+    if state == "coming" and awards.is_locked(show, now):
+        chip, action = "Show over", "Dates and details"
+    elif state == "coming" and awards.nominees_pending(show, now):
         chip, action = "Ballot opening soon", "Dates and details"
     elif state == "coming":
         chip, action = f"Ballot opens {show['nominees_label']}", "Dates and details"

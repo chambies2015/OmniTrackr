@@ -86,6 +86,12 @@ def promo_season(today: Optional[date] = None) -> bool:
     return (today.month, today.day) >= (11, 25) or today.month == 1
 
 
+def year_words(year: int, today: Optional[date] = None) -> str:
+    """ "this year" while it is that year, "in 2026" in the January after, when the grids look back."""
+    today = today or _now().date()
+    return "this year" if today.year == year else f"in {year}"
+
+
 def hero_link_html(today: Optional[date] = None) -> str:
     """The guest homepage's "New" pill above the headline, in season."""
     if not promo_season(today):
@@ -100,14 +106,18 @@ def tools_tile_html(today: Optional[date] = None) -> str:
     """A wide tile at the top of the homepage's free tools, in season."""
     if not promo_season(today):
         return ""
+    today = today or _now().date()
     year = season_year(today)
+    # In January the year being looked back on is over, so it isn't "new for the end of" it any more.
+    kicker = f"New for the end of {year}" if today.year == year else f"Looking back on {year}"
     squares = "".join(f'<i class="lp-nine__sq lp-nine__sq--{kind}"></i>' for kind in KIND_ORDER)
     return ('<li class="lp-try-wide"><a class="lp-try lp-try--nine" href="/top-nine" data-home-tool="top-nine">'
             f'<span class="lp-nine" aria-hidden="true">{squares}</span>'
-            f'<span class="lp-try__kicker">New for the end of {year}</span>'
+            f'<span class="lp-try__kicker">{kicker}</span>'
             f'<strong>Your {year} top nine</strong>'
-            '<span>Pick the nine films, shows, games, albums or books you loved most this year. You get a picture to '
-            'post and a link friends can open to see how many they\'ve seen too.</span></a></li>')
+            '<span>Pick the nine films, shows, games, albums or books you loved most '
+            f'{year_words(year, today)}. You get a picture to post and a link friends can open to see how many '
+            'they\'ve seen too.</span></a></li>')
 
 
 def default_name(year: int) -> str:

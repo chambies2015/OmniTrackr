@@ -24,7 +24,7 @@ from .profiles import _CardCache
 router = APIRouter(tags=["new-year-challenge"])
 _CARDS = _CardCache(size=64)
 CSS_VERSION = "20261110-pledge-3"
-JS_VERSION = "20261110-pledge-2"
+JS_VERSION = "20261128-card-status-1"
 
 
 class PledgeBody(BaseModel):

@@ -522,16 +522,17 @@ def _token_big_only(db: Session, user: models.User, data: dict, big: dict, token
         lead = (f"Your {year} recap counts {_plural(finished, 'finish', 'finishes')} now. Keep going if you like: "
                 "tap a poster, pick the month, and it saves straight to your library. You don’t need to sign in.")
     else:
-        lead = ("Tap anything you watched, played, read or listened to this year and pick the month. It goes into your "
-                f"library and your {year} recap. You don’t need to sign in.")
+        # The link lasts 30 days, so a December email can be opened in January: name the year.
+        lead = (f"Tap anything you watched, played, read or listened to in {year} and pick the month. It goes into "
+                f"your library and your {year} recap. You don’t need to sign in.")
     if signed_in:
         primary = f'<a class="site-btn site-btn--primary" href="/year-in-review/{year}#story">Play your {year}</a>'
         secondary = '<a class="site-btn site-btn--ghost" href="/">Open my library</a>'
     else:
         primary = '<a class="site-btn site-btn--primary" href="/#login">Log in to play your year</a>'
         secondary = '<a class="site-btn site-btn--ghost" href="/daily">Play today’s daily puzzle</a>'
-    note = ("Films, shows, games and albums most people got to this year, and a few books, podcasts and audiobooks. "
-            "Anything already in your library is marked.")
+    note = (f"Films, shows, games and albums most people got to in {year}, and a few books, podcasts and "
+            "audiobooks. Anything already in your library is marked.")
     return (
         f'<section class="yf yf--emailed" aria-labelledby="yfTitle">'
         '<header class="yf-head">'

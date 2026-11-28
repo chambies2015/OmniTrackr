@@ -371,6 +371,12 @@
       }
     }
     section.dataset.dismissKey = cardDismissKey(data);
+    // home-layout.js lets the card wait behind "Show more" once there is no door to open today.
+    let status = 'today';
+    if (view.opened.length >= view.total) status = 'done';
+    else if (view.finished) status = 'catch-up';
+    else if (view.newestOpened) status = view.missed ? 'missed' : 'opened';
+    section.dataset.status = status;
     section.hidden = false;
   }
 

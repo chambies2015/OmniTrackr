@@ -6,6 +6,7 @@ Registered in seasonal_guides.SEASONS. Written November 2026 for February 2027 (
 repeat the February 2027 Discover edition, the other seasonal hubs and guides, the Discover trails or the
 advent calendar (tests/test_valentines.py).
 """
+from .dated_text import Dated
 
 VALENTINES = {
     "path": "/valentines-day",
@@ -42,10 +43,15 @@ VALENTINES = {
         "shelf has one pick in every format OmniTrackr tracks: a film, a series, an anime, a game, a book, an album, a "
         "manga, a podcast and an audiobook. Every pick has a romance level from one to five, a note on how much time it "
         "takes and a caveat that says what is in it, sex scenes included.",
-        "After the shelves there is a calendar of the new love stories coming out around Valentine's Day 2027, with their "
-        "dates and where to find them. The February Discover edition, Love in every form, opens on February 1 with nine "
-        "more love stories of its own, from Past Lives to Nana. None of its picks are repeated here, and the plans near "
-        "the bottom of the page borrow from both.",
+        Dated("After the shelves there is a calendar of the new love stories coming out around Valentine's Day 2027, with "
+              "their dates and where to find them. The February Discover edition, Love in every form, opens on February 1 "
+              "with nine more love stories of its own, from Past Lives to Nana. None of its picks are repeated here, and the "
+              "plans near the bottom of the page borrow from both.",
+              ("2027-02-01",
+               "After the shelves there is a calendar of the new love stories coming out around Valentine's Day 2027, "
+               "with their dates and where to find them. The February Discover edition, Love in every form, has nine "
+               "more love stories of its own, from Past Lives to Nana. None of its picks are repeated here, and the "
+               "plans near the bottom of the page borrow from both.")),
     ],
     "scale": [
         (1, "Barely a love story", "Friendship, family or a night on your own. Romance is a subplot at most, so it suits the anti-Valentine's crowd."),
@@ -685,10 +691,15 @@ VALENTINES = {
          "romances come later in the spring, including Emily Henry's Modern Classic on April 6 and the film of her Beach "
          "Read on May 7."),
         ("Is this the same as the February Discover edition?",
-         "No. The February 2027 edition, Love in every form, opens on February 1 with nine love stories of its own, one "
-         "per format, from Past Lives to Nana, and none of them are repeated here. The February challenge that goes with it "
-         "asks you to finish one of the nine, go back to something you already love and write a line about why. Once "
-         "February starts, both are linked at the bottom of this page."),
+         Dated("No. The February 2027 edition, Love in every form, opens on February 1 with nine love stories of its own, "
+               "one per format, from Past Lives to Nana, and none of them are repeated here. The February challenge that "
+               "goes with it asks you to finish one of the nine, go back to something you already love and write a line "
+               "about why. Once February starts, both are linked at the bottom of this page.",
+               ("2027-02-01",
+                "No. The February 2027 edition, Love in every form, has nine love stories of its own, one per format, "
+                "from Past Lives to Nana, and none of them are repeated here. The February challenge that goes with it "
+                "asks you to finish one of the nine, go back to something you already love and write a line about why. "
+                "Both are linked at the bottom of this page."))),
         ("How does the romance scale work?",
          "It runs from one, barely a love story, to five, hearts everywhere. We set each level ourselves by asking how much "
          "of the work is about falling or being in love: a story about friendship with a romance on the side scores lower "

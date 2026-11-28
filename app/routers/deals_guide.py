@@ -151,7 +151,9 @@ def _pick_html(pick: dict, pages: dict) -> str:
     )
 
 
-def _section_html(section: dict, pages: dict) -> str:
+def _section_html(section: dict, pages: dict, today: date) -> str:
+    # A format's intro can hold dated_text.Dated lines ("Grand Theft Auto VI, due on November 19").
+    section = dated_text.resolve(section, today)
     drops = "".join(f"<li>{_e(line)}</li>" for line in section["drops"])
     holds = "".join(f"<li>{_e(line)}</li>" for line in section["holds"])
     picks = "".join(_pick_html(pick, pages) for pick in section["picks"])
@@ -281,7 +283,7 @@ def guide_content(*, pages: dict, signed_in: bool, counts: Optional[dict] = None
         _checks(),
         sorted_note,
     ]
-    parts.extend(_section_html(section, pages) for section in sections)
+    parts.extend(_section_html(section, pages, today) for section in sections)
     parts.extend([
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
         _related(today),

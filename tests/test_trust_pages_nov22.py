@@ -107,12 +107,16 @@ def test_binge_guide_note_names_its_own_new_section(client):
     assert "now covers only what applies to this series" not in one_piece
 
 
-def test_guides_without_a_first_published_line_get_one(client):
+def test_guides_without_a_first_published_line_get_one(client, monkeypatch):
     for path in ("/discover/monthly/november-2026", "/awards/grammys-2027", "/awards/oscars-2027"):
         html = client.get(path).text
         note = html[html.index('<div class="guide-changes"'):]
         note = note[:note.index("</div>")]
         assert 'First published <time datetime="' in note, path
+    # The Game Awards page had nothing logged until Nov 28, and every page without its own dates has an entry
+    # now, so the log is read without that day's entry to see the dates-only note.
+    logged = corrections_log.guide_changes()
+    monkeypatch.setattr(corrections_log, "guide_changes", lambda: tuple(c for c in logged if c.date != "2026-11-28"))
     awards = client.get("/awards/the-game-awards-2026").text  # nothing logged, so dates only
     note = awards[awards.index('<div class="guide-changes"'):]
     assert "<h3>About this guide</h3>" in note[:note.index("</div>")]

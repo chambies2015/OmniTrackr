@@ -516,10 +516,10 @@ SHOWS = {
         "nominees_note": "The nominees were revealed on Tuesday, November 17, 2026.",
         "dates": (
             ("Nominees announced", "Tuesday, November 17, 2026"),
-            ("Public vote", "Open now on thegameawards.com"),
+            ("Public vote", Dated("Open now on thegameawards.com", ("2026-12-11", "Closed"))),
             ("Ceremony", "Thursday, December 10, 2026, 7:30 p.m. Eastern"),
             ("Venue", "Peacock Theater, Los Angeles"),
-            ("Ballots here lock", "December 10 at 4:30 p.m. Pacific"),
+            (Dated("Ballots here lock", ("2026-12-11", "Ballots here locked")), "December 10 at 4:30 p.m. Pacific"),
         ),
         "sections": (
             ("nominees", "Who is nominated", (
@@ -548,11 +548,20 @@ SHOWS = {
                 "was November 21. Expansions, DLC, remakes and remasters can be nominated alongside new games.",
             )),
             ("watch", "How to watch", (
-                "The show streams free on YouTube and Twitch, and this year on Disney+ as well. GGRecon reports "
-                "that Disney+ carries it live in North America and some other markets that Disney had not named. "
-                "GamingBible's guide also lists X, TikTok Live, Facebook, Instagram Live, Kick and Steam.",
-                "The opening act starts at 4:30 p.m. Pacific, which is 7:30 p.m. Eastern and 12:30 a.m. on Friday "
-                "in the UK. That is the time the show's own FAQ gives, as VGChartz quotes it. Ballots here lock then.",
+                Dated("The show streams free on YouTube and Twitch, and this year on Disney+ as well. GGRecon reports "
+                      "that Disney+ carries it live in North America and some other markets that Disney had not named. "
+                      "GamingBible's guide also lists X, TikTok Live, Facebook, Instagram Live, Kick and Steam.",
+                      ("2026-12-11",
+                       "The show streamed free on YouTube and Twitch, and this year on Disney+ as well. GGRecon "
+                       "reported that Disney+ carried it live in North America and some other markets that Disney had "
+                       "not named. GamingBible's guide also listed X, TikTok Live, Facebook, Instagram Live, Kick and "
+                       "Steam.")),
+                Dated("The opening act starts at 4:30 p.m. Pacific, which is 7:30 p.m. Eastern and 12:30 a.m. on Friday "
+                      "in the UK. That is the time the show's own FAQ gives, as VGChartz quotes it. Ballots here lock then.",
+                      ("2026-12-11",
+                       "The opening act started at 4:30 p.m. Pacific, which was 7:30 p.m. Eastern and 12:30 a.m. on "
+                       "Friday in the UK, the time the show's own FAQ gave, as VGChartz quoted it. Ballots here locked "
+                       "then.")),
             )),
             ("categories", "What the ballot covers", (
                 "The ballot has all 30 categories announced with the nominees, from Game of the Year to Best "
@@ -672,7 +681,7 @@ SHOWS = {
             ("Final ballots sent", "December 18, 2026"),
             ("Final ballots due", "January 2, 2027"),
             ("Ceremony", "Sunday, January 10, 2027"),
-            ("Ballots here lock", "January 10 at 4 p.m. Pacific"),
+            (Dated("Ballots here lock", ("2027-01-11", "Ballots here locked")), "January 10 at 4 p.m. Pacific"),
         ),
         "sections": (
             ("chosen", "How the winners are chosen", (
@@ -719,8 +728,11 @@ SHOWS = {
                 "or comedy, and One Battle After Another went on to take Best Picture.",
             )),
             ("watch", "How to watch", (
-                "The ceremony airs live on CBS from the Beverly Hilton in Beverly Hills and streams on Paramount+ "
-                "in the United States. Nikki Glaser hosts for the third year running.",
+                Dated("The ceremony airs live on CBS from the Beverly Hilton in Beverly Hills and streams on Paramount+ "
+                      "in the United States. Nikki Glaser hosts for the third year running.",
+                      ("2027-01-11",
+                       "The ceremony aired live on CBS from the Beverly Hilton in Beverly Hills and streamed on "
+                       "Paramount+ in the United States. Nikki Glaser was booked to host for the third year running.")),
             )),
             ("changes", "What is different this year", (
                 "Podcasts got their own Globe last year, and Good Hang with Amy Poehler won the first one. For 2027 "
@@ -819,7 +831,7 @@ SHOWS = {
             ("Final-round voting", "December 10, 2026 to January 7, 2027"),
             ("Ceremony", "Sunday, February 7, 2027, 7 p.m. Eastern"),
             ("Venue", "Crypto.com Arena, Los Angeles"),
-            ("Ballots here lock", "February 7 at 4 p.m. Pacific"),
+            (Dated("Ballots here lock", ("2027-02-08", "Ballots here locked")), "February 7 at 4 p.m. Pacific"),
         ),
         "sections": (
             ("nominees", "Who is nominated", (
@@ -846,9 +858,13 @@ SHOWS = {
                 "dates. Anything from this autumn waits for the 2028 show.",
             )),
             ("watch", "How to watch", (
-                "The show moves to ABC this year, with streams on Disney+ and Hulu. It is the first Grammys "
-                "broadcast on ABC since 1972, under a ten-year deal with Disney announced in October 2024. It "
-                "starts at 7 p.m. Eastern, 4 p.m. Pacific.",
+                Dated("The show moves to ABC this year, with streams on Disney+ and Hulu. It is the first Grammys "
+                      "broadcast on ABC since 1972, under a ten-year deal with Disney announced in October 2024. It "
+                      "starts at 7 p.m. Eastern, 4 p.m. Pacific.",
+                      ("2027-02-08",
+                       "The show moved to ABC this year, with streams on Disney+ and Hulu. It was the first Grammys "
+                       "broadcast on ABC since 1972, under a ten-year deal with Disney announced in October 2024, and "
+                       "it started at 7 p.m. Eastern, 4 p.m. Pacific.")),
                 "No host had been named when this page was last checked. Trevor Noah hosted for the sixth and last "
                 "time in 2026.",
             )),
@@ -946,7 +962,7 @@ SHOWS = {
             ("Final voting", "February 25 to March 4, 2027"),
             ("Ceremony", "Sunday, March 14, 2027, 7 p.m. Eastern"),
             ("Venue", "Dolby Theatre, Hollywood"),
-            ("Ballots here lock", "March 14 at 4 p.m. Pacific"),
+            (Dated("Ballots here lock", ("2027-03-15", "Ballots here locked")), "March 14 at 4 p.m. Pacific"),
         ),
         "sections": (
             ("chosen", "How the winners are chosen", (
@@ -994,8 +1010,11 @@ SHOWS = {
                 "evening when shortlisted teams show their work to the branch.",
             )),
             ("watch", "How to watch", (
-                "The ceremony airs live on ABC at 7 p.m. Eastern, 4 p.m. Pacific, and streams on Hulu. Conan "
-                "O'Brien hosts for the third year in a row.",
+                Dated("The ceremony airs live on ABC at 7 p.m. Eastern, 4 p.m. Pacific, and streams on Hulu. Conan "
+                      "O'Brien hosts for the third year in a row.",
+                      ("2027-03-15",
+                       "The ceremony aired live on ABC at 7 p.m. Eastern, 4 p.m. Pacific, and streamed on Hulu. Conan "
+                       "O'Brien was booked to host for the third year in a row.")),
             )),
             ("changes", "What changed in the rules", (
                 "The international feature category now also accepts films that won the top prize at Berlin, Busan, "
