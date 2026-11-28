@@ -24,6 +24,7 @@ Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py)
 Manga, podcast and audiobook picks are saved straight to their tracker (seasonal.extra_entry).
 A new season is a new entry here plus a theme block in seasonal.css and seasonal-card.css.
 """
+from .dated_text import Dated
 
 SEASONS = {
     "halloween": {
@@ -580,8 +581,13 @@ SEASONS = {
                             "you: festive decorations and recipes arrive, trees drop ornaments when you shake them, "
                             "and Toy Day comes on Christmas Eve. Because it runs on your clock, it is the one pick "
                             "here you can visit for a few minutes every day of the season.",
-                     "note": "Start in November so your island is settled by December. Visiting a friend's or relative's "
-                             "island is part of the fun, and an easy way to keep in touch with someone far away.",
+                     "note": Dated("Start in November so your island is settled by December. Visiting a friend's or "
+                                   "relative's island is part of the fun, and an easy way to keep in touch with someone "
+                                   "far away.",
+                                   ("2026-12-01",
+                                    "Start early in December and your island will have settled in by Toy Day. Visiting "
+                                    "a friend's or relative's island is part of the fun, and an easy way to keep in "
+                                    "touch with someone far away.")),
                      "caveat": "Nintendo Switch only, and visiting islands over the internet needs a paid Nintendo Switch "
                                "Online membership. Very slow by design."},
                     {"kind": "book", "title": "A Christmas Carol", "year": 1843, "creator": "Charles Dickens", "level": 5,

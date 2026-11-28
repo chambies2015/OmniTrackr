@@ -154,6 +154,16 @@ CHALLENGES: dict[str, dict] = {
              "detail": "A rating and a takeaway are the details you will forget first. Add them now and your recap will say why you liked something, and your next recommendations will be better for it."},
         ],
         "reflection": "Which finish this month would you hand to a friend in January, and what would you tell them about it?",
+        "notes": [
+            {"heading": "Four finishes in a busy month", "paragraphs": [
+                "The December edition is the quickest way through. Four of its six picks fit into an evening each: Blackstar runs 41 minutes, The Apartment just over two hours, What Remains of Edith Finch about two, and A Month in the Country is a short novel of around a hundred pages. That is four titles in four formats, enough for steps 1 and 2, and rating two of them on the finish screen takes care of step 3.",
+                "The other two picks are for longer stretches. Ping Pong the Animation is eleven episodes of about 23 minutes, a long weekend at most. Six Feet Under is five seasons and 63 episodes, which is most of the month even over the holidays, and it counts as one title on the day you mark the series finished, so start it early if it's the one you want.",
+            ]},
+            {"heading": "What December adds to your Year in Review", "paragraphs": [
+                "Year in Review is built from finishes that carry a date, so anything you mark finished this month goes into your 2026 recap the day you log it. Ratings change it more than the count does. The recap only describes how you rate once at least three of the year's finishes have a rating, and it counts any finish released twenty or more years before as a classic, so The Apartment (1960) or A Month in the Country (1980) moves that part of the recap more than a new release would.",
+                "If you only started tracking partway through 2026, Fill in your year, linked from the Year in Review page, asks about titles you ticked off without a date. A finish you date to an earlier month there counts for the recap and your yearly goal, but not for this challenge, which only counts what you finish in December.",
+            ]},
+        ],
     },
     "2027-01": {
         "name": "First things first",

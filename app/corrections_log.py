@@ -365,9 +365,107 @@ def _switch_fixes() -> Change:
     )
 
 
+# The guides that gained a section on November 27, with the section each gained.
+_NOV27_ADDED = {
+    "naruto-and-shippuden": "arcs", "friends": "couples", "dune": "jumps", "the-lord-of-the-rings": "after",
+    "a-song-of-ice-and-fire": "meanwhile", "star-wars-films": "children", "middle-earth-films": "rohirrim",
+}
+
+
+def _binge_nov27() -> Change:
+    from . import binge_calculator
+    from .binge_guides import GUIDES
+
+    def line(slug: str) -> str:
+        names = {section_id: heading for section_id, heading, _ in GUIDES[slug]["sections"]}
+        return f"Added the section “{names[_NOV27_ADDED[slug]]}”."
+
+    pages = tuple((binge_calculator.path(slug), line(slug)) for slug in _NOV27_ADDED)
+    return Change(
+        "2026-11-27", "added", f"{len(pages)} “How long it takes” guides", binge_calculator.BASE_PATH,
+        "Seven more of the guides with ads gained a section: where the big arcs fall in Naruto, the episodes that "
+        "move the Friends couples along, how far apart in time the Dune books are set, what to read after The Lord "
+        "of the Rings, the Dunk and Egg novellas while The Winds of Winter has no date, the Star Wars ratings for "
+        "watching with children, and where The War of the Rohirrim fits beside the six Middle-earth films.",
+        pages,
+    )
+
+
+def _percy_jackson_season_three() -> Change:
+    return Change(
+        "2026-11-27", "update", "Percy Jackson in order", "/in-order/percy-jackson",
+        "The guide still said season three of the Disney+ series was scheduled to premiere on November 20, a week "
+        "after it had. It now says the season began that day with two of its eight episodes, then two a week through "
+        "the finale on December 11.",
+        (("/in-order/percy-jackson",
+          "Season three of the Disney+ series premiered on November 20, 2026. The series note and the answer about "
+          "season three said it was still to come; they now say it began that day and give the finale date, "
+          "December 11."),),
+    )
+
+
+def _winter_recheck() -> Change:
+    pages = (
+        ("/new-releases/winter-2026-27",
+         "Every date on the page was checked again on November 27 and none had moved. The Moth Reborn's US date is "
+         "February 23, not February 25, which is the UK date. Narnia now gives its IMAX previews (February 10) and its "
+         "Netflix date (April 2), and Only Murders in the Building's sixth season notes its London setting and "
+         "its episode schedule."),
+        ("/new-releases/winter-2027-books",
+         "The Moth Reborn's US date is February 23, 2027. This page had the UK date, February 25."),
+    )
+    return Change(
+        "2026-11-27", "correction", "Winter 2026-27 release guides", "/new-releases/winter-2026-27",
+        "We checked every release date in the winter guide against publishers', studios' and stores' own listings. None had "
+        "moved since November 1. One was wrong from the start: The Moth Reborn comes out in the US on February 23, "
+        "2027, two days before the UK edition.",
+        pages,
+    )
+
+
+def _dune_part_three() -> Change:
+    return Change(
+        "2026-11-27", "update", "Dune in order", "/in-order/dune",
+        "Added Dune: Part Three, Denis Villeneuve's film of Dune Messiah, dated December 18, 2026, to the "
+        "list and to all three orders. It sits after Messiah in the recommended order.",
+        (("/in-order/dune",
+          "Added Dune: Part Three (December 18, 2026) to the list and to the recommended, release and screen orders, "
+          "and the answer about a third Villeneuve film now gives its date."),),
+    )
+
+
+def _dated_lines() -> Change:
+    pages = (
+        ("/holidays/thanksgiving",
+         "From November 30 the opening and the answer about the date say Thanksgiving 2026 has passed and give next "
+         "year's, Thursday, November 25, 2027."),
+        ("/holidays/black-friday",
+         "From December 1 the opening, the day-by-day dates and two answers say how the 2026 week fell and give "
+         "2027's dates. Three of the day notes no longer say “today” or “now”."),
+        ("/holidays/christmas",
+         "The lines about December 2, December 4 and Christmas Day itself change tense once each day has passed, so "
+         "the page no longer calls them upcoming afterwards."),
+        ("/new-releases/november-2026",
+         "From December 1 the opening says the guide was written on November 1, before most of the picks were out, "
+         "and points to the winter guide. A pick's “Before it arrives” note becomes “Before you start” once it is out."),
+        ("/new-releases/winter-2026-27",
+         "The lines about December 18, when Dune: Part Three and Avengers: Doomsday open on the same day, change "
+         "tense once that day has passed."),
+        ("/binge-calculator/dune",
+         "The line about Dune: Part Three opening on December 18, 2026 changes tense once it has."),
+    )
+    return Change(
+        "2026-11-27", "edited", "Six seasonal and release guides", "/guides",
+        "Guides written ahead of their dates kept saying a film “opens” or a sale “is” on a day that had already "
+        "gone by. Those lines now have a second version the page switches to once the day has passed. No picks "
+        "changed. The Thanksgiving and Black Friday guides also give 2027's dates once 2026's have gone.",
+        pages,
+    )
+
+
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [_binge_nov25(), _seasonal_formats(), _best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
+    changes = [_binge_nov27(), _percy_jackson_season_three(), _dune_part_three(), _winter_recheck(), _dated_lines(), _binge_nov25(), _seasonal_formats(), _best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
                _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(), *_grammys(),
                _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))

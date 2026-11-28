@@ -11,6 +11,7 @@ REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
 DEEPENED = "2026-11-23"  # guides that gained a fourth section
 FILLED = "2026-11-25"  # five more TV guides that gained a fourth section
+WIDENED = "2026-11-27"  # Friends gained a fourth section
 
 GUIDES = {
     "breaking-bad": {
@@ -461,7 +462,7 @@ GUIDES = {
         ],
     },
     "friends": {
-        "name": "Friends", "kind": "tv", "reviewed": UPDATED,
+        "name": "Friends", "kind": "tv", "reviewed": WIDENED,
         "summary": "Friends is 236 episodes over ten seasons, about 87 hours at 22 minutes each. Season counts and how long a full rewatch takes at your pace.",
         "titles": [{"kind": "tv", "title": "Friends", "year": 1994}],
         "see_also": ["the-office", "supernatural", "lost"], "skip_minutes": 1,
@@ -507,6 +508,17 @@ GUIDES = {
                 "Three stories are told in two parts: the episode after the Super Bowl in season 2, Ross's wedding at the end "
                 "of season 4, and the finale, \"The Last One\". Each part counts as its own episode, the way streaming services "
                 "number them, so the 236 includes both halves of all three.",
+            ]),
+            ("couples", "The episodes that move the couples along", [
+                "Most of Friends works in any order, but two stories run through all ten seasons. Ross and Rachel's turns "
+                "on a handful of episodes: \"The One Where Ross Finds Out\" (season 2, episode 7), \"The One with the Prom "
+                "Video\" (season 2, episode 14), \"The One Where Ross and Rachel Take a Break\" (season 3, episode 15), "
+                "Ross's wedding in London at the end of season 4, \"The One in Vegas\" at the end of season 5 and \"The "
+                "One Where Rachel Has a Baby\" at the end of season 8.",
+                "Monica and Chandler's begins at that same wedding in London. \"The One Where Everybody Finds Out\" "
+                "(season 5, episode 14) is the one where the others catch on, the proposal closes season 6 and their "
+                "wedding closes season 7. \"The Last One\" ties off both. Counting the two-part episodes as two, that is "
+                "16 episodes and about six hours, a quick way to remind yourself where things stand before a rewatch.",
             ]),
         ],
         "faq": [

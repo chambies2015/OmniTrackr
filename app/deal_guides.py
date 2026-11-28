@@ -12,9 +12,12 @@ plain ``link`` (url, label) instead, for things Amazon doesn't sell, such as Rec
 Store Day releases, or neither when there is nothing to buy. Prices are left out on
 purpose: they change by the hour that week.
 
-The writing is our own. Facts were checked on the date in ``reviewed``.
+The writing is our own. Facts were checked on the date in ``reviewed``. Lines that read wrong once the
+week is over are dated_text.Dated values, resolved for the day the page is drawn.
 """
 from __future__ import annotations
+
+from .dated_text import Dated
 
 GUIDE = {
     "path": "/holidays/black-friday",
@@ -31,10 +34,24 @@ GUIDE = {
                 "before you buy."),
     "card": "What tends to get cheaper on Black Friday, what rarely does, and what to check first.",
     "intro": [
-        "Black Friday is on November 27 this year and Cyber Monday on November 30. For anyone who tracks what they "
-        "watch and read, the week is less about televisions and more about the list: the series you want on disc, the "
-        "manga box set you keep putting off, the game you skipped at launch. Those are the things that do get "
-        "cheaper, but not all of them, and not always on the day.",
+        Dated("Black Friday is on November 27 this year and Cyber Monday on November 30. For anyone who tracks what they "
+              "watch and read, the week is less about televisions and more about the list: the series you want on disc, the "
+              "manga box set you keep putting off, the game you skipped at launch. Those are the things that do get "
+              "cheaper, but not all of them, and not always on the day.",
+              ("2026-12-01",
+               "Black Friday was on November 27 this year and Cyber Monday on November 30. What gets cheaper changes "
+               "very little from one year to the next, so the guide stays up for the Steam Winter Sale from December 17 "
+               "and for next year, when Black Friday falls on November 26. For anyone who tracks what they watch and "
+               "read, the week is less about televisions and more about the list: the series you want on disc, the "
+               "manga box set you keep putting off, the game you skipped at launch. Those are the things that do get "
+               "cheaper, but not all of them, and not always on the day."),
+              ("2027-01-05",
+               "Black Friday was on November 27 in 2026 and Cyber Monday on November 30. What gets cheaper changes very "
+               "little from one year to the next, so the guide stays up until it gets its 2027 dates; next year Black "
+               "Friday falls on November 26. For anyone who tracks what they watch and read, the week is less about "
+               "televisions and more about the list: the series you want on disc, the manga box set you keep putting "
+               "off, the game you skipped at launch. Those are the things that do get cheaper, but not all of them, and "
+               "not always on the day.")),
         "The pattern is fairly steady from year to year. Older stock drops: catalogue films, complete series, last "
         "year's games, books that have been out a while. The shop's own hardware drops too, since the shop sets "
         "the price. New releases, limited editions and the big console makers' own games barely move, and some of "
@@ -44,17 +61,21 @@ GUIDE = {
         "they change by the hour that week and a printed one would be wrong by the time you read it.",
     ],
     # The week, day by day. ``tone`` marks the two big days for the page's styling.
-    "calendar_intro": ("Most shops no longer keep their prices for Friday. The first deals usually appear in early "
-                       "November and the big ones by the Monday of Thanksgiving week. Here is how the days fall in 2026."),
+    "calendar_intro": Dated("Most shops no longer keep their prices for Friday. The first deals usually appear in early "
+                            "November and the big ones by the Monday of Thanksgiving week. Here is how the days fall in 2026.",
+                            ("2026-12-01",
+                             "Most shops no longer keep their prices for Friday. The first deals usually appear in early "
+                             "November and the big ones by the Monday of Thanksgiving week. Here is how the days fell in "
+                             "2026.")),
     "calendar": [
         {"date": "2026-11-23", "day": "Mon to Wed", "label": "Nov 23 to 25", "tone": "",
          "name": "The early week",
-         "text": "Most big shops have their Black Friday prices up by now. If something you want is already at a "
-                 "price you're happy with, there's little to gain from waiting."},
+         "text": "Most big shops have their Black Friday prices up by this point. If something you want is already at "
+                 "a price you're happy with, there's little to gain from waiting."},
         {"date": "2026-11-26", "day": "Thursday", "label": "Nov 26", "tone": "",
          "name": "Thanksgiving",
-         "text": "Many online sales start or deepen today, while a lot of people are at the table. Stores that open "
-                 "are often on short hours."},
+         "text": "Many online sales start or deepen on Thanksgiving itself, while a lot of people are at the table. "
+                 "Stores that open are often on short hours."},
         {"date": "2026-11-27", "day": "Friday", "label": "Nov 27", "tone": "big",
          "name": "Black Friday",
          "text": "The busiest day. Record Store Day runs its Black Friday event at independent record shops, with "
@@ -66,11 +87,17 @@ GUIDE = {
         {"date": "2026-11-30", "day": "Monday", "label": "Nov 30", "tone": "big",
          "name": "Cyber Monday",
          "text": "Online only. Prices from the weekend mostly hold, and subscriptions and digital storefronts tend to "
-                 "push their offers today."},
+                 "save their offers for this day."},
         {"date": "2026-12-17", "ends": "2027-01-04", "day": "From Dec 17", "label": "to Jan 4", "tone": "",
          "name": "Steam Winter Sale",
-         "text": "Valve moved its Autumn Sale to the start of October this year, so the next site-wide Steam sale is "
-                 "the winter one, from December 17 to January 4."},
+         "text": Dated("Valve moved its Autumn Sale to the start of October this year, so the next site-wide Steam sale "
+                       "is the winter one, from December 17 to January 4.",
+                       ("2026-12-17",
+                        "Valve moved its Autumn Sale to the start of October this year, so the site-wide sale after Black "
+                        "Friday is the winter one, which runs from December 17 to January 4."),
+                       ("2027-01-05",
+                        "Valve moved its Autumn Sale to the start of October in 2026, so the site-wide sale after Black "
+                        "Friday was the winter one, from December 17 to January 4."))},
     ],
     # Five checks before buying anything that week.
     "checks": [
@@ -506,12 +533,20 @@ GUIDE = {
     ],
     "faq": [
         ("When are Black Friday and Cyber Monday in 2026?",
-         "Black Friday is Friday, November 27, the day after Thanksgiving, and Cyber Monday is Monday, November 30. "
-         "Many shops start their offers in the week before, and some in early November."),
+         Dated("Black Friday is Friday, November 27, the day after Thanksgiving, and Cyber Monday is Monday, November 30. "
+               "Many shops start their offers in the week before, and some in early November.",
+               ("2026-12-01",
+                "Black Friday was Friday, November 27, the day after Thanksgiving, and Cyber Monday was Monday, November "
+                "30. In 2027 they fall on November 26 and November 29, and many shops start their offers in the week "
+                "before, some in early November."))),
         ("Is there a Steam sale on Black Friday this year?",
-         "Not a site-wide one. Valve moved its Autumn Sale to October 1 to 8 in 2026, and the Winter Sale runs from "
-         "December 17 to January 4. Publishers can still discount their own games on Steam in Thanksgiving week, so "
-         "it's worth checking a wishlist, but the bigger sale is in December."),
+         Dated("Not a site-wide one. Valve moved its Autumn Sale to October 1 to 8 in 2026, and the Winter Sale runs from "
+               "December 17 to January 4. Publishers can still discount their own games on Steam in Thanksgiving week, so "
+               "it's worth checking a wishlist, but the bigger sale is in December.",
+               ("2027-01-05",
+                "Not a site-wide one in 2026. Valve moved its Autumn Sale to October 1 to 8, and the Winter Sale ran from "
+                "December 17 to January 4. Publishers can still discount their own games on Steam in Thanksgiving week, "
+                "so it's worth checking a wishlist, but the bigger sale was in December."))),
         ("Are Black Friday deals real discounts?",
          "Some are and some aren't. The reliable ones are on older stock and on hardware the shop makes itself. The "
          "doubtful ones compare against a list price nobody paid. A price-history site such as camelcamelcamel or "
