@@ -131,20 +131,22 @@ def _empty_cells() -> str:
         '<span class="tn-cell__add" aria-hidden="true">+</span></button></li>' for index in range(top_nine.SLOTS))
 
 
-GUIDE = (
+def _guide(when: str) -> str:
+    """The tips under the maker. ``when`` is "this year", or "in 2026" during the January after."""
+    return (
     '<section class="editorial tn-guide" aria-labelledby="tnHow"><h2 id="tnHow">How to pick nine</h2>'
     '<p>Nine is a small number for a whole year, and that is the point. Start with the titles you brought up in '
     'conversation without being asked: the show you kept telling people to start, the game you lost a weekend to, the '
     'album that was on in the car for a month. Those usually fill four or five squares on their own.</p>'
     '<p>For the rest, think about what the grid says when someone scrolls past it. A top nine that is all films reads '
     'as a film list. Mixing in one book and one album says more about your year than a tenth film would. It is also '
-    'fine to break the rule about release dates. The question is what you loved this year, and the old film you finally '
-    'saw in March counts.</p>'
+    f'fine to break the rule about release dates. The question is what you loved {when}, and the old film you '
+    'finally saw in March counts.</p>'
     '<p>Order matters less than you think, but the eye goes to the top left square first and the centre square '
     'second, so put your favourite in one of those. Tap a filled square to move it earlier or later.</p></section>'
     '<section class="editorial tn-guide" aria-labelledby="tnIdeas"><h2 id="tnIdeas">Grids worth trying</h2><ul>'
     '<li>One of each: a film, a show, an anime, a game, an album, a book, a manga, a podcast and an audiobook.</li>'
-    '<li>Only things you finished for the first time this year.</li>'
+    f'<li>Only things you finished for the first time {when}.</li>'
     '<li>Nine you would hand to a friend who asks "what should I start?"</li>'
     '<li>The year in order: January in the top left, December in the bottom right.</li>'
     '<li>Comfort picks: what you went back to when the week was too long.</li>'
@@ -167,7 +169,7 @@ GUIDE = (
     'Instagram\'s profile grid shows, and it works on X, Threads and Bluesky too. The story picture is 1080 by 1920 '
     'with room left for Instagram\'s top and bottom bars, so you can add a link sticker with your top nine\'s link.</dd>'
     '</dl></section>'
-)
+    )
 
 
 @router.get("/top-nine", include_in_schema=False)
@@ -197,8 +199,8 @@ def top_nine_page(request: Request, source: str = Query("", alias="from", max_le
     content = (
         f'<header class="hero tn-hero"><p class="eyebrow">TOP NINE · {_e(year)}</p>'
         f'<h1>Your {_e(year)} in nine squares</h1>'
-        '<p>Pick the nine things you loved most this year: films, shows, games, albums, books, anything. You get a '
-        'picture sized for Instagram, a story version, and a link friends can open to see how many they\'ve seen too. '
+        f'<p>Pick the nine things you loved most {top_nine.year_words(year)}: films, shows, games, albums, books, '
+        'anything. You get a picture sized for Instagram, a story version, and a link friends can open to see how many they\'ve seen too. '
         'Free, and no account needed.</p></header>'
         f'<section class="tn-tool" id="topNine" data-year="{_e(year)}" data-signed-in="{"true" if signed_in else "false"}" '
         f'data-from="{_e(source)}" data-have="{_e(have)}" data-edit="{_e(edit)}" aria-label="Top nine maker">'
@@ -251,7 +253,7 @@ def top_nine_page(request: Request, source: str = Query("", alias="from", max_le
         '<div class="tn-dock" data-tn-dock hidden><span data-tn-dock-text></span>'
         '<button type="button" class="tn-textbtn" data-tn-dock-up>See the grid</button></div>'
         '</section>'
-        + GUIDE
+        + _guide(top_nine.year_words(year))
     )
     head = (f'<link rel="stylesheet" href="/static/top-nine.css?v={CSS_VERSION}">'
             f'<script src="/static/top-nine.js?v={JS_VERSION}" defer></script>')

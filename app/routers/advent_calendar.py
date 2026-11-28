@@ -26,7 +26,7 @@ from .profiles import _CardCache
 router = APIRouter(tags=["advent-calendar"])
 _CARDS = _CardCache(size=64)
 CSS_VERSION = "20261114-advent-1"
-JS_VERSION = "20261120-advent-dates-1"
+JS_VERSION = "20261128-card-status-1"
 SEASONAL_CSS = "/static/seasonal.css?v=20261106-holiday-guides-1"
 LIKED_CSS = "/static/if-you-liked.css?v=20261106-holiday-guides-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261122-shelf-1"

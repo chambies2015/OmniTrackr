@@ -491,3 +491,30 @@ test('with the welcome-back deck open each group keeps to one card', () => {
   // Watch together always shows, so the yearbook is the friends group's one card.
   assert.deepEqual(tucked(root), ['homeNews', 'nextUpQueue', 'yourWeek', 'backlogDraw', 'comingUp', 'onThisDay']);
 });
+
+test('December rail: the advent card steps back once today\'s door is open, the 2027 pledge once pledged (Dec walk, Nov 28)', () => {
+  const { root, api } = setup();
+  board(root, ['daily'], ['adventCard', 'monthlyChallenge', 'newYearPledge', 'yearGoals', 'awardsBallot']);
+  root.querySelector('#yearGoals').append(Object.assign(new Node('ul'), { id: 'yearGoalsList' }));
+  const advent = root.querySelector('#adventCard');
+  const pledge = root.querySelector('#newYearPledge');
+  advent.dataset.status = 'today';
+  pledge.dataset.status = 'ask';
+  api.OmniHomeLayout.arrange();
+  // Wide rail: three cards, so the unanswered pledge sits beside the door and the month's challenge.
+  assert.deepEqual(tucked(root), ['yearGoals', 'awardsBallot']);
+  // Today's door opened, nothing missed: the advent card waits and goals come back.
+  advent.dataset.status = 'opened';
+  api.OmniHomeLayout.arrange();
+  assert.deepEqual(tucked(root), ['adventCard', 'awardsBallot']);
+  // Doors still shut from earlier days, or catching up after Christmas Eve: it stays out.
+  for (const status of ['missed', 'catch-up']) {
+    advent.dataset.status = status;
+    api.OmniHomeLayout.arrange();
+    assert.equal(advent.classList.contains('is-home-tucked'), false, status);
+  }
+  advent.dataset.status = 'done';
+  pledge.dataset.status = 'pledged';
+  api.OmniHomeLayout.arrange();
+  assert.deepEqual(tucked(root), ['adventCard', 'newYearPledge']);
+});

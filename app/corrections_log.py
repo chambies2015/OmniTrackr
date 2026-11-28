@@ -463,9 +463,40 @@ def _dated_lines() -> Change:
     )
 
 
+def _dated_lines_nov28() -> Change:
+    pages = (
+        ("/holidays/christmas",
+         "From Christmas Day the Home Alone note says when ABC showed it, and from January 1 the opening and three "
+         "answers talk about Christmas 2026 in the past tense."),
+        ("/holidays/black-friday",
+         "The games note no longer calls Grand Theft Auto VI due, and the Steam lines follow the Winter Sale from "
+         "December 17 to its end on January 4. From January 1 the opening gives Black Friday 2027's date."),
+        ("/valentines-day",
+         "From February 1 the introduction and one answer say the February edition is out, where they had said it "
+         "opens on February 1."),
+        ("/awards/the-game-awards-2026",
+         "Once the show has started, the opening, the key dates and How to watch are in the past tense, and the "
+         "public vote reads Closed."),
+        ("/awards/golden-globes-2027",
+         "Once the show has started, the opening, the key dates and How to watch are in the past tense. If the "
+         "nominees never made it onto a ballot here, the page says so."),
+        ("/awards/grammys-2027",
+         "Once the show has started, the opening, the key dates and How to watch are in the past tense."),
+        ("/awards/oscars-2027",
+         "Once the show has started, the opening, the key dates and How to watch are in the past tense."),
+    )
+    return Change(
+        "2026-11-28", "edited", "Holiday and awards pages", "/guides",
+        "A check of every page from December 1 to February 1 found more lines that would still read as upcoming "
+        "after their day: on the Christmas, Black Friday and Valentine's guides and on all four awards pages. "
+        "Those now switch to a past-tense version once the day has gone by. No picks or nominees changed.",
+        pages,
+    )
+
+
 def guide_changes() -> tuple[Change, ...]:
     """Every logged change to a guide or hub, newest first."""
-    changes = [_binge_nov27(), _percy_jackson_season_three(), _dune_part_three(), _winter_recheck(), _dated_lines(), _binge_nov25(), _seasonal_formats(), _best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
+    changes = [_dated_lines_nov28(), _binge_nov27(), _percy_jackson_season_three(), _dune_part_three(), _winter_recheck(), _dated_lines(), _binge_nov25(), _seasonal_formats(), _best_of_still_to_come(), *_awards_depth(), _binge_fourth_sections(), _switch_fixes(), _switch_sections(), _in_order_dates(),
                _binge_sections(), _if_you_liked_decks(), _best_of_decks(), _hubs(), *_grammys(),
                _if_you_liked_questions(), _edition_notes(), _spring_tv_dates()]
     return tuple(sorted(changes, key=lambda change: change.date, reverse=True))

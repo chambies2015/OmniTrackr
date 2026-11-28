@@ -309,6 +309,8 @@
     link.textContent = copy.action;
     link.href = data.shared && data.url ? data.url : `${data.page}#pledge`;
     section.dataset.year = String(data.year);
+    // Once pledged, the card is a reminder rather than an ask, and home-layout.js lets it wait behind "Show more".
+    section.dataset.status = data.pledged ? 'pledged' : 'ask';
     section.hidden = false;
   }
 

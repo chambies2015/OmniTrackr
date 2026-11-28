@@ -146,6 +146,40 @@ PENDING_WORDS = {
 }
 
 
+# Once a show has started (is_locked), its own lead and description read wrong: "are on Thursday,
+# December 10", "the ballot below is open". From the lock on, the page uses these. The Globes and Oscars
+# words leave the ballot out, because their nominees weren't in the data when this was written and the
+# ballot section below says for itself whether there was one.
+AFTER_WORDS = {
+    "the-game-awards-2026": {
+        "lead": ("The Game Awards 2026 were on Thursday, December 10 at the Peacock Theater in Los Angeles. Grand "
+                 "Theft Auto VI went in with the most nominations, eight. Ballots here locked when the show began, "
+                 "and the winners are marked category by category below."),
+        "description": ("The Game Awards 2026 were on December 10 in Los Angeles. Every nominee and winner in all 30 "
+                        "categories, how the winners were chosen, last year's results and how the ballots here scored."),
+    },
+    "golden-globes-2027": {
+        "lead": ("The 84th Golden Globes were on Sunday, January 10, 2027 at the Beverly Hilton, on CBS and "
+                 "Paramount+. Nominations came out on Monday, December 7."),
+        "description": ("The 84th Golden Globes were on January 10, 2027. Who votes, how the categories split, what "
+                        "changed this year and what the Globes say about the Oscars."),
+    },
+    "grammys-2027": {
+        "lead": ("The 69th Grammy Awards were on Sunday, February 7, 2027 at Crypto.com Arena in Los Angeles, on ABC "
+                 "for the first time since 1972. RAYE went in with the most nominations, 11. Ballots here locked when "
+                 "the show began, and the winners are marked category by category below."),
+        "description": ("The 69th Grammy Awards were on February 7, 2027. The nominees and winners in 13 categories, "
+                        "last year's winners and how the ballots here scored."),
+    },
+    "oscars-2027": {
+        "lead": ("The 99th Academy Awards were on Sunday, March 14, 2027 at the Dolby Theatre in Hollywood, live on "
+                 "ABC. Nominations came out on Thursday, January 21."),
+        "description": ("The 99th Academy Awards were on March 14, 2027. How the winners were chosen, which films "
+                        "could compete, what changed in the rules and last year's winners."),
+    },
+}
+
+
 def _join(parts: list[str]) -> str:
     return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
 
@@ -198,8 +232,10 @@ def season_faq(now: Optional[datetime] = None) -> tuple:
 
 def show_words(slug: str, show: dict, now: Optional[datetime] = None) -> dict:
     """The show's lead and description for right now."""
-    pending = PENDING_WORDS.get(slug) if nominees_pending(show, now) else None
-    source = pending or show
+    if is_locked(show, now) and slug in AFTER_WORDS:
+        source = AFTER_WORDS[slug]
+    else:
+        source = (PENDING_WORDS.get(slug) if nominees_pending(show, now) else None) or show
     return {"lead": source["lead"], "description": source["description"]}
 
 

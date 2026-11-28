@@ -71,6 +71,12 @@ GUIDES = {
                    "then a quiet week before New Year's Day, which is also a Friday. The new releases were spread out "
                    "further than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters "
                    "on November 13, and the busiest single day was Wednesday, December 2, when Prime Video and Netflix each "
+                   "released a Christmas film and NBC lit the tree at Rockefeller Center."),
+                  ("2027-01-01",
+                   "Christmas Day 2026 fell on a Friday, so a lot of people had a long weekend straight after it and then a "
+                   "quiet week before New Year's Day, which was also a Friday. The new releases were spread out further "
+                   "than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters on "
+                   "November 13, and the busiest single day was Wednesday, December 2, when Prime Video and Netflix each "
                    "released a Christmas film and NBC lit the tree at Rockefeller Center.")),
             "This guide does two jobs. The first part is the new stuff: the Christmas films, specials and albums of 2026, "
             "each with its date and where to find it, checked on November 20. Five of the films get a full write-up. The "
@@ -281,10 +287,15 @@ GUIDES = {
                             "Marv, who plan to clear out the street on Christmas Eve. John Hughes wrote it, Chris "
                             "Columbus directed it and John Williams wrote the score. The last half hour, when Kevin's "
                             "traps go off one after another, is the part children ask to watch again.",
-                     "note": "Put it on in the late afternoon, when the children are too excited for anything slower. "
-                             "Adults tend to notice other things on a rewatch: the old man next door, and how much the "
-                             "film is about a boy who thinks his family doesn't want him. ABC has it on its schedule "
-                             "for 8 p.m. Eastern on Christmas Eve this year.",
+                     "note": Dated("Put it on in the late afternoon, when the children are too excited for anything "
+                                   "slower. Adults tend to notice other things on a rewatch: the old man next door, and "
+                                   "how much the film is about a boy who thinks his family doesn't want him. ABC has it "
+                                   "on its schedule for 8 p.m. Eastern on Christmas Eve this year.",
+                                   ("2026-12-25",
+                                    "Put it on in the late afternoon, when the children are too excited for anything "
+                                    "slower. Adults tend to notice other things on a rewatch: the old man next door, and "
+                                    "how much the film is about a boy who thinks his family doesn't want him. ABC had it "
+                                    "on its schedule for 8 p.m. Eastern on Christmas Eve 2026.")),
                      "caveat": "Rated PG. The traps are cartoon violence, but a couple of them, the iron and the "
                                "blowtorch, make younger viewers wince, and the film opens with Kevin sent to bed in "
                                "disgrace."},
@@ -569,11 +580,18 @@ GUIDES = {
              "No. The first Violent Night was rated R for strong bloody violence and language throughout, and the "
              "sequel comes from the same director and writers. For a Santa film the whole family can watch, try "
              "Arthur Christmas on this page or The Muppet Christmas Carol on the holiday hub."),
-            ("Is there a Doctor Who Christmas special in 2026?",
-             "No. The BBC had promised one, then said on June 10, 2026 that it would not make a one-off special and "
-             "would put the money into the show's long-term future instead. No date has been given for new episodes. "
-             "If you want a Christmas Carol with ghosts in it this year, Ebenezer is the one."),
-            ("What Christmas specials are on TV this year?",
+            (Dated("Is there a Doctor Who Christmas special in 2026?",
+                   ("2027-01-01", "Was there a Doctor Who Christmas special in 2026?")),
+             Dated("No. The BBC had promised one, then said on June 10, 2026 that it would not make a one-off special and "
+                   "would put the money into the show's long-term future instead. No date has been given for new "
+                   "episodes. If you want a Christmas Carol with ghosts in it this year, Ebenezer is the one.",
+                   ("2027-01-01",
+                    "No. The BBC had promised one, then said on June 10, 2026 that it would not make a one-off special "
+                    "and would put the money into the show's long-term future instead. No date had been given for new "
+                    "episodes when we checked on November 20. For a Christmas Carol with ghosts in it, Ebenezer was "
+                    "2026's new one."))),
+            (Dated("What Christmas specials are on TV this year?",
+                   ("2027-01-01", "What Christmas specials were on TV in 2026?")),
              Dated("The biggest new ones are on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
                    "Christmas With Snoop at 10 p.m., both on NBC. ABC has its Disney Holiday Spectacular on November 30, CMA "
                    "Country Christmas on December 1, iHeartRadio Jingle Ball on December 17 and the Disney Parks parade on "
@@ -601,7 +619,11 @@ GUIDES = {
                    ("2026-12-26",
                     "It was a Friday, December 25, so Christmas Eve was a Thursday and New Year's Eve is the Thursday "
                     "after. In the United Kingdom Boxing Day fell on a Saturday, and the bank holiday for it moved to "
-                    "Monday, December 28."))),
+                    "Monday, December 28."),
+                   ("2027-01-01",
+                    "It was a Friday, December 25, so Christmas Eve was a Thursday and New Year's Eve the Thursday after. "
+                    "In the United Kingdom Boxing Day fell on a Saturday, and the bank holiday for it moved to Monday, "
+                    "December 28."))),
             ("Why does saving a Christmas episode add the whole series?",
              "OmniTrackr keeps a show in your library as one entry, with its seasons and episodes inside it. Saving "
              "The Office from this page adds the series as not started. You can then mark the single episode as "
