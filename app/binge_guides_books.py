@@ -5,9 +5,11 @@ edition. ``audio`` is the length in minutes of the unabridged audiobook named in
 the guide's ``audio`` note, as listed by Audible in November 2026. ``approx``
 marks a word count we estimated ourselves (the guide says how).
 """
+from .dated_text import Dated
 
 REVIEWED = "2026-11-10"
 UPDATED = "2026-11-20"  # guides that gained a third section
+WIDENED = "2026-11-27"  # guides that gained a fourth section on November 27
 
 
 def _book(name, year, words, audio, creator, **extra):
@@ -76,7 +78,7 @@ GUIDES = {
         ],
     },
     "the-lord-of-the-rings": {
-        "name": "The Lord of the Rings", "kind": "book", "reviewed": UPDATED, "in_order": "lord-of-the-rings",
+        "name": "The Lord of the Rings", "kind": "book", "reviewed": WIDENED, "in_order": "lord-of-the-rings",
         "heading": "How long does it take to read The Lord of the Rings?",
         "summary": "The Lord of the Rings is about 481,000 words: roughly 40 hours to read, or 54 as an audiobook. Volume lengths, The Hobbit, and a planner.",
         "audio": {"narrator": "Rob Inglis", "note": "Audiobook lengths are for the Rob Inglis recordings."},
@@ -120,6 +122,16 @@ GUIDES = {
                 "in Book IV. Knowing the shape helps, and so does treating each book as a unit: six books at one a week is "
                 "the six-week plan above.",
             ]),
+            ("after", "After the last page", [
+                "The Silmarillion is the history of everything before The Hobbit, from the making of the world to the "
+                "end of the First Age. Christopher Tolkien edited it from his father's papers and published it in 1977, "
+                "four years after Tolkien died, and it reads more like a book of myths than a novel. If the opening "
+                "chapters lose you, skip to Of Beren and Lúthien, the story Aragorn sings part of on Weathertop, and go "
+                "back once you are hooked.",
+                "Three of its stories were later published at full length as books of their own: The Children of Húrin "
+                "in 2007, Beren and Lúthien in 2017 and The Fall of Gondolin in 2018. The Children of Húrin reads most like "
+                "a novel and is the one to start with. None of them are counted in the totals above.",
+            ]),
         ],
         "faq": [
             ("How many words is The Lord of the Rings?",
@@ -132,7 +144,7 @@ GUIDES = {
         ],
     },
     "a-song-of-ice-and-fire": {
-        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": UPDATED, "in_order": "game-of-thrones",
+        "name": "A Song of Ice and Fire", "kind": "book", "reviewed": WIDENED, "in_order": "game-of-thrones",
         "heading": "How long does it take to read A Song of Ice and Fire?",
         "summary": "The five published A Song of Ice and Fire novels are about 1.77 million words: roughly 148 hours to read, or 201 hours on audio.",
         "audio": {"narrator": "Roy Dotrice", "note": "Audiobook lengths are for the Roy Dotrice recordings."},
@@ -174,6 +186,17 @@ GUIDES = {
                 "Season 5 draws on books four and five together.",
                 "Season 6 goes past the books entirely. If you read first and watch second, finish A Dance with Dragons "
                 "before season 6, and treat seasons 6 to 8 as the only ending there is for now.",
+            ]),
+            ("meanwhile", "While you wait for The Winds of Winter", [
+                "The sixth book, The Winds of Winter, still has no publication date, and George R.R. Martin's updates on "
+                "his blog have not given one, so plan on these five as the whole series for now. A seventh, A Dream of "
+                "Spring, is meant to end it.",
+                "The three Dunk and Egg novellas, The Hedge Knight, The Sworn Sword and The Mystery Knight, are set about "
+                "ninety years before A Game of Thrones and were collected in 2015 as A Knight of the Seven Kingdoms. They "
+                "are a few evenings' reading, and HBO's series of the same name, whose six-episode first season began in "
+                "January 2026, adapts The Hedge Knight. Fire & Blood, the history of the Targaryen kings that House of "
+                "the Dragon is based on, is written as a chronicle rather than a novel, which suits some readers more "
+                "than others.",
             ]),
         ],
         "faq": [
@@ -250,7 +273,7 @@ GUIDES = {
         ],
     },
     "dune": {
-        "name": "Dune", "kind": "book", "reviewed": UPDATED, "in_order": "dune",
+        "name": "Dune", "kind": "book", "reviewed": WIDENED, "in_order": "dune",
         "heading": "How long does it take to read Dune?",
         "summary": "Dune is about 188,000 words, roughly 16 hours to read or 21 on audio. Times for all six Frank Herbert novels and where to stop.",
         "audio": {"narrator": "Scott Brick, Simon Vance and cast", "note": "Audiobook lengths are for the Macmillan Audio recordings led by Scott Brick and Simon Vance."},
@@ -287,11 +310,27 @@ GUIDES = {
                 "Denis Villeneuve films released so far cover the first novel only.",
             ]),
             ("films", "Reading before the films", [
-                "Denis Villeneuve's two films split the first novel in half, so reading Dune before or after them takes the "
-                "same 16 hours. Dune: Part Three, his version of Dune Messiah, opens on December 18, 2026. Messiah is the "
-                "shortest book in the series, about seven hours, so it fits easily before then.",
+                Dated("Denis Villeneuve's two films split the first novel in half, so reading Dune before or after them "
+                      "takes the same 16 hours. Dune: Part Three, his version of Dune Messiah, opens on December 18, 2026. "
+                      "Messiah is the shortest book in the series, about seven hours, so it fits easily before then.",
+                      ("2026-12-18",
+                       "Denis Villeneuve's first two films split the first novel in half, so reading Dune before or after "
+                       "them takes the same 16 hours. Dune: Part Three, his version of Dune Messiah, came out on December "
+                       "18, 2026. Messiah is the shortest book in the series, about seven hours, so it is an easy read "
+                       "before or after the film.")),
                 "The films change some things, most of all how Chani feels about Paul by the end. Reading the book afterwards "
                 "is a good way to see what was moved.",
+            ]),
+            ("jumps", "How far apart the books are", [
+                "Each sequel starts some years after the one before it, and the gaps grow. Dune Messiah opens twelve years "
+                "after Dune, and Children of Dune nine years after Messiah. Then God Emperor of Dune jumps about 3,500 "
+                "years, Heretics of Dune another 1,500, and Chapterhouse: Dune carries straight on from Heretics. Herbert "
+                "died in 1986 with the story unfinished.",
+                "That shape is why the first three are often read as a trilogy. Dune, Messiah and Children of Dune follow "
+                "Paul and his children, and come to 418,000 words, about 35 hours at the planner's usual pace and a little "
+                "under half the series. God Emperor follows one of those children thousands of years on, and Heretics and "
+                "Chapterhouse have an almost entirely new cast, so the last page of Children of Dune is a good place to "
+                "decide whether to go on.",
             ]),
         ],
         "faq": [

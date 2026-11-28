@@ -108,7 +108,15 @@ def test_guide_note_matches_how_the_about_page_says_guides_are_made(client):
 
 # ---------------------------------------------------------------- awards pages after nominees day
 
+def _game_awards_without_nominees(monkeypatch):
+    # The real Game Awards nominees are loaded now, so put the show back in the state these tests are
+    # about: announced, but with no checked list in the data yet.
+    show = awards_data.SHOWS["the-game-awards-2026"]
+    monkeypatch.setitem(awards_data.SHOWS, "the-game-awards-2026", dict(show, categories=[]))
+
+
 def test_game_awards_intro_and_description_stop_looking_ahead_once_nominees_are_out(client, monkeypatch):
+    _game_awards_without_nominees(monkeypatch)
     monkeypatch.setattr(awards, "_now", lambda: datetime(2026, 11, 23, 3))
     html = client.get("/awards/the-game-awards-2026").text
     assert "When they land, this page becomes a ballot" not in html
@@ -119,9 +127,11 @@ def test_game_awards_intro_and_description_stop_looking_ahead_once_nominees_are_
 
 
 def test_awards_intro_is_unchanged_on_nominees_day_itself(client, monkeypatch):
+    _game_awards_without_nominees(monkeypatch)
     monkeypatch.setattr(awards, "_now", lambda: datetime(2026, 11, 17, 15))
     html = client.get("/awards/the-game-awards-2026").text
-    assert "When they land, this page becomes a ballot" in html
+    assert awards_data.SHOWS["the-game-awards-2026"]["lead"] in html
+    assert "this page becomes a ballot once every name is checked" not in html
 
 
 def test_pending_words_keep_each_show_s_first_sentence():

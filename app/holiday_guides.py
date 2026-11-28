@@ -29,7 +29,11 @@ Optional on any of them:
 Movie, TV, anime, game, book and album picks join the Pick for me pool (pick.py).
 Manga, podcast and audiobook picks are saved straight to the matching tracker
 (seasonal.extra_entry), since Pick for me only suggests the first six formats.
+
+Lines that go stale once a date passes ("opens on December 4") are written as dated_text.Dated values,
+which the guide pages resolve for the day they are drawn.
 """
+from .dated_text import Dated
 
 GUIDES = {
     "christmas": {
@@ -51,11 +55,23 @@ GUIDES = {
         "eyebrow": "CHRISTMAS 2026",
         "related_heading": "More for the holidays",
         "intro": [
-            "Christmas Day falls on a Friday this year. For a lot of people that means a long weekend straight after it, "
-            "then a quiet week before New Year's Day, which is also a Friday. The new releases are spread out further "
-            "than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters on "
-            "November 13, and the busiest single day is Wednesday, December 2, when Prime Video and Netflix each release "
-            "a Christmas film and NBC lights the tree at Rockefeller Center.",
+            Dated("Christmas Day falls on a Friday this year. For a lot of people that means a long weekend straight after it, "
+                  "then a quiet week before New Year's Day, which is also a Friday. The new releases are spread out further "
+                  "than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters on "
+                  "November 13, and the busiest single day is Wednesday, December 2, when Prime Video and Netflix each release "
+                  "a Christmas film and NBC lights the tree at Rockefeller Center.",
+                  ("2026-12-03",
+                   "Christmas Day falls on a Friday this year. For a lot of people that means a long weekend straight after "
+                   "it, then a quiet week before New Year's Day, which is also a Friday. The new releases were spread out "
+                   "further than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters "
+                   "on November 13, and the busiest single day was Wednesday, December 2, when Prime Video and Netflix each "
+                   "released a Christmas film and NBC lit the tree at Rockefeller Center."),
+                  ("2026-12-26",
+                   "Christmas Day fell on a Friday this year, so a lot of people had a long weekend straight after it and "
+                   "then a quiet week before New Year's Day, which is also a Friday. The new releases were spread out "
+                   "further than usual. Netflix put out its first Christmas film on November 4, Ebenezer opened in theaters "
+                   "on November 13, and the busiest single day was Wednesday, December 2, when Prime Video and Netflix each "
+                   "released a Christmas film and NBC lit the tree at Rockefeller Center.")),
             "This guide does two jobs. The first part is the new stuff: the Christmas films, specials and albums of 2026, "
             "each with its date and where to find it, checked on November 20. Five of the films get a full write-up. The "
             "rest are listed by date in a calendar, so you can see the whole season on one screen.",
@@ -101,7 +117,8 @@ GUIDES = {
                                "Paramount hadn't announced a streaming date when we checked."},
                     {"kind": "movie", "title": "The Man with the Bag", "year": 2026, "creator": "Adam Shankman",
                      "release": {"date": "2026-12-02", "where": "Prime Video"},
-                     "time": "A feature-length comedy; no runtime listed yet",
+                     "time": Dated("A feature-length comedy; no runtime listed yet",
+                                   ("2026-12-02", "A feature-length comedy; no runtime had been listed when we checked")),
                      "why": "Arnold Schwarzenegger plays Santa Claus, thirty years after he spent Jingle All the Way "
                             "fighting other parents for a toy. A few days before Christmas his sack of presents is "
                             "stolen, and he hires a small-time thief, played by Alan Ritchson from Reacher, to help get "
@@ -150,9 +167,13 @@ GUIDES = {
                             "Kinney's series. The Heffleys skip Christmas at home and fly to a resort on a tropical "
                             "island, and Greg finds out that paradise isn't as relaxing as the brochure promised. Matt "
                             "Danner, who directed the animated The Last Straw, directed it.",
-                     "note": "This is the new release for the youngest in the house. Children who have read the books "
-                             "will want it the day it arrives, and it fits in the afternoon, before the grown-ups' film "
-                             "in the evening.",
+                     "note": Dated("This is the new release for the youngest in the house. Children who have read the books "
+                                   "will want it the day it arrives, and it fits in the afternoon, before the grown-ups' film "
+                                   "in the evening.",
+                                   ("2026-12-04",
+                                    "This is the new release for the youngest in the house. Children who have read the "
+                                    "books will want to see it first, and it fits in the afternoon, before the grown-ups' "
+                                    "film in the evening.")),
                      "caveat": "Slapstick and gross-out jokes in the style of the books. It is set on a beach, so it is "
                                "the least Christmassy film here, and adults without a Wimpy Kid reader at home can "
                                "skip it."},
@@ -523,16 +544,27 @@ GUIDES = {
         ],
         "faq": [
             ("What new Christmas movies are out in 2026?",
-             "In theaters, Ebenezer opened on November 13 and Violent Night 2 opens on December 4. On streaming, "
-             "Netflix has A Dog's Perfect Christmas (November 4), Tyler Perry's The Gospel of Christmas (November 11), "
-             "The Christmas Switch (November 12), Guarding Stars (November 18) and In a Holidaze (December 2). Prime "
-             "Video has Clashing Through the Snow (November 23) and The Man with the Bag (December 2), Hulu has The 12 "
-             "Dates of Christmas (November 6), and Disney+ has Diary of a Wimpy Kid Christmas: The Getaway (December 4). "
-             "The calendar on this page has every date and where to find each one."),
+             Dated("In theaters, Ebenezer opened on November 13 and Violent Night 2 opens on December 4. On streaming, "
+                   "Netflix has A Dog's Perfect Christmas (November 4), Tyler Perry's The Gospel of Christmas (November 11), "
+                   "The Christmas Switch (November 12), Guarding Stars (November 18) and In a Holidaze (December 2). Prime "
+                   "Video has Clashing Through the Snow (November 23) and The Man with the Bag (December 2), Hulu has The 12 "
+                   "Dates of Christmas (November 6), and Disney+ has Diary of a Wimpy Kid Christmas: The Getaway (December 4). "
+                   "The calendar on this page has every date and where to find each one.",
+                   ("2026-12-04",
+                    "In theaters, Ebenezer opened on November 13 and Violent Night 2 on December 4. On streaming, Netflix "
+                    "has A Dog's Perfect Christmas (November 4), Tyler Perry's The Gospel of Christmas (November 11), The "
+                    "Christmas Switch (November 12), Guarding Stars (November 18) and In a Holidaze (December 2). Prime "
+                    "Video has Clashing Through the Snow (November 23) and The Man with the Bag (December 2), Hulu has The "
+                    "12 Dates of Christmas (November 6), and Disney+ has Diary of a Wimpy Kid Christmas: The Getaway "
+                    "(December 4). The calendar on this page has every date and where to find each one."))),
             ("When can I stream Ebenezer?",
-             "Paramount hadn't announced a streaming date when we checked on November 20. It opened in US theaters on "
-             "November 13. Paramount's films usually move to Paramount+ some weeks after they leave theaters, so if you "
-             "want to see it before Christmas, the cinema is the safe bet."),
+             Dated("Paramount hadn't announced a streaming date when we checked on November 20. It opened in US theaters on "
+                   "November 13. Paramount's films usually move to Paramount+ some weeks after they leave theaters, so if you "
+                   "want to see it before Christmas, the cinema is the safe bet.",
+                   ("2026-12-26",
+                    "Paramount hadn't announced a streaming date when we checked on November 20. It opened in US theaters "
+                    "on November 13, and Paramount's films usually move to Paramount+ some weeks after they leave "
+                    "theaters."))),
             ("Is Violent Night 2 suitable for children?",
              "No. The first Violent Night was rated R for strong bloody violence and language throughout, and the "
              "sequel comes from the same director and writers. For a Santa film the whole family can watch, try "
@@ -542,13 +574,34 @@ GUIDES = {
              "would put the money into the show's long-term future instead. No date has been given for new episodes. "
              "If you want a Christmas Carol with ghosts in it this year, Ebenezer is the one."),
             ("What Christmas specials are on TV this year?",
-             "The biggest new ones are on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
-             "Christmas With Snoop at 10 p.m., both on NBC. ABC has its Disney Holiday Spectacular on November 30, CMA "
-             "Country Christmas on December 1, iHeartRadio Jingle Ball on December 17 and the Disney Parks parade on "
-             "Christmas morning. All times are Eastern and can change, so check your listings on the day."),
+             Dated("The biggest new ones are on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
+                   "Christmas With Snoop at 10 p.m., both on NBC. ABC has its Disney Holiday Spectacular on November 30, CMA "
+                   "Country Christmas on December 1, iHeartRadio Jingle Ball on December 17 and the Disney Parks parade on "
+                   "Christmas morning. All times are Eastern and can change, so check your listings on the day.",
+                   ("2026-12-03",
+                    "The biggest new ones were on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
+                    "Christmas With Snoop at 10 p.m., both on NBC. ABC showed its Disney Holiday Spectacular on November 30 "
+                    "and CMA Country Christmas on December 1, and still has iHeartRadio Jingle Ball on December 17 and the "
+                    "Disney Parks parade on Christmas morning. Times are Eastern and can change, so check your listings on "
+                    "the day."),
+                   ("2026-12-18",
+                    "The biggest new ones were on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
+                    "Christmas With Snoop at 10 p.m., both on NBC. ABC showed its Disney Holiday Spectacular on November "
+                    "30, CMA Country Christmas on December 1 and iHeartRadio Jingle Ball on December 17, and the Disney "
+                    "Parks parade is on Christmas morning. Times are Eastern and can change, so check your listings on "
+                    "the day."),
+                   ("2026-12-26",
+                    "The biggest new ones were on Wednesday, December 2: Christmas in Rockefeller Center at 7 p.m. and "
+                    "Christmas With Snoop at 10 p.m., both on NBC. ABC showed its Disney Holiday Spectacular on November "
+                    "30, CMA Country Christmas on December 1, iHeartRadio Jingle Ball on December 17 and the Disney Parks "
+                    "parade on Christmas morning."))),
             ("What day of the week is Christmas 2026?",
-             "Friday, December 25, so Christmas Eve is a Thursday and New Year's Eve the Thursday after. In the United "
-             "Kingdom Boxing Day falls on a Saturday, and the bank holiday for it moves to Monday, December 28."),
+             Dated("Friday, December 25, so Christmas Eve is a Thursday and New Year's Eve the Thursday after. In the United "
+                   "Kingdom Boxing Day falls on a Saturday, and the bank holiday for it moves to Monday, December 28.",
+                   ("2026-12-26",
+                    "It was a Friday, December 25, so Christmas Eve was a Thursday and New Year's Eve is the Thursday "
+                    "after. In the United Kingdom Boxing Day fell on a Saturday, and the bank holiday for it moved to "
+                    "Monday, December 28."))),
             ("Why does saving a Christmas episode add the whole series?",
              "OmniTrackr keeps a show in your library as one entry, with its seasons and episodes inside it. Saving "
              "The Office from this page adds the series as not started. You can then mark the single episode as "
@@ -616,11 +669,18 @@ GUIDES = {
         "eyebrow": "THANKSGIVING 2026",
         "related_heading": "More for the holidays",
         "intro": [
-            "Thanksgiving in the United States falls on Thursday, November 26 this year, and for most families it is "
-            "a four-day event. People drive or fly on Wednesday. They spend Thursday in the kitchen and at the table, "
-            "Friday on the sofa with leftovers, and Saturday and Sunday getting everybody home again. Each of those "
-            "days asks for something different from the people in the house, and from whatever is on the screen or "
-            "the speaker.",
+            Dated("Thanksgiving in the United States falls on Thursday, November 26 this year, and for most families it is "
+                  "a four-day event. People drive or fly on Wednesday. They spend Thursday in the kitchen and at the table, "
+                  "Friday on the sofa with leftovers, and Saturday and Sunday getting everybody home again. Each of those "
+                  "days asks for something different from the people in the house, and from whatever is on the screen or "
+                  "the speaker.",
+                  ("2026-11-30",
+                   "Thanksgiving 2026 was on Thursday, November 26, and next year it falls on Thursday, November 25. For "
+                   "most families it is a four-day event. People drive or fly on Wednesday. They spend Thursday in the "
+                   "kitchen and at the table, Friday on the sofa with leftovers, and Saturday and Sunday getting "
+                   "everybody home again. Each of those days asks for something different from the people in the house, "
+                   "and from whatever is on the screen or the speaker. Most of these picks also suit the long weekend "
+                   "after Christmas.")),
             "So this guide follows the weekend in order. There are four shelves of five picks, one for each stretch "
             "of it, and between them they cover every format OmniTrackr tracks: films, TV, anime, games, books, "
             "albums, manga, podcasts and audiobooks. Each pick says how long it takes, who in the room it suits, and "
@@ -951,9 +1011,13 @@ GUIDES = {
         ],
         "faq": [
             ("When is Thanksgiving in 2026?",
-             "Thanksgiving in the United States is on Thursday, November 26, 2026, the fourth Thursday of November. "
-             "The Wednesday before and the Sunday after, November 25 and 29, are the busiest travel days. Canadian "
-             "Thanksgiving was on Monday, October 12."),
+             Dated("Thanksgiving in the United States is on Thursday, November 26, 2026, the fourth Thursday of November. "
+                   "The Wednesday before and the Sunday after, November 25 and 29, are the busiest travel days. Canadian "
+                   "Thanksgiving was on Monday, October 12.",
+                   ("2026-11-30",
+                    "It was on Thursday, November 26, 2026, the fourth Thursday of November, and the Wednesday before and "
+                    "the Sunday after were the busiest days for travel. In 2027 it falls on Thursday, November 25. "
+                    "Canadian Thanksgiving was on Monday, October 12, 2026, and is on Monday, October 11 in 2027."))),
             ("What are the best Thanksgiving TV episodes?",
              "A few that stand alone: The One with All the Thanksgivings in the fifth season of Friends, Thanksgiving "
              "Orphans in the fifth season of Cheers, A Deep-Fried Korean Thanksgiving in the third season of Gilmore "

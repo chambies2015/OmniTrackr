@@ -368,7 +368,7 @@ GUIDES = {
             ("A Court of Forgotten Melody and The Stars Look Like Home (January 12).",
              "The seventh A Court of Thorns and Roses novel from Sarah J. Maas and a new T. J. Klune. Both are in our "
              "broader winter releases guide, with Heather Fawcett's Emily Wilde's History of Dark Faerie (January 19) "
-             "and Samantha Shannon's The Moth Reborn (February 25)."),
+             "and Samantha Shannon's The Moth Reborn (February 23)."),
             ("The Two-Body Problem and The Last Testimony (February 2).",
              "Ali Hazelwood's sequel to The Love Hypothesis and Veronica Roth's second Sixth Faction book, which brings "
              "back Tris and Four from Divergent."),

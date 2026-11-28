@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from .. import binge_calculator as binge
-from .. import funnel, in_order, title_pages, title_search
+from .. import dated_text, funnel, in_order, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..binge_guides import FIRST_PUBLISHED, GUIDES
 from ..dependencies import get_current_user, get_db
@@ -361,7 +361,7 @@ def page_title(entry: dict) -> str:
     return next((title for title in choices if len(title) <= TITLE_ROOM), choices[-1])
 
 
-def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str:
+def guide_content(slug: str, entry: dict, details: dict, signed_in: bool, today: Optional[date] = None) -> str:
     kind = entry["kind"]
     reviewed = entry["reviewed"]
     jump = [("#answer", "The short answer"), ("#plan", "Plan it"), ("#breakdown", PART_HEADINGS[kind])]
@@ -382,7 +382,8 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         _guide_planner(entry),
         _track_panel(slug, entry, signed_in),
     ]
-    for section_id, title, paragraphs in entry["sections"]:
+    # A section line can be a dated_text.Dated value (Dune: Part Three "opens" until December 18).
+    for section_id, title, paragraphs in dated_text.resolve(entry["sections"], today or date.today()):
         parts.append(f'<section id="{_e(section_id)}" class="editorial bc-notes"><h2>{_e(title)}</h2>{_paragraphs(paragraphs)}</section>')
     parts.append('<section id="questions" class="bc-questions" aria-labelledby="questions-heading">'
                  '<h2 id="questions-heading">Questions</h2>')

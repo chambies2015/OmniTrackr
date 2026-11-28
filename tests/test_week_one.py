@@ -34,9 +34,12 @@ def today():
 
 
 def member(db, name="nova", days_old=0, verified=True, private_tv=False):
+    # A few minutes in the past, but never so far that it lands on the day before (in the first
+    # minutes after midnight UTC, "5 minutes ago" is yesterday and the card counts one day more).
+    created = datetime.utcnow() - timedelta(days=days_old)
+    created -= min(timedelta(minutes=5), created - created.replace(hour=0, minute=0, second=0, microsecond=0))
     user = models.User(username=name, email=f"{name}@example.com", hashed_password=auth.get_password_hash("password123"),
-                       is_verified=verified, is_active=True, created_at=datetime.utcnow() - timedelta(days=days_old, minutes=5),
-                       tv_shows_private=private_tv)
+                       is_verified=verified, is_active=True, created_at=created, tv_shows_private=private_tv)
     db.add(user)
     db.commit()
     return user

@@ -1,4 +1,5 @@
 """Book "In order" guides: Narnia, Percy Jackson, Discworld and the Cosmere. Merged into in_order_guides.GUIDES."""
+from .dated_text import Dated
 
 GUIDES = {
     "narnia": {
@@ -150,7 +151,9 @@ GUIDES = {
              "note": "Percy, now a high school senior, needs three letters of recommendation from gods to get into New Rome University. Short and low-stakes, it brings back the first-person voice of the original five, with Grover and Annabeth along."},
             {"id": "disney-series", "kind": "tv", "title": "Percy Jackson and the Olympians", "year": 2023, "creator": None,
              "aka": ["Percy Jackson & the Olympians"],
-             "note": "Disney+'s adaptation, co-created by Riordan, with Walker Scobell as Percy and one season per book. Season one (December 2023) covers The Lightning Thief and season two (December 2025 to January 2026) The Sea of Monsters. Season three, The Titan's Curse, is scheduled to premiere on November 20, 2026.", "optional": True},
+             "note": Dated("Disney+'s adaptation, co-created by Riordan, with Walker Scobell as Percy and one season per book. Season one (December 2023) covers The Lightning Thief and season two (December 2025 to January 2026) The Sea of Monsters. Season three, The Titan's Curse, began on November 20, 2026, with two of its eight episodes, and releases two more each Friday until the finale on December 11.",
+                           ("2026-12-11", "Disney+'s adaptation, co-created by Riordan, with Walker Scobell as Percy and one season per book. Season one (December 2023) covers The Lightning Thief, season two (December 2025 to January 2026) The Sea of Monsters and season three (November 20 to December 11, 2026) The Titan's Curse.")),
+             "optional": True},
             {"id": "wrath-of-the-triple-goddess", "kind": "book", "title": "Wrath of the Triple Goddess", "year": 2024, "creator": "Rick Riordan",
              "aka": ["Percy Jackson and the Olympians: Wrath of the Triple Goddess"],
              "note": "Letter number two: Percy and Annabeth house-sit for Hecate over Halloween, and her pets do not cooperate. The third letter book has no title or date yet."},
@@ -191,7 +194,8 @@ GUIDES = {
             ("Are the Percy Jackson movies worth watching?",
              "As 2010s fantasy films they pass the time. As adaptations they change too much, and the second film inherits the first film's choices. The Disney+ series is much closer to the books."),
             ("When does season 3 of the Disney+ series come out?",
-             "Season three adapts The Titan's Curse and is scheduled to premiere on Disney+ on November 20, 2026. Seasons one and two each covered one book, in order."),
+             Dated("Season three adapts The Titan's Curse. It premiered on Disney+ and Hulu on November 20, 2026 with two episodes, and the other six follow two at a time each Friday until the finale on December 11. Seasons one and two each covered one book, in order.",
+                   ("2026-12-11", "Season three adapts The Titan's Curse. It premiered on Disney+ and Hulu on November 20, 2026 with two episodes and released the other six two at a time each Friday, ending on December 11. Seasons one and two each covered one book, in order."))),
         ],
     },
     "discworld": {

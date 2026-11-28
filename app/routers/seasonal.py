@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import browse, challenges, friend_tools, funnel, pick, seasonal, title_pages, title_search
+from .. import browse, challenges, dated_text, friend_tools, funnel, pick, seasonal, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
@@ -381,6 +381,7 @@ def _source_link(label: str, url: str) -> str:
 
 def companion_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     """A guide beside a hub: the hub's shelves, plans and questions, without the festive scale."""
+    entry = dated_text.resolve(entry, today)
     items = seasonal.picks(entry)
     formats = sorted({item["kind"] for item in items}, key=list(title_pages.KINDS).index)
     parent = SEASONS[entry["parent"]]
@@ -465,9 +466,10 @@ def _structured(entry: dict) -> dict:
 
 def _hub(slug: str):
     def view(request: Request, db: Session = Depends(get_db)):
-        entry = SEASONS[slug]
+        today = date.today()
+        entry = dated_text.resolve(SEASONS[slug], today)
         signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-        content = hub_content(slug, entry, _details(db), signed_in, date.today())
+        content = hub_content(slug, entry, _details(db), signed_in, today)
         response = page(entry["search_title"], entry["summary"], entry["path"], content,
                         structured_data=_structured(entry), head=_head(signed_in))
         response.headers["Cache-Control"] = "private, no-cache"
@@ -481,9 +483,10 @@ def _companion(slug: str):
     def view(request: Request, db: Session = Depends(get_db)):
         entry = seasonal.companion(slug)
         signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-        content = companion_content(slug, entry, _details(db), signed_in, date.today())
+        today = date.today()
+        content = companion_content(slug, entry, _details(db), signed_in, today)
         response = page(entry["search_title"], entry["summary"], entry["path"], content,
-                        structured_data=_structured(entry), head=_head(signed_in))
+                        structured_data=_structured(dated_text.resolve(entry, today)), head=_head(signed_in))
         response.headers["Cache-Control"] = "private, no-cache"
         response.headers["Vary"] = "Cookie"
         return response
