@@ -522,6 +522,7 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .lp-stage__col, .lp-stage__row, .lp-stage__card { animation: none; }
   .lp-formats__list a { transition: none; }
+  .lp-nine, .lp-try--nine:hover .lp-nine { transform: none; transition: none; }
 }
 @media (max-width: 900px) { .lp .lp-hero:has(.lp-stage) { padding-bottom: 28px; } }
 
@@ -849,7 +850,4 @@ body.lp:has(.lp-savebar:not([hidden])) .lp-hero__alt { display: none; }
   .lp-try--nine { gap: 2px 14px; padding: 14px; }
   .lp-nine { grid-template-columns: repeat(3, 14px); grid-template-rows: repeat(3, 19px); gap: 3px; }
   .lp-tools__more .lp-try--nine > span:last-child { display: block; font-size: .82rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lp-nine, .lp-try--nine:hover .lp-nine { transform: none; transition: none; }
 }
