@@ -76,7 +76,10 @@ def test_token_round_trip_and_tampering(db_session):
     movie = save(db_session, user)
     token = check_in.make_token(user.id, [{"category": "movies", "id": movie.id}], "checkin")
     assert check_in.read_token(token) == {"user_id": user.id, "items": [("movies", movie.id)], "source": "checkin"}
-    assert check_in.read_token(token[:-2] + ("aa" if not token.endswith("aa") else "bb")) is None
+    # Change the signature's first character: the last one can carry only padding bits, so swapping
+    # it sometimes leaves the same signature (about one run in a thousand).
+    body, signature = token.rsplit(".", 1)
+    assert check_in.read_token(f"{body}.{'B' if signature[0] == 'A' else 'A'}{signature[1:]}") is None
     assert check_in.read_token("") is None and check_in.read_token("x" * 500) is None
     # Signed for another purpose (the weekly email's link) is not a check-in link.
     from app import digest

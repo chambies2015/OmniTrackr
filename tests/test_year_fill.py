@@ -343,7 +343,10 @@ def test_token_round_trip_and_tampering(db_session):
     token = _token_for(db_session, user, [("movies", movie.id)])
     assert year_fill.read_token(token) == {"user_id": user.id, "year": 2026, "items": [("movies", movie.id)],
                                            "catchup": False}
-    assert year_fill.read_token(token[:-2] + ("aa" if not token.endswith("aa") else "bb")) is None
+    # Change the signature's first character: the last one can carry only padding bits, so swapping
+    # it sometimes leaves the same signature (about one run in a thousand).
+    body, signature = token.rsplit(".", 1)
+    assert year_fill.read_token(f"{body}.{'B' if signature[0] == 'A' else 'A'}{signature[1:]}") is None
     assert year_fill.read_token("") is None and year_fill.read_token("x" * 600) is None
     from app import check_in
     # A check-in link is signed with another salt and never opens this page.

@@ -167,13 +167,19 @@ def season_card_links(slug: str, today: Optional[date] = None) -> list[dict]:
     return []
 
 
-def hero_line_html(today: Optional[date] = None) -> str:
-    """The guest homepage's one-line holiday note above the headline, only while swaps are in season."""
+def hero_link_html(today: Optional[date] = None) -> str:
+    """The Pick swap pill for the guest homepage's news line, only while swaps are in season."""
     if not swap_season(today):
         return ""
-    return ('<p class="lp-hero__news"><a href="/swap" data-home-tool="swap"><span class="lp-hero__news-tag">New</span>'
+    return ('<a href="/swap" data-home-tool="swap"><span class="lp-hero__news-tag">New</span>'
             '<span>Pick swap, a Secret Santa for recommendations</span>'
-            '<svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>')
+            '<svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>')
+
+
+def hero_line_html(today: Optional[date] = None) -> str:
+    """The guest homepage's one-line holiday note above the headline, only while swaps are in season."""
+    link = hero_link_html(today)
+    return f'<p class="lp-hero__news">{link}</p>' if link else ""
 
 
 def home_idea(db: Session, user_id: int, today: Optional[date] = None) -> Optional[dict]:

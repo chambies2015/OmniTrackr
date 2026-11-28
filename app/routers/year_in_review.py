@@ -634,6 +634,20 @@ def _yearbook_box(db: Session, user: models.User, year: int) -> str:
             '</p></section>')
 
 
+def _top_nine_box(year: int) -> str:
+    """In year-end season: the year's nine favourites as a picture to post (app/top_nine.py)."""
+    from .. import top_nine
+    if not top_nine.promo_season() or top_nine.season_year() != year:
+        return ""
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-top-nine">'
+            f'<h2 id="recap-top-nine">Post your {year} top nine</h2>'
+            f'<p>Pick nine favourites from this recap and anything else you loved in {year}. You get a picture sized '
+            'for Instagram, a story version and a link where friends tap the ones they\'ve seen too. Your finishes '
+            'from this year are at the top of the list to pick from.</p>'
+            '<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="/top-nine">Make my top nine'
+            '</a></p></section>')
+
+
 def _big_finished(db: Session, user: models.User, year: int) -> Optional[int]:
     """The recap's finish count when it's short enough to offer the year's big releases, else None."""
     from .. import year_catchup
@@ -772,7 +786,8 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         extra=_fill_box(db, user, year),
         # An empty recap gets the pledge box (start next year fresh) but no yearbook or Ko-fi box.
         body=_body(recap, private=True) + share_box
-        + ("" if recap.get("is_empty") else _yearbook_box(db, user, year)) + _next_year_box(db, user, year)
+        + ("" if recap.get("is_empty") else _yearbook_box(db, user, year) + _top_nine_box(year))
+        + _next_year_box(db, user, year)
         + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
         story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),

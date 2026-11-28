@@ -512,8 +512,9 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             page = page.replace("<!--HERO_PROOF-->", hero_proof, 1)
         if "<!--HERO_NEWS-->" in page:
             try:
-                from . import friend_tools
-                hero_news = friend_tools.hero_line_html()
+                from . import friend_tools, top_nine
+                pills = [pill for pill in (top_nine.hero_link_html(), friend_tools.hero_link_html()) if pill]
+                hero_news = f'<p class="lp-hero__news">{"".join(pills)}</p>' if pills else ""
             except Exception:
                 hero_news = ""  # The homepage never depends on this line.
             page = page.replace("<!--HERO_NEWS-->", hero_news, 1)
@@ -1639,6 +1640,32 @@ for route in tier_list_router.router.routes:
                 bind_rate_limited_endpoint(route, limiter.limit(rate[method])(route.endpoint))
                 break
 app.include_router(tier_list_router.router)
+
+from .routers import top_nine as top_nine_router
+# Top nine (Nov 2026): anyone can make one, so making one has a daily cap, and every open of a
+# shared grid that isn't the maker's counts a view (a write).
+TOP_NINE_LIMITS = {
+    "/api/top-nine/search": {"GET": "90/minute"},
+    "/api/top-nine/suggest": {"GET": "30/minute"},
+    "/api/top-nine/art": {"GET": "30/minute"},
+    "/api/top-nine": {"POST": "10/minute;40/day"},
+    "/api/top-nine/mine": {"GET": "30/minute"},
+    "/api/top-nine/claim": {"POST": "10/minute"},
+    "/api/top-nine/{token}": {"GET": "60/minute", "PUT": "40/minute", "DELETE": "20/minute"},
+    "/api/top-nine/{token}/keep": {"POST": "10/minute"},
+    "/api/top-nine/{token}/answer": {"POST": "20/minute"},
+    "/top-nine/{token}": {"GET": "60/minute"},
+    "/top-nine/{token}/post.jpg": {"GET": "30/minute"},
+    "/top-nine/{token}/story.jpg": {"GET": "30/minute"},
+    "/top-nine/{token}/card.png": {"GET": "30/minute"},
+}
+for route in top_nine_router.router.routes:
+    rate = TOP_NINE_LIMITS.get(getattr(route, "path", None), {})
+    for method in getattr(route, "methods", set()) or set():
+        if method in rate:
+            bind_rate_limited_endpoint(route, limiter.limit(rate[method])(route.endpoint))
+            break
+app.include_router(top_nine_router.router)
 
 from .routers import daily as daily_router
 rate_limited_daily_guess = limiter.limit("120/minute")(daily_router.daily_guess)

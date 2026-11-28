@@ -134,6 +134,8 @@ def test_season_card_leaves_pick_swap_out_after_december_22(authenticated_client
 
 
 def test_homepage_hero_line_only_in_season(client, monkeypatch):
+    from app import top_nine
+    monkeypatch.setattr(top_nine, "promo_season", lambda today=None: False)  # its own pill, tested in test_top_nine.py
     monkeypatch.setattr(friend_tools, "swap_season", lambda today=None: True)
     page = client.get("/").text
     assert 'class="lp-hero__news"' in page and 'href="/swap" data-home-tool="swap"' in page
@@ -152,7 +154,7 @@ def test_homepage_feature_cards_link_both_guides():
     assert "style=" not in features
     css = (ROOT / "app/static/public-landing.css").read_text(encoding="utf-8")
     assert ".lp-tour { grid-template-columns: repeat(4, minmax(0, 1fr)); }" in css
-    assert "/static/public-landing.css?v=20261123-friends-1" in LANDING
+    assert "/static/public-landing.css?v=20261128-top-nine-1" in LANDING
 
 
 def _swap(db, host, today):

@@ -258,6 +258,17 @@ GUEST = (
     ("yearbook_signup_clicked", "Yearbook: sign-up pressed on a yearbook or the guide"),
     ("yearbook_email_sent", "Yearbook: email sent (new notes or signing closed)"),
     ("yearbook_back_from_email", "Yearbook: the yearbook page opened from one of its emails"),
+    ("top_nine_started", "Top nine: a first square filled in the maker"),
+    ("top_nine_made", "Top nine: pictures and a link made"),
+    ("top_nine_saved", "Top nine: a picture saved or shared by its maker"),
+    ("top_nine_shared", "Top nine: a link copied or shared"),
+    ("top_nine_link_opened", "Top nine: a link opened by a visitor without an account"),
+    ("top_nine_answered", "Top nine: someone said how many of the nine they've seen too"),
+    ("top_nine_start_clicked", "Top nine: Make my top nine pressed on someone's grid"),
+    ("top_nine_remixed", "Top nine: a grid made after opening someone else's"),
+    ("top_nine_signup_clicked", "Top nine: sign-up pressed in the maker or on a shared grid"),
+    ("top_nine_claimed", "Top nine: grids made before sign-up moved into a new account"),
+    ("top_nine_kept", "Top nine: the nine put into a member's library"),
     ("collection_link_opened", "Lists: a share link opened by a visitor without an account"),
     ("collection_title_saved", "Lists: a title added to a library from someone's list"),
     ("collection_signup_clicked", "Lists: sign-up pressed from someone's list"),
@@ -382,7 +393,9 @@ CLIENT_EVENTS = {name for name, _ in EMAIL_FORM + EMAIL_SNAGS + EMAIL_RETURN + A
                  "svc_link_shared", "svc_services_ticked", "svc_title_saved", "svc_signup_clicked",
                  "together_shared", "together_signup_clicked", "swap_shared", "swap_signup_clicked",
                  "break_signup_clicked", "break_home_offer_clicked", "break_link_shared", "break_story_saved",
-                 "break_title_saved", "break_same_days_clicked", "yearbook_shared", "yearbook_story_saved", "yearbook_signup_clicked"}
+                 "break_title_saved", "break_same_days_clicked", "yearbook_shared", "yearbook_story_saved", "yearbook_signup_clicked",
+                 "top_nine_started", "top_nine_saved", "top_nine_shared", "top_nine_start_clicked",
+                 "top_nine_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:
