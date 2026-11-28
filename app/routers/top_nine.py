@@ -19,8 +19,8 @@ from ..visitor_identity import set_visitor_cookie, visitor_identity
 from .discover import page
 
 router = APIRouter(tags=["top-nine"])
-CSS_VERSION = "20261128-top-nine-1"
-JS_VERSION = "20261128-top-nine-1"
+CSS_VERSION = "20261128-top-nine-sweep-1"
+JS_VERSION = "20261128-top-nine-sweep-1"
 SITE = "https://omnitrackr.xyz"
 POSTER_SECONDS = 8.0
 PICTURE_NAMES = {"post": "post.jpg", "story": "story.jpg", "card": "card.png"}
@@ -185,8 +185,8 @@ def top_nine_page(request: Request, source: str = Query("", alias="from", max_le
         for theme, label in (("night", "Night"), ("paper", "Paper"), ("berry", "Berry")))
     guest_cta = '' if signed_in else (
         '<aside class="tn-cta" data-tn-cta hidden><p><strong>Keep your nine.</strong> This link lasts '
-        f'{top_nine.GUEST_DAYS} days. With a free account it stays up for good, the nine titles go into your library '
-        f'as finished, and your {year} Year in Review counts them.</p>'
+        f'{top_nine.GUEST_DAYS} days. With a free account it stays up for good and the nine titles go into your '
+        'library as finished.</p>'
         '<a class="button" href="/?next=%2Ftop-nine#signup" data-tn-signup>Keep my nine, free</a></aside>')
     member_keep = ('<aside class="tn-cta tn-cta--member" data-tn-keep-box hidden><p><strong>Put these in your '
                    'library?</strong> Titles you don\'t have yet go in as finished. Titles you already have stay as '
@@ -376,9 +376,12 @@ def claim_grids(body: ClaimBody, request: Request, response: Response,
 
 
 @router.get("/api/top-nine/{token}")
-def get_grid(token: str, request: Request, response: Response, db: Session = Depends(get_db)):
+def get_grid(token: str, request: Request, response: Response, user=Depends(get_optional_current_user),
+             db: Session = Depends(get_db)):
     _private(response)
-    return top_nine.public_state(db, _grid_or_404(db, token))
+    grid = _grid_or_404(db, token)
+    # "yours" lets the maker open a signed-in member's own grid for changes (?edit=) and no one else's.
+    return {**top_nine.public_state(db, grid), "yours": user is not None and grid.owner_id == user.id}
 
 
 @router.put("/api/top-nine/{token}")
@@ -599,7 +602,8 @@ async def _picture(token: str, which: str, request: Request, db: Session) -> Res
         raise HTTPException(404, "This top nine isn't here anymore")
     grid_id, data, version = found
     etag = f'"{version}-{which}"'
-    headers = {"Cache-Control": "public, max-age=3600", "ETag": etag, "X-Content-Type-Options": "nosniff",
+    # Short, like the other share pictures: a deleted grid's pictures shouldn't stay up in caches for long.
+    headers = {"Cache-Control": "public, max-age=600", "ETag": etag, "X-Content-Type-Options": "nosniff",
                "X-Robots-Tag": "noindex"}
     if request.query_params.get("download") == "1":
         headers["Content-Disposition"] = f'attachment; filename="top-nine-{data["year"]}-{which}.{PICTURE_NAMES[which].rsplit(".", 1)[1]}"'

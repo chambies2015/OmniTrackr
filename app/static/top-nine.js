@@ -872,7 +872,8 @@
       if (edit) {
         const grid = await fetchGrid(edit).catch(() => null);
         const key = keyFor(edit);
-        if (grid && (signedIn || key)) {
+        // A member opens only their own grid for changes; a guest grid needs this browser's key.
+        if (grid && (grid.yours || (key && !grid.member))) {
           state = {
             v: 1, year: grid.year, name: grid.name, theme: grid.theme,
             tiles: (grid.tiles || []).slice(0, SLOTS).map(cleanTile), token: grid.token, key, version: grid.version,
@@ -882,7 +883,7 @@
           if (grid.year !== year) say(`This is your ${grid.year} top nine.`);
           persist();
         } else {
-          say('That top nine can only be changed in the browser that made it.');
+          say('Only whoever made this top nine can change it.');
         }
         history.replaceState(null, '', '/top-nine');
       } else if (source) {
